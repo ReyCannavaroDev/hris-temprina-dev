@@ -1,7 +1,18 @@
 <?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-/**
- * placeholder model: t_loker_d_kualifikasi
- * bagian: Alter
- * tempel source code dari generator lama di file ini.
- */
+class tlokerdkualifikasi extends Migration
+{
+    protected $tableName = "t_loker_d_kualifikasi";
+    
+    public function up()
+    {
+        Schema::table($this->tableName, function (Blueprint $table) {
+            //$table->string('_existColumnName_')->change();
+            //$table->string('_columnName_');
+            //$table->dropColumn([ ]);
+        });
+    }
+}
