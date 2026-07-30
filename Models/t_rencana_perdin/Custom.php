@@ -1,7 +1,286 @@
 <?php
 
-/**
- * placeholder model: t_rencana_perdin
- * bagian: Custom
- * tempel source code dari generator lama di file ini.
- */
+namespace App\Models\CustomModels;
+use App\Cores\Helper;
+use App\Cores\Approval;
+use Carbon\Carbon;
+
+class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
+{
+    private $helper;
+    public function __construct()
+    {
+        parent::__construct();
+        $this->helper = getCore("Helper");
+    }
+
+    public $fileColumns = [
+        /*file_column*/
+    ];
+
+    //public $createAdditionalData = ["creator_id"=>"auth:id"];
+    //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
+
+    public function createBefore( $model, $arrayData, $metaData, $id=null )
+    {
+        $nomor = t_perdin::find($arrayData['t_perdin_id'])?->nomor ?? '';
+        $newArrayData  = array_merge( $arrayData,[
+            // "nomor" => $this->helper->generateNomor("KODE RINCIAN PERDIN"),
+            "nomor" => $nomor,
+        ] );
+        return [
+            "model"  => $model,
+            "data"   => $newArrayData,
+            // "errors" => ['error1']
+        ];
+    }
+    
+
+    public function custom_generateTarif()
+    {
+        $req = app()->request;
+        // dd($req->kota_id);
+        // $tgl_awal = $req->tgl_awal;
+        // $tgl_akhir = $req->tgl_akhir;
+        $posisi_id = $req->posisi_id;
+        $kota_id = $req->kota_id;
+        $provinsi_id = $req->provinsi_id;
+
+        $m_tarif = m_tarif_perdin_det::whereHas("m_tarif_perdin", function (
+            $q
+        ) use ($kota_id, $posisi_id, $provinsi_id) {
+            $q->where("kota_id", $kota_id)
+                ->where("provinsi_id", $provinsi_id)
+                ->where("posisi_id", $posisi_id);
+        })
+            ->get()
+            ->map(function ($item) {
+                return [
+                    "komponen" => $item->komponen,
+                    "nominal" => $item->nominal,
+                    "jumlah" => 1,
+                    "catatan" => $item->catatan,
+                ];
+            });
+
+        return response()->json(["data" => $m_tarif]);
+    }
+
+    public function public_generateTarif()
+    {
+        $req = app()->request;
+        
+        $posisi_id = $req->posisi_id;
+        $kota_id = $req->kota_id;
+        $provinsi_id = $req->provinsi_id;
+
+        $m_tarif = m_tarif_perdin_det::whereHas("m_tarif_perdin", function (
+            $q
+        ) use ($kota_id, $posisi_id, $provinsi_id) {
+            $q->where("kota_id", $kota_id)
+                ->where("provinsi_id", $provinsi_id)
+                ->where("posisi_id", $posisi_id);
+        })
+            ->get()
+            ->map(function ($item) {
+                return [
+                    "komponen" => $item->komponen,
+                    "nominal" => $item->nominal,
+                ];
+            });
+
+        return response()->json(["data" => $m_tarif]);
+    }
+
+    public function custom_app_log($req)
+    {
+        $conf = [
+            "trx_id" => $req->id ?? 0,
+            "trx_table" => $this->getTable(),
+        ];
+        $data = $this->helper->approvalLog($conf);
+        return response($data);
+    }
+
+    public function custom_app_detail($req)
+    {
+        $id = $req->id ?? 66;
+        $data = $this->helper->approvalDetail($id);
+        return $this->helper->customResponse("OK", 200, $data);
+    }
+
+    public function custom_posted($req)
+    {
+        \DB::beginTransaction();
+        try {
+            $data = t_rencana_perdin::find($req->id);
+            $data->status = "POSTED";
+            $data->save();
+
+            \DB::commit();
+            return $this->helper->customResponse("Data berhasil diajukan");
+        } catch (\Exception $e) {
+            \DB::rollback();
+            return $this->helper->responseCatch($e);
+        }
+    }
+
+    public function custom_send_approval()
+    {
+        $target_id = req("target_id");
+        $user_target = $target_id ? default_users::where('m_kary_id', $target_id)->first()?->id : null;
+
+        $app = $this->createAppTicket(req("id"), $user_target);
+        if (!$app) {
+            return $this->helper->customResponse(
+                "Terjadi kesalahan, coba kembali nanti",
+                400
+            );
+        }
+
+        if (app()->request->header("Source") != "mobile") {
+            $data = $this->find(req("id"));
+            if ($data) {
+                $data->update([
+                    "status" => "IN APPROVAL",
+                ]);
+            }
+        }
+
+        return $this->helper->customResponse(
+            "Permintaan approval berhasil dibuat"
+        );
+    }
+
+    private function createAppTicket($id, $target_id)
+    {
+        $tempId = $id;
+        $trx = \DB::table("t_rencana_perdin")->find($tempId);
+        $conf = [
+            "app_name" => "APPROVAL RINCIAN PERDIN",
+            "trx_id" => $trx->id,
+            "trx_table" => $this->getTable(),
+            "trx_name" => "Pengajuan Rincian Perdin",
+            "form_name" => "t_pengajuan_perdin",
+            "trx_nomor" => $trx->nomor,
+            "trx_date" => Date("Y-m-d"),
+            "trx_creator_id" => auth()->user()->id,
+            "target_id" => $target_id,
+        ];
+
+        $app = $this->helper->approvalCreateTicket($conf);
+        if ($app) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function custom_progress($req)
+    {
+        // Start a database transaction
+        \DB::beginTransaction();
+
+        try {
+            $conf = [
+                "app_id" => $req->id,
+                "app_type" => $req->type, // APPROVED, REVISED, REJECTED,
+                "app_note" => $req->note, // alasan approve
+            ];
+
+            $app = $this->helper->approvalProgress($conf, true);
+            if ($app->status) {
+                $data = $this->find($app->trx_id);
+                if ($app->finish) {
+                    $data->update([
+                        "status" => $req->type,
+                    ]);
+                } else {
+                    $data->update([
+                        "status" => "IN APPROVAL",
+                    ]);
+                }
+            }
+
+            \DB::commit();
+
+            return $this->helper->customResponse("Proses approval berhasil");
+        } catch (\Exception $e) {
+            \DB::rollback();
+            return $this->helper->responseCatch($e);
+        }
+    }
+
+    public function custom_approveHC()
+    {
+        $req = app()->request;
+
+        try {
+            \DB::beginTransaction();
+
+            $data = $this->find($req->id);
+
+            if (!$data) {
+                return $this->helper->customResponse("Data tidak ditemukan", 404);
+            }
+
+            $data->update([
+                'status' => 'APPROVED'
+            ]);
+
+            $log = $this->logHc($data->id);
+
+            \DB::commit();
+            return $this->helper->customResponse("Approval berhasil", 200);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+
+            \Log::error("Error Approve HC: " . $e->getMessage());
+
+            return $this->helper->customResponse(
+                "Terjadi kesalahan sistem: " . $e->getMessage(), 
+                500
+            );
+        }
+    }
+
+    public function logHc($trxId)
+    {
+        $prevLog = generate_approval_log::where('trx_id', $trxId)->where('action_type', 'HALF APPROVED');
+        if($check = $prevLog->exists()){
+            $prev = $prevLog->first();
+            $log_insert = generate_approval_log::create([
+                'nomor'                     => $prev->nomor,
+                'generate_approval_id'      => $prev->id,
+                'generate_approval_det_id'  => null,
+                'trx_id'                    => $prev->trx_id,
+                'trx_table'                 => $prev->trx_table,
+                'trx_name'                  => $prev->trx_name,
+                'trx_nomor'                 => $prev->trx_nomor,
+                'trx_date'                  => $prev->trx_date,
+                'form_name'                 => $prev->form_name,
+                'trx_creator_id'            => $prev->trx_creator_id,
+                'action_type'               => 'APPROVED',
+                'action_user_id'            => auth()->user()->id,
+                'creator_id'                => auth()->user()->id,
+                'action_at'                 => Carbon::now(),
+                'action_note'               => 'APPROVED BY HC'
+            ]); 
+        }
+    }
+
+    public function scopelanding($model)
+    {
+        $m_branch_id = request('m_branch_id');
+        $m_subcomp_id = request('m_subcomp_id');
+
+        return $model->whereHas('m_kary', function ($q) use ($m_branch_id, $m_subcomp_id) {
+            $q->when($m_branch_id, function ($q) use ($m_branch_id) {
+                $q->where('m_branch_id', $m_branch_id);
+            })->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
+                $q->where('m_subcomp_id', $m_subcomp_id);
+            });
+        });
+    }
+}

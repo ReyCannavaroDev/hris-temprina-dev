@@ -1,7 +1,18 @@
 <?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-/**
- * placeholder model: generate_num_type
- * bagian: Alter
- * tempel source code dari generator lama di file ini.
- */
+class generatenumtype extends Migration
+{
+    protected $tableName = "generate_num_type";
+    
+    public function up()
+    {
+        Schema::table($this->tableName, function (Blueprint $table) {
+            //$table->string('_existColumnName_')->change();
+            //$table->string('_columnName_');
+            //$table->dropColumn([ ]);
+        });
+    }
+}
