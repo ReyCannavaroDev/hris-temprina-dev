@@ -1,0 +1,7 @@
+<?php
+
+/**
+ * placeholder model: m_role
+ * bagian: Alter
+ * tempel source code dari generator lama di file ini.
+ */

@@ -1,0 +1,17 @@
+l_csv
+m_approval_d
+m_branch_d_cc
+m_grading
+m_os
+m_os_kary
+m_posisi_d
+m_posisi_n
+m_structure
+presensi_m_menu_maksi
+presensi_m_menu_maksi_det
+presensi_maksi
+presensi_maksi_det
+t_jadwal_kerja_d_sub_n
+t_klaim_ranap
+t_klaim_ranap_d
+t_surat
