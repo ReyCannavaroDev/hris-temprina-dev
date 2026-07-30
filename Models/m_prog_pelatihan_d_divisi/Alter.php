@@ -1,7 +1,18 @@
 <?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-/**
- * placeholder model: m_prog_pelatihan_d_divisi
- * bagian: Alter
- * tempel source code dari generator lama di file ini.
- */
+class mprogpelatihanddivisi extends Migration
+{
+    protected $tableName = "m_prog_pelatihan_d_divisi";
+    
+    public function up()
+    {
+        Schema::table($this->tableName, function (Blueprint $table) {
+            //$table->string('_existColumnName_')->change();
+            //$table->string('_columnName_');
+            //$table->dropColumn([ ]);
+        });
+    }
+}
