@@ -1,3 +1,2 @@
-{-- placeholder blade: default
-     tempel source code dari generator lama di file ini.
---}
+<?php
+  <h4>OKE</h4>

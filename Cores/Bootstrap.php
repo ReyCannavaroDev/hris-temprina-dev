@@ -1,6 +1,15 @@
 <?php
+namespace App\Cores;
 
-/**
- * placeholder core: Bootstrap
- * tempel source code dari generator lama di file ini.
- */
+class Bootstrap
+{
+    public function register( $app ){
+        try{
+            new Frontend( $app );
+        }catch(\Exception $e){
+            // ff($e);
+        }
+        
+        return $app;
+    }
+}
