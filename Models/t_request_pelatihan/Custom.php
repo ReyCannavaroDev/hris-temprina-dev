@@ -18,6 +18,9 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         $this->heirs = array_values(array_unique(array_merge($this->heirs, [
             "t_request_pelatihan_d_kary",
         ])));
+        $this->detailsChild = array_values(array_unique(array_merge($this->detailsChild, [
+            "t_request_pelatihan_d_kary",
+        ])));
     }
     
     public $fileColumns    = [ /*file_column*/ ];
@@ -46,6 +49,11 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         }
 
         return array_merge( $row, $data );
+    }
+
+    public function t_request_pelatihan_d_kary() :\HasMany
+    {
+        return $this->hasMany('App\Models\BasicModels\t_request_pelatihan_d_kary', 't_request_pelatihan_id', 'id');
     }
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
