@@ -20,6 +20,9 @@ class m_kary extends \App\Models\BasicModels\m_kary
         parent::__construct();
         $this->helper = getCore("Helper");
         $this->respo = getCore("Respo");
+        $this->joins = array_values(array_filter($this->joins, function ($join) {
+            return $join !== "m_jam_kerja.id=m_kary.m_jam_kerja_id";
+        }));
     }
 
     public $fileColumns = [
