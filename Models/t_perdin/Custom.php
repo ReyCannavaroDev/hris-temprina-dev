@@ -10,6 +10,9 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     {
         parent::__construct();
         $this->helper = getCore("Helper");
+        $this->heirs = array_values(array_unique(array_merge($this->heirs, [
+            "m_kary",
+        ])));
     }
     
     public $fileColumns    = [ /*file_column*/ ];
@@ -19,6 +22,11 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     public function t_rencana_perdin()
     {
         return $this->hasMany(t_rencana_perdin::class, 't_perdin_id', 'id');
+    }
+
+    public function m_kary() :\BelongsTo
+    {
+        return $this->belongsTo('App\Models\BasicModels\m_kary', 'm_kary_id', 'id');
     }
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
