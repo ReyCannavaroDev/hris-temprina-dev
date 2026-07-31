@@ -181,7 +181,7 @@ onBeforeMount(async () => {
         })
         const resultJson = await apiApp.json()
         console.log('test', resultJson.data)
-        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${resultJson.data.approval.trx_id}`, {
+        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${resultJson.data.approval.trx_id}?join=true&transform=true`, {
           headers: {
             'Content-Type': 'Application/json',
             Authorization: `${store.user.token_type} ${store.user.token}`
@@ -194,8 +194,9 @@ onBeforeMount(async () => {
         values.trx = resultJson?.data.trx
         values.datalog = resultJson?.data.approval_log
         initialValues = resultTrxJson.data
+        const requestPelatihanDetail = initialValues.t_request_pelatihan_d_kary ?? []
         detailArr.value = await Promise.all(
-          initialValues.t_request_pelatihan_d_kary.map(async (dt) => {
+          requestPelatihanDetail.map(async (dt) => {
             let cabang_kary = ''
             let divisi_kary = ''
             let posisi_kary = ''
@@ -269,7 +270,7 @@ onBeforeMount(async () => {
         const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
         isRequesting.value = true
 
-        const params = { join: true, transform: false }
+        const params = { join: true, transform: true }
         const fixedParams = new URLSearchParams(params)
         const res = await fetch(dataURL + '?' + fixedParams, {
           headers: {
@@ -314,8 +315,9 @@ onBeforeMount(async () => {
         // })
 
 
+        const requestPelatihanDetail = initialValues.t_request_pelatihan_d_kary ?? []
         detailArr.value = await Promise.all(
-          initialValues.t_request_pelatihan_d_kary.map(async (dt) => {
+          requestPelatihanDetail.map(async (dt) => {
             let cabang_kary = ''
             let divisi_kary = ''
             let posisi_kary = ''

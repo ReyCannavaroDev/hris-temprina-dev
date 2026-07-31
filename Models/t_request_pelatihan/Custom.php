@@ -15,6 +15,9 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         parent::__construct();
         $this->helper = new Helper();
         $this->approval = new Approval();
+        $this->heirs = array_values(array_unique(array_merge($this->heirs, [
+            "t_request_pelatihan_d_kary",
+        ])));
     }
     
     public $fileColumns    = [ /*file_column*/ ];
@@ -32,6 +35,16 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
                 'jumlah_karyawan' => $jumlahKaryawan
             ];
         }
+
+        if(!empty($row['trainer_id'])){
+            $trainer = m_trainer::find($row['trainer_id']);
+            $data['trainer'] = [
+                'id' => $trainer?->id,
+                'nama_trainer' => $trainer?->nama_trainer,
+            ];
+            $data['trainer.nama_trainer'] = $trainer?->nama_trainer;
+        }
+
         return array_merge( $row, $data );
     }
 
