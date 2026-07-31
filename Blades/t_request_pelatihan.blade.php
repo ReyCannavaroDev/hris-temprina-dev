@@ -263,7 +263,8 @@
                       searchfield: 'this.id, this.code,this.name_short,this.name_long,type.value1'
                     },
                   onsuccess:(response) => {
-                   response.data = [...response.data].map((dt) => {
+                   const items = Array.isArray(response.data) ? response.data : []
+                   response.data = items.map((dt) => {
                    dt['m_kary_id'] = dt['id'];
                    dt['nama_kary'] = dt['nama_lengkap'];
                    dt['divisi_kary'] = dt['m_divisi.name'];
