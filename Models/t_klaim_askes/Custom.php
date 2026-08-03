@@ -32,6 +32,22 @@ class t_klaim_askes extends \App\Models\BasicModels\t_klaim_askes
             // "errors" => ['error1']
         ];
     }
+
+    public function transformRowData(array $row)
+    {
+        $data = [];
+
+        if (!empty($row['m_kary_id'])) {
+            $kary = \App\Models\BasicModels\m_kary::find($row['m_kary_id']);
+            $data['m_kary'] = [
+                'id' => $kary?->id,
+                'nama_lengkap' => $kary?->nama_lengkap,
+            ];
+            $data['m_kary.nama_lengkap'] = $kary?->nama_lengkap;
+        }
+
+        return array_merge($row, $data);
+    }
     
 
     public function custom_posted()
