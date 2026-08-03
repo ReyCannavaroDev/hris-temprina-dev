@@ -149,19 +149,19 @@ watch(
 
     let totalAccepted = 0
 
+    if (isRead) {
+      newVal.forEach((item) => {
+        if (item.santunanPct === undefined) {
+          item.santunanPct = item?.['santunan.value_2']
+        }
+      })
+    }
+
     newVal.forEach((item) => {
 
       const nominal = Number(item.nominal) || 0
       const klaimTable = Number(item.klaim_table) || 0
-      const santunan = Number(item.santunanPct)
-
-      if (isRead) {
-        detailArr.value.forEach(item => {
-          if (item.santunanPct === undefined) {
-            item.santunanPct = item?.['santunan.value_2']
-          }
-        })
-      }
+      const santunan = Number(item.santunanPct ?? item?.['santunan.value_2']) || 0
 
       let accepted = 0
 
@@ -388,8 +388,9 @@ onBeforeMount(async () => {
         values.trx = resultJson?.data.trx
         values.datalog = resultJson?.data.approval_log
         initialValues = resultTrxJson.data
+        const detailSource = Array.isArray(initialValues.t_klaim_askes_d) ? initialValues.t_klaim_askes_d : []
         detailArr.value = await Promise.all(
-          initialValues.t_klaim_askes_d.map(async (dt) => {
+          detailSource.map(async (dt) => {
             let cabang_kary = ''
             let divisi_kary = ''
             let posisi_kary = ''
@@ -484,7 +485,7 @@ onBeforeMount(async () => {
 
         // Menambahkan Data Ke Array
 
-        initialValues.t_klaim_askes_d?.forEach((items) => {
+        ;(Array.isArray(initialValues.t_klaim_askes_d) ? initialValues.t_klaim_askes_d : []).forEach((items) => {
           if (actionText.value?.toLowerCase() === 'copy' && items.id) {
             delete items.id, delete items.no
           }

@@ -304,9 +304,10 @@
             </td> -->
             <td class="text-center border border-[#CACACA]">
               <FieldSelect class="mt-0 w-full" :bind="{ disabled: !actionText, clearable:false }"
-                :value="item.santunan_id" @input="v=>item.santunan_id=v" :errorText="formErrors.santunan_id?'failed':''"
-                :hints="formErrors.santunan_id" valueField="id" displayField="value" @update:valueFull="res => {
+                :value="item.santunan" @input="v=>item.santunan=v" :errorText="formErrors.santunan?'failed':''"
+                :hints="formErrors.santunan" valueField="value" displayField="value" @update:valueFull="res => {
                   if (res){
+                    item.santunan = res.value
                     item.santunanPct = res.value_2
                   } else {
                     item.santunanPct = null

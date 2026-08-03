@@ -10,6 +10,9 @@ class t_klaim_askes extends \App\Models\BasicModels\t_klaim_askes
     {
         parent::__construct();
         $this->helper = getCore("Helper");
+        $this->details = array_values(array_unique(array_merge($this->details, [
+            "t_klaim_askes_d",
+        ])));
     }
     
     public $fileColumns    = [ /*file_column*/ ];
