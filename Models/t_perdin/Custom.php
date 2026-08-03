@@ -72,11 +72,12 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         $hariCode = $this->getHariCode($formattedDate);
         $suffix = "{$hariCode}.{$datePart}/TMG/SBY/TGS";
 
-        $lastNomor = self::whereDate('date_from', $formattedDate)
-            ->whereNotNull('nomor')
-            ->where('nomor', 'like', "%/{$suffix}")
+        $lastNomor = self::whereNotNull('nomor')
             ->orderBy('id', 'desc')
-            ->value('nomor');
+            ->pluck('nomor')
+            ->first(function ($nomor) {
+                return preg_match('/^(\d{3})\//', $nomor);
+            });
 
         $seq = 1;
         if ($lastNomor && preg_match('/^(\d{3})\//', $lastNomor, $match)) {
