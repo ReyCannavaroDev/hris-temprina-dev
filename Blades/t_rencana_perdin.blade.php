@@ -186,8 +186,8 @@
               <td class="border px-2 py-1">{{ values.approval?.nomor ?? '-' }}</td>
             </tr>
             <tr class="border">
-              <td class="border px-2 py-1 font-semibold">Tanggal</td>
-              <td class="border px-2 py-1">{{ values.approval?.created_at ?? '-' }}</td>
+              <td class="border px-2 py-1 font-semibold">Tanggal Rencana Biaya</td>
+              <td class="border px-2 py-1">{{ values.approval?.trx_date ?? values.approval?.created_at ?? '-' }}</td>
             </tr>
             <tr class="border">
               <td class="border px-2 py-1 font-semibold">Pemohon</td>

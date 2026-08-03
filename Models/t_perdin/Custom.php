@@ -29,16 +29,67 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         return $this->belongsTo('App\Models\BasicModels\m_kary', 'm_kary_id', 'id');
     }
 
+    private function normalizeDate(?string $value) : ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        foreach (['d/m/Y', 'Y-m-d', 'd-m-Y'] as $format) {
+            try {
+                return Carbon::createFromFormat($format, $value)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                // coba format berikutnya
+            }
+        }
+
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function getHariCode(string $date) : string
+    {
+        $map = [
+            0 => 'MG',
+            1 => 'SN',
+            2 => 'SL',
+            3 => 'RB',
+            4 => 'KM',
+            5 => 'JM',
+            6 => 'SB',
+        ];
+
+        return $map[(int) Carbon::parse($date)->dayOfWeek] ?? 'SN';
+    }
+
+    private function generateNomorPerdin(?string $dateFrom) : string
+    {
+        $formattedDate = $this->normalizeDate($dateFrom) ?? Carbon::now()->format('Y-m-d');
+        $datePart = Carbon::parse($formattedDate)->format('dmy');
+        $hariCode = $this->getHariCode($formattedDate);
+        $suffix = "{$hariCode}.{$datePart}/TMG/SBY/TGS";
+
+        $lastNomor = self::whereDate('date_from', $formattedDate)
+            ->whereNotNull('nomor')
+            ->where('nomor', 'like', "%/{$suffix}")
+            ->orderBy('id', 'desc')
+            ->value('nomor');
+
+        $seq = 1;
+        if ($lastNomor && preg_match('/^(\d{3})\//', $lastNomor, $match)) {
+            $seq = ((int) $match[1]) + 1;
+        }
+
+        return sprintf('%03d/%s', $seq, $suffix);
+    }
+
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
-        $formattedDate = isset($arrayData['date_from']) 
-        ? Carbon::createFromFormat('d/m/Y', $arrayData['date_from'])->format('Y-m-d') 
-        : null;
-    
         $newArrayData = array_merge($arrayData, [
-            "nomor" => !empty($arrayData['nomor']) 
-                        ? $arrayData['nomor'] 
-                        : $this->helper->generateNomor("KODE RINCIAN PERDIN", true, null, $formattedDate),
+            "nomor" => $this->generateNomorPerdin($arrayData['date_from'] ?? null),
         ]);
 
         return [

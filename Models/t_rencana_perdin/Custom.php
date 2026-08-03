@@ -23,7 +23,8 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
-        $nomor = t_perdin::find($arrayData['t_perdin_id'])?->nomor ?? '';
+        $perdin = t_perdin::find($arrayData['t_perdin_id']);
+        $nomor = $perdin?->nomor ?? '';
         $newArrayData  = array_merge( $arrayData,[
             // "nomor" => $this->helper->generateNomor("KODE RINCIAN PERDIN"),
             "nomor" => $nomor,
@@ -156,6 +157,13 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
     {
         $tempId = $id;
         $trx = \DB::table("t_rencana_perdin")->find($tempId);
+        $trxDate = Date("Y-m-d");
+        if ($trx?->t_perdin_id) {
+            $perdin = t_perdin::find($trx->t_perdin_id);
+            if ($perdin?->date_from) {
+                $trxDate = Carbon::parse($perdin->date_from)->format('Y-m-d');
+            }
+        }
         $conf = [
             "app_name" => "APPROVAL RINCIAN PERDIN",
             "trx_id" => $trx->id,
@@ -163,7 +171,7 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
             "trx_name" => "Pengajuan Rincian Perdin",
             "form_name" => "t_pengajuan_perdin",
             "trx_nomor" => $trx->nomor,
-            "trx_date" => Date("Y-m-d"),
+            "trx_date" => $trxDate,
             "trx_creator_id" => auth()->user()->id,
             "target_id" => $target_id,
         ];

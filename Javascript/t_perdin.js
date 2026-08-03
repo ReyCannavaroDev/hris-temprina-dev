@@ -104,6 +104,12 @@ onBeforeMount(async () => {
       if (!res.ok) throw new Error("Failed when trying to read data")
       const resultJson = await res.json()
       initialValues = resultJson.data
+      if (actionText.value?.toLowerCase() === 'copy') {
+        delete initialValues.id
+        delete initialValues.nomor
+        delete initialValues.created_at
+        delete initialValues.updated_at
+      }
     } catch (err) {
       isBadForm.value = true
       swal.fire({

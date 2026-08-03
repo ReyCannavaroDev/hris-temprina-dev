@@ -42,9 +42,9 @@
     <!-- START COLUMN -->
     <div>
        <div>
-        <FieldX class="w-full !mt-3" :bind="{ readonly: !actionText }" :value="values.nomor"
+        <FieldX class="w-full !mt-3" :bind="{ readonly: true }" :value="values.nomor"
           :errorText="formErrors.nomor?'failed':''" @input="v=>values.nomor=v"
-          :hints="formErrors.nomor" placeholder="Masukkan Nomor" label="Nomor" fa-icon="" :check="false" />
+          :hints="formErrors.nomor" placeholder="Auto Generate By System" label="Nomor" fa-icon="" :check="false" />
       </div>
 
       <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.m_kary_id"
@@ -99,7 +99,7 @@
     <div>
       <FieldX class="w-full !mt-3" :bind="{ readonly: !actionText }" type="date" :value="values.date_from"
         :errorText="formErrors.date_from?'failed':''" @input="v=>values.date_from=v" :hints="formErrors.date_from"
-        placeholder="Masukkan Tanggal Awal" label="Tanggal Mulai" fa-icon="" :check="false" />
+        placeholder="Masukkan Tanggal Surat Tugas" label="Tanggal Surat Tugas" fa-icon="" :check="false" />
     </div>
 
     <div>
