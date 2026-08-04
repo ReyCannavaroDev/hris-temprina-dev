@@ -105,7 +105,7 @@
         :errorText="formErrors.t_request_pelatihan_id?'failed':''" :hints="formErrors.t_request_pelatihan_id"
         valueField="id" displayField="m_prog_pelatihan.tema_pelatihan" label="Pelatihan" placeholder="Pilih Pelatihan" @update:valueFull="v => {
           if (v && Object.keys(v).length) {
-            values.m_prog_pelatihan_id = v['m_prog_pelatihan.id'] || null
+            values.m_prog_pelatihan_id = v['m_prog_pelatihan.id'] || v.m_prog_pelatihan_id || null
             values.trainer_id = v['trainer_id'] || null
           } else {
             values.m_prog_pelatihan_id = null
@@ -156,7 +156,7 @@
         valueField="id" displayField="m_prog_pelatihan.tema_pelatihan" label="Pelatihan" placeholder="Pilih Pelatihan"
         @update:valueFull="v => {
           if (v && Object.keys(v).length) {
-            values.m_prog_pelatihan_id = v['m_prog_pelatihan.id'] || null
+            values.m_prog_pelatihan_id = v['m_prog_pelatihan.id'] || v.m_prog_pelatihan_id || null
             values.trainer_id = v['trainer_id'] || null
           } else {
             values.m_prog_pelatihan_id = null

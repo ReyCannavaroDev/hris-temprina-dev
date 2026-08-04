@@ -29,6 +29,17 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
                 'jumlah_karyawan' => $jumlahKaryawan
             ];
         }
+
+        if(!empty($row['m_prog_pelatihan_id'])){
+            $program = m_prog_pelatihan::find($row['m_prog_pelatihan_id']);
+            $data['m_prog_pelatihan'] = [
+                'id' => $program?->id,
+                'tema_pelatihan' => $program?->tema_pelatihan,
+            ];
+            $data['m_prog_pelatihan.id'] = $program?->id;
+            $data['m_prog_pelatihan.tema_pelatihan'] = $program?->tema_pelatihan;
+        }
+
         return array_merge( $row, $data );
     }
 

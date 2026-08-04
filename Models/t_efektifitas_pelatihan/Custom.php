@@ -16,6 +16,43 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
 
     //public $createAdditionalData = ["creator_id"=>"auth:id"];
     //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
+
+    public function transformRowData( array $row )
+    {
+        $data = [];
+
+        if(!empty($row['m_prog_pelatihan_id'])){
+            $program = m_prog_pelatihan::find($row['m_prog_pelatihan_id']);
+            $data['m_prog_pelatihan'] = [
+                'id' => $program?->id,
+                'tema_pelatihan' => $program?->tema_pelatihan,
+            ];
+            $data['m_prog_pelatihan.id'] = $program?->id;
+            $data['m_prog_pelatihan.tema_pelatihan'] = $program?->tema_pelatihan;
+        }
+
+        if(!empty($row['trainer_id'])){
+            $trainer = m_trainer::find($row['trainer_id']);
+            $data['trainer'] = [
+                'id' => $trainer?->id,
+                'nama_trainer' => $trainer?->nama_trainer,
+            ];
+            $data['trainer.nama_trainer'] = $trainer?->nama_trainer;
+        }
+
+        if(!empty($row['creator_id'])){
+            $user = default_users::find($row['creator_id']);
+            $kary = $user?->m_kary_id ? m_kary::find($user->m_kary_id) : null;
+            $data['m_kary'] = [
+                'id' => $kary?->id,
+                'nama_lengkap' => $kary?->nama_lengkap,
+            ];
+            $data['m_kary.nama_lengkap'] = $kary?->nama_lengkap;
+        }
+
+        return array_merge( $row, $data );
+    }
+
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
         $newArrayData  = array_merge( $arrayData,[
