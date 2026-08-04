@@ -157,7 +157,7 @@
                 transform:false,
                 join:false
               }
-          }" fa-icon="caret-down" label="Tipe Penilaian" placeholder="Pilih Tipe Penilaian" :check="false" />
+          }" fa-icon="caret-down" label="Trainer" placeholder="Pilih Trainer" :check="false" />
     </div>
 
     <div v-show="route.query.is_approval">
