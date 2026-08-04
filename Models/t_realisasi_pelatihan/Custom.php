@@ -12,6 +12,12 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
         parent::__construct();
         $this->helper = getCore("Helper");
         $this->approval = getCore("Approval");
+        $this->heirs = array_values(array_unique(array_merge($this->heirs, [
+            "t_realisasi_pelatihan_d_kary",
+        ])));
+        $this->detailsChild = array_values(array_unique(array_merge($this->detailsChild, [
+            "t_realisasi_pelatihan_d_kary",
+        ])));
     }
     
     public $fileColumns    = [ /*file_column*/ ];
@@ -60,6 +66,11 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
             "model"  => $model,
             "data"   => $newArrayData,
         ];
+    }
+
+    public function t_realisasi_pelatihan_d_kary() :\HasMany
+    {
+        return $this->hasMany('App\Models\BasicModels\t_realisasi_pelatihan_d_kary', 't_realisasi_pelatihan_id', 'id');
     }
 
     public function custom_send_approval()
