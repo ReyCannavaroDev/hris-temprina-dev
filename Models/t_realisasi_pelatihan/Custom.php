@@ -46,6 +46,16 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
             $data['m_prog_pelatihan.tema_pelatihan'] = $program?->tema_pelatihan;
         }
 
+        if(!empty($row['trainer_id'])){
+            $trainer = m_trainer::find($row['trainer_id']);
+            $data['trainer'] = [
+                'id' => $trainer?->id,
+                'nama_trainer' => $trainer?->nama_trainer,
+            ];
+            $data['trainer.id'] = $trainer?->id;
+            $data['trainer.nama_trainer'] = $trainer?->nama_trainer;
+        }
+
         return array_merge( $row, $data );
     }
 
