@@ -2410,6 +2410,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
         return $query
             ->whereIn("m_kary.m_divisi_id", $divisiIds)
+            ->distinct()
             ->when($level && $level->sequence < $maxLevel, function ($q) use (
                 $level
             ) {
