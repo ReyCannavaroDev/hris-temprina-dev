@@ -207,7 +207,7 @@
     </div>
 
     <div>
-      <FieldSelect :bind="{ disabled: !actionText  }"
+      <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_id }"
         class="w-full mt-3" :value="values.m_divisi_id" @input="v=>values.m_divisi_id=v"
         :errorText="formErrors.m_divisi_id?'failed':''" @update:valueFull="(objVal)=>{
                   values.m_dept_id = null
@@ -217,7 +217,7 @@
                     params: {
                       scopes:'Name',
                       //simplest:true,
-                      where: `this.is_active = 'true'`
+                      where: `this.is_active = 'true' AND this.m_branch_id='${values.m_branch_id}'`
                     }
                 }" valueField="id" displayField="name.value" :check="false" />
     </div>
