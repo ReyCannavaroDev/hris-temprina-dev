@@ -24,6 +24,11 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         return $this->hasMany(t_rencana_perdin::class, 't_perdin_id', 'id');
     }
 
+    public function t_penyelesaian_perdin()
+    {
+        return $this->hasMany(t_penyelesaian_perdin::class, 't_perdin_id', 'id');
+    }
+
     public function m_kary() :\BelongsTo
     {
         return $this->belongsTo('App\Models\BasicModels\m_kary', 'm_kary_id', 'id');
@@ -149,6 +154,6 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     
     public function scoperincian($model)
     {
-        return $model->with('t_rencana_perdin');
+        return $model->with(['t_rencana_perdin', 't_penyelesaian_perdin']);
     }
 }
