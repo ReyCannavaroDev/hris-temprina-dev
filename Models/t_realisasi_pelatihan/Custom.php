@@ -2,6 +2,7 @@
 
 namespace App\Models\CustomModels;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatihan
 {   
@@ -78,7 +79,7 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
         ];
     }
 
-    public function t_realisasi_pelatihan_d_kary() :\HasMany
+    public function t_realisasi_pelatihan_d_kary() :HasMany
     {
         return $this->hasMany('App\Models\BasicModels\t_realisasi_pelatihan_d_kary', 't_realisasi_pelatihan_id', 'id');
     }

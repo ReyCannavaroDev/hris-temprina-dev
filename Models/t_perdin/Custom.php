@@ -77,21 +77,20 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     private function generateNomorPerdin(?string $dateFrom) : string
     {
         $formattedDate = $this->normalizeDate($dateFrom) ?? Carbon::now()->format('Y-m-d');
+        $year = Carbon::parse($formattedDate)->year;
         $datePart = Carbon::parse($formattedDate)->format('dmy');
         $hariCode = $this->getHariCode($formattedDate);
         $suffix = "{$hariCode}.{$datePart}/TMG/SBY/TGS";
 
-        $lastNomor = self::whereNotNull('nomor')
-            ->orderBy('id', 'desc')
+        $lastSeq = self::whereNotNull('nomor')
+            ->whereYear('date_from', $year)
             ->pluck('nomor')
-            ->first(function ($nomor) {
-                return preg_match('/^(\d{3})\//', $nomor);
-            });
+            ->map(function ($nomor) {
+                return preg_match('/^(\d{3})\//', $nomor, $match) ? (int) $match[1] : 0;
+            })
+            ->max();
 
-        $seq = 1;
-        if ($lastNomor && preg_match('/^(\d{3})\//', $lastNomor, $match)) {
-            $seq = ((int) $match[1]) + 1;
-        }
+        $seq = ((int) $lastSeq) + 1;
 
         return sprintf('%03d/%s', $seq, $suffix);
     }

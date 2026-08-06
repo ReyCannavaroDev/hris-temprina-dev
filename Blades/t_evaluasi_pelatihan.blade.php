@@ -106,14 +106,23 @@
       <FieldPopup class="w-full col-span-9 !mt-3" :bind="{ readonly: !actionText }"
         :value="values.t_realisasi_pelatihan_id" @input="(v)=>values.t_realisasi_pelatihan_id=v"
         :errorText="formErrors.t_realisasi_pelatihan_id?'failed':''" :hints="formErrors.t_realisasi_pelatihan_id"
-        valueField="id" displayField="desc" label="Pelatihan" placeholder="Pilih Pelatihan" :api="{
+        valueField="id" displayField="m_prog_pelatihan.tema_pelatihan" label="Pelatihan" placeholder="Pilih Pelatihan"
+        @update:valueFull="v => {
+          if (v && Object.keys(v).length) {
+            values.m_prog_pelatihan_id = v['m_prog_pelatihan.id'] || v.m_prog_pelatihan_id || null
+            values.trainer_id = v['trainer_id'] || null
+          } else {
+            values.m_prog_pelatihan_id = null
+            values.trainer_id = null
+          }
+        }" :api="{
            url:  `${store.server.url_backend}/operation/t_realisasi_pelatihan`,
               headers: {
                 'Content-Type': 'Application/json',
                 Authorization: `${store.user.token_type} ${store.user.token}`
               },
               params: {
-                scopes:'owndata',
+                where: `this.status='POSTED'`,
               }
         }" placeholder="" fa-icon="" :check="false" :columns="[{
           headerName: 'No',
@@ -131,8 +140,15 @@
             },
             {
               flex: 1,
+              field: 'm_prog_pelatihan.tema_pelatihan',
+              headerName: 'Tema',
+              sortable: false, resizable: true, filter: false,
+              cellClass: ['border-r', '!border-gray-200', 'justify-start']
+            },
+            {
+              flex: 1,
               field: 'desc',
-              headerName: 'keterangan',
+              headerName: 'Keterangan',
               sortable: false, resizable: true, filter: false,
               cellClass: ['border-r', '!border-gray-200', 'justify-start']
             },
