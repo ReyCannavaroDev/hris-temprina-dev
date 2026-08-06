@@ -48,6 +48,15 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             $data['trainer.nama_trainer'] = $trainer?->nama_trainer;
         }
 
+        if(!empty($row['m_prog_pelatihan_id'])){
+            $m_prog_pelatihan = m_prog_pelatihan::find($row['m_prog_pelatihan_id']);
+            $data['m_prog_pelatihan'] = [
+                'id' => $m_prog_pelatihan?->id,
+                'tema_pelatihan' => $m_prog_pelatihan?->tema_pelatihan,
+            ];
+            $data['m_prog_pelatihan.tema_pelatihan'] = $m_prog_pelatihan?->tema_pelatihan;
+        }
+
         return array_merge( $row, $data );
     }
 

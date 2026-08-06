@@ -790,6 +790,16 @@ const landing = reactive({
     cellClass: ['border-r', '!border-gray-200', 'justify-start']
   },
   {
+    field: 'm_prog_pelatihan.tema_pelatihan',
+    headerName: 'Nama Pelatihan',
+    filter: true,
+    sortable: true,
+    flex: 2,
+    filter: 'ColFilter',
+    resizable: true,
+    cellClass: ['border-r', '!border-gray-200', 'justify-start']
+  },
+  {
     headerName: 'Tanggal Awal',
     field: 'date_from',
     filter: true,
