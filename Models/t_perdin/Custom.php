@@ -10,6 +10,10 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     {
         parent::__construct();
         $this->helper = getCore("Helper");
+        $this->joins = array_values(array_filter($this->joins, function ($join) {
+            return $join !== "m_kary.id=t_perdin.m_atasan_id";
+        }));
+        $this->joins[] = "m_kary.id=t_perdin.m_kary_id";
         $this->heirs = array_values(array_unique(array_merge($this->heirs, [
             "m_kary",
         ])));
