@@ -17,6 +17,14 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         $this->heirs = array_values(array_unique(array_merge($this->heirs, [
             "m_kary",
         ])));
+        
+        $newCols = ["tanggal_surat_tugas", "tanggal_rencana_biaya"];
+        $this->fillable = array_merge($this->fillable, $newCols);
+        $this->columns = array_merge($this->columns, $newCols);
+        $this->columnsFull = array_merge($this->columnsFull, ["tanggal_surat_tugas:date", "tanggal_rencana_biaya:date"]);
+        $this->createable = array_merge($this->createable, $newCols);
+        $this->updateable = array_merge($this->updateable, $newCols);
+        $this->searchable = array_merge($this->searchable, $newCols);
     }
     
     public $fileColumns    = [ /*file_column*/ ];
@@ -78,6 +86,8 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     {
         $newArrayData = array_merge($arrayData, [
             "nomor" => $this->helper->generateNomor("PERDIN", true, null, $arrayData['date_from'] ?? null),
+            "tanggal_surat_tugas" => $arrayData['date_from'] ?? null,
+            "tanggal_rencana_biaya" => $arrayData['date_from'] ?? null,
         ]);
 
         return [

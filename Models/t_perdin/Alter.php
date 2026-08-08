@@ -10,9 +10,12 @@ class tperdin extends Migration
     public function up()
     {
         Schema::table($this->tableName, function (Blueprint $table) {
-            //$table->string('_existColumnName_')->change();
-            //$table->string('_columnName_');
-            //$table->dropColumn([ ]);
+            if (!Schema::hasColumn($this->tableName, 'tanggal_surat_tugas')) {
+                $table->date('tanggal_surat_tugas')->nullable();
+            }
+            if (!Schema::hasColumn($this->tableName, 'tanggal_rencana_biaya')) {
+                $table->date('tanggal_rencana_biaya')->nullable();
+            }
         });
     }
 }
