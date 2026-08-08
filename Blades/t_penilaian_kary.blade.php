@@ -87,7 +87,7 @@
                 kary_id : `${store.user.data.m_kary_id ?? 0}`,
                 m_subcomp_id:`${values.m_subcomp_id}`,
                 m_branch_id:`${values.m_branch_id}`,
-                scopes :'bawahan,nonos,respo,divisi',
+                scopes :'lowerlevel,nonos,respo,divisi',
                 searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name'
               }
         }"
