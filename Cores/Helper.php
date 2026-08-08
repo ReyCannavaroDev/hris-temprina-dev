@@ -70,9 +70,19 @@ class Helper
                         in_array($trx_type->ref_type, ["day", "month", "year"])
                     ) {
                         // type dating
-                        // $temporaryCode .= date($trx_type->value);
                         $timestamp = $date ? strtotime($date) : time();
-                        $temporaryCode .= date($trx_type->value, $timestamp);
+                        $val = strtolower(trim((string) $trx_type->value));
+                        
+                        if ($val === 'hari_indo') {
+                            $map = [
+                                0 => 'MG', 1 => 'SN', 2 => 'SL', 3 => 'RB',
+                                4 => 'KM', 5 => 'JM', 6 => 'SB',
+                            ];
+                            $dayOfWeek = (int) date('w', $timestamp);
+                            $temporaryCode .= $map[$dayOfWeek] ?? 'SN';
+                        } else {
+                            $temporaryCode .= date($trx_type->value, $timestamp);
+                        }
                     } elseif ($trx_type->ref_type === "seq") {
                         // type seq
                         $table = "generate_num";

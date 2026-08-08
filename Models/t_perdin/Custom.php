@@ -74,31 +74,10 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         return $map[(int) Carbon::parse($date)->dayOfWeek] ?? 'SN';
     }
 
-    private function generateNomorPerdin(?string $dateFrom) : string
-    {
-        $formattedDate = $this->normalizeDate($dateFrom) ?? Carbon::now()->format('Y-m-d');
-        $year = Carbon::parse($formattedDate)->year;
-        $datePart = Carbon::parse($formattedDate)->format('dmy');
-        $hariCode = $this->getHariCode($formattedDate);
-        $suffix = "{$hariCode}.{$datePart}/TMG/SBY/TGS";
-
-        $lastSeq = self::whereNotNull('nomor')
-            ->whereYear('date_from', $year)
-            ->pluck('nomor')
-            ->map(function ($nomor) {
-                return preg_match('/^(\d{3})\//', $nomor, $match) ? (int) $match[1] : 0;
-            })
-            ->max();
-
-        $seq = ((int) $lastSeq) + 1;
-
-        return sprintf('%03d/%s', $seq, $suffix);
-    }
-
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
         $newArrayData = array_merge($arrayData, [
-            "nomor" => $this->generateNomorPerdin($arrayData['date_from'] ?? null),
+            "nomor" => $this->helper->generateNomor("PERDIN", true, null, $arrayData['date_from'] ?? null),
         ]);
 
         return [
