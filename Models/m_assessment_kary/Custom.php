@@ -14,8 +14,9 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
     //public $createAdditionalData = ["creator_id"=>"auth:id"];
     //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 
-    public function scopeForKaryawan($query, $karyawan_id)
+    public function scopeForKaryawan($query)
     {
+        $karyawan_id = request('karyawan_id');
         if (!$karyawan_id) return $query;
         
         $karyawan = \App\Models\BasicModels\m_kary::find($karyawan_id);
