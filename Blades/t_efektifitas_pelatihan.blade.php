@@ -236,7 +236,7 @@
                 transform:false,
                 join:false
               }
-          }" fa-icon="caret-down" label="Tipe Penilaian" placeholder="Pilih Tipe Penilaian" :check="false" />
+          }" fa-icon="caret-down" label="Tema Pelatihan" placeholder="Tema Terisi Otomatis" :check="false" />
     </div>
 
     <div>

@@ -13,6 +13,10 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
         parent::__construct();
         $this->helper = getCore("Helper");
         $this->approval = getCore("Approval");
+        
+        $this->joins = array_values(array_unique(array_merge($this->joins, [
+            "m_prog_pelatihan.id=t_realisasi_pelatihan.m_prog_pelatihan_id"
+        ])));
         $this->heirs = array_values(array_unique(array_merge($this->heirs, [
             "t_realisasi_pelatihan_d_kary",
         ])));
