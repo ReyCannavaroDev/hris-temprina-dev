@@ -761,8 +761,8 @@ const landing = computed(() => {
         cellClass: ['border-r', '!border-gray-200', 'justify-start']
       },
       {
-        headerName: 'Nama',
-        field: 'm_kary.nama_lengkap',
+        headerName: 'Nama Trainer',
+        field: 'trainer.nama_trainer',
         flex: 1,
         filter: true,
         sortable: true,
