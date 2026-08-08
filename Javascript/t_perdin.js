@@ -332,7 +332,7 @@ const landing = reactive({
       m_subcomp_id: data.subcomp_id,
       m_branch_id: data.branch_id,
       simplest: true,
-      searchfield: 'this.id, m_kary.nama_lengkap, this.tugas, this.tempat_tujuan, this.date_from, this.date_to'
+      searchfield: 'this.id, m_kary.nama_lengkap, this.tugas, this.tempat_tujuan, this.date_from, this.date_to, this.tanggal_surat_tugas, this.tanggal_rencana_biaya'
     })),
     onsuccess(response) {
       response.page = response.current_page
@@ -362,6 +362,26 @@ const landing = reactive({
   {
     field: 'm_kary.nama_lengkap',
     headerName: 'Nama Karyawan',
+    filter: true,
+    sortable: true,
+    filter: 'ColFilter',
+    resizable: true, wrapText: true,
+    flex: 1,
+    cellClass: ['border-r', '!border-gray-200', 'justify-start']
+  },
+  {
+    field: 'tanggal_surat_tugas',
+    headerName: 'Tgl Surat Tugas',
+    filter: true,
+    sortable: true,
+    filter: 'ColFilter',
+    resizable: true, wrapText: true,
+    flex: 1,
+    cellClass: ['border-r', '!border-gray-200', 'justify-start']
+  },
+  {
+    field: 'tanggal_rencana_biaya',
+    headerName: 'Tgl Rencana Biaya',
     filter: true,
     sortable: true,
     filter: 'ColFilter',

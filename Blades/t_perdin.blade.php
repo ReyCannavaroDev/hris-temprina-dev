@@ -109,6 +109,18 @@
     </div>
 
     <div>
+      <FieldX class="w-full !mt-3" :bind="{ readonly: true }" type="date" :value="values.tanggal_surat_tugas"
+        :errorText="formErrors.tanggal_surat_tugas?'failed':''" @input="v=>values.tanggal_surat_tugas=v" :hints="formErrors.tanggal_surat_tugas"
+        placeholder="Auto Generate By System" label="Tgl Surat Tugas (Auto)" fa-icon="" :check="false" />
+    </div>
+
+    <div>
+      <FieldX class="w-full !mt-3" :bind="{ readonly: true }" type="date" :value="values.tanggal_rencana_biaya"
+        :errorText="formErrors.tanggal_rencana_biaya?'failed':''" @input="v=>values.tanggal_rencana_biaya=v" :hints="formErrors.tanggal_rencana_biaya"
+        placeholder="Auto Generate By System" label="Tgl Rencana Biaya (Auto)" fa-icon="" :check="false" />
+    </div>
+
+    <div>
       <FieldX class="w-full !mt-3" :bind="{ readonly: !actionText }" :value="values.tugas"
         :errorText="formErrors.tugas?'failed':''" @input="v=>values.tugas=v" :hints="formErrors.tugas"
         placeholder="Tuliskan Detail Perjalanan Dinas" label="Perjalanan Dinas" fa-icon="" :check="false" />
