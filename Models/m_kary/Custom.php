@@ -2470,7 +2470,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
         })->first();
 
         if (!$m_kary || !$m_kary->m_posisi_id) {
-            return $query; // Untuk testing admin, aslinya $query->whereRaw("1 = 0");
+            return $query->whereRaw("1 = 0");
         }
 
         $divisiIds = [];
@@ -2490,7 +2490,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
         })->first();
 
         if (!$level) {
-            return $query; // Untuk testing admin, aslinya $query->whereRaw("1 = 0");
+            return $query->whereRaw("1 = 0");
         }
 
         return $query
