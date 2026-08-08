@@ -14,6 +14,11 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
     //public $createAdditionalData = ["creator_id"=>"auth:id"];
     //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 
+    public function m_assessment_kary_d_level() :\Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany('App\Models\CustomModels\m_assessment_kary_d_level', 'm_assessment_kary_id', 'id');
+    }
+
     public function scopeForKaryawan($query)
     {
         $karyawan_id = request('karyawan_id');
