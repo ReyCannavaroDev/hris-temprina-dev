@@ -20,6 +20,20 @@
     </div>
   </div>
 
+  <!-- Filter Divisi -->
+  <div class="px-2.5 py-1 mb-2 w-1/3">
+    <FieldSelect class="w-full" :bind="{ clearable: true }" :value="data.filter_divisi_id"
+      @input="v => { data.filter_divisi_id = v; onFilterDivisiChange() }" valueField="id" displayField="name" :api="{
+            url: `${store.server.url_backend}/operation/m_divisi`,
+            headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+            params: {
+              simplest: true,
+              transform: false,
+              join: false
+            }
+        }" placeholder="Filter Berdasarkan Divisi" label="Divisi" fa-icon="building" :check="false" />
+  </div>
+
 
   <hr>
   <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions"
@@ -51,6 +65,14 @@
       class="w-full col-span-9 !mt-3"
         :bind="{ readonly: !actionText }"
         :value="values.m_kary_id" @input="(v)=>values.m_kary_id=v"
+        @update:valueFull="(response)=>{
+          if(response) {
+            values.nama_jabatan = response['m_posisi.name'] ?? response['m_posisi.name'];
+            onKaryawanSelected(response);
+          } else {
+            values.nama_jabatan = '';
+          }
+        }"
         :errorText="formErrors.m_kary_id?'failed':''" 
         :hints="formErrors.m_kary_id" 
         valueField="id" displayField="nama_lengkap"
@@ -65,7 +87,7 @@
                 kary_id : `${store.user.data.m_kary_id ?? 0}`,
                 m_subcomp_id:`${values.m_subcomp_id}`,
                 m_branch_id:`${values.m_branch_id}`,
-                scopes :'lowerlevel,nonos,respo,divisi',
+                scopes :'bawahan,nonos,respo,divisi',
                 searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name'
               }
         }"
@@ -112,13 +134,6 @@
               sortable: false, resizable: true, filter: false,
               cellClass: ['border-r', '!border-gray-200', 'justify-end']
             },
-            //{
-            //  flex: 1,
-            //  field: 'atasan.nama_lengkap',
-            //  headerName: 'Atasan',
-            //  sortable: false, resizable: true, filter: false,
-            //  cellClass: ['border-r', '!border-gray-200', 'justify-end']
-            //},
             {
               flex: 1,
               field: 'm_posisi.name',
@@ -128,6 +143,12 @@
             },]"
       />
       
+    </div>
+
+    <div>
+      <FieldX class="w-full !mt-3" :bind="{ readonly: true }" :value="values.nama_jabatan"
+        :errorText="formErrors.nama_jabatan?'failed':''" @input="v=>values.nama_jabatan=v" :hints="formErrors.nama_jabatan"
+        placeholder="Jabatan Terisi Otomatis" label="Jabatan Karyawan" fa-icon="user-tie" :check="false" />
     </div>
 
     <div>
@@ -152,7 +173,7 @@
           }" fa-icon="caret-down" label="Atasan" placeholder="tulis" :check="false" />
     </div>
     <div>
-      <FieldSelect class="w-full col-span-9 !mt-3" :bind="{ disabled: actionText !== 'Tambah', clearable:true }"
+      <FieldSelect class="w-full col-span-9 !mt-3" :bind="{ disabled: true, clearable:true }"
         :value="values.tipe_penilaian" @input="v=>values.tipe_penilaian=v"
         :errorText="formErrors.tipe_penilaian?'failed':''" :hints="formErrors.tipe_penilaian" valueField="value"
         displayField="value" :api="{
@@ -164,7 +185,7 @@
                 transform:false,
                 join:false
               }
-          }" fa-icon="caret-down" label="Tipe Penilaian" placeholder="Pilih Tipe Penilaian" :check="false" />
+          }" fa-icon="caret-down" label="Tipe Penilaian (Terisi Otomatis)" placeholder="Pilih Tipe Penilaian" :check="false" />
     </div>
 
     <div>
@@ -172,13 +193,17 @@
         :value="values.m_assessment_kary_id" @input="v=>values.m_assessment_kary_id=v"
         :errorText="formErrors.m_assessment_kary_id?'failed':''" :hints="formErrors.m_assessment_kary_id"
         valueField="id" displayField="deskripsi" @update:valueFull="(response)=>{
-          onTipePenilaianSelected(response.id)}" :api="{
+          onTipePenilaianSelected(response.id); 
+          if(response && response['type.value']) {
+            values.tipe_penilaian = response['type.value'];
+          }
+        }" :api="{
     url: `${store.server.url_backend}/operation/m_assessment_kary`,
     headers: {
       'Content-Type': 'Application/json',
       Authorization: `${store.user.token_type} ${store.user.token}`
     },
-    params: isRead ? {} : { where: `type.value = '${values.tipe_penilaian}'`, transform: true }
+    params: isRead ? {} : { scopes: 'forKaryawan', karyawan_id: `${values.m_kary_id || 0}`, transform: true }
     }" fa-icon="caret-down" label="Penilaian" placeholder="tulis" :check="false" />
     </div>
 

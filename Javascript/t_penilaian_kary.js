@@ -136,6 +136,15 @@ watch(selectedSeq, (newVal) => {
 }, { deep: true });
 
 
+function onKaryawanSelected(karyawan) {
+  // Clear the existing selected assessment to force user to re-select 
+  // based on the newly filtered dropdown.
+  values.m_assessment_kary_id = null;
+  values.tipe_penilaian = null;
+  values.penilaian = null;
+  detailArr.value = [];
+}
+
 const hitungTotalNilai = (item, selectedValue) => {
   const subTerpilih = item.t_assessment_kary_sub_d.find(sub => sub.nilai === selectedValue);
   if (!subTerpilih) {
@@ -442,16 +451,26 @@ function filterShowData(params, noBtn) {
     activeBtn.value = noBtn
   }
   
-  if (activeBtn.value == null) {
-    // clear params filter
-    landing.api.params.where = null
-  } else if (params) {
-    landing.api.params.where = `this.status='DRAFT'`
-  } else {
-    landing.api.params.where = `this.status='POSTED'`
+  updateLandingFilter()
+}
+
+function onFilterDivisiChange() {
+  updateLandingFilter()
+}
+
+function updateLandingFilter() {
+  let whereClauses = [];
+  
+  if (activeBtn.value != null) {
+    whereClauses.push(activeBtn.value === 1 ? `this.status='DRAFT'` : `this.status='POSTED'`);
+  }
+  
+  if (data.filter_divisi_id) {
+    whereClauses.push(`m_kary.m_divisi_id=${data.filter_divisi_id}`);
   }
 
-  apiTable.value.reload()
+  landing.api.params.where = whereClauses.length ? whereClauses.join(' AND ') : null;
+  apiTable.value.reload();
 }
 
 const activeBtn = ref()

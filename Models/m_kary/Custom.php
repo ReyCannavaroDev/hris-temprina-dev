@@ -2506,6 +2506,31 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ->where("l.sequence", "<", $level->sequence);
     }
 
+    public function scopeBawahan($query)
+    {
+        $m_kary = m_kary::whereHas("default_users", function ($q) {
+            $q->where("id", auth()->id());
+        })->first();
+
+        if (!$m_kary) {
+            return $query->whereRaw("1 = 0");
+        }
+
+        $subordinateIds = \DB::select("
+            WITH RECURSIVE subordinates AS (
+                SELECT id FROM m_kary WHERE atasan_id = ?
+                UNION
+                SELECT k.id FROM m_kary k
+                INNER JOIN subordinates s ON k.atasan_id = s.id
+            )
+            SELECT id FROM subordinates
+        ", [$m_kary->id]);
+
+        $ids = array_column($subordinateIds, 'id');
+
+        return $query->whereIn('m_kary.id', $ids);
+    }
+
     public function public_getKary($req)
     {
         return $this->custom_getKary($req);

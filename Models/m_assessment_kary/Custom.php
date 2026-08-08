@@ -14,6 +14,35 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
     //public $createAdditionalData = ["creator_id"=>"auth:id"];
     //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 
+    public function scopeForKaryawan($query, $karyawan_id)
+    {
+        if (!$karyawan_id) return $query;
+        
+        $karyawan = \App\Models\BasicModels\m_kary::find($karyawan_id);
+        if (!$karyawan || !$karyawan->m_posisi_id) return $query;
+
+        // Get level_posisi_id of the karyawan
+        $level_id = \DB::table('m_level_posisi_d')
+            ->where('m_posisi_id', $karyawan->m_posisi_id)
+            ->value('m_level_posisi_id');
+
+        if (!$level_id) {
+            return $query->whereRaw("1 = 0");
+        }
+
+        // Filter m_assessment_kary based on level and divisi
+        $query->whereHas('m_assessment_kary_d_level', function($q) use ($level_id) {
+            $q->where('m_level_posisi_id', $level_id);
+        });
+
+        $query->where(function($q) use ($karyawan) {
+            $q->whereNull('m_divisi_id')
+              ->orWhere('m_divisi_id', $karyawan->m_divisi_id);
+        });
+
+        return $query;
+    }
+
     public function transformRowData( array $row)
     {
         $data = [];
