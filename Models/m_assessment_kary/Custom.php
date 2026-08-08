@@ -43,6 +43,8 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
 
         $query->where(function($q) use ($karyawan) {
             $q->whereNull('m_divisi_id')
+              ->orWhere('m_divisi_id', 0)
+              ->orWhere('m_divisi_id', '')
               ->orWhere('m_divisi_id', $karyawan->m_divisi_id);
         });
 
