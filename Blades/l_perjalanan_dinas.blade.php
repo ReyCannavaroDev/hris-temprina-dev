@@ -1,4 +1,3 @@
-
 @verbatim
 <div class="flex flex-col gap-y-3">
   <div class="flex gap-x-4 px-2">
@@ -70,7 +69,7 @@
               values.m_branch_id=''
               values.m_subcomp_id=''
               values.m_divisi_id=''
-              detailArr = []
+
               //$log(values.divisi)
             }" :errorText="formErrors.m_comp_id?'failed':''" :hints="formErrors.m_comp_id" displayField="name"
             valueField="id" :api="{
@@ -95,7 +94,7 @@
               values.m_subcomp_id=v
               values.m_divisi_id=''
               values.m_branch_id=''
-              detailArr = []
+
               //$log(values.divisi)
             }" :errorText="formErrors.m_subcomp_id?'failed':''" :hints="formErrors.m_subcomp_id" displayField="name"
             valueField="id" :api="{
@@ -119,7 +118,7 @@
               //$log(v)
               values.m_branch_id=v
               values.m_divisi_id=''
-              detailArr = []
+
               //$log(values.divisi)
             }" :errorText="formErrors.m_branch_id?'failed':''" :hints="formErrors.m_branch_id" displayField="name"
             valueField="id" :api="{
@@ -142,7 +141,7 @@
             :value="values.m_divisi_id" :check="false" @input="(v)=>{
               //$log(v)
               values.m_divisi_id=v
-              detailArr = []
+
               //$log(values.m_divisi_id)
             }" :errorText="formErrors.m_divisi_id?'failed':''" :hints="formErrors.m_divisi_id" displayField="name"
             valueField="id" :api="{
