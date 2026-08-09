@@ -3,7 +3,7 @@
   $periode_from = $req->periode_from ?? date('Y-m').'-01';
   $periode_to = $req->periode_to ?? date('Y-m-d');
   $raw = \DB::select("
-    select t.nomor, kd.nama dir, d.nama div, dp.nama dept, 
+    select t.nomor, kd.nama dir, d.name div, dp.nama dept, 
     coalesce(j.value, '-') jenis_spd, t.tanggal, t.tgl_acara_awal, t.tgl_acara_akhir , za.nama zona_asal, zt.nama zona_tujuan,
     l.nama lokasi, u.name pic, t.total_biaya, (select r.total_biaya_spd from t_rpd r where r.t_spd_id = t.id and r.status = 'POSTED' limit 1) total_biaya_real,
     t.kegiatan, t.keterangan, t.status, t.is_kend_dinas
