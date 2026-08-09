@@ -143,7 +143,7 @@
               values.m_divisi_id=v
 
               //$log(values.m_divisi_id)
-            }" :errorText="formErrors.m_divisi_id?'failed':''" :hints="formErrors.m_divisi_id" displayField="name"
+            }" :errorText="formErrors.m_divisi_id?'failed':''" :hints="formErrors.m_divisi_id" displayField="name.value"
             valueField="id" :api="{
                 url: `${store.server.url_backend}/operation/m_divisi`,
                 headers: {
