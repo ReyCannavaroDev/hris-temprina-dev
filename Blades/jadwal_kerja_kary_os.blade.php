@@ -226,7 +226,7 @@
       <label class="col-span-12">Divisi</label>
       <FieldSelect :bind="{ disabled: !actionText, clearable:false }" :value="values.m_divisi_id"
         @input="v=>values.m_divisi_id=v" :errorText="formErrors.m_divisi_id?'failed':''" :hints="formErrors.m_divisi_id"
-        valueField="id" displayField="value" :api="{
+        valueField="id" displayField="name.value" :api="{
                 url: `${store.server.url_backend}/operation/m_divisi`,
                 headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                 params: {

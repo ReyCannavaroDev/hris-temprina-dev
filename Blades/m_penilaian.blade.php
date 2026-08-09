@@ -178,7 +178,7 @@
     </div>
 
      <div>
-            <FieldSelect :bind="{ disabled: false, clearable:true }" class="w-full mt-3" :value="values.m_divisi_id"
+            <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_id, clearable:true }" class="w-full mt-3" :value="values.m_divisi_id"
               @input="v=>values.m_divisi_id=v" :errorText="formErrors.m_divisi_id?'failed':''" @update:valueFull="(objVal)=>{
                   values.m_dept_id = null
                 }" label="Divisi" placeholder="Pilih Divisi" :hints="formErrors.m_divisi_id" :api="{
