@@ -230,6 +230,7 @@
                 url: `${store.server.url_backend}/operation/m_divisi`,
                 headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                 params: {
+                  scopes: 'Name',
                   transform:true,
                   join:true,
                   where: `this.is_active='true' AND this.m_branch_id = ${values.m_branch_id}`,

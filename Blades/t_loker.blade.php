@@ -138,8 +138,8 @@
                     headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                     params: {
                       scopes:'Name',
-                      //simplest:true,
-                      //where: `this.is_active = 'true'`
+                      simplest:true,
+                      where: `this.is_active = 'true'` + (values.m_branch_id ? ` AND this.m_branch_id = '${values.m_branch_id}'` : '')
                     }
                 }" valueField="id" displayField="name.value" :check="false" />
 
