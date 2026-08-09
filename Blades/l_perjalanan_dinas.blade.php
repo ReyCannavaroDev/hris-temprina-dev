@@ -153,6 +153,7 @@
                 params: {
                   simplest:true,
                   single:true,
+                  scopes: 'Name',
                   where: `this.is_active='true'` + (values.m_branch_id ? ` AND this.m_branch_id = '${values.m_branch_id}'` : ''),
                   transform:false,
                 }
