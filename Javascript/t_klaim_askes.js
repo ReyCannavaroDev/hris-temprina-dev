@@ -202,19 +202,9 @@ const apiKary = computed(() => {
     where: '',
   }
 
-  // Jika is_approval tidak true, baru masukkan params filter
-  if (!is_approval) {
-    params.m_subcomp_id = values.m_subcomp_id ?? null
-    params.m_branch_id = values.m_branch_id ?? null
-  }
-
-  console.log('Mode Approval:', is_approval)
-  console.log('branch', params.m_branch_id)
-  console.log('subcomp', params.m_subcomp_id)
-
   const where = []
 
-  // Logika 'where' juga bisa dibungkus kondisi yang sama jika diperlukan
+  // Keep the filter on m_kary only; request-level scope leaks into its detail tables.
   if (!is_approval) {
     if (values.m_subcomp_id != null) {
       where.push(`this.m_subcomp_id = ${values.m_subcomp_id}`)
@@ -355,6 +345,57 @@ const addKontrak = async () => {
   detailArr.value = [...detailArr.value, newKontrak]
 }
 
+async function readKlaimAskesForForm(id) {
+  const klaimId = Number(id)
+  if (!Number.isInteger(klaimId) || klaimId < 1) {
+    throw new Error('ID klaim tidak valid')
+  }
+
+  const headers = {
+    'Content-Type': 'Application/json',
+    Authorization: store.user.token_type + ' ' + store.user.token
+  }
+  const headerParams = new URLSearchParams({
+    where: 'this.id=' + klaimId,
+    paginate: '1',
+    join: 'true',
+    transform: 'false'
+  })
+  const headerResponse = await fetch(
+    store.server.url_backend + '/operation' + endpointApi + '?' + headerParams,
+    { headers }
+  )
+  if (!headerResponse.ok) {
+    throw new Error('Gagal membaca data klaim')
+  }
+
+  const headerJson = await headerResponse.json()
+  const headerRows = Array.isArray(headerJson.data) ? headerJson.data : []
+  if (!headerRows.length) {
+    throw new Error('Data klaim tidak ditemukan')
+  }
+
+  const klaim = headerRows[0]
+  const detailParams = new URLSearchParams({
+    where: 'this.t_klaim_askes_id=' + klaimId,
+    paginate: '100',
+    join: 'true',
+    transform: 'false'
+  })
+  const detailResponse = await fetch(
+    store.server.url_backend + '/operation/t_klaim_askes_d?' + detailParams,
+    { headers }
+  )
+  if (!detailResponse.ok) {
+    throw new Error('Gagal membaca detail klaim')
+  }
+
+  const detailJson = await detailResponse.json()
+  klaim.t_klaim_askes_d = Array.isArray(detailJson.data) ? detailJson.data : []
+
+  return klaim
+}
+
 onBeforeMount(async () => {
   // console.log('test')
   // onReset()
@@ -375,19 +416,13 @@ onBeforeMount(async () => {
         })
         const resultJson = await apiApp.json()
         console.log('test', resultJson.data)
-        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${resultJson.data.approval.trx_id}`, {
-          headers: {
-            'Content-Type': 'Application/json',
-            Authorization: `${store.user.token_type} ${store.user.token}`
-          },
-        })
-        if (!apiTrx.ok || !apiApp.ok) throw new Error("Failed when trying to read data")
-        const resultTrxJson = await apiTrx.json()
+        if (!apiApp.ok) throw new Error("Failed when trying to read data")
+        const trxData = await readKlaimAskesForForm(resultJson?.data?.approval?.trx_id)
         values.interval = resultJson?.data.approval
         values.approval = resultJson?.data.approval
         values.trx = resultJson?.data.trx
         values.datalog = resultJson?.data.approval_log
-        initialValues = resultTrxJson.data
+        initialValues = trxData
         const detailSource = Array.isArray(initialValues.t_klaim_askes_d) ? initialValues.t_klaim_askes_d : []
         detailArr.value = await Promise.all(
           detailSource.map(async (dt) => {
@@ -457,24 +492,13 @@ onBeforeMount(async () => {
         )
 
         // logic finish & Approved data
-        isApproved.value = resultTrxJson?.data?.cuti_status == 'APPROVED' ? true : false
+        isApproved.value = initialValues?.cuti_status == 'APPROVED' ? true : false
         isFinish.value = resultJson?.data?.approval?.tahap_saat_ini == resultJson?.data?.approval?.tahap_total ? true : false
       } else {
         const editedId = route.params.id
-        const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
         isRequesting.value = true
 
-        const params = { join: true, transform: false }
-        const fixedParams = new URLSearchParams(params)
-        const res = await fetch(dataURL + '?' + fixedParams, {
-          headers: {
-            'Content-Type': 'Application/json',
-            Authorization: `${store.user.token_type} ${store.user.token}`
-          },
-        })
-        if (!res.ok) throw new Error("Failed when trying to read data")
-        const resultJson = await res.json()
-        initialValues = resultJson.data
+        initialValues = await readKlaimAskesForForm(editedId)
 
         if (initialValues['status']) {
           values.status_name = initialValues['status']
