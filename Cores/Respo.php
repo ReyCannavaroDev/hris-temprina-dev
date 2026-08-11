@@ -246,7 +246,7 @@ class Respo
                     from m_menu a where a.$type = b.$type $parent_condition group by a.$type limit 2) path,
                 (select 
                     case
-                        when count(1) < 2 then (select c.path from m_menu c where c.$type = b.$type $parent_condition_c)
+                        when count(1) < 2 then (select c.endpoint from m_menu c where c.$type = b.$type $parent_condition_c)
                         else ''
                     end
                     from m_menu a where a.$type = b.$type $parent_condition group by a.$type limit 2) endpoint,
@@ -293,7 +293,7 @@ class Respo
                 'truncatable'  => true,
                 'icon'         => $dt->icon ?? 'arrow-right',
                 'description'  => $dt->description,
-                'endpoint'     => $dt->path,
+                'endpoint'     => $dt->endpoint ?? $dt->path,
                 'type'         => $dt->type,
             ], $access);
 

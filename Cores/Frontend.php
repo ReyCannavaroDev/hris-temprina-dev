@@ -293,7 +293,7 @@ class Frontend
                     'truncatable' => @$row['truncatable'] ? true : false,
                     'icon' => ($injIcon ?? $row['icon']) ?? 'cog',
                     'description' =>  $row['description'],
-                    'endpoint' =>  $row['path']
+                    'endpoint' =>  $row['endpoint'] ?? $row['path']
                 ];
             }else{
                 // menu yang punya child (dropdown)
