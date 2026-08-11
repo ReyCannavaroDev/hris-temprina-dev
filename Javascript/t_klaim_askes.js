@@ -199,6 +199,7 @@ const apiKary = computed(() => {
     join: false,
     transform: false,
     scopes: 'respo',
+    skip_m_kary_details: true,
     where: '',
   }
 
