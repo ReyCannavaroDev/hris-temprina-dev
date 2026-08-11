@@ -106,7 +106,12 @@ class Respo
 
         foreach ($level1 as $dt) {
             if ($dt["type"] === "multi") {
-                $dt["children"] = $this->qMenu("menu", $dt["modul"]);
+                $children = $this->qMenu("menu", $dt["modul"]);
+                foreach ($children as &$child) {
+                    $child["modul"] = $dt["modul"];
+                }
+                unset($child);
+                $dt["children"] = $children;
             }
             $fixedMenu[] = $dt;
             // tambahakan separator untuk pemisah modul
