@@ -48,7 +48,11 @@ class t_klaim_askes extends \App\Models\BasicModels\t_klaim_askes
 
         return array_merge($row, $data);
     }
-    
+
+    public function t_klaim_askes_d() :\HasMany
+    {
+        return $this->hasMany('App\Models\CustomModels\t_klaim_askes_d', 't_klaim_askes_id', 'id');
+    }
 
     public function custom_posted()
     {
