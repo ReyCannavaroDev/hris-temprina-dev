@@ -17,5 +17,8 @@ class t_klaim_askes_d extends \App\Models\BasicModels\t_klaim_askes_d
 
     public $createAdditionalData = ["creator_id"=>"auth:id"];
     public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
+    
+    // Override bug empty string required from Basic model
+    public $required = [];
 
 }
