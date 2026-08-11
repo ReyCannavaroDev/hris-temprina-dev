@@ -41,7 +41,13 @@
       </div>
 
     </div>
-    <div>
+    <div class="flex items-center gap-x-2">
+      <!-- FITUR DIRECT ID JUMP (CONCEPT) -->
+      <div class="flex items-center border border-gray-300 rounded-md overflow-hidden bg-white">
+        <input type="number" v-model="quickJumpId" placeholder="Go to ID..." class="px-2 py-1 text-sm outline-none w-24">
+        <button @click="quickJumpId ? $router.push($route.path + '/' + quickJumpId + '?action=Detail') : null" class="bg-gray-200 hover:bg-gray-300 px-2 py-1 border-l border-gray-300 text-sm font-semibold">Go</button>
+      </div>
+
       <RouterLink :to="$route.path+'/create?'+(Date.parse(new Date()))"
         class="border border-blue-600 text-blue-600 bg-white  hover:bg-blue-600 hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">
         Create New

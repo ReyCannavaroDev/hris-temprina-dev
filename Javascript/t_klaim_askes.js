@@ -21,7 +21,7 @@ let modalOpen = ref(false)
 let isFinish = ref(false)
 let dataLog = reactive({ items: [] })
 const detailArr = ref([])
-
+const quickJumpId = ref('')
 
 // ------------------------------ PERSIAPAN
 const endpointApi = '/t_klaim_askes'
