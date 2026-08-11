@@ -305,14 +305,14 @@ class Helper
             $text = "Setting approval tipe MENGAJUKAN tidak ditemukan";
             $next = false;
             $kode = "0000001";
-        }
-
-        $detail = $details[0];
-
-        if ($detail->default_users_id && $detail->default_users_id !== $userAuth->id) {
-            $text = "Anda tidak memiliki akses untuk membuat tiket approval ini";
-            $next = false;
-            $kode = "0000003";
+        } else {
+            $detail = $details[0];
+    
+            if ($detail->default_users_id && $detail->default_users_id !== $userAuth->id) {
+                $text = "Anda tidak memiliki akses untuk membuat tiket approval ini";
+                $next = false;
+                $kode = "0000003";
+            }
         }
 
         if (!$next) {
@@ -626,7 +626,7 @@ class Helper
         $process_data = DB::select($fixedConfig, [$app_id]);
 
         if (!count($process_data)) {
-            trigger_error("Maaf data approval tidak ditemukan");
+            trigger_error("Maaf data approval tidak ditemukan", E_USER_ERROR);
         }
 
         $process_data = $process_data[0];
