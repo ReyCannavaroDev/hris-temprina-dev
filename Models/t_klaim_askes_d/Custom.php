@@ -12,7 +12,7 @@ class t_klaim_askes_d extends \App\Models\BasicModels\t_klaim_askes_d
         $this->helper = getCore("Helper");
     }
     
-    public $fileColumns = ['bukti'];
+    public $fileColumns = [];
 
 
     public $createAdditionalData = ["creator_id"=>"auth:id"];
