@@ -202,10 +202,16 @@ class Respo
     {
         $where = "";
         $respo_condition = "";
+        $parent_condition = "";
+        $parent_condition_c = "";
         if ($type === "submodul") {
             $where = " and b.modul = '$ctx'";
+            $parent_condition = " and a.modul = '$ctx'";
+            $parent_condition_c = " and c.modul = '$ctx'";
         } elseif ($type === "menu") {
             $where = " and b.modul = '$ctx'";
+            $parent_condition = " and a.modul = '$ctx'";
+            $parent_condition_c = " and c.modul = '$ctx'";
         }
 
         $menu_respo = $this->getMenuRespo();
@@ -224,38 +230,38 @@ class Respo
                     when count(1) < 2 then 'single'
                     else 'multi'
                 end
-                from m_menu a where a.$type = b.$type limit 3) type ,
+                from m_menu a where a.$type = b.$type $parent_condition limit 3) type ,
                 b.$type modul,
                 (select 
                     case
-                        when count(1) < 2 then (select c.sequence  from m_menu c where c.$type = b.$type)
-                        else (select c.sequence from m_menu c where c.$type = b.$type order by c.sequence asc limit 1)
+                        when count(1) < 2 then (select c.sequence  from m_menu c where c.$type = b.$type $parent_condition_c)
+                        else (select c.sequence from m_menu c where c.$type = b.$type $parent_condition_c order by c.sequence asc limit 1)
                     end
-                    from m_menu a where a.$type = b.$type group by a.$type limit 2) sequence,
+                    from m_menu a where a.$type = b.$type $parent_condition group by a.$type limit 2) sequence,
                 (select 
                     case
-                        when count(1) < 2 then (select c.path from m_menu c where c.$type = b.$type)
+                        when count(1) < 2 then (select c.path from m_menu c where c.$type = b.$type $parent_condition_c)
                         else '#'
                     end
-                    from m_menu a where a.$type = b.$type group by a.$type limit 2) path,
+                    from m_menu a where a.$type = b.$type $parent_condition group by a.$type limit 2) path,
                 (select 
                     case
-                        when count(1) < 2 then (select c.path from m_menu c where c.$type = b.$type)
+                        when count(1) < 2 then (select c.path from m_menu c where c.$type = b.$type $parent_condition_c)
                         else ''
                     end
-                    from m_menu a where a.$type = b.$type group by a.$type limit 2) endpoint,
+                    from m_menu a where a.$type = b.$type $parent_condition group by a.$type limit 2) endpoint,
                 (select 
                     case
-                        when count(1) < 2 then (select c.description  from m_menu c where c.$type = b.$type)
+                        when count(1) < 2 then (select c.description  from m_menu c where c.$type = b.$type $parent_condition_c)
                         else '#'
                     end
-                    from m_menu a where a.$type = b.$type group by a.$type limit 2) description,
+                    from m_menu a where a.$type = b.$type $parent_condition group by a.$type limit 2) description,
                 (select 
                         case
-                            when count(1) < 2 then (select c.icon  from m_menu c where c.$type = b.$type)
+                            when count(1) < 2 then (select c.icon  from m_menu c where c.$type = b.$type $parent_condition_c)
                             else null
                         end
-                    from m_menu a where a.$type = b.$type group by a.$type limit 2) icon
+                    from m_menu a where a.$type = b.$type $parent_condition group by a.$type limit 2) icon
                 from m_menu b where b.is_active = true  $where $respo_condition
                 group by $type order by 3
         ");
