@@ -23,10 +23,6 @@ class m_kary extends \App\Models\BasicModels\m_kary
         $this->joins = array_values(array_filter($this->joins, function ($join) {
             return $join !== "m_jam_kerja.id=m_kary.m_jam_kerja_id";
         }));
-
-        if (app()->request->skip_m_kary_details) {
-            $this->details = [];
-        }
     }
 
     public $fileColumns = [
