@@ -202,9 +202,19 @@ const apiKary = computed(() => {
     where: '',
   }
 
+  // Jika is_approval tidak true, baru masukkan params filter
+  if (!is_approval) {
+    params.m_subcomp_id = values.m_subcomp_id ?? null
+    params.m_branch_id = values.m_branch_id ?? null
+  }
+
+  console.log('Mode Approval:', is_approval)
+  console.log('branch', params.m_branch_id)
+  console.log('subcomp', params.m_subcomp_id)
+
   const where = []
 
-  // Keep the filter on m_kary only; request-level scope leaks into its detail tables.
+  // Logika 'where' juga bisa dibungkus kondisi yang sama jika diperlukan
   if (!is_approval) {
     if (values.m_subcomp_id != null) {
       where.push(`this.m_subcomp_id = ${values.m_subcomp_id}`)
