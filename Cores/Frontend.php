@@ -560,7 +560,59 @@ class Frontend
             $jsString = \File::get(public_path("js/$modul.js"));
             $js = Blade::render($jsString, ['id' => $id]);
 
-            $fixedTemplate = "<template>\n$html\n</template>\n<script setup>\n$js\n</script>";
+            $sidebarGroupByModule = [
+                'm_standart_gaji_harian_os' => 'Master',
+                'm_company_outsourcing' => 'Master',
+                't_lembur_harian_os' => 'Transaksi',
+                't_perhitungan_gaji_harian_os' => 'Payroll',
+                't_perhitungan_gaji_borongan_os' => 'Payroll',
+                'presensi_absensi_os' => 'Transaksi',
+            ];
+
+            $sidebarCompatibilityJs = '';
+            if (isset($sidebarGroupByModule[$modul])) {
+                $sidebarGroup = json_encode($sidebarGroupByModule[$modul]);
+                $sidebarPath = json_encode('/' . $modul);
+                $sidebarCompatibilityJs = <<<JS
+// The static sidebar uses substring matching for its open state.
+const __generatorSidebarGroup = $sidebarGroup;
+const __generatorSidebarPath = $sidebarPath;
+const __generatorCloseInvalidSidebarGroup = () => {
+    const currentPath = window.location.pathname.replace(/\/+$/, '');
+    if (
+        currentPath !== __generatorSidebarPath &&
+        !currentPath.startsWith(__generatorSidebarPath + '/')
+    ) {
+        return false;
+    }
+
+    const sidebar = document.getElementById('scroll-nav-bar');
+    if (!sidebar) {
+        return false;
+    }
+
+    const trigger = Array.from(sidebar.querySelectorAll('.child-menu')).find((element) => {
+        const label = Array.from(element.children).find((child) => child.tagName === 'SPAN');
+        return element.nextElementSibling &&
+            element.nextElementSibling.tagName === 'UL' &&
+            label &&
+            label.textContent.trim() === __generatorSidebarGroup;
+    });
+    const submenu = trigger && trigger.nextElementSibling;
+    if (submenu && submenu.classList.contains('max-h-400')) {
+        trigger.click();
+        return true;
+    }
+
+    return false;
+};
+
+setTimeout(__generatorCloseInvalidSidebarGroup, 150);
+setTimeout(__generatorCloseInvalidSidebarGroup, 450);
+JS;
+            }
+
+            $fixedTemplate = "<template>\n$html\n</template>\n<script setup>\n$js\n$sidebarCompatibilityJs\n</script>";
             return $req->has('v3') ? base64_encode($fixedTemplate) : $fixedTemplate;
         } catch (\Exception $e) {
             return $e->getMessage();

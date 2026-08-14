@@ -26,24 +26,6 @@ class Respo
 
         $req = app()->request;
         $level1 = $this->qMenu();
-        $childrenByModule = [];
-        foreach ($level1 as $menu) {
-            if ($menu["type"] === "multi") {
-                $childrenByModule[$menu["modul"]] = $this->qMenu(
-                    "menu",
-                    $menu["modul"]
-                );
-            }
-        }
-
-        $outsourcingPaths = array_values(
-            array_filter(
-                array_column($childrenByModule["Outsourcing"] ?? [], "path"),
-                function ($path) {
-                    return !empty($path) && $path !== "#";
-                }
-            )
-        );
         $fixedMenu = [
             [
                 "modul" => "Dashboard",
@@ -123,35 +105,15 @@ class Respo
         // --- End restriction ---
 
         foreach ($level1 as $dt) {
-            $standaloneMenus = [];
             if ($dt["type"] === "multi") {
-                $children = [];
-                foreach ($childrenByModule[$dt["modul"]] ?? [] as $child) {
+                $children = $this->qMenu("menu", $dt["modul"]);
+                foreach ($children as &$child) {
                     $child["modul"] = $dt["modul"];
-
-                    // The frontend uses substring matching to open a sidebar group.
-                    // Keep prefix paths as leaves so an Outsourcing route cannot open another group.
-                    if (
-                        $dt["modul"] !== "Outsourcing" &&
-                        $this->isOutsourcingPathCollision(
-                            $child["path"] ?? null,
-                            $outsourcingPaths
-                        )
-                    ) {
-                        $child["modul"] = $child["text"];
-                        $child["type"] = "single";
-                        $standaloneMenus[] = $child;
-                        continue;
-                    }
-
-                    $children[] = $child;
                 }
+                unset($child);
                 $dt["children"] = $children;
             }
             $fixedMenu[] = $dt;
-            foreach ($standaloneMenus as $standaloneMenu) {
-                $fixedMenu[] = $standaloneMenu;
-            }
             // tambahakan separator untuk pemisah modul
             $fixedMenu[] = [
                 "separator" => true,
@@ -222,21 +184,6 @@ class Respo
         }
 
         return $fixedMenu;
-    }
-
-    private function isOutsourcingPathCollision($path, $outsourcingPaths)
-    {
-        if (!$path || $path === "#") {
-            return false;
-        }
-
-        foreach ($outsourcingPaths as $outsourcingPath) {
-            if (\Str::contains($outsourcingPath, $path)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     // Fungsi rekursif untuk menerapkan filter pada semua level children
