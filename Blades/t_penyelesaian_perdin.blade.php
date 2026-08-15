@@ -308,15 +308,15 @@
           if (obj) {
             values.kbs_id     = obj.id
             values.t_kbs_id     = obj.id
-            values.kbs_no     = obj.no
-            values.no_kbs     = obj.no
-            values.kbs_date   = obj.date
-            values.kbs_duedate= obj.duedate
-            values.kbs_amount = obj.amount
-            values.nominal = obj.amount
-            values.nominal_kbs = obj.amount
-            values.kbs_pic    = obj.pic
-            values.kbs_status = obj.status
+            values.kbs_no     = obj.nomor
+            values.no_kbs     = obj.nomor
+            values.kbs_date   = obj.tanggal
+            values.kbs_duedate= obj.tanggal
+            values.kbs_amount = obj.nominal
+            values.nominal = obj.nominal
+            values.nominal_kbs = obj.nominal
+            values.kbs_pic    = obj['m_kary.nama_lengkap']
+            values.kbs_status = obj.is_active
           } else {
             values.kbs_id      = null
             values.kbs_no      = null
@@ -328,14 +328,16 @@
             values.kbs_status  = null
           }
         }" :api="{
-          url: `https://erp1.temprina.com/api/public/t_kbs/getKbs`,
+          url: `${store.server.url_backend}/operation/t_kbs`,
           headers: {
             'Content-Type': 'application/json',
             Authorization: `${store.user.token_type} ${store.user.token}`
           },
           params: {
-            searchfield: 'date,no,duedate,pic,amount',
-            m_kary_id: values.m_kary_id
+            searchfield: 'tanggal,nomor,nominal,m_kary.nama_lengkap',
+            simplest: true,
+            join: true,
+            where: `this.m_kary_id=${values.m_kary_id}`
           }
         }" :columns="[
           {
@@ -346,42 +348,35 @@
             cellClass: ['justify-center', 'bg-gray-50']
           },
           {
-            field: 'no',
+            field: 'nomor',
             headerName: 'No KBS',
             flex: 1,
             sortable: true, resizable: true,
             cellClass: ['border-r', 'justify-center']
           },
           {
-            field: 'date',
+            field: 'tanggal',
             headerName: 'Tanggal',
             flex: 1,
             sortable: true, resizable: true,
             cellClass: ['border-r', 'justify-center']
           },
           {
-            field: 'duedate',
-            headerName: 'Jatuh Tempo',
+            field: 'm_kary.nama_lengkap',
+            headerName: 'Karyawan',
             flex: 1,
             sortable: true, resizable: true,
             cellClass: ['border-r', 'justify-center']
           },
           {
-            field: 'pic',
-            headerName: 'PIC',
-            flex: 1,
-            sortable: true, resizable: true,
-            cellClass: ['border-r', 'justify-center']
-          },
-          {
-            field: 'amount',
+            field: 'nominal',
             headerName: 'Nominal',
             flex: 1,
             sortable: true, resizable: true,
             cellClass: ['border-r', 'justify-center']
           },
           {
-            field: 'status',
+            field: 'is_active',
             headerName: 'Status',
             flex: 1,
             sortable: true, resizable: true,
