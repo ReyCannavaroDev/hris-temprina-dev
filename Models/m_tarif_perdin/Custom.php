@@ -41,6 +41,11 @@ class m_tarif_perdin extends \App\Models\BasicModels\m_tarif_perdin
         $model->with(["m_tarif_perdin_det"]);
     }
 
+    public function m_tarif_perdin_det()
+    {
+        return $this->hasMany(\App\Models\CustomModels\m_tarif_perdin_det::class, 'm_tarif_perdin_id', 'id');
+    }
+
     public function scopelevel($model)
     {
         $m_posisi_id = app()->request->t_m_posisi_id;
