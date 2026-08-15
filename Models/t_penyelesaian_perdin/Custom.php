@@ -18,12 +18,12 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
 
     public function t_penyelesaian_perdin_det() :\HasMany
     {
-        return $this->hasMany('App\Models\CustomModels\t_penyelesaian_perdin_det', 't_penyelesaian_perdin_id', 'id');
+        return $this->hasMany('App\Models\BasicModels\t_penyelesaian_perdin_det', 't_penyelesaian_perdin_id', 'id');
     }
 
     public function t_penyelesaian_perdin_d_laporan() :\HasMany
     {
-        return $this->hasMany('App\Models\CustomModels\t_penyelesaian_perdin_d_laporan', 't_penyelesaian_perdin_id', 'id');
+        return $this->hasMany('App\Models\BasicModels\t_penyelesaian_perdin_d_laporan', 't_penyelesaian_perdin_id', 'id');
     }
 
     public $createAdditionalData = ["creator_id"=>"auth:id"];

@@ -33,12 +33,12 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
 
     public function t_rencana_perdin() :\HasMany
     {
-        return $this->hasMany('App\Models\CustomModels\t_rencana_perdin', 't_perdin_id', 'id');
+        return $this->hasMany('App\Models\BasicModels\t_rencana_perdin', 't_perdin_id', 'id');
     }
 
     public function t_penyelesaian_perdin() :\HasMany
     {
-        return $this->hasMany('App\Models\CustomModels\t_penyelesaian_perdin', 't_perdin_id', 'id');
+        return $this->hasMany('App\Models\BasicModels\t_penyelesaian_perdin', 't_perdin_id', 'id');
     }
 
     public function m_kary() :\BelongsTo

@@ -20,7 +20,7 @@ class t_kbs extends \App\Models\BasicModels\t_kbs
 
     public function m_kary() :\BelongsTo
     {
-        return $this->belongsTo('App\Models\CustomModels\m_kary', 'm_kary_id', 'id');
+        return $this->belongsTo('App\Models\BasicModels\m_kary', 'm_kary_id', 'id');
     }
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
