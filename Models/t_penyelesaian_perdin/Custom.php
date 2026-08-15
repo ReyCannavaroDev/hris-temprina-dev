@@ -14,24 +14,16 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
     }
     
     public $fileColumns    = [ /*file_column*/ ];
-    public $details = [];
+    public $details = ["t_penyelesaian_perdin_det", "t_penyelesaian_perdin_d_laporan"];
 
-    public function readAfter( $model, $arrayData, $metaData, $id=null )
+    public function t_penyelesaian_perdin_det() :\HasMany
     {
-        $newArrayData = $arrayData;
-        
-        if (isset($newArrayData['id']) && $newArrayData['id']) {
-            $newArrayData['t_penyelesaian_perdin_det'] = \App\Models\CustomModels\t_penyelesaian_perdin_det::where('t_penyelesaian_perdin_id', $newArrayData['id'])->get()->toArray();
-            $newArrayData['t_penyelesaian_perdin_d_laporan'] = \App\Models\CustomModels\t_penyelesaian_perdin_d_laporan::where('t_penyelesaian_perdin_id', $newArrayData['id'])->get()->toArray();
-        } else {
-            $newArrayData['t_penyelesaian_perdin_det'] = [];
-            $newArrayData['t_penyelesaian_perdin_d_laporan'] = [];
-        }
+        return $this->hasMany('App\Models\CustomModels\t_penyelesaian_perdin_det', 't_penyelesaian_perdin_id', 'id');
+    }
 
-        return [
-            "model"  => $model,
-            "data"   => $newArrayData,
-        ];
+    public function t_penyelesaian_perdin_d_laporan() :\HasMany
+    {
+        return $this->hasMany('App\Models\CustomModels\t_penyelesaian_perdin_d_laporan', 't_penyelesaian_perdin_id', 'id');
     }
 
     public $createAdditionalData = ["creator_id"=>"auth:id"];
