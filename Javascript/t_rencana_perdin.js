@@ -1,5 +1,5 @@
 import { useRouter, useRoute, RouterLink } from 'vue-router'
-import { ref, computed, readonly, reactive, inject, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, onActivated } from 'vue'
+import { ref, computed, readonly, reactive, inject, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, onActivated, watch } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -73,6 +73,50 @@ watchEffect(() => {
   detailArr.value.forEach(item => {
     item.amt = parseFloat(((item.qty ?? 0) * (item.price ?? 0)).toFixed(2))
   })
+})
+
+watch(() => [values.t_perdin_id, values.m_kary_id], async ([newPerdin, newKary]) => {
+  if (newPerdin && newKary && actionText.value === 'Tambah') {
+    isRequesting.value = true;
+    try {
+      const resPerdin = await fetch(`${store.server.url_backend}/operation/t_perdin/${newPerdin}?simplest=true`, {
+        headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` }
+      })
+      const dataPerdin = await resPerdin.json()
+
+      const resKary = await fetch(`${store.server.url_backend}/operation/m_kary/${newKary}?simplest=true`, {
+        headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` }
+      })
+      const dataKary = await resKary.json()
+
+      if (dataPerdin.data && dataKary.data) {
+        const payload = {
+          kota_id: dataPerdin.data.kota_id || dataPerdin.data['t_perdin.kota_id'] || dataPerdin.data.m_kota_id,
+          provinsi_id: dataPerdin.data.provinsi_id || dataPerdin.data['t_perdin.provinsi_id'] || dataPerdin.data.m_provinsi_id,
+          posisi_id: dataKary.data.m_posisi_id || dataKary.data['m_kary.m_posisi_id']
+        }
+
+        const resTarif = await fetch(`${store.server.url_backend}/operation/t_rencana_perdin/generateTarif`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` },
+          body: JSON.stringify(payload)
+        })
+        const resultTarif = await resTarif.json()
+        if (resultTarif.data && resultTarif.data.length > 0) {
+          detailArr.value = resultTarif.data
+        } else {
+          detailArr.value = []
+          swal.fire({
+            icon: 'info',
+            text: 'Tarif perdin belum tersedia untuk level posisi karyawan ini di kota tujuan.',
+          });
+        }
+      }
+    } catch (e) {
+      console.log(e)
+    }
+    isRequesting.value = false;
+  }
 })
 
 onBeforeMount(async () => {
