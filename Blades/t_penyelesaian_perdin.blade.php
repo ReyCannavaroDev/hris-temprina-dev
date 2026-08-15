@@ -302,8 +302,8 @@
     </div>
 
     <div>
-      <FieldPopup class="w-full !mt-3" :bind="{ readonly: !actionText }" :value="values.kbs_id"
-        @input="v => values.kbs_id = v" valueField="id" displayField="no" placeholder="Pilih KBS" label="KBS"
+      <FieldPopup :key="'kbs_' + values.m_kary_id" class="w-full !mt-3" :bind="{ readonly: !actionText }" :value="values.kbs_id"
+        @input="v => values.kbs_id = v" valueField="id" displayField="nomor" placeholder="Pilih KBS" label="KBS"
         :check="false" @update:valueFull="obj => {
           if (obj) {
             values.kbs_id     = obj.id
@@ -337,7 +337,7 @@
             searchfield: 'tanggal,nomor,nominal,m_kary.nama_lengkap',
             simplest: true,
             join: true,
-            where: `this.m_kary_id=${values.m_kary_id}`
+            where: `this.m_kary_id = ${values.m_kary_id}`
           }
         }" :columns="[
           {
