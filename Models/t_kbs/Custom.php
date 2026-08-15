@@ -13,6 +13,7 @@ class t_kbs extends \App\Models\BasicModels\t_kbs
     }
     
     public $fileColumns    = [ /*file_column*/ ];
+    public $joins       = ["m_kary.id=t_kbs.m_kary_id"];
 
     //public $createAdditionalData = ["creator_id"=>"auth:id"];
     //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];

@@ -129,7 +129,14 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
     public function custom_send_approval()
     {
         $target_id = req("target_id");
-        $user_target = $target_id ? default_users::where('m_kary_id', $target_id)->first()?->id : null;
+        $user_target = $target_id ? \App\Models\BasicModels\default_users::where('m_kary_id', $target_id)->first()?->id : null;
+
+        if (!$user_target) {
+            $trx = \DB::table("t_rencana_perdin")->find(req("id"));
+            $m_kary_id = $trx->m_kary_id ?? $trx->creator_id ?? 0;
+            $atasan_id = \App\Models\BasicModels\m_kary::where('id', $m_kary_id)->first()?->atasan_id ?? 0;
+            $user_target = \App\Models\BasicModels\default_users::where('m_kary_id', $atasan_id)->pluck('id')->first();
+        }
 
         $app = $this->createAppTicket(req("id"), $user_target);
         if (!$app) {
@@ -137,6 +144,16 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
                 "Terjadi kesalahan, coba kembali nanti",
                 400
             );
+        }
+
+        if ($user_target) {
+            $fcm_tokens = \App\Models\BasicModels\default_users_fcm::where('default_users_id', $user_target)->pluck('token_fcm');
+            if (count($fcm_tokens) > 0) {
+                $firebase = app(\App\Services\FirebaseMessagingService::class);
+                foreach ($fcm_tokens as $token) {
+                    $firebase->sendToDevice($token, "Approval Rencana Perdin", "Ada pengajuan rencana perdin yang butuh approval Anda.", ["title" => "Approval Rencana Perdin"]);
+                }
+            }
         }
 
         if (app()->request->header("Source") != "mobile") {
@@ -149,7 +166,7 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
         }
 
         return $this->helper->customResponse(
-            "Permintaan approval berhasil dibuat"
+            "Permintaan approval berhasil dibuat beserta notifikasi"
         );
     }
 
