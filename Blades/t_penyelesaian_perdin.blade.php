@@ -334,10 +334,10 @@
             Authorization: `${store.user.token_type} ${store.user.token}`
           },
           params: {
-            searchfield: 'tanggal,nomor,nominal,m_kary.nama_lengkap',
+            searchfield: 'this.tanggal, this.nomor, this.nominal, m_kary.nama_lengkap',
             simplest: true,
             join: true,
-            where: `this.m_kary_id = ${values.m_kary_id}`
+            where: values.m_kary_id ? `this.m_kary_id = ${values.m_kary_id}` : ''
           }
         }" :columns="[
           {
