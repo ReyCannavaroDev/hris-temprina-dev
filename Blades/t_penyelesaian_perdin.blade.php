@@ -137,7 +137,7 @@
                   values.kota_id = obj['kota.id']; 
                   values.tugas = obj.tugas; 
                   values.posisi_id = obj['m_kary.m_posisi_id']; 
-                  values.m_kary_id = obj['m_kary.id']; 
+                  values.m_kary_id = obj.m_kary_id; 
                   values.tujuan = obj.tujuan; 
                   values.tanggalAwal = obj.date_from; 
                   values.tanggalAkhir = obj.date_to; 
