@@ -14,6 +14,17 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
     }
     
     public $fileColumns    = [ /*file_column*/ ];
+    public $details = ["t_penyelesaian_perdin_det", "t_penyelesaian_perdin_d_laporan"];
+
+    public function t_penyelesaian_perdin_det()
+    {
+        return $this->hasMany(\App\Models\CustomModels\t_penyelesaian_perdin_det::class, 't_penyelesaian_perdin_id', 'id');
+    }
+
+    public function t_penyelesaian_perdin_d_laporan()
+    {
+        return $this->hasMany(\App\Models\CustomModels\t_penyelesaian_perdin_d_laporan::class, 't_penyelesaian_perdin_id', 'id');
+    }
 
     public $createAdditionalData = ["creator_id"=>"auth:id"];
     public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
