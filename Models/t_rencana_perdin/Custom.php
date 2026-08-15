@@ -17,6 +17,7 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
     public $fileColumns = [
         /*file_column*/
     ];
+    public $details = ["t_rencana_perdin_det"];
 
     //public $createAdditionalData = ["creator_id"=>"auth:id"];
     //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
