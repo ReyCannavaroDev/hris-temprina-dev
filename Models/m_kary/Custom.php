@@ -2414,24 +2414,16 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
         return $query
             ->whereIn("m_kary.m_divisi_id", $divisiIds)
-            ->distinct()
             ->when($level && $level->sequence < $maxLevel, function ($q) use (
                 $level
             ) {
-                $q->join(
-                    "m_level_posisi_d as ld",
-                    "ld.m_posisi_id",
-                    "=",
-                    "m_kary.m_posisi_id"
-                )
-                    ->join(
-                        "m_level_posisi as l",
-                        "l.id",
-                        "=",
-                        "ld.m_level_posisi_id"
-                    )
-                    ->where("l.sequence", ">", $level->sequence)
-                    ->select("m_kary.*");
+                $q->whereExists(function ($query) use ($level) {
+                    $query->select(\DB::raw(1))
+                          ->from('m_level_posisi_d as ld')
+                          ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                          ->whereColumn('ld.m_posisi_id', 'm_kary.m_posisi_id')
+                          ->where('l.sequence', '>', $level->sequence);
+                });
             });
     }
 
