@@ -430,6 +430,11 @@ class Respo
             ];
         }
 
+        // Map m_level_posisi to m_level_jabatan for permission check
+        if ($modul == '/m_level_posisi' || $modul == 'm_level_posisi') {
+            $modul = '/m_level_jabatan';
+        }
+
         // dd($respo_active);
         $access = getBasic('m_respo_d')
             ->select(
