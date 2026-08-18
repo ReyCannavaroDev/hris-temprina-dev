@@ -175,6 +175,7 @@ async function onSave() {
     values.month = `${values.mont}-01`
     values.m_prog_pelatihan_d_level =
       values.m_prog_pelatihan_d_level.map(id => ({
+        m_prog_pelatihan_id: 1,
         m_level_posisi_id: id,
         creator_id: store.user?.data?.id
       }))
