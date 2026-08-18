@@ -171,6 +171,7 @@ async function onSave() {
     const dataURL = `${store.server.url_backend}/operation${endpointApi}${isCreating ? '' : ('/' + route.params.id)}`
     isRequesting.value = true
     values.is_active = values.is_active ? 1 : 0
+    values.kode = '1'
     values.month = `${values.mont}-01`
     values.m_prog_pelatihan_d_level =
       values.m_prog_pelatihan_d_level.map(id => ({
