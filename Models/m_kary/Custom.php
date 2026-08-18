@@ -2799,6 +2799,11 @@ class m_kary extends \App\Models\BasicModels\m_kary
     public function scopeEfektifitas($model)
     {
         $req = app()->request;
+        $kary_id = $req->kary_id;
+        
+        if ($kary_id === 'null' || empty($kary_id)) {
+            return $model->whereRaw('1 = 0');
+        }
 
         return $model
             ->select("m_kary.*")
@@ -2815,7 +2820,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 "d.t_realisasi_pelatihan_id"
             )
             ->where("rp.id", $req->t_realisasi_pelatihan_id)
-            ->where("m_kary.atasan_id", $req->kary_id);
+            ->where("m_kary.atasan_id", $kary_id);
     }
 
     public function hitungRekap($kary_id, $start, $end): array

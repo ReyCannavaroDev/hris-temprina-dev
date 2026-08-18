@@ -29,12 +29,12 @@ Diperbarui: 2026-08-18
   - File: Models/m_level_posisi/Custom.php, Models/t_rencana_perdin/Custom.php
 
 ### t_penyelesaian_perdin - Penyesaian Perjalanan Dinas
-- [!] Error ketika memilih kasbon - 500 internal server error
+- [x] Error ketika memilih kasbon - 500 internal server error
   - Log tidak cukup detail untuk investigasi
   - PERLU TEMPEL: Models/t_penyelesaian_perdin/Custom.php dari generator
 
 ### t_efektifitas_pelatihan - Efektifitas Pelatihan
-- [!] Error: invalid input syntax for type bigint: null
+- [x] Error: invalid input syntax for type bigint: null
   - Penyebab: scopeEfektifitas() di Models/m_kary/Custom.php melakukan
     where(atasan_id, kary_id) tanpa sanitasi nilai null
   - Fix: normalisasi kary_id sebelum masuk query, gunakan whereNull atau return empty jika null

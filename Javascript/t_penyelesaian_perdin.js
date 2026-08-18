@@ -60,7 +60,7 @@ const changedValues = []
 
 const values = reactive({
   status: 'DRAFT',
-  m_kary_id: `${store.user.data.m_kary_id}`,
+  m_kary_id: store.user.data.m_kary_id && store.user.data.m_kary_id !== 'null' ? store.user.data.m_kary_id : null,
 })
 
 let id = 0
