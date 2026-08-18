@@ -1,180 +1,158 @@
-# Analisis Error `t_perdin` Saat Memilih Atasan
+# PLAN — Backlog Analisis dan Perbaikan HRIS Temprina
 
-## Ringkasan
+Dokumen ini adalah backlog hasil pemeriksaan source yang tersedia di workspace. Repo ini hanya berisi potongan source generator lama dan bukan aplikasi Laravel lengkap, sehingga status “sudah ada di source” belum sama dengan “sudah terbukti berhasil di server”. Tidak ada perubahan source aplikasi pada analisis ini; file yang diubah hanya dokumen rencana ini.
 
-Error pada lampiran adalah:
+## Status
 
-```text
-Call to undefined method App\Models\CustomModels\m_level_posisi::m_level_posisi_d()
-```
+- **BUG TERBUKTI DI SOURCE**: source saat ini memperlihatkan kondisi yang dapat menyebabkan feedback/error.
+- **SUDAH ADA DI SOURCE — PERLU REGRESI**: pola perbaikannya sudah ada, tetapi belum dapat diuji tanpa runtime/API/database.
+- **MITIGASI ADA — VALIDASI DEPLOYMENT**: source lokal menghindari masalah, tetapi perlu dipastikan source yang dijalankan server sama.
+- **BELUM DAPAT DIBUKTIKAN**: file terkait kosong/placeholder atau dependensi penting tidak tersedia.
+- **CLOSED CLIENT**: feedback dinyatakan selesai oleh client; tidak ada pekerjaan baru berdasarkan source saat ini.
+- **BLOCKED**: membutuhkan source, schema, log, atau aturan bisnis tambahan.
 
-Error ini terjadi ketika form `t_perdin` mengisi pilihan **Atasan**. Akar masalah langsungnya adalah runtime mencoba menjalankan `whereHas('m_level_posisi_d')` pada model `App\Models\CustomModels\m_level_posisi`, tetapi method relasi tersebut tidak tersedia pada class yang sedang dimuat oleh server.
+## Prioritas backlog
 
-Source yang ada di workspace lokal sudah berisi relasi tersebut pada `Models/m_level_posisi/Custom.php`. Karena itu, penyebab paling mungkin adalah source server berbeda dari workspace ini, file `Custom.php` belum ikut ter-deploy, atau class/OPcache/autoload di server masih memakai versi lama. Belum ada bukti bahwa perubahan migration atau tipe kolom database diperlukan untuk error ini.
+### P0 — t_klaim_askes: detail dan kontrak payload
 
-## Bukti alur request
+**Status: BUG TERBUKTI DI SOURCE**
 
-1. Form `t_perdin` pada `Blades/t_perdin.blade.php:84-95` memakai `FieldSelect` untuk Atasan.
-2. Field tersebut memanggil endpoint operasi `m_kary` dengan scope `higherlevel` dan parameter `t_m_kary_id` dari karyawan yang dipilih.
-3. Scope tersebut didefinisikan di `Models/m_kary/Custom.php:2381-2428`.
-4. Pada `Models/m_kary/Custom.php:2407-2411`, scope memanggil:
+Temuan yang perlu diperbaiki:
 
-   ```php
-   $level = m_level_posisi::whereHas("m_level_posisi_d", function ($q) use ($m_kary) {
-       $q->where("m_posisi_id", $m_kary->m_posisi_id);
-   })->first();
-   ```
+1. `Javascript/t_klaim_askes.js:636-641` mengisi `row.t_klaim_askes_id = row.id`. Data klaim dari API `getAskes` dibentuk sebagai data referensi dengan field `klaim_id`, `klaim_nama`, `klaim_type`, dan `m_kary_id` di `Models/m_kary/Custom.php` sekitar fungsi `getAskes`. Field `id` tidak terlihat dijamin ada. Akibatnya detail baru dapat tersimpan tanpa foreign key parent.
+2. `Blades/t_klaim_askes.blade.php:335` memanggil `removeDetail(item)`, sedangkan `Javascript/t_klaim_askes.js:643-645` mengharapkan index numerik untuk `splice`. Ini adalah mismatch nyata antara template dan fungsi JavaScript.
+3. UI menambahkan `santunanPct` ke object detail (`Javascript/t_klaim_askes.js:146-193`), sedangkan kolom detail di `Models/t_klaim_askes_d/Basic.php` hanya mendefinisikan `santunan` sebagai string. Saat save, `detailArr` dikirim utuh (`Javascript/t_klaim_askes.js:752-765`). Payload harus dinormalisasi agar field UI-only tidak ikut disimpan, atau kontraknya harus ditambahkan secara resmi pada model/database.
+4. `apiAskes` memakai `.map()` setelah fallback response (`Javascript/t_klaim_askes.js:279-307`). Fallback belum menjamin nilai akhir adalah array; response object tanpa `data` masih dapat memunculkan error `map`.
 
-5. Pemanggilan `whereHas` membutuhkan method relasi `m_level_posisi_d` pada model `m_level_posisi` yang dipakai runtime. Pesan error menunjukkan class yang dipakai adalah `App\Models\CustomModels\m_level_posisi`.
+Perbaikan yang direncanakan:
 
-## Temuan pada source lokal
+- Tetapkan parent ID dari claim yang sedang diedit/dibuat, bukan dari row referensi klaim askes.
+- Samakan pemanggilan `removeDetail` dengan kontrak fungsi, lalu uji hapus detail pertama, tengah, dan terakhir.
+- Pisahkan field tampilan seperti `santunanPct` dari payload database; pastikan `santunan` tetap mengikuti tipe string pada `t_klaim_askes_d`.
+- Tambahkan guard `Array.isArray` pada hasil API sebelum `.map()`.
 
-### Relasi yang dibutuhkan sudah ada
+Yang sudah tersedia dan perlu diregresikan:
 
-`Models/m_level_posisi/Custom.php:17-20` memiliki implementasi:
+- Relasi detail sudah didaftarkan di `Models/t_klaim_askes/Custom.php:13-15,52-55`.
+- Read form sudah mengambil endpoint detail dan mengisi `klaim.t_klaim_askes_d` di `Javascript/t_klaim_askes.js:359-407`.
+- Landing sudah meminta `transform=true` dan menampilkan `m_kary.nama_lengkap` di `Javascript/t_klaim_askes.js:1069-1081,1110`; `transformRowData()` memasok field tersebut di `Models/t_klaim_askes/Custom.php:36-50`.
 
-```php
-public function m_level_posisi_d()
-{
-    return $this->hasMany(\App\Models\CustomModels\m_level_posisi_d::class, 'm_level_posisi_id', 'id');
-}
-```
+### P0 — t_perdin: pastikan source perbaikan benar-benar yang dideploy
 
-`Models/m_level_posisi_d/Basic.php:14-20` dan `Models/m_level_posisi_d/Migration.php:13-21` juga konsisten dengan relasi tersebut:
+**Status: SUDAH ADA DI SOURCE — PERLU REGRESI / MITIGASI DEPLOYMENT**
 
-- tabel detail: `m_level_posisi_d`;
-- foreign key: `m_level_posisi_d.m_level_posisi_id`;
-- parent key: `m_level_posisi.id`;
-- keduanya bertipe `bigInteger`.
+Temuan:
 
-Artinya, berdasarkan source lokal, `whereHas('m_level_posisi_d')` adalah relasi yang valid. Error pada lampiran tidak dapat dijelaskan oleh source lokal yang sedang ditempel apabila file server identik dan class sudah dimuat ulang.
+- Relasi `t_penyelesaian_perdin()` sudah ada di `Models/t_perdin/Custom.php:39-42`, dan `t_perdin/Basic.php` mencantumkan `t_penyelesaian_perdin` sebagai heir. Feedback `undefined method` untuk relasi ini seharusnya sudah tertangani di source lokal.
+- Error lampiran awal menyebut `m_level_posisi_d()`, bukan `t_penyelesaian_perdin()`. Relasi `m_level_posisi_d()` sudah ada di `Models/m_level_posisi/Custom.php:17-20`, sementara `scopehigherlevel()` memakainya melalui `whereHas()` di `Models/m_kary/Custom.php:2381-2428`. Jika server masih menghasilkan undefined method, kandidat utama adalah source/cache/deployment tidak sama dengan workspace ini.
+- Penomoran hari sudah dinormalisasi dengan `trim()` dan `strtolower()` di `Cores/Helper.php:70-85`, termasuk mapping `MG`, `SN`, `SL`, `RB`, `KM`, `JM`, `SB`.
+- Kolom `tanggal_surat_tugas` dan `tanggal_rencana_biaya` sudah dibuat di `Models/t_perdin/Alter.php:12-19`, didaftarkan di `Models/t_perdin/Custom.php:21-27`, diisi dari `date_from` pada `createBefore()` (`Custom.php:85-97`), dan ditampilkan read-only di Blade serta tabel JavaScript.
 
-### Class Basic tidak memiliki relasi tersebut
+Yang harus diverifikasi:
 
-`Models/m_level_posisi/Basic.php:10-39` tidak mendefinisikan method `m_level_posisi_d`. Relasi hanya ada pada Custom model. Ini sesuai pola generator lama yang menaruh relasi tambahan di `Custom.php`, tetapi membuat deployment harus menyertakan file Basic dan Custom secara bersamaan.
+- Deploy ulang/clear cache sesuai mekanisme aplikasi kantor, lalu pastikan class `CustomModels` yang dipanggil runtime memuat dua relasi tersebut.
+- Uji pemilihan atasan pada `t_perdin` dan tarif perdin, termasuk nilai kosong dan karyawan tanpa level posisi.
+- Uji nomor untuk seluruh kode hari dan variasi spasi/huruf kapital.
+- Uji create/edit ketika `date_from` kosong, berubah, atau dikirim sebagai format tanggal berbeda.
+- Periksa regresi join: `t_perdin/Custom.php:13-16` mengganti join `m_atasan_id` menjadi join karyawan pengaju (`m_kary_id`). Pastikan landing/detail yang membutuhkan nama atasan tidak kehilangan datanya.
 
-Pesan error menyebut namespace `CustomModels`, jadi masalah yang paling masuk akal bukan sekadar scope memanggil class Basic. Yang perlu dibuktikan di server adalah isi class Custom yang benar-benar sudah dimuat, bukan hanya isi file di repository lokal.
+### P1 — menu karyawan dan relasi m_jam_kerja
 
-## Pemeriksaan tipe kolom dan relasi
+**Status: BUG TERBUKTI DI SOURCE; MITIGASI ADA**
 
-Relasi yang terlibat dalam pemilihan Atasan memiliki tipe yang konsisten:
+Temuan:
 
-| Relasi | Source | Tipe lokal | Status |
-|---|---|---:|---|
-| level ke detail | `m_level_posisi.id` → `m_level_posisi_d.m_level_posisi_id` | bigint → bigint | konsisten |
-| detail ke jabatan | `m_level_posisi_d.m_posisi_id` → `m_posisi.id` | bigint → bigint | konsisten |
-| karyawan ke jabatan | `m_kary.m_posisi_id` → `m_posisi.id` | bigint → bigint | konsisten |
-| karyawan ke divisi | `m_kary.m_divisi_id` → `m_divisi.id` | bigint → bigint | konsisten |
-| hierarki divisi | `m_divisi.parent_id` → `m_divisi.id` | bigint → bigint | konsisten |
-| perdin ke atasan | `t_perdin.m_atasan_id` → `m_kary.id` | bigint → bigint | konsisten |
+- `Models/m_kary/Migration.php:25` dan `Models/m_kary/Basic.php:23` mendefinisikan `m_jam_kerja_id` sebagai JSON.
+- `Models/m_kary/Basic.php` masih memiliki join `m_jam_kerja.id=m_kary.m_jam_kerja_id` dan relasi `belongsTo` ke ID. Ini tidak konsisten dengan tipe JSON dan cocok dengan error PostgreSQL `operator does not exist: bigint = json`.
+- `Models/m_kary/Custom.php:23-25` menghapus join tersebut dari constructor; salah satu query custom juga tidak lagi menjalankan join (`Custom.php:559`). Ini adalah mitigasi lokal, bukan bukti semua endpoint sudah aman.
+- Source `Models/m_jam_kerja/Basic.php` dan `Migration.php` masih placeholder, sehingga tipe/schema tabel referensi tidak dapat dipastikan dari workspace.
 
-Dengan demikian, error pada lampiran bukan indikasi mismatch `bigint` versus `json` pada jalur pemilihan Atasan.
+Rencana:
 
-## Hal yang bukan akar masalah error lampiran
+- Inventaris semua endpoint/menu yang memakai `m_kary`, `joins`, atau scope terkait jam kerja.
+- Tentukan kontrak data berdasarkan migration/schema resmi: apakah `m_jam_kerja_id` memang JSON, atau seharusnya bigint.
+- Jangan mengubah tipe kolom atau join secara global sebelum schema resmi tersedia.
+- Uji menu karyawan dengan data `m_jam_kerja_id` null, satu ID, dan JSON array setelah source server dipastikan sama.
 
-Workspace memang memiliki masalah tipe lain yang perlu dipisahkan dari kasus ini:
+### P1 — t_efektivitas_pelatihan: parameter atasan bernilai literal null
 
-- `Models/m_kary/Migration.php:25` mendefinisikan `m_jam_kerja_id` sebagai JSON.
-- `Models/m_kary/Basic.php:23-25` masih mencatat metadata/join `m_jam_kerja.id=m_kary.m_jam_kerja_id`.
-- `Models/m_kary/Custom.php:23-25` secara eksplisit menghapus join tersebut.
+**Status: BUG TERBUKTI DI SOURCE**
 
-Ini merupakan indikasi masalah lama `bigint = json` yang mungkin terkait listing karyawan, tetapi lampiran `t_perdin` berisi error `undefined method`, bukan error operator PostgreSQL. Jangan memperbaiki field `m_jam_kerja_id` sebagai solusi untuk error Atasan sebelum ada query/log yang membuktikan jalurnya.
+Bukti:
 
-## Diagnosis dan tingkat kepastian
+- `Models/m_kary/Custom.php:2799-2818` pada `scopeEfektifitas()` membaca `request('kary_id')` lalu langsung menjalankan `where('m_kary.atasan_id', $req->kary_id)`.
+- Log feedback yang ditempel menunjukkan query memakai `m_kary.atasan_id = null`, yang di PostgreSQL dapat menjadi invalid input syntax karena `null` diperlakukan sebagai string/parameter, bukan `IS NULL`.
 
-### Pasti
+Rencana:
 
-- Request Atasan masuk ke scope `higherlevel` pada model `m_kary`.
-- Scope tersebut memanggil relasi `m_level_posisi_d`.
-- Runtime pada saat error tidak menemukan method relasi itu pada `App\Models\CustomModels\m_level_posisi`.
+- Tetapkan perilaku bisnis ketika `kary_id` kosong: kembalikan hasil kosong/validasi 422, atau gunakan `whereNull` hanya jika memang itu aturan bisnis.
+- Normalisasi string `"null"`, string kosong, dan nilai null sebelum query.
+- Uji karyawan yang mempunyai bawahan, tanpa bawahan, `kary_id` kosong, dan `kary_id` tidak valid.
 
-### Sangat mungkin
+### P1 — t_klaim_askes: read, nama karyawan, dan struktur santunan
 
-- Server menjalankan versi `Models/m_level_posisi/Custom.php` yang lebih lama atau tidak sama dengan source lokal.
-- File Custom belum tersalin saat deployment, atau class yang sudah dimuat belum di-reload setelah file berubah.
-- Cache class/OPcache/autoload membuat proses aplikasi masih menggunakan definisi class lama.
+**Status: SUDAH ADA DI SOURCE — PERLU REGRESI; sebagian masih tercakup P0**
 
-### Belum dapat dipastikan dari workspace
+- Relasi `t_klaim_askes_d` dan proses read sudah ada, sehingga keluhan detail tidak terbaca tidak dapat dinyatakan masih terjadi hanya dari source.
+- `transformRowData()` sudah menambahkan nama karyawan untuk landing.
+- Field `santunan` di detail memang bertipe string. Yang belum konsisten adalah field UI `santunanPct`, bukan tipe `santunan` itu sendiri.
+- Kesimpulan: jangan mengulang perubahan relasi/read sebelum P0 diuji; fokus pada kontrak payload dan guard array.
 
-- Environment asal error: QL, development, atau production.
-- Commit/salinan source yang sedang berjalan di environment tersebut.
-- Apakah ada mekanisme generator/loader lain yang mengganti class Custom dengan class berbeda.
-- Data karyawan tertentu yang dipilih, nilai `m_posisi_id`, serta isi aktual tabel `m_level_posisi_d`.
+### P2 — pengajuan pelatihan: dropdown divisi berulang
 
-## Rencana perbaikan
+**Status: SUDAH ADA DI SOURCE — PERLU REGRESI**
 
-### Tahap 1 — Verifikasi source yang berjalan
+Bukti:
 
-1. Bandingkan file server `Models/m_level_posisi/Custom.php` dengan source lokal.
-2. Pastikan namespace dan class yang dimuat adalah `App\Models\CustomModels\m_level_posisi`.
-3. Pastikan class tersebut memiliki method `m_level_posisi_d` dengan foreign key `m_level_posisi_id` dan local key `id`.
-4. Periksa apakah file `Models/m_level_posisi_d/Custom.php` tersedia pada server, karena relasi lokal mengarah ke class Custom detail.
-5. Setelah source disamakan, reload mekanisme cache/class yang digunakan oleh environment sesuai prosedur kantor. Jangan mengasumsikan route, service provider, Composer, Artisan, atau struktur Laravel standar dari workspace ini.
+- `Blades/t_request_pelatihan.blade.php:214-220` memfilter divisi aktif berdasarkan `m_branch_id` yang dipilih.
+- Branch reset juga tersedia pada Blade terkait, dan `Models/t_request_pelatihan/Custom.php:270-279` memiliki filter `m_subcomp_id`/`m_branch_id`.
 
-### Tahap 2 — Patch minimal bila server memang belum memiliki relasi
+Rencana verifikasi:
 
-File yang perlu diubah:
+- Uji kedua varian tampilan (`t_request_pelatihan` dan `_req_pelatihan`) bila keduanya masih digunakan.
+- Ganti branch beberapa kali dan pastikan pilihan divisi lama dikosongkan.
+- Pastikan API tidak mengembalikan duplikat untuk data divisi yang sama; jika source API memang duplikat, baru tentukan deduplikasi di layer yang benar.
 
-- `Models/m_level_posisi/Custom.php`
+### P2 — penilaian karyawan / assessment
 
-Perubahan minimal:
+**Status: BELUM DAPAT DIBUKTIKAN / BLOCKED**
 
-- tambahkan method `m_level_posisi_d()` seperti yang sudah ada di source lokal pada baris 17-20;
-- jangan mengubah migration atau tipe kolom;
-- jangan mengganti nama relasi yang dipanggil scope `higherlevel`;
-- jangan mengubah query level sebelum relasi runtime berhasil diverifikasi.
+Temuan:
 
-Jika source server ternyata memakai model Basic secara langsung, periksa loader model terlebih dahulu. Menyalin method ke Basic secara membabi buta dapat menyimpang dari pola generator dan dapat membuat class yang aktif berbeda dari yang diperkirakan.
+- UI `Blades/t_penilaian_kary.blade.php` dan `Javascript/t_penilaian_kary.js` ada, tetapi endpoint yang dipanggil adalah `t_assessment_kary` (`Javascript/t_penilaian_kary.js:28`).
+- `Models/t_assessment_kary/Basic.php`, `Custom.php`, `Migration.php`, serta model detailnya masih placeholder. Tidak ada `Models/t_penilaian_kary` yang dapat dijadikan kontrak transaksi.
+- UI sudah memiliki filter divisi dan scope hierarchy karyawan, tetapi itu belum membuktikan query rekursif atau aturan bawahan berlapis berjalan di backend.
+- `Javascript/t_penilaian_kary.js:316` memanggil `.map()` langsung pada `initialValues.t_assessment_kary_d`; guard array perlu dipertimbangkan setelah kontrak response model tersedia.
+- Mapping `Level Jabatan` ke `Tipe Penilaian` tidak ditemukan sebagai aturan final di source. Karena itu rancangan query rekursif, filter divisi, dan sinkronisasi jabatan jangan diimplementasikan sebelum aturan mapping dikonfirmasi.
 
-### Tahap 3 — Validasi data dan perilaku bisnis
+Rencana setelah blocker dibuka:
 
-Setelah error method selesai:
+- Minta source model/migration/alter/custom transaksi assessment yang sebenarnya.
+- Minta tabel mapping resmi level jabatan → tipe penilaian dan aturan atasan/bawahan.
+- Petakan query existing sebelum menambah recursive query.
+- Uji karyawan level pertama, bawahan langsung, bawahan berlapis, beda divisi, dan jabatan yang tidak punya mapping.
 
-1. Pilih karyawan pada form `t_perdin`.
-2. Pastikan request Atasan mengirim `t_m_kary_id` yang valid, bukan string kosong atau nilai non-numerik.
-3. Pastikan karyawan tersebut memiliki `m_posisi_id`.
-4. Pastikan posisi tersebut memiliki baris pada `m_level_posisi_d`.
-5. Pastikan level memiliki `sequence` dan terdapat kandidat dengan level lebih tinggi pada divisi yang sama atau divisi induknya.
-6. Pastikan pilihan Atasan menampilkan `id` dan `nama_lengkap`.
-7. Simpan `t_perdin` dan pastikan `m_atasan_id` tersimpan sebagai ID karyawan, bukan object JSON atau string kosong.
+Feedback indikator penilaian staff dicatat sebagai **CLOSED CLIENT** sesuai laporan maintenance; tidak ada bukti source yang mengharuskan perubahan baru.
 
-## Risiko dan dampak
+## Daftar pengujian minimum
 
-- Dampak langsung perbaikan relasi terbatas pada query scope `higherlevel` dan endpoint pilihan Atasan.
-- Jika relasi tidak ditemukan hanya karena deployment stale, perubahan database tidak diperlukan.
-- Jika karyawan tidak memiliki posisi/level, daftar Atasan dapat kosong tanpa error; ini merupakan kondisi data atau aturan bisnis, bukan kegagalan relasi.
-- `Models/t_perdin/Custom.php:13-16` menghapus join inherited `m_kary.id=t_perdin.m_atasan_id` lalu menambahkan join untuk `m_kary_id`. Ini tidak menjadi penyebab error saat lookup Atasan, tetapi perlu diuji terpisah karena dapat memengaruhi listing/detail `t_perdin` yang mengharapkan data atasan dari join otomatis.
-- Scope `higherlevel` mencari rantai `m_divisi.parent_id` dengan loop. Data parent yang melingkar dapat menyebabkan loop tidak selesai; validasi data hierarki perlu dilakukan jika request tidak lagi gagal pada method tetapi tetap lambat.
+- **t_perdin**: pilih atasan, pilih tarif, create/edit tanggal, nomor semua hari, read/detail, dan data tanpa level posisi.
+- **m_kary**: menu landing, join jam kerja, nilai ID/JSON/null, serta endpoint yang memakai Basic dan Custom model.
+- **t_efektivitas_pelatihan**: `kary_id` valid, kosong, literal `null`, null database, dan karyawan tanpa bawahan.
+- **t_klaim_askes**: tambah detail, simpan, baca ulang, hapus per posisi, approval read, santunan, map response non-array, dan nama karyawan di landing.
+- **t_request_pelatihan**: branch berubah, divisi reset, data tidak duplikat.
+- **assessment**: hanya setelah model dan aturan mapping tersedia.
 
-## Rencana pengujian
+## Urutan pengerjaan yang disarankan
 
-Karena workspace ini hanya berisi source generator lama dan bukan aplikasi yang dapat dijalankan langsung, pengujian runtime harus dilakukan oleh programmer pada environment yang memiliki dependency dan database.
+1. Perbaiki dan uji P0 `t_klaim_askes`.
+2. Cocokkan source runtime/deployment untuk relasi `t_perdin` dan `m_level_posisi_d`.
+3. Selesaikan kontrak schema `m_jam_kerja`, lalu uji menu karyawan.
+4. Normalisasi parameter `kary_id` pada efektivitas pelatihan.
+5. Jalankan regresi training request dan t_perdin.
+6. Minta source/aturan assessment sebelum melanjutkan rollbacked customization.
+6. Setelah item di atas tervalidasi, lakukan audit ulang untuk feedback Temprina lain yang belum memiliki bukti source.
 
-### Pemeriksaan source
+## Batasan analisis
 
-- [ ] `Models/m_level_posisi/Custom.php` di environment target memiliki method `m_level_posisi_d()`.
-- [ ] `Models/m_level_posisi_d/Custom.php` tersedia dan class-nya sesuai namespace.
-- [ ] Source `Models/m_kary/Custom.php` pada environment target memuat scope `higherlevel` yang sama.
-- [ ] Tidak ada credential, dump database, atau data pribadi yang disalin ke workspace.
-
-### Smoke test UI/API
-
-- [ ] Form `t_perdin` dapat dibuka.
-- [ ] Setelah karyawan dipilih, request pilihan Jabatan berhasil.
-- [ ] Request pilihan Atasan tidak lagi menghasilkan HTTP 500.
-- [ ] Kandidat Atasan dikembalikan dengan field `id` dan `nama_lengkap`.
-- [ ] Karyawan tanpa level ditangani sebagai daftar kosong atau perilaku bisnis yang telah disepakati, bukan fatal error.
-- [ ] Penyimpanan `t_perdin` menghasilkan `m_atasan_id` bigint yang valid.
-- [ ] Edit, detail, dan listing `t_perdin` tetap berjalan setelah perubahan.
-
-### Regression test
-
-- [ ] Listing `m_kary` tidak kembali terkena `bigint = json` pada join `m_jam_kerja`.
-- [ ] Scope lain pada `m_kary` yang memakai level (`lowerlevel`, `Bawahan`, export) tetap dapat dipanggil.
-- [ ] Pemilihan Atasan untuk divisi induk dan divisi tanpa parent berjalan sesuai aturan.
-- [ ] `t_pengajuan_perdin` yang memakai tarif/level tidak terkena regresi.
-
-## Kesimpulan
-
-Prioritas pertama adalah menyamakan dan memuat ulang source `Models/m_level_posisi/Custom.php` pada environment yang menghasilkan error. Source lokal sudah menunjukkan patch relasi yang dibutuhkan, sehingga belum ada alasan berbasis bukti untuk mengubah migration, join, atau tipe kolom database. Setelah error method terselesaikan, baru lakukan validasi data level, kandidat atasan, dan efek samping join `t_perdin`.
-
+Belum ada akses runtime, database, schema deployment, route/controller/service provider, atau log server tambahan. Karena itu rencana ini tidak menyimpulkan bahwa semua feedback sudah selesai hanya karena pola perbaikannya terlihat di source lokal. Setiap item “sudah ada di source” tetap membutuhkan pengujian endpoint dan konfirmasi source yang dideploy.
