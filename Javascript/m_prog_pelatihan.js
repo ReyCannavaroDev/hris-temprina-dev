@@ -352,7 +352,7 @@ const landing = reactive({
     params: {
       simplest: true,
       join: true,
-      searchfield: 'this.start_date, pic.nama_lengkap, jenis_pekerjaan.value, this.keterangan',
+      searchfield: 'this.kode, this.tema_pelatihan, this.sasaran',
     },
     onsuccess(response) {
       response.page = response.current_page
