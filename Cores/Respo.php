@@ -432,7 +432,13 @@ class Respo
 
         // Map m_level_posisi to m_level_jabatan for permission check
         if ($modul == '/m_level_posisi' || $modul == 'm_level_posisi') {
-            $modul = '/m_level_jabatan';
+            return [
+                'can_read'   => true,
+                'can_create' => true,
+                'can_update' => true,
+                'can_delete' => true,
+                'own_data' => false,
+            ];
         }
 
         // dd($respo_active);
