@@ -132,7 +132,7 @@ onBeforeMount(async () => {
       //console.log('kontol', initialValues)
       initialValues.m_prog_pelatihan_d_level =
         Array.isArray(initialValues.m_prog_pelatihan_d_level)
-          ? initialValues.m_prog_pelatihan_d_level.map(item => item['m_level_posisi.level_name'])
+          ? initialValues.m_prog_pelatihan_d_level.map(item => item.m_level_posisi_id)
           : []
 
     } catch (err) {
@@ -172,10 +172,8 @@ async function onSave() {
     isRequesting.value = true
     values.is_active = values.is_active ? 1 : 0
     values.month = `${values.mont}-01`
-    values.kode = '1'
     values.m_prog_pelatihan_d_level =
       values.m_prog_pelatihan_d_level.map(id => ({
-        m_prog_pelatihan_id: 1,
         m_level_posisi_id: id,
         creator_id: store.user?.data?.id
       }))

@@ -14,7 +14,7 @@ class m_prog_pelatihan extends \App\Models\BasicModels\m_prog_pelatihan
     public $createAdditionalData = ["creator_id"=>"auth:id"];
     public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 
-    public $details = ['m_prog_pelatihan_d_divisi', 'm_prog_pelatihan_d_level'];
+    public $details = ['m_prog_pelatihan_d_level'];
 
     public function m_prog_pelatihan_d_divisi() :\Illuminate\Database\Eloquent\Relations\HasMany
     {
@@ -24,6 +24,31 @@ class m_prog_pelatihan extends \App\Models\BasicModels\m_prog_pelatihan
     public function m_prog_pelatihan_d_level() :\Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany('App\Models\BasicModels\m_prog_pelatihan_d_level', 'm_prog_pelatihan_id', 'id');
+    }
+
+    public function createBefore($model, $arrayData, $metaData, $id=null)
+    {
+        $req = app()->request;
+        if(empty($req->m_prog_pelatihan_d_level)){
+            $this->details = [];
+        }
+        return [
+            "model"  => $model,
+            "data"   => $arrayData,
+        ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id=null)
+    {
+        $req = app()->request;
+        if(empty($req->m_prog_pelatihan_d_level)){
+            \App\Models\BasicModels\m_prog_pelatihan_d_level::where('m_prog_pelatihan_id', $id)->delete();
+            $this->details = [];
+        }
+        return [
+            "model"  => $model,
+            "data"   => $arrayData,
+        ];
     }
 
     public function createAfter($model, $arrayData, $metaData, $id=null)
