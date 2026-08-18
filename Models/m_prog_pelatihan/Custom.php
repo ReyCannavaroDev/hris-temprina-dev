@@ -53,13 +53,15 @@ class m_prog_pelatihan extends \App\Models\BasicModels\m_prog_pelatihan
 
     public function createAfter($model, $arrayData, $metaData, $id=null)
     {
-        $this->updateSasaran($model->id);
+        $realId = is_object($model) ? $model->id : $id;
+        $this->updateSasaran($realId);
         return true;
     }
 
     public function updateAfter($model, $arrayData, $metaData, $id=null)
     {
-        $this->updateSasaran($model->id);
+        $realId = is_object($model) ? $model->id : $id;
+        $this->updateSasaran($realId);
         return true;
     }
 
