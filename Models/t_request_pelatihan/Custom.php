@@ -291,6 +291,7 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
                 'm_kary.m_branch_id',
                 'm_kary.m_divisi_id',
                 'm_kary.m_posisi_id',
+                'm_kary.nama_lengkap',
                 'm_general.value as m_divisi.name'                    
             );
         }]);

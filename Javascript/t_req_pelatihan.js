@@ -48,7 +48,7 @@ onBeforeMount(async () => {
 })
 
 const values = reactive({
-  // status: true,
+  status: 'ACTIVE',
   // direktorat: store.user.data?.direktorat
 })
 
@@ -413,6 +413,25 @@ async function approval() {
 
 async function onSave() {
   try {
+    formErrors.value = {}
+    let hasError = false
+    const requiredFields = ['date_from', 'date_to', 'm_comp_id', 'm_branch_id', 'm_prog_pelatihan_id', 'sarana', 'trainer_id']
+    
+    requiredFields.forEach(field => {
+      if (!values[field]) {
+        formErrors.value[field] = ['Bidang ini wajib di isi']
+        hasError = true
+      }
+    })
+
+    if (hasError) {
+      isBadForm.value = true
+      swal.fire({
+        icon: 'error',
+        text: 'Maaf data belum valid, silahkan dikoreksi'
+      })
+      return
+    }
 
     values.t_request_pelatihan_d_kary = detailArr.value
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)

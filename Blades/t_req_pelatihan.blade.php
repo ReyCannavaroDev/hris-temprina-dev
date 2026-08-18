@@ -285,8 +285,12 @@
     </div>
 
     <div>
-      <FieldX placeholder="Masukan Status" label="Status" :bind="{ readonly: true }" type="text" :value="values.status"
-        class="w-full mt-3" @input="v=>values.status=v" :check="false" />
+      <FieldSelect class="w-full mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.status"
+        @input="v=>values.status=v" :errorText="formErrors.status?'failed':''" :hints="formErrors.status"
+        valueField="value" displayField="value" :options="[
+        { id: 1, value: 'ACTIVE' },
+        { id: 2, value: 'INACTIVE' }
+      ]" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
     </div>
 
 
