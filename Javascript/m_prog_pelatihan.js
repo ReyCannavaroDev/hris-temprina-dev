@@ -125,14 +125,14 @@ onBeforeMount(async () => {
       if (!res.ok) throw new Error("Failed when trying to read data")
       const resultJson = await res.json()
       initialValues = resultJson.data
-      initialValues.tampilDivisi = (initialValues.m_prog_pelatihan_d_divisi || []).map(item => item.m_divisi_id)
-      initialValues.tampilLevel = (initialValues.m_prog_pelatihan_d_level || []).map(item => item.m_level_posisi_id)
+      initialValues.tampilDivisi = (initialValues.m_prog_pelatihan_d_divisi || []).map(item => item['m_divisi.id'] || item.m_divisi_id)
+      initialValues.tampilLevel = (initialValues.m_prog_pelatihan_d_level || []).map(item => item['m_level_posisi.id'] || item.m_level_posisi_id)
       initialValues.mont = initialValues.month.slice(0, 7)
       initialValues.is_active = initialValues.is_active ? 1 : 0
       //console.log('kontol', initialValues)
       initialValues.m_prog_pelatihan_d_level =
         Array.isArray(initialValues.m_prog_pelatihan_d_level)
-          ? initialValues.m_prog_pelatihan_d_level.map(item => item.m_level_posisi_id)
+          ? initialValues.m_prog_pelatihan_d_level.map(item => item['m_level_posisi.id'] || item.m_level_posisi_id)
           : []
 
     } catch (err) {
