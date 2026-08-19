@@ -7,6 +7,17 @@ class t_request_pelatihan_d_kary extends \App\Models\BasicModels\t_request_pelat
     public function __construct()
     {
         parent::__construct();
+        $this->columnsFull = array_merge($this->columnsFull, [
+            "m_kary.nama_lengkap:string:optional",
+            "m_kary.m_branch_id:bigint:optional",
+            "m_kary.m_divisi_id:bigint:optional",
+            "m_kary.m_posisi_id:bigint:optional",
+            "nama_lengkap:string:optional",
+            "m_branch_id:bigint:optional",
+            "m_divisi_id:bigint:optional",
+            "m_posisi_id:bigint:optional",
+            "m_divisi.name:string:optional"
+        ]);
     }
     
     public $fileColumns    = [ /*file_column*/ ];

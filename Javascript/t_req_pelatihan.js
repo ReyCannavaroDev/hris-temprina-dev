@@ -144,7 +144,7 @@ onBeforeMount(async () => {
 
             return {
               ...dt,
-              nama_kary: dt['m_kary.nama_lengkap'],
+              nama_kary: dt['m_kary.nama_lengkap'] || dt['nama_lengkap'],
               cabang_kary,
               divisi_kary,
               posisi_kary
@@ -264,7 +264,7 @@ onBeforeMount(async () => {
 
             return {
               ...dt,
-              nama_kary: dt['m_kary.nama_lengkap'],
+              nama_kary: dt['m_kary.nama_lengkap'] || dt['nama_lengkap'],
               cabang_kary,
               divisi_kary,
               posisi_kary
