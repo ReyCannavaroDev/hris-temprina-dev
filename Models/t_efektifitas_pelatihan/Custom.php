@@ -2,15 +2,30 @@
 
 namespace App\Models\CustomModels;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pelatihan
 {    
     private $helper;
+    private $approval;
     public function __construct()
     {
         parent::__construct();
         $this->helper = getCore("Helper");
+        $this->approval = getCore("Approval");
+
+        $this->joins = array_values(array_unique(array_merge($this->joins, [
+            "m_prog_pelatihan.id=t_efektifitas_pelatihan.m_prog_pelatihan_id",
+            "m_trainer.id=t_efektifitas_pelatihan.trainer_id"
+        ])));
+
+        if (app()->request->isMethod('GET')) {
+            $this->details = [];
+            $this->detailsChild = [];
+        }
     }
+
+    public $details = ['t_efektifitas_pelatihan_detail'];
     
     public $fileColumns    = [ /*file_column*/ ];
 
@@ -50,11 +65,26 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
             $data['m_kary.nama_lengkap'] = $kary?->nama_lengkap;
         }
 
+        $detail = \DB::table('t_efektifitas_pelatihan_detail')
+            ->where('t_efektifitas_pelatihan_id', $row['id'])
+            ->leftJoin('m_kary', 't_efektifitas_pelatihan_detail.m_kary_id', '=', 'm_kary.id')
+            ->select(
+                't_efektifitas_pelatihan_detail.*',
+                'm_kary.nama_lengkap as m_kary.nama_lengkap'
+            )
+            ->orderBy('t_efektifitas_pelatihan_detail.sequence', 'asc')
+            ->orderBy('t_efektifitas_pelatihan_detail.id', 'asc')
+            ->get();
+
+        $data['t_efektifitas_pelatihan_detail'] = json_decode(json_encode($detail), true);
+
         return array_merge( $row, $data );
     }
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
+        $this->prepareDetailRequest();
+
         $newArrayData  = array_merge( $arrayData,[
             "kode" => $this->helper->generateNomor("KODE EFEKTIFITAS PELATIHAN"),
             "creator_id" => auth()->user()->id
@@ -63,6 +93,87 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
             "model"  => $model,
             "data"   => $newArrayData,
         ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id=null)
+    {
+        $this->prepareDetailRequest($id);
+
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
+        ];
+    }
+
+    private function prepareDetailRequest($id=null)
+    {
+        $req = app()->request;
+        $details = $req->t_efektifitas_pelatihan_detail ?? [];
+        $realisasiId = $req->t_realisasi_pelatihan_id ?? null;
+        $atasanId = default_users::find(auth()->user()->id)?->m_kary_id;
+
+        if (empty($details)) {
+            if ($id) {
+                \App\Models\BasicModels\t_efektifitas_pelatihan_detail::where('t_efektifitas_pelatihan_id', $id)->delete();
+            }
+            $this->details = [];
+            trigger_error("Detail efektifitas pelatihan belum terisi");
+        }
+
+        if (!$realisasiId) {
+            trigger_error("Realisasi pelatihan wajib dipilih");
+        }
+
+        if (!$atasanId) {
+            trigger_error("Data atasan user login tidak ditemukan");
+        }
+
+        $allowedKaryIds = \DB::table('t_realisasi_pelatihan_d_kary as d')
+            ->join('m_kary', 'm_kary.id', '=', 'd.m_kary_id')
+            ->where('d.t_realisasi_pelatihan_id', $realisasiId)
+            ->where('m_kary.atasan_id', $atasanId)
+            ->pluck('m_kary.id')
+            ->toArray();
+
+        if (empty($allowedKaryIds)) {
+            trigger_error("Tidak ada peserta pelatihan yang menjadi bawahan user login");
+        }
+
+        $cleanDetails = [];
+        foreach ($details as $det) {
+            $det = is_array($det) ? $det : (array) $det;
+            $mKaryId = $det['m_kary_id'] ?? null;
+
+            if (!$mKaryId || !in_array($mKaryId, $allowedKaryIds)) {
+                continue;
+            }
+
+            if (empty($det['komponen_efektifitas'])) {
+                continue;
+            }
+
+            $cleanDetails[] = [
+                'm_kary_id' => $mKaryId,
+                'komponen_efektifitas' => $det['komponen_efektifitas'],
+                'nilai' => $det['nilai'] ?? null,
+                'sequence' => $det['sequence'] ?? null,
+            ];
+        }
+
+        if (empty($cleanDetails)) {
+            trigger_error("Detail efektifitas pelatihan belum terisi");
+        }
+
+        if ($id) {
+            \App\Models\BasicModels\t_efektifitas_pelatihan_detail::where('t_efektifitas_pelatihan_id', $id)->delete();
+        }
+
+        $req->merge(['t_efektifitas_pelatihan_detail' => $cleanDetails]);
+    }
+
+    public function t_efektifitas_pelatihan_detail() :HasMany
+    {
+        return $this->hasMany('App\Models\BasicModels\t_efektifitas_pelatihan_detail', 't_efektifitas_pelatihan_id', 'id');
     }
     
 

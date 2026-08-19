@@ -461,4 +461,17 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
             $q->where('m_kary_id', $m_kary_id);
         });
     }
+
+    public function scopeefektifitas($model)
+    {
+        $m_kary_id = default_users::find(auth()->user()->id)?->m_kary_id;
+        if (!$m_kary_id) {
+            return $model->whereRaw('1 = 0');
+        }
+
+        return $model->whereHas('t_realisasi_pelatihan_d_kary', function($q) use ($m_kary_id){
+            $q->join('m_kary', 'm_kary.id', '=', 't_realisasi_pelatihan_d_kary.m_kary_id')
+                ->where('m_kary.atasan_id', $m_kary_id);
+        });
+    }
 }

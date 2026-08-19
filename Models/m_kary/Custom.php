@@ -2799,13 +2799,14 @@ class m_kary extends \App\Models\BasicModels\m_kary
     public function scopeEfektifitas($model)
     {
         $req = app()->request;
-        $kary_id = $req->kary_id;
+        $kary_id = $req->kary_id ?? default_users::find(auth()->user()->id)?->m_kary_id;
         
         if ($kary_id === 'null' || empty($kary_id)) {
             return $model->whereRaw('1 = 0');
         }
 
         return $model
+            ->distinct()
             ->select("m_kary.*")
             ->join(
                 "t_realisasi_pelatihan_d_kary as d",

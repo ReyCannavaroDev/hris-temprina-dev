@@ -118,6 +118,10 @@
         Authorization: `${store.user.token_type} ${store.user.token}`
         },
         params: {
+          where: `this.status='POSTED'`,
+          scopes: 'efektifitas',
+          transform: true,
+          join: true
         }
         }" placeholder="" fa-icon="" :check="false" :columns="[{
         headerName: 'No',
@@ -274,7 +278,7 @@
       </div>
     </div>
 
-    <ButtonMultiSelect v-show="values.t_realisasi_pelatihan_id" title="Add to list" @add="onDetailAdd" :api="{
+    <ButtonMultiSelect v-show="actionText && values.t_realisasi_pelatihan_id" title="Add to list" @add="onDetailAdd" :api="{
             url: `${store.server.url_backend}/operation/m_kary`,
             headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
             params: { 
@@ -333,7 +337,7 @@
       {{ item.nama_lengkap }}
     </button>
 
-        <button @click="removeDetail(item.seq)" class="ml-2 w-6 h-6 flex items-center justify-center bg-gray-200 rounded-full shadow hover:bg-gray-300 transition duration-200">
+        <button @click="removeDetail(item.sequence)" class="ml-2 w-6 h-6 flex items-center justify-center bg-gray-200 rounded-full shadow hover:bg-gray-300 transition duration-200">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
            class="w-4 h-4 stroke-2 text-gray-600 transform transition-transform duration-200 hover:scale-125">
         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -393,7 +397,7 @@
       </button>
       <button
         class="bg-green-600 text-white font-semibold hover:bg-green-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
-        v-show="actionText && data.can_create"
+        v-show="actionText && route.query.action?.toLowerCase() !== 'verifikasi' && (['Tambah','Create','Copy'].includes(actionText) ? data.can_create : data.can_update)"
         @click="onSave"
       >
         <icon fa="save" />

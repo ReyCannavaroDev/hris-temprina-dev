@@ -14,6 +14,7 @@ const apiTable = ref(null)
 const formErrors = ref({})
 const isRequesting = ref(false)
 const isModalOpen = ref(false)
+const isBadForm = ref(false)
 const activeBtn = ref()
 const infoOutstanding = ref(null)
 const endpointApi = 't_efektifitas_pelatihan'
@@ -40,6 +41,7 @@ const detailArr = ref([])
 const selectedSeq = ref([])
 let seq = 1
 let initialValues = {}
+let isLoadingData = false
 
 // ========================== HOOK ==========================
 onBeforeMount(() => {
@@ -60,9 +62,15 @@ onActivated(() => {
 })
 
 // ========================== WATCH ==========================
-watch(() => values.t_realisasi_pelatihan_id, (newVal) => {
+watch(() => values.t_realisasi_pelatihan_id, async (newVal) => {
   if (!newVal) {
     detailArr.value = []
+    showForm.value = []
+    return
+  }
+
+  if (!isLoadingData && actionText.value) {
+    await loadPesertaRealisasi()
   }
 })
 
@@ -205,6 +213,7 @@ async function buildDetailArr(data, store) {
   for (const item of data) {
     if (!groupedByKaryawan[item.m_kary_id]) {
       groupedByKaryawan[item.m_kary_id] = {
+        sequence: item.sequence ?? seq++,
         m_kary_id: item.m_kary_id,
         nama_lengkap: item['m_kary.nama_lengkap'],
         komponen: []
@@ -247,25 +256,63 @@ async function buildDetailArr(data, store) {
 
 const onDetailAdd = async (e) => {
   for (const row of e) {
-    const newKaryawan = {
-      sequence: seq++,
-      m_kary_id: row.id,
-      nama_lengkap: row.nama_lengkap,
-      komponen: []
+    await addKaryawanDetail(row)
+  }
+}
+
+async function addKaryawanDetail(row) {
+  const mKaryId = row.m_kary_id || row.id
+  if (!mKaryId || detailArr.value.some(item => item.m_kary_id === mKaryId)) return
+
+  const newKaryawan = {
+    sequence: seq++,
+    m_kary_id: mKaryId,
+    nama_lengkap: row.nama_lengkap || row['m_kary.nama_lengkap'] || '-',
+    komponen: []
+  }
+
+  detailArr.value.push(newKaryawan)
+  showForm.value.push(detailArr.value.length === 1)
+
+  const index = detailArr.value.length - 1
+  await loadTipePenilaianForKaryawan(index)
+}
+
+async function loadPesertaRealisasi() {
+  if (!values.t_realisasi_pelatihan_id || !values.m_kary_id) return
+
+  try {
+    isRequesting.value = true
+    detailArr.value = []
+    showForm.value = []
+    seq = 1
+
+    const params = new URLSearchParams({
+      t_realisasi_pelatihan_id: values.t_realisasi_pelatihan_id,
+      kary_id: values.m_kary_id,
+      scopes: 'Efektifitas',
+      where: 'this.is_active = true',
+      selectfield: 'id, kode, nama_lengkap',
+      simplest: 'true'
+    })
+
+    const res = await fetch(`${store.server.url_backend}/operation/m_kary?${params.toString()}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    })
+
+    const result = await res.json()
+    if (!res.ok) throw new Error(result.message || 'Gagal membaca peserta pelatihan')
+
+    for (const row of result.data || []) {
+      await addKaryawanDetail(row)
     }
-
-    detailArr.value.push(newKaryawan)
-    if (detailArr.value.length === 1) {
-      showForm.value = [true]
-    } else {
-      showForm.value.push(false)
-    }
-
-    console.log('karyawan', newKaryawan)
-
-    const index = detailArr.value.length - 1
-
-    await loadTipePenilaianForKaryawan(index)
+  } catch (err) {
+    swal.fire({ icon: 'warning', text: err.message || err })
+  } finally {
+    isRequesting.value = false
   }
 }
 
@@ -275,7 +322,7 @@ const btnidx = (index) => {
 };
 
 const removeDetail = (targetSeq) => {
-  const index = detailArr.value.findIndex(item => item.seq === targetSeq);
+  const index = detailArr.value.findIndex(item => item.sequence === targetSeq);
   if (index !== -1) {
     detailArr.value.splice(index, 1);
     showForm.value.splice(index, 1);
@@ -285,6 +332,7 @@ const removeDetail = (targetSeq) => {
 // ========================== LOAD DATA ==========================
 async function loadData() {
   try {
+    isLoadingData = true
     isRequesting.value = true
     const editedId = route.params.id
 
@@ -295,7 +343,7 @@ async function loadData() {
 
     if (route.query.is_approval) {
       const apiApp = await fetch(
-        `${store.server.url_backend}/operation/t_evaluasi_pelatihan/detail?id=${editedId}`,
+        `${store.server.url_backend}/operation/${endpointApi}/detail?id=${editedId}`,
         { headers }
       )
 
@@ -304,7 +352,7 @@ async function loadData() {
       const resultJson = await apiApp.json()
 
       const apiTrx = await fetch(
-        `${store.server.url_backend}/operation/${endpointApi}/${resultJson.data.approval.trx_id}`,
+        `${store.server.url_backend}/operation/${endpointApi}/${resultJson.data.approval.trx_id}?transform=true&join=true`,
         { headers }
       )
 
@@ -334,7 +382,7 @@ async function loadData() {
       )
     } else {
       const res = await fetch(
-        `${store.server.url_backend}/operation/${endpointApi}/${editedId}`,
+        `${store.server.url_backend}/operation/${endpointApi}/${editedId}?transform=true&join=true`,
         { headers }
       )
 
@@ -353,16 +401,19 @@ async function loadData() {
 
       for (const key in initialValues) values[key] = initialValues[key]
 
-      const resKary = await fetch(
-        `${store.server.url_backend}/operation/m_kary/${initialValues['m_kary.id']}?simplest=true`,
-        { headers }
-      )
+      const karyId = initialValues['m_kary.id']
+      if (karyId) {
+        const resKary = await fetch(
+          `${store.server.url_backend}/operation/m_kary/${karyId}?simplest=true`,
+          { headers }
+        )
 
-      const dataKary = await resKary.json()
+        const dataKary = await resKary.json()
 
-      values.nama = dataKary.data?.nama_lengkap || ''
-      values.penilaian = dataKary.data?.nama_lengkap || ''
-      values.jabatan = dataKary.data?.jabatan || ''
+        values.nama = dataKary.data?.nama_lengkap || ''
+        values.penilaian = dataKary.data?.nama_lengkap || ''
+        values.jabatan = dataKary.data?.jabatan || ''
+      }
     }
   } catch (err) {
     swal.fire({
@@ -372,6 +423,7 @@ async function loadData() {
     }).then(() => router.back())
   } finally {
     isRequesting.value = false
+    isLoadingData = false
   }
 }
 
@@ -738,7 +790,7 @@ const landing = computed(() => {
         'Content-Type': 'application/json',
         Authorization: `${store.user.token_type} ${store.user.token}`
       },
-      params: { simplest: true, searchfield: 'this.nama, m_kary.nama_lengkap' },
+      params: { simplest: true, transform: true, join: true, searchfield: 'm_prog_pelatihan.tema_pelatihan, m_trainer.nama_trainer' },
       onsuccess(res) {
         res.page = res.current_page
         res.hasNext = res.has_next
