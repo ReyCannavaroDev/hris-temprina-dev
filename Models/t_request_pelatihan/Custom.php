@@ -15,6 +15,10 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         parent::__construct($attributes);
         $this->helper = new Helper();
         $this->approval = new Approval();
+
+        if (app()->request->isMethod('GET')) {
+            $this->details = [];
+        }
     }
 
     public function setAttribute($key, $value)

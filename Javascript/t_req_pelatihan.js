@@ -72,7 +72,8 @@ onBeforeMount(async () => {
         })
         const resultJson = await apiApp.json()
         console.log('test', resultJson.data)
-        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${resultJson.data.approval.trx_id}`, {
+        const apiTrxParams = new URLSearchParams({ join: true, transform: true })
+        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${resultJson.data.approval.trx_id}?${apiTrxParams}`, {
           headers: {
             'Content-Type': 'Application/json',
             Authorization: `${store.user.token_type} ${store.user.token}`
@@ -160,7 +161,7 @@ onBeforeMount(async () => {
         const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
         isRequesting.value = true
 
-        const params = { join: true, transform: false }
+        const params = { join: true, transform: true }
         const fixedParams = new URLSearchParams(params)
         const res = await fetch(dataURL + '?' + fixedParams, {
           headers: {
