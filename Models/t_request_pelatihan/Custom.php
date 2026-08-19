@@ -81,6 +81,11 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
+        $req = app()->request;
+        
+        // Debugging payload by throwing it back to frontend
+        throw new \Exception("DUMP REQ: " . json_encode($req->all()));
+
         if(!isset($arrayData['status'])){
             $status = 'DRAFT';
         }else{
@@ -93,8 +98,6 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             "creator_id" => auth()->user()->id
         ] );
 
-        $req = app()->request;
-        \Log::info("Payload details:", ['details' => $req->t_request_pelatihan_d_kary]);
         if(empty($req->t_request_pelatihan_d_kary)){
             $this->details = [];
         } else {
