@@ -4,9 +4,9 @@ namespace App\Models\CustomModels;
 
 class t_request_pelatihan_d_kary extends \App\Models\BasicModels\t_request_pelatihan_d_kary
 {    
-    public function __construct()
+    public function __construct(array $attributes = [])
     {
-        parent::__construct();
+        parent::__construct($attributes);
         $this->columnsFull = array_merge($this->columnsFull, [
             "m_kary.nama_lengkap:string:optional",
             "m_kary.m_branch_id:bigint:optional",
@@ -18,6 +18,14 @@ class t_request_pelatihan_d_kary extends \App\Models\BasicModels\t_request_pelat
             "m_posisi_id:bigint:optional",
             "m_divisi.name:string:optional"
         ]);
+    }
+
+    public function setAttribute($key, $value)
+    {
+        if ($value === 'optional') {
+            $value = null;
+        }
+        return parent::setAttribute($key, $value);
     }
     
     public $fileColumns    = [ /*file_column*/ ];

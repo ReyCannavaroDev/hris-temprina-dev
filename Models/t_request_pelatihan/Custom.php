@@ -10,11 +10,19 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
     private $helper;
     private $approval;
 
-    public function __construct()
+    public function __construct(array $attributes = [])
     {
-        parent::__construct();
+        parent::__construct($attributes);
         $this->helper = new Helper();
         $this->approval = new Approval();
+    }
+
+    public function setAttribute($key, $value)
+    {
+        if ($value === 'optional') {
+            $value = null;
+        }
+        return parent::setAttribute($key, $value);
     }
     
     public $details = ['t_request_pelatihan_d_kary'];
