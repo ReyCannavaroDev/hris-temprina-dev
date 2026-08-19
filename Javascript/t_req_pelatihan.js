@@ -443,6 +443,11 @@ async function onSave() {
       newRow['m_branch_id'] = row.m_branch_id || null
       newRow['m_divisi_id'] = row.m_divisi_id || null
       newRow['m_posisi_id'] = row.m_posisi_id || null
+      
+      // BUANG tanggal bawaan dari m_kary agar generator tidak mencoba parse dan meledak
+      delete newRow.created_at
+      delete newRow.updated_at
+      
       return newRow
     })
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
