@@ -123,6 +123,9 @@
               },
               params: {
                 where: `this.status='POSTED'`,
+                scopes: 'owndata',
+                transform: true,
+                join: true
               }
         }" placeholder="" fa-icon="" :check="false" :columns="[{
           headerName: 'No',
@@ -325,7 +328,7 @@
       </button>
     <button
         class="bg-green-600 text-white font-semibold hover:bg-green-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
-        v-show="actionText && data.can_create && !route.query.action?.toLowerCase() === 'verifikasi'"
+        v-show="actionText && route.query.action?.toLowerCase() !== 'verifikasi' && (['Tambah','Create','Copy'].includes(actionText) ? data.can_create : data.can_update)"
         @click="onSave"
       >
         <icon fa="save" />

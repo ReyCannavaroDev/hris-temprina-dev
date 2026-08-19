@@ -281,12 +281,84 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
             $data = $this->find($req->id);
             $data->status = 'POSTED';
             $data->save();
+            $this->createEvaluasiPeserta($data);
 
          \DB::commit();
          return $this->helper->customResponse("Data berhasil diposting");
         }catch (\Exception $e) {
             \DB::rollback();
             return $this->helper->responseCatch($e);
+        }
+    }
+
+    private function createEvaluasiPeserta($data)
+    {
+        $peserta = t_realisasi_pelatihan_d_kary::where('t_realisasi_pelatihan_id', $data->id)
+            ->whereNotNull('m_kary_id')
+            ->pluck('m_kary_id')
+            ->unique()
+            ->values();
+
+        if (!count($peserta)) {
+            return;
+        }
+
+        $program = $data->m_prog_pelatihan_id ? m_prog_pelatihan::find($data->m_prog_pelatihan_id) : null;
+
+        foreach ($peserta as $m_kary_id) {
+            $creatorId = default_users::where('m_kary_id', $m_kary_id)->orderBy('id', 'asc')->pluck('id')->first() ?? auth()->user()->id;
+            $evaluasi = t_evaluasi_pelatihan::where('t_realisasi_pelatihan_id', $data->id)
+                ->where('m_kary_id', $m_kary_id)
+                ->first();
+
+            if (!$evaluasi) {
+                $evaluasi = t_evaluasi_pelatihan::create([
+                    "kode" => $this->helper->generateNomor("KODE EVALUASI PELATIHAN"),
+                    "trainer_id" => $data->trainer_id,
+                    "m_kary_id" => $m_kary_id,
+                    "m_prog_pelatihan_id" => $data->m_prog_pelatihan_id,
+                    "t_realisasi_pelatihan_id" => $data->id,
+                    "tanggal" => date('Y-m-d'),
+                    "status" => "DRAFT",
+                    "creator_id" => $creatorId
+                ]);
+            } else {
+                $evaluasi->update([
+                    "trainer_id" => $evaluasi->trainer_id ?? $data->trainer_id,
+                    "m_prog_pelatihan_id" => $evaluasi->m_prog_pelatihan_id ?? $data->m_prog_pelatihan_id,
+                ]);
+            }
+
+            $this->sendEvaluasiNotification($m_kary_id, $evaluasi, $program);
+        }
+    }
+
+    private function sendEvaluasiNotification($m_kary_id, $evaluasi, $program=null)
+    {
+        $userIds = default_users::where('m_kary_id', $m_kary_id)->pluck('id');
+        if (!count($userIds)) {
+            return;
+        }
+
+        $tokens = \App\Models\BasicModels\default_users_fcm::whereIn('default_users_id', $userIds)->pluck('token_fcm');
+        if (!count($tokens)) {
+            return;
+        }
+
+        $title = "Evaluasi Pelatihan";
+        $body = "Silakan isi evaluasi pelatihan" . ($program?->tema_pelatihan ? " " . $program->tema_pelatihan : "") . ".";
+        $firebase = app(\App\Services\FirebaseMessagingService::class);
+
+        foreach ($tokens as $token) {
+            try {
+                $firebase->sendToDevice($token, $title, $body, [
+                    "title" => $title,
+                    "form_name" => "t_evaluasi_pelatihan",
+                    "trx_id" => (string) $evaluasi->id,
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning("Gagal mengirim notifikasi evaluasi pelatihan: " . $e->getMessage());
+            }
         }
     }
 

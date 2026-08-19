@@ -2,6 +2,7 @@
 
 namespace App\Models\CustomModels;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
 {    
@@ -12,12 +13,69 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         parent::__construct();
         $this->helper = getCore("Helper");
         $this->approval = getCore("Approval");
+
+        $this->joins = array_values(array_unique(array_merge($this->joins, [
+            "m_kary.id=t_evaluasi_pelatihan.m_kary_id",
+            "m_prog_pelatihan.id=t_evaluasi_pelatihan.m_prog_pelatihan_id",
+            "m_trainer.id=t_evaluasi_pelatihan.trainer_id"
+        ])));
+
+        if (app()->request->isMethod('GET')) {
+            $this->details = [];
+            $this->detailsChild = [];
+        }
     }
+
+    public $details = ['t_evaluasi_pelatihan_detail'];
     
     public $fileColumns    = [ /*file_column*/ ];
 
     //public $createAdditionalData = ["creator_id"=>"auth:id"];
     //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
+    public function transformRowData( array $row )
+    {
+        $data = [];
+
+        if(!empty($row['m_prog_pelatihan_id'])){
+            $program = m_prog_pelatihan::find($row['m_prog_pelatihan_id']);
+            $data['m_prog_pelatihan'] = [
+                'id' => $program?->id,
+                'tema_pelatihan' => $program?->tema_pelatihan,
+            ];
+            $data['m_prog_pelatihan.id'] = $program?->id;
+            $data['m_prog_pelatihan.tema_pelatihan'] = $program?->tema_pelatihan;
+        }
+
+        if(!empty($row['trainer_id'])){
+            $trainer = m_trainer::find($row['trainer_id']);
+            $data['trainer'] = [
+                'id' => $trainer?->id,
+                'nama_trainer' => $trainer?->nama_trainer,
+            ];
+            $data['trainer.id'] = $trainer?->id;
+            $data['trainer.nama_trainer'] = $trainer?->nama_trainer;
+        }
+
+        if(!empty($row['m_kary_id'])){
+            $kary = m_kary::find($row['m_kary_id']);
+            $data['m_kary'] = [
+                'id' => $kary?->id,
+                'nama_lengkap' => $kary?->nama_lengkap,
+            ];
+            $data['m_kary.id'] = $kary?->id;
+            $data['m_kary.nama_lengkap'] = $kary?->nama_lengkap;
+        }
+
+        $detail = \DB::table('t_evaluasi_pelatihan_detail')
+            ->where('t_evaluasi_pelatihan_id', $row['id'])
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $data['t_evaluasi_pelatihan_detail'] = json_decode(json_encode($detail), true);
+
+        return array_merge( $row, $data );
+    }
+
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
         if(!isset($arrayData['status'])){
@@ -25,6 +83,8 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         }else{
             $status = $arrayData['status'];
         }
+
+        $this->prepareDetailRequest();
 
         $newArrayData  = array_merge( $arrayData,[
             "kode" => $this->helper->generateNomor("KODE EVALUASI PELATIHAN"),
@@ -35,6 +95,76 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
             "model"  => $model,
             "data"   => $newArrayData,
         ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id=null)
+    {
+        $this->prepareDetailRequest($id);
+
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
+        ];
+    }
+
+    private function prepareDetailRequest($id=null)
+    {
+        $req = app()->request;
+        $details = $req->t_evaluasi_pelatihan_detail ?? [];
+
+        if (empty($details)) {
+            if ($id) {
+                \App\Models\BasicModels\t_evaluasi_pelatihan_detail::where('t_evaluasi_pelatihan_id', $id)->delete();
+            }
+            $this->details = [];
+            return;
+        }
+
+        $cleanDetails = [];
+        foreach ($details as $det) {
+            $det = is_array($det) ? $det : (array) $det;
+
+            if (empty($det['jenis_evaluasi']) && empty($det['komponen_evaluasi'])) {
+                continue;
+            }
+
+            $cleanRow = [
+                'jenis_evaluasi' => $det['jenis_evaluasi'] ?? null,
+                'komponen_evaluasi' => $det['komponen_evaluasi'] ?? null,
+                'nilai' => $det['nilai'] ?? null,
+            ];
+
+            if ($id && !empty($det['id'])) {
+                $isExistingDetail = \App\Models\BasicModels\t_evaluasi_pelatihan_detail::where('id', $det['id'])
+                    ->where('t_evaluasi_pelatihan_id', $id)
+                    ->exists();
+
+                if ($isExistingDetail) {
+                    $cleanRow['id'] = $det['id'];
+                }
+            }
+
+            $cleanDetails[] = $cleanRow;
+        }
+
+        if ($id) {
+            $keepIds = array_values(array_filter(array_map(function ($row) {
+                return $row['id'] ?? null;
+            }, $cleanDetails)));
+
+            $deleteQuery = \App\Models\BasicModels\t_evaluasi_pelatihan_detail::where('t_evaluasi_pelatihan_id', $id);
+            if (!empty($keepIds)) {
+                $deleteQuery->whereNotIn('id', $keepIds);
+            }
+            $deleteQuery->delete();
+        }
+
+        $req->merge(['t_evaluasi_pelatihan_detail' => $cleanDetails]);
+    }
+
+    public function t_evaluasi_pelatihan_detail() :HasMany
+    {
+        return $this->hasMany('App\Models\BasicModels\t_evaluasi_pelatihan_detail', 't_evaluasi_pelatihan_id', 'id');
     }
 
     public function custom_app_detail($req)

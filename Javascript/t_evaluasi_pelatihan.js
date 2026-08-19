@@ -229,7 +229,7 @@ async function loadData() {
       })
       const resultJson = await apiApp.json()
       console.log(resultJson.data)
-      const apiTrx = await fetch(`${store.server.url_backend}/operation/${endpointApi}/${resultJson.data.approval.trx_id}`, {
+      const apiTrx = await fetch(`${store.server.url_backend}/operation/${endpointApi}/${resultJson.data.approval.trx_id}?transform=true&join=true`, {
         headers: {
           'Content-Type': 'Application/json',
           Authorization: `${store.user.token_type} ${store.user.token}`
@@ -251,7 +251,7 @@ async function loadData() {
 
       for (const key in initialValues) values[key] = initialValues[key]
     } else {
-      const res = await fetch(`${store.server.url_backend}/operation/${endpointApi}/${editedId}`, {
+      const res = await fetch(`${store.server.url_backend}/operation/${endpointApi}/${editedId}?transform=true&join=true`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `${store.user.token_type} ${store.user.token}`
@@ -268,16 +268,19 @@ async function loadData() {
 
       for (const key in initialValues) values[key] = initialValues[key]
 
-      const resKary = await fetch(`${store.server.url_backend}/operation/m_kary/${initialValues['m_kary.id']}?simplest=true`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `${store.user.token_type} ${store.user.token}`
-        }
-      })
-      const dataKary = await resKary.json()
-      values.nama = dataKary.data?.nama_lengkap || ''
-      values.penilaian = dataKary.data?.nama_lengkap || ''
-      values.jabatan = dataKary.data?.jabatan || ''
+      const karyId = initialValues['m_kary.id'] || initialValues.m_kary_id
+      if (karyId) {
+        const resKary = await fetch(`${store.server.url_backend}/operation/m_kary/${karyId}?simplest=true`, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          }
+        })
+        const dataKary = await resKary.json()
+        values.nama = dataKary.data?.nama_lengkap || values['m_kary.nama_lengkap'] || ''
+        values.penilaian = dataKary.data?.nama_lengkap || values['m_kary.nama_lengkap'] || ''
+        values.jabatan = dataKary.data?.jabatan || ''
+      }
     }
   } catch (err) {
     swal.fire({ icon: 'error', text: err.message || err, confirmButtonText: 'Kembali' }).then(() => router.back())
@@ -622,11 +625,12 @@ const landing = computed(() => {
         'Content-Type': 'application/json',
         Authorization: `${store.user.token_type} ${store.user.token}`
       },
-      params: { simplest: true, paginate: 25, searchfield: 'this.nama, m_kary.nama_lengkap' },
+      params: { simplest: true, paginate: 25, transform: true, join: true, searchfield: 'm_kary.nama_lengkap, m_prog_pelatihan.tema_pelatihan' },
       onsuccess: r => ({ ...r, page: r.current_page, hasNext: r.has_next })
     },
     columns: [
       { headerName: 'No', valueGetter: p => p.node.rowIndex + 1, width: 60, cellClass: ['justify-center', 'bg-gray-50', 'border-r', '!border-gray-200'] },
+      { headerName: 'Tema Pelatihan', field: 'm_prog_pelatihan.tema_pelatihan', flex: 1, filter: true, sortable: true, cellClass: ['border-r', '!border-gray-200', 'justify-start'] },
       { headerName: 'Nama', field: 'm_kary.nama_lengkap', flex: 1, filter: true, sortable: true, cellClass: ['border-r', '!border-gray-200', 'justify-start'] },
       { headerName: 'Tanggal', field: 'tanggal', flex: 1, filter: true, sortable: true, cellClass: ['border-r', '!border-gray-200', 'justify-start'] },
       {
