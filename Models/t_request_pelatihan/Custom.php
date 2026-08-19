@@ -58,21 +58,22 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         }
 
         // Fetch detail karyawan manually to bypass GlobalHelper's $details limitation and generator errors
-        $detail_karyawan = t_request_pelatihan_d_kary::where('t_request_pelatihan_id', $row['id'])
-            ->join('m_kary', 't_request_pelatihan_d_kary.m_kary_id', '=', 'm_kary.id')
+        $detail_karyawan = \DB::table('t_request_pelatihan_d_kary')
+            ->where('t_request_pelatihan_id', $row['id'])
+            ->leftJoin('m_kary', 't_request_pelatihan_d_kary.m_kary_id', '=', 'm_kary.id')
             ->leftJoin('m_divisi', 'm_kary.m_divisi_id', '=', 'm_divisi.id')
             ->leftJoin('m_general', 'm_divisi.name', '=', 'm_general.id')
             ->select(
                 't_request_pelatihan_d_kary.*',
-                'm_kary.nama_lengkap',
-                'm_kary.m_branch_id',
-                'm_kary.m_divisi_id',
-                'm_kary.m_posisi_id',
+                'm_kary.nama_lengkap as m_kary.nama_lengkap',
+                'm_kary.m_branch_id as m_kary.m_branch_id',
+                'm_kary.m_divisi_id as m_kary.m_divisi_id',
+                'm_kary.m_posisi_id as m_kary.m_posisi_id',
                 'm_general.value as m_divisi.name'
             )
             ->get();
             
-        $data['t_request_pelatihan_d_kary'] = $detail_karyawan->toArray();
+        $data['t_request_pelatihan_d_kary'] = json_decode(json_encode($detail_karyawan), true);
 
         return array_merge( $row, $data );
     }
