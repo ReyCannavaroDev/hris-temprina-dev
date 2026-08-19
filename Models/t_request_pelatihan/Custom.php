@@ -15,14 +15,10 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         parent::__construct();
         $this->helper = new Helper();
         $this->approval = new Approval();
-        $this->heirs = array_values(array_unique(array_merge($this->heirs, [
-            "t_request_pelatihan_d_kary",
-        ])));
-        $this->detailsChild = array_values(array_unique(array_merge($this->detailsChild, [
-            "t_request_pelatihan_d_kary",
-        ])));
     }
     
+    public $details = ['t_request_pelatihan_d_kary'];
+
     public $fileColumns    = [ /*file_column*/ ];
 
     public $createAdditionalData = ["creator_id"=>"auth:id"];
@@ -78,7 +74,7 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         return array_merge( $row, $data );
     }
 
-    public function t_request_pelatihan_d_kary() :\HasMany
+    public function t_request_pelatihan_d_kary() :\Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany('App\Models\BasicModels\t_request_pelatihan_d_kary', 't_request_pelatihan_id', 'id');
     }
@@ -96,9 +92,28 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             "status" => $status,
             "creator_id" => auth()->user()->id
         ] );
+
+        $req = app()->request;
+        if(empty($req->t_request_pelatihan_d_kary)){
+            $this->details = [];
+        }
+
         return [
             "model"  => $model,
             "data"   => $newArrayData,
+        ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id=null)
+    {
+        $req = app()->request;
+        if(empty($req->t_request_pelatihan_d_kary)){
+            \App\Models\BasicModels\t_request_pelatihan_d_kary::where('t_request_pelatihan_id', $id)->delete();
+            $this->details = [];
+        }
+        return [
+            "model"  => $model,
+            "data"   => $arrayData,
         ];
     }
 
