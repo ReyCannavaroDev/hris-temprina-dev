@@ -113,6 +113,8 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
                     $cleanRow = $det;
                     $cleanRow['m_kary_id'] = $karyId;
                     unset($cleanRow['id']);
+                    unset($cleanRow['created_at']);
+                    unset($cleanRow['updated_at']);
                     $cleanRow['creator_id'] = auth()->user()->id ?? 1;
                     $cleanDetails[] = $cleanRow;
                 }
@@ -146,6 +148,8 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
                     $cleanRow = $det;
                     $cleanRow['m_kary_id'] = $karyId;
                     unset($cleanRow['id']);
+                    unset($cleanRow['created_at']);
+                    unset($cleanRow['updated_at']);
                     $cleanRow['creator_id'] = auth()->user()->id ?? 1;
                     $cleanDetails[] = $cleanRow;
                 }
