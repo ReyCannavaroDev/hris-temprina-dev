@@ -364,7 +364,6 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             ->join('m_general', 'm_divisi.name', 'm_general.id')
             ->select(
                 't_request_pelatihan_d_kary.*', 
-                'm_kary.id',        
                 'm_kary.m_branch_id',
                 'm_kary.m_divisi_id',
                 'm_kary.m_posisi_id',
