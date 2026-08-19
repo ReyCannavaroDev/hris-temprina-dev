@@ -156,14 +156,14 @@
       values.m_comp_id = null;
       values.m_subcomp_id = null;
       values.m_branch_id = null;
-      values.m_divisi_id = null;
+      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
     }
   }" @update:valueFull="obj => {
     if (obj) {
       values.m_comp_id = obj.id;
       values.m_subcomp_id = null;
       values.m_branch_id = null;
-      values.m_divisi_id = null;
+      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
     } else {
       values.m_comp_id = null;
     }
@@ -189,13 +189,13 @@
     } else {
       values.m_subcomp_id = null;
       values.m_branch_id = null;
-      values.m_divisi_id = null;
+      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
     }
   }" @update:valueFull="obj => {
     if (obj) {
       values.m_subcomp_id = obj.id;
       values.m_branch_id = null;
-      values.m_divisi_id = null;
+      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
     } else {
       values.m_subcomp_id = null;
     }
@@ -214,18 +214,18 @@
     </div>
     <!-- CABANG -->
     <div>
-      <FieldSelect :bind="{ disabled: values.m_branch !== null }" class="w-full !mt-3" :value="values.m_branch_id"
+      <FieldSelect :bind="{ disabled: values.t_request_pelatihan_id !== null }" class="w-full !mt-3" :value="values.m_branch_id"
         @input="v => {
     if (v) {
       values.m_branch_id = v;
     } else {
       values.m_branch_id = null;
-      values.m_divisi_id = null;
+      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
     }
   }" @update:valueFull="obj => {
     if (obj) {
       values.m_branch_id = obj.id;
-      values.m_divisi_id = null;
+      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
     } else {
       values.m_branch_id = null;
     }
@@ -243,7 +243,7 @@
     </div>
 
     <div>
-      <FieldSelect :bind="{ disabled: (!actionText || !values.m_branch_id) && values.m_divisi_id !== null }"
+      <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_id || values.t_request_pelatihan_id !== null }"
         class="w-full mt-3" :value="values.m_divisi_id" @input="v=>values.m_divisi_id=v"
         :errorText="formErrors.m_divisi_id?'failed':''" @update:valueFull="(objVal)=>{
                   values.m_dept_id = null
@@ -251,12 +251,11 @@
                     url: `${store.server.url_backend}/operation/m_divisi`,
                     headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                     params: {
-                      scopes:'Name',
                       //simplest:true,
                       //selectfield: 'this.id,name.value,this.m_branch_id',
                       where: `this.is_active = 'true' and this.m_branch_id='${values.m_branch_id}'`
                     }
-                }" valueField="id" displayField="name.value" :check="false" />
+                }" valueField="id" displayField="name_old" :check="false" />
     </div>
 
     <div>
@@ -264,7 +263,6 @@
         class="w-full mt-3" :value="values.trainer_id" @input="v=>values.trainer_id=v"
         :errorText="formErrors.trainer_id?'failed':''" @update:valueFull="(objVal)=>{
                   $log('ini ',objVal)
-                  values.m_divisi_id = null
                 }" label="" placeholder="" :hints="formErrors.trainer_id" :api="{
           url: `${store.server.url_backend}/operation/m_trainer`,
           headers: { 
