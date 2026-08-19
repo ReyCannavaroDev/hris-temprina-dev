@@ -109,19 +109,19 @@
         :hints="formErrors.t_request_pelatihan_id" valueField="id" displayField="desc" @update:valueFull="obj => {
     if (obj) {
       $log('cek',obj)
-      values.m_comp_id = obj['m_comp.id'];
-      values.m_subcomp_id = obj['m_subcomp.id'];
-      values.m_branch_id = obj['m_branch.id'];
-      values.m_divisi_id = obj['m_divisi.id'];
-      values.trainer_id = obj['trainer.id'];
-      values.m_prog_pelatihan_id = obj['m_prog_pelatihan.id'];
-      values.date_from = obj['date_from'];
-      values.date_to = obj['date_to'];
-      values.desc = obj['desc'];
-      values.sarana = obj['sarana'];
+      values.m_comp_id = obj.m_comp_id;
+      values.m_subcomp_id = obj.m_subcomp_id;
+      values.m_branch_id = obj.m_branch_id;
+      values.m_divisi_id = obj.m_divisi_id;
+      values.trainer_id = obj.trainer_id;
+      values.m_prog_pelatihan_id = obj.m_prog_pelatihan_id;
+      values.date_from = obj.date_from;
+      values.date_to = obj.date_to;
+      values.desc = obj.desc;
+      values.sarana = obj.sarana;
       detailArr = obj['t_request_pelatihan_d_kary'].map((dt)=>({
         ...dt, 
-        divisi_name : dt['m_divisi.name']
+        divisi_kary : dt['m_divisi.name']
       }))
     } else {
       values.m_comp_id = null;
