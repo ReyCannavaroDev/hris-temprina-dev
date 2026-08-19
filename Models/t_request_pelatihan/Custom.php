@@ -94,8 +94,28 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         ] );
 
         $req = app()->request;
+        \Log::info("Payload details:", ['details' => $req->t_request_pelatihan_d_kary]);
         if(empty($req->t_request_pelatihan_d_kary)){
             $this->details = [];
+        } else {
+            // Remove any field that might be string "optional" just in case it is creeping in
+            $cleanDetails = [];
+            foreach($req->t_request_pelatihan_d_kary as $det) {
+                $cleanRow = [];
+                foreach($det as $k => $v) {
+                    if ($v !== 'optional') {
+                        $cleanRow[$k] = $v;
+                    }
+                }
+                $cleanDetails[] = $cleanRow;
+            }
+            $req->merge(['t_request_pelatihan_d_kary' => $cleanDetails]);
+        }
+
+        foreach($newArrayData as $k => $v) {
+            if ($v === 'optional') {
+                unset($newArrayData[$k]);
+            }
         }
 
         return [
@@ -110,7 +130,26 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         if(empty($req->t_request_pelatihan_d_kary)){
             \App\Models\BasicModels\t_request_pelatihan_d_kary::where('t_request_pelatihan_id', $id)->delete();
             $this->details = [];
+        } else {
+            $cleanDetails = [];
+            foreach($req->t_request_pelatihan_d_kary as $det) {
+                $cleanRow = [];
+                foreach($det as $k => $v) {
+                    if ($v !== 'optional') {
+                        $cleanRow[$k] = $v;
+                    }
+                }
+                $cleanDetails[] = $cleanRow;
+            }
+            $req->merge(['t_request_pelatihan_d_kary' => $cleanDetails]);
         }
+
+        foreach($arrayData as $k => $v) {
+            if ($v === 'optional') {
+                unset($arrayData[$k]);
+            }
+        }
+
         return [
             "model"  => $model,
             "data"   => $arrayData,
