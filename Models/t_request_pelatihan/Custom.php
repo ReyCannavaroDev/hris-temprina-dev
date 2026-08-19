@@ -118,9 +118,9 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         ];
     }
 
-    public function createAfter($model, $arrayData, $metaData)
+    public function createAfter($model, $arrayData, $metaData, $id=null)
     {
-        // ... (keep this empty or as is, I will only replace createBefore and updateBefore)
+        // ...
     }
 
     public function updateBefore($model, $arrayData, $metaData, $id=null)
