@@ -81,11 +81,6 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
-        $req = app()->request;
-        
-        // Debugging payload by throwing it back to frontend
-        throw new \Exception("DUMP REQ: " . json_encode($req->all()));
-
         if(!isset($arrayData['status'])){
             $status = 'DRAFT';
         }else{
@@ -98,33 +93,34 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             "creator_id" => auth()->user()->id
         ] );
 
+        $req = app()->request;
         if(empty($req->t_request_pelatihan_d_kary)){
             $this->details = [];
         } else {
-            // Remove any field that might be string "optional" just in case it is creeping in
             $cleanDetails = [];
             foreach($req->t_request_pelatihan_d_kary as $det) {
-                $cleanRow = [];
-                foreach($det as $k => $v) {
-                    if ($v !== 'optional') {
-                        $cleanRow[$k] = $v;
-                    }
+                // Frontend sends the entire m_kary object, so the employee ID is in $det['id']
+                // We MUST map it to m_kary_id, and do NOT pass 'id' to prevent the generator from treating it as the detail's primary key
+                $karyId = isset($det['m_kary_id']) ? $det['m_kary_id'] : (isset($det['id']) ? $det['id'] : null);
+                
+                if ($karyId) {
+                    $cleanDetails[] = [
+                        'm_kary_id' => $karyId
+                    ];
                 }
-                $cleanDetails[] = $cleanRow;
             }
             $req->merge(['t_request_pelatihan_d_kary' => $cleanDetails]);
-        }
-
-        foreach($newArrayData as $k => $v) {
-            if ($v === 'optional') {
-                unset($newArrayData[$k]);
-            }
         }
 
         return [
             "model"  => $model,
             "data"   => $newArrayData,
         ];
+    }
+
+    public function createAfter($model, $arrayData, $metaData)
+    {
+        // ... (keep this empty or as is, I will only replace createBefore and updateBefore)
     }
 
     public function updateBefore($model, $arrayData, $metaData, $id=null)
@@ -136,21 +132,18 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         } else {
             $cleanDetails = [];
             foreach($req->t_request_pelatihan_d_kary as $det) {
-                $cleanRow = [];
-                foreach($det as $k => $v) {
-                    if ($v !== 'optional') {
-                        $cleanRow[$k] = $v;
-                    }
+                // Extract m_kary_id properly from the frontend's object
+                $karyId = isset($det['m_kary_id']) ? $det['m_kary_id'] : (isset($det['id']) ? $det['id'] : null);
+                
+                if ($karyId) {
+                    $cleanDetails[] = [
+                        'm_kary_id' => $karyId
+                    ];
                 }
-                $cleanDetails[] = $cleanRow;
             }
+            // For update, the generator might delete and recreate, or we can just let it handle it
+            // since we mapped m_kary_id correctly.
             $req->merge(['t_request_pelatihan_d_kary' => $cleanDetails]);
-        }
-
-        foreach($arrayData as $k => $v) {
-            if ($v === 'optional') {
-                unset($arrayData[$k]);
-            }
         }
 
         return [
