@@ -7,17 +7,22 @@ class t_request_pelatihan_d_kary extends \App\Models\BasicModels\t_request_pelat
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->columnsFull = array_merge($this->columnsFull, [
-            "m_kary.nama_lengkap:string:optional",
-            "m_kary.m_branch_id:bigint:optional",
-            "m_kary.m_divisi_id:bigint:optional",
-            "m_kary.m_posisi_id:bigint:optional",
-            "nama_lengkap:string:optional",
-            "m_branch_id:bigint:optional",
-            "m_divisi_id:bigint:optional",
-            "m_posisi_id:bigint:optional",
-            "m_divisi.name:string:optional"
-        ]);
+        
+        // Hanya tambahkan kolom siluman ini jika request method adalah GET (read/view)
+        // Jika tidak, generator akan memaksa memvalidasi kolom ini saat POST dan meledak di BigNumber!
+        if (app()->request->isMethod('GET')) {
+            $this->columnsFull = array_merge($this->columnsFull, [
+                "m_kary.nama_lengkap:string:optional",
+                "m_kary.m_branch_id:bigint:optional",
+                "m_kary.m_divisi_id:bigint:optional",
+                "m_kary.m_posisi_id:bigint:optional",
+                "nama_lengkap:string:optional",
+                "m_branch_id:bigint:optional",
+                "m_divisi_id:bigint:optional",
+                "m_posisi_id:bigint:optional",
+                "m_divisi.name:string:optional"
+            ]);
+        }
     }
 
     public function setAttribute($key, $value)
