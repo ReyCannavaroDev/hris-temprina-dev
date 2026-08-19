@@ -143,11 +143,9 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             $cleanDetails = [];
             foreach($req->t_request_pelatihan_d_kary as $det) {
                 $karyId = isset($det['m_kary_id']) ? $det['m_kary_id'] : (isset($det['id']) ? $det['id'] : null);
-                
                 if ($karyId) {
                     $cleanRow = $det;
                     $cleanRow['m_kary_id'] = $karyId;
-                    unset($cleanRow['id']);
                     unset($cleanRow['created_at']);
                     unset($cleanRow['updated_at']);
                     $cleanRow['creator_id'] = auth()->user()->id ?? 1;
