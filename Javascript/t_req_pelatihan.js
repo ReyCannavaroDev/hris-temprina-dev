@@ -433,7 +433,18 @@ async function onSave() {
       return
     }
 
-    values.t_request_pelatihan_d_kary = detailArr.value
+    values.t_request_pelatihan_d_kary = detailArr.value.map(row => {
+      const newRow = { ...row }
+      newRow.m_kary_id = row.id
+      newRow.id = null
+      newRow['m_kary.m_branch_id'] = null
+      newRow['m_kary.m_divisi_id'] = null
+      newRow['m_kary.m_posisi_id'] = null
+      newRow['m_branch_id'] = row.m_branch_id || null
+      newRow['m_divisi_id'] = row.m_divisi_id || null
+      newRow['m_posisi_id'] = row.m_posisi_id || null
+      return newRow
+    })
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
     const dataURL = `${store.server.url_backend}/operation${endpointApi}${isCreating ? '' : ('/' + route.params.id)}`
     isRequesting.value = true
