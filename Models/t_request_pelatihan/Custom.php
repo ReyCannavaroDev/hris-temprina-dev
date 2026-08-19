@@ -21,6 +21,9 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         $this->detailsChild = array_values(array_unique(array_merge($this->detailsChild, [
             "t_request_pelatihan_d_kary",
         ])));
+        $this->details = array_values(array_unique(array_merge($this->details, [
+            "t_request_pelatihan_d_kary",
+        ])));
     }
     
     public $fileColumns    = [ /*file_column*/ ];
