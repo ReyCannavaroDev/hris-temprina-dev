@@ -435,8 +435,11 @@ async function onSave() {
 
     values.t_request_pelatihan_d_kary = detailArr.value.map(row => {
       const newRow = { ...row }
-      newRow.m_kary_id = row.id
-      newRow.id = null
+      // Jika m_kary_id sudah ada (dari load backend), pakai itu. Jika kosong (dari pilih modal), pakai row.id
+      newRow.m_kary_id = row.m_kary_id ? row.m_kary_id : row.id
+      // Jika m_kary_id sudah ada, berarti row.id adalah ID detail, biarkan saja. Jika tidak, set null agar dianggap record baru.
+      newRow.id = row.m_kary_id ? row.id : null
+
       newRow['m_kary.m_branch_id'] = null
       newRow['m_kary.m_divisi_id'] = null
       newRow['m_kary.m_posisi_id'] = null
