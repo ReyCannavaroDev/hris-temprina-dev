@@ -59,13 +59,13 @@ Diperbarui: 2026-08-18
   - PERLU TEMPEL: Models/t_kbs/Custom.php dan Javascript/t_kbs.js
 
 ### m_prog_pelatihan - Program Pelatihan
-- [ ] Kolom sasaran belum ditampilkan datanya di landing
+- [x] Kolom sasaran belum ditampilkan datanya di landing
   - PERLU TEMPEL: Models/m_prog_pelatihan/Custom.php dan Javascript/m_prog_pelatihan.js
 
 ### t_req_pelatihan - Pengajuan Pelatihan
-- [ ] Status seharusnya auto active saat create
-- [ ] Tambah validasi status di frontend sebelum submit
-- [ ] Saat view detail, nama karyawan tidak muncul
+- [x] Status seharusnya auto active saat create
+- [x] Tambah validasi status di frontend sebelum submit
+- [x] Saat view detail, nama karyawan tidak muncul
   - PERLU TEMPEL: Models/t_req_pelatihan/Custom.php
 
 ### m_penilaian - Komponen Penilaian Karyawan
@@ -145,9 +145,9 @@ Diperbarui: 2026-08-18
 
 4. Tempel source t_kbs, fix nama karyawan di landing
 
-5. Tempel source m_prog_pelatihan, fix sasaran di landing
+5. [x] Tempel source m_prog_pelatihan, fix sasaran di landing
 
-6. Tempel source t_req_pelatihan, fix nama karyawan di detail + auto status
+6. [x] Tempel source t_req_pelatihan, fix nama karyawan di detail + auto status
 
 7. Tempel source m_penilaian, fix level NaN + level di landing
 
