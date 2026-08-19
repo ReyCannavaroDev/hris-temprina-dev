@@ -99,14 +99,14 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         } else {
             $cleanDetails = [];
             foreach($req->t_request_pelatihan_d_kary as $det) {
-                // Frontend sends the entire m_kary object, so the employee ID is in $det['id']
-                // We MUST map it to m_kary_id, and do NOT pass 'id' to prevent the generator from treating it as the detail's primary key
                 $karyId = isset($det['m_kary_id']) ? $det['m_kary_id'] : (isset($det['id']) ? $det['id'] : null);
                 
                 if ($karyId) {
-                    $cleanDetails[] = [
-                        'm_kary_id' => $karyId
-                    ];
+                    $cleanRow = $det;
+                    $cleanRow['m_kary_id'] = $karyId;
+                    unset($cleanRow['id']);
+                    $cleanRow['creator_id'] = auth()->user()->id ?? 1;
+                    $cleanDetails[] = $cleanRow;
                 }
             }
             $req->merge(['t_request_pelatihan_d_kary' => $cleanDetails]);
@@ -132,17 +132,16 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         } else {
             $cleanDetails = [];
             foreach($req->t_request_pelatihan_d_kary as $det) {
-                // Extract m_kary_id properly from the frontend's object
                 $karyId = isset($det['m_kary_id']) ? $det['m_kary_id'] : (isset($det['id']) ? $det['id'] : null);
                 
                 if ($karyId) {
-                    $cleanDetails[] = [
-                        'm_kary_id' => $karyId
-                    ];
+                    $cleanRow = $det;
+                    $cleanRow['m_kary_id'] = $karyId;
+                    unset($cleanRow['id']);
+                    $cleanRow['creator_id'] = auth()->user()->id ?? 1;
+                    $cleanDetails[] = $cleanRow;
                 }
             }
-            // For update, the generator might delete and recreate, or we can just let it handle it
-            // since we mapped m_kary_id correctly.
             $req->merge(['t_request_pelatihan_d_kary' => $cleanDetails]);
         }
 
