@@ -49,7 +49,7 @@ onBeforeMount(async () => {
 })
 
 const values = reactive({
-  // status: true,
+  status: 'ACTIVE',
   // direktorat: store.user.data?.direktorat
 })
 
@@ -66,7 +66,8 @@ onBeforeMount(async () => {
           }
         })
         const resultJson = await apiApp.json()
-        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${resultJson.data.approval.trx_id}`, {
+        const apiTrxParams = new URLSearchParams({ join: true, transform: true })
+        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${resultJson.data.approval.trx_id}?${apiTrxParams}`, {
           headers: {
             'Content-Type': 'Application/json',
             Authorization: `${store.user.token_type} ${store.user.token}`
@@ -106,7 +107,7 @@ onBeforeMount(async () => {
         const editedId = route.params.id
         const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
         isRequesting.value = true
-        const params = { join: true, transform: false }
+        const params = { join: true, transform: true }
         const fixedParams = new URLSearchParams(params)
         const res = await fetch(dataURL + '?' + fixedParams, {
           headers: {
@@ -164,10 +165,75 @@ onBeforeMount(async () => {
 
 let _id = 0
 const detailArr = ref([])
+
+function mapKaryawanDetail(row, keepDetailId = true) {
+  const mKaryId = row?.m_kary_id || row?.id || null
+
+  return {
+    ...row,
+    id: keepDetailId ? (row?.id ?? null) : null,
+    m_kary_id: mKaryId,
+    nama_kary: row?.['m_kary.nama_lengkap'] || row?.nama_kary || row?.nama_lengkap || '',
+    cabang_kary: row?.cabang_kary || row?.['m_branch.name'] || '',
+    divisi_kary: row?.divisi_kary || row?.['m_divisi.name'] || row?.nama_divisi || '',
+    posisi_kary: row?.posisi_kary || row?.['m_posisi.name'] || '',
+    m_branch_id: row?.['m_kary.m_branch_id'] || row?.m_branch_id || null,
+    m_divisi_id: row?.['m_kary.m_divisi_id'] || row?.m_divisi_id || null,
+    m_posisi_id: row?.['m_kary.m_posisi_id'] || row?.m_posisi_id || null
+  }
+}
+
+function applyRequestPelatihan(obj) {
+  if (!obj) {
+    values.t_request_pelatihan_id = null
+    values.m_comp_id = null
+    values.m_subcomp_id = null
+    values.m_branch_id = null
+    values.m_divisi_id = null
+    values.trainer_id = null
+    values.m_prog_pelatihan_id = null
+    values.date_from = null
+    values.date_to = null
+    values.desc = null
+    values.sarana = null
+    detailArr.value = []
+    return
+  }
+
+  values.t_request_pelatihan_id = obj.id
+  values.m_comp_id = obj.m_comp_id
+  values.m_subcomp_id = obj.m_subcomp_id
+  values.m_branch_id = obj.m_branch_id
+  values.m_divisi_id = obj.m_divisi_id
+  values.trainer_id = obj.trainer_id
+  values.m_prog_pelatihan_id = obj.m_prog_pelatihan_id
+  values.date_from = obj.date_from
+  values.date_to = obj.date_to
+  values.desc = obj.desc
+  values.sarana = obj.sarana
+  values.status = values.status || 'ACTIVE'
+
+  detailArr.value = (obj.t_request_pelatihan_d_kary || []).map(row => mapKaryawanDetail(row, false))
+}
+
+function cleanDetailForSubmit(row) {
+  const mKaryId = row?.m_kary_id || (!row?.t_realisasi_pelatihan_id ? row?.id : null)
+  if (!mKaryId) return null
+
+  const cleanRow = {
+    m_kary_id: mKaryId
+  }
+
+  if (row?.t_realisasi_pelatihan_id && row?.id) {
+    cleanRow.id = row.id
+  }
+
+  return cleanRow
+}
+
 const onDetailAdd = (e) => {
   e.forEach(row => {
-    row.t_mou_d = row.id;
-    detailArr.value.push(row)
+    detailArr.value.push(mapKaryawanDetail(row, false))
   });
 }
 
@@ -354,8 +420,29 @@ async function posted() {
 
 async function onSave() {
   try {
+    formErrors.value = {}
+    let hasError = false
+    const requiredFields = ['t_request_pelatihan_id', 'date_from', 'date_to', 'm_comp_id', 'm_branch_id', 'm_divisi_id', 'm_prog_pelatihan_id', 'sarana', 'trainer_id', 'status']
+
+    requiredFields.forEach(field => {
+      if (!values[field]) {
+        formErrors.value[field] = ['Bidang ini wajib di isi']
+        hasError = true
+      }
+    })
+
+    if (hasError) {
+      isBadForm.value = true
+      swal.fire({
+        icon: 'error',
+        text: 'Maaf data belum valid, silahkan dikoreksi'
+      })
+      return
+    }
 
     values.t_realisasi_pelatihan_d_kary = detailArr.value
+      .map(row => cleanDetailForSubmit(row))
+      .filter(row => row && row.m_kary_id)
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
     const dataURL = `${store.server.url_backend}/operation${endpointApi}${isCreating ? '' : ('/' + route.params.id)}`
     isRequesting.value = true

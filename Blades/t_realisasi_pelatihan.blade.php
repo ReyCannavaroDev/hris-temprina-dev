@@ -106,33 +106,14 @@
     <div>
       <FieldPopup class="w-full mt-3" :bind="{ readonly: !actionText }" :value="values.t_request_pelatihan_id"
         @input="(v)=>values.t_request_pelatihan_id=v" :errorText="formErrors.t_request_pelatihan_id?'failed':''"
-        :hints="formErrors.t_request_pelatihan_id" valueField="id" displayField="desc" @update:valueFull="obj => {
-    if (obj) {
-      $log('cek',obj)
-      values.m_comp_id = obj.m_comp_id;
-      values.m_subcomp_id = obj.m_subcomp_id;
-      values.m_branch_id = obj.m_branch_id;
-      values.m_divisi_id = obj.m_divisi_id;
-      values.trainer_id = obj.trainer_id;
-      values.m_prog_pelatihan_id = obj.m_prog_pelatihan_id;
-      values.date_from = obj.date_from;
-      values.date_to = obj.date_to;
-      values.desc = obj.desc;
-      values.sarana = obj.sarana;
-      detailArr = obj['t_request_pelatihan_d_kary'].map((dt)=>({
-        ...dt, 
-        divisi_kary : dt['m_divisi.name']
-      }))
-    } else {
-      values.m_comp_id = null;
-      detailArr = []
-    }
-  }" :api="{
+        :hints="formErrors.t_request_pelatihan_id" valueField="id" displayField="desc"
+        @update:valueFull="obj => applyRequestPelatihan(obj)" :api="{
           url: `${store.server.url_backend}/operation/t_request_pelatihan`,
           headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
           params: {
             simplest: false,
-            scopes:'detail',
+            join: true,
+            transform: true,
           }
         }" placeholder="Pilih Request Pelatihan" label="Request Pelatihan" fa-icon="" :check="false" :columns="[{
           headerName: 'No',
@@ -341,8 +322,12 @@
     </div>
 
     <div>
-      <FieldX placeholder="Masukan Status" label="Status" :bind="{ readonly: true }" type="text" :value="values.status"
-        class="w-full mt-3" @input="v=>values.status=v" :check="false" />
+      <FieldSelect class="w-full mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.status"
+        @input="v=>values.status=v" :errorText="formErrors.status?'failed':''" :hints="formErrors.status"
+        valueField="value" displayField="value" :options="[
+        { id: 1, value: 'ACTIVE' },
+        { id: 2, value: 'INACTIVE' }
+      ]" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
     </div>
 
     <div>
@@ -480,7 +465,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(item, i) in detailArr" :key="item.id" class="border-t" v-if="detailArr.length > 0">
+          <tr v-for="(item, i) in detailArr" :key="item.id || item.m_kary_id || i" class="border-t" v-if="detailArr.length > 0">
             <td class="p-2 text-center border border-[#CACACA]">
               {{ i + 1 }}.
             </td>
@@ -549,7 +534,7 @@
 
             <td class="p-2 border border-[#CACACA]">
               <div class="flex justify-center">
-                <button type="button" @click="removeDetail(item)" :disabled="!actionText">
+                <button type="button" @click="removeDetail(i)" :disabled="!actionText">
                     <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path id="Vector" d="M14 1H10.5L9.5 0H4.5L3.5 1H0V3H14M1 16C1 16.5304 1.21071 17.0391 1.58579 17.4142C1.96086 17.7893 2.46957 18 3 18H11C11.5304 18 12.0391 17.7893 12.4142 17.4142C12.7893 17.0391 13 16.5304 13 16V4H1V16Z" fill="#F24E1E"/>
                     </svg>

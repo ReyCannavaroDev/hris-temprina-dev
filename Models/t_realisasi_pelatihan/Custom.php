@@ -13,7 +13,7 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
         parent::__construct();
         $this->helper = getCore("Helper");
         $this->approval = getCore("Approval");
-        
+
         $this->joins = array_values(array_unique(array_merge($this->joins, [
             "m_prog_pelatihan.id=t_realisasi_pelatihan.m_prog_pelatihan_id"
         ])));
@@ -23,7 +23,14 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
         $this->detailsChild = array_values(array_unique(array_merge($this->detailsChild, [
             "t_realisasi_pelatihan_d_kary",
         ])));
+
+        if (app()->request->isMethod('GET')) {
+            $this->details = [];
+            $this->detailsChild = [];
+        }
     }
+
+    public $details = ['t_realisasi_pelatihan_d_kary'];
     
     public $fileColumns    = [ /*file_column*/ ];
 
@@ -61,16 +68,39 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
             $data['trainer.nama_trainer'] = $trainer?->nama_trainer;
         }
 
+        $detail_karyawan = \DB::table('t_realisasi_pelatihan_d_kary')
+            ->where('t_realisasi_pelatihan_id', $row['id'])
+            ->leftJoin('m_kary', 't_realisasi_pelatihan_d_kary.m_kary_id', '=', 'm_kary.id')
+            ->leftJoin('m_branch', 'm_kary.m_branch_id', '=', 'm_branch.id')
+            ->leftJoin('m_divisi', 'm_kary.m_divisi_id', '=', 'm_divisi.id')
+            ->leftJoin('m_general', 'm_divisi.name', '=', 'm_general.id')
+            ->leftJoin('m_posisi', 'm_kary.m_posisi_id', '=', 'm_posisi.id')
+            ->select(
+                't_realisasi_pelatihan_d_kary.*',
+                'm_kary.nama_lengkap as m_kary.nama_lengkap',
+                'm_kary.m_branch_id as m_kary.m_branch_id',
+                'm_kary.m_divisi_id as m_kary.m_divisi_id',
+                'm_kary.m_posisi_id as m_kary.m_posisi_id',
+                'm_branch.name as m_branch.name',
+                'm_general.value as m_divisi.name',
+                'm_posisi.name as m_posisi.name'
+            )
+            ->get();
+
+        $data['t_realisasi_pelatihan_d_kary'] = json_decode(json_encode($detail_karyawan), true);
+
         return array_merge( $row, $data );
     }
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
         if(!isset($arrayData['status'])){
-            $status = 'DRAFT';
+            $status = 'ACTIVE';
         }else{
             $status = $arrayData['status'];
         }
+
+        $this->prepareDetailRequest();
 
         $newArrayData  = array_merge( $arrayData,[
             "kode" => $this->helper->generateNomor("KODE REALISASI PELATIHAN"),
@@ -81,6 +111,71 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
             "model"  => $model,
             "data"   => $newArrayData,
         ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id=null)
+    {
+        $this->prepareDetailRequest($id);
+
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
+        ];
+    }
+
+    private function prepareDetailRequest($id=null)
+    {
+        $req = app()->request;
+        $details = $req->t_realisasi_pelatihan_d_kary ?? [];
+
+        if (empty($details)) {
+            if ($id) {
+                \App\Models\BasicModels\t_realisasi_pelatihan_d_kary::where('t_realisasi_pelatihan_id', $id)->delete();
+            }
+            $this->details = [];
+            return;
+        }
+
+        $cleanDetails = [];
+        foreach ($details as $det) {
+            $det = is_array($det) ? $det : (array) $det;
+            $karyId = $det['m_kary_id'] ?? (!$id ? ($det['id'] ?? null) : null);
+
+            if (!$karyId) {
+                continue;
+            }
+
+            $cleanRow = [
+                'm_kary_id' => $karyId,
+                'creator_id' => auth()->user()->id ?? 1,
+            ];
+
+            if ($id && !empty($det['id'])) {
+                $isExistingDetail = \App\Models\BasicModels\t_realisasi_pelatihan_d_kary::where('id', $det['id'])
+                    ->where('t_realisasi_pelatihan_id', $id)
+                    ->exists();
+
+                if ($isExistingDetail) {
+                    $cleanRow['id'] = $det['id'];
+                }
+            }
+
+            $cleanDetails[] = $cleanRow;
+        }
+
+        if ($id) {
+            $keepIds = array_values(array_filter(array_map(function ($row) {
+                return $row['id'] ?? null;
+            }, $cleanDetails)));
+
+            $deleteQuery = \App\Models\BasicModels\t_realisasi_pelatihan_d_kary::where('t_realisasi_pelatihan_id', $id);
+            if (!empty($keepIds)) {
+                $deleteQuery->whereNotIn('id', $keepIds);
+            }
+            $deleteQuery->delete();
+        }
+
+        $req->merge(['t_realisasi_pelatihan_d_kary' => $cleanDetails]);
     }
 
     public function t_realisasi_pelatihan_d_kary() :HasMany
