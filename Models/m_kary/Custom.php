@@ -2268,10 +2268,28 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
         return $model
             ->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
-                $q->where("m_kary.m_subcomp_id", $m_subcomp_id);
+                if (is_string($m_subcomp_id) && str_starts_with($m_subcomp_id, '[') && str_ends_with($m_subcomp_id, ']')) {
+                    $m_subcomp_id = json_decode($m_subcomp_id, true);
+                }
+                if (is_array($m_subcomp_id)) {
+                    $q->whereIn("m_kary.m_subcomp_id", $m_subcomp_id);
+                } else if(is_string($m_subcomp_id) && str_contains($m_subcomp_id, ',')) {
+                    $q->whereIn("m_kary.m_subcomp_id", explode(',', $m_subcomp_id));
+                } else {
+                    $q->where("m_kary.m_subcomp_id", $m_subcomp_id);
+                }
             })
             ->when($m_branch_id, function ($q) use ($m_branch_id) {
-                $q->where("m_kary.m_branch_id", $m_branch_id);
+                if (is_string($m_branch_id) && str_starts_with($m_branch_id, '[') && str_ends_with($m_branch_id, ']')) {
+                    $m_branch_id = json_decode($m_branch_id, true);
+                }
+                if (is_array($m_branch_id)) {
+                    $q->whereIn("m_kary.m_branch_id", $m_branch_id);
+                } else if(is_string($m_branch_id) && str_contains($m_branch_id, ',')) {
+                    $q->whereIn("m_kary.m_branch_id", explode(',', $m_branch_id));
+                } else {
+                    $q->where("m_kary.m_branch_id", $m_branch_id);
+                }
             });
     }
 
@@ -3174,14 +3192,30 @@ class m_kary extends \App\Models\BasicModels\m_kary
                             $m_comp_id,
                             fn($q) => $q->where("m_comp_id", $m_comp_id)
                         )
-                        ->when(
-                            $m_subcomp_id,
-                            fn($q) => $q->where("m_subcomp_id", $m_subcomp_id)
-                        )
-                        ->when(
-                            $m_branch_id,
-                            fn($q) => $q->where("m_branch_id", $m_branch_id)
-                        )
+                        ->when($m_subcomp_id, function($q) use ($m_subcomp_id) {
+                            if (is_string($m_subcomp_id) && str_starts_with($m_subcomp_id, '[') && str_ends_with($m_subcomp_id, ']')) {
+                                $m_subcomp_id = json_decode($m_subcomp_id, true);
+                            }
+                            if (is_array($m_subcomp_id)) {
+                                $q->whereIn("m_subcomp_id", $m_subcomp_id);
+                            } else if (is_string($m_subcomp_id) && str_contains($m_subcomp_id, ',')) {
+                                $q->whereIn("m_subcomp_id", explode(',', $m_subcomp_id));
+                            } else {
+                                $q->where("m_subcomp_id", $m_subcomp_id);
+                            }
+                        })
+                        ->when($m_branch_id, function($q) use ($m_branch_id) {
+                            if (is_string($m_branch_id) && str_starts_with($m_branch_id, '[') && str_ends_with($m_branch_id, ']')) {
+                                $m_branch_id = json_decode($m_branch_id, true);
+                            }
+                            if (is_array($m_branch_id)) {
+                                $q->whereIn("m_branch_id", $m_branch_id);
+                            } else if (is_string($m_branch_id) && str_contains($m_branch_id, ',')) {
+                                $q->whereIn("m_branch_id", explode(',', $m_branch_id));
+                            } else {
+                                $q->where("m_branch_id", $m_branch_id);
+                            }
+                        })
                         ->when(
                             $m_divisi_id,
                             fn($q) => $q->where("m_divisi_id", $m_divisi_id)
