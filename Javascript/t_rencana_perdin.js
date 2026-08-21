@@ -31,7 +31,7 @@ let dataLog = reactive({ items: [] })
 let activeBtn = ref(null)
 
 // ------------------------------ PERSIAPAN
-const endpointApi = '/t_rencana_perdin	'
+const endpointApi = '/t_rencana_perdin'
 onBeforeMount(() => {
   document.title = is_approval ? 'Approval Rencana Perdin' : ' Rencana Perdin'
 })

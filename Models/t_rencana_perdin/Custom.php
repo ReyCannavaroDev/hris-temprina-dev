@@ -297,35 +297,6 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
 
     public function scopelanding($model)
     {
-        $m_branch_id = request('m_branch_id');
-        $m_subcomp_id = request('m_subcomp_id');
-
-        return $model->whereHas('m_kary', function ($q) use ($m_branch_id, $m_subcomp_id) {
-            $q->when($m_branch_id, function ($q) use ($m_branch_id) {
-                if (is_string($m_branch_id) && str_starts_with($m_branch_id, '[') && str_ends_with($m_branch_id, ']')) {
-                    $m_branch_id = json_decode($m_branch_id, true);
-                }
-                
-                if (is_array($m_branch_id)) {
-                    $q->whereIn('m_branch_id', $m_branch_id);
-                } else if(is_string($m_branch_id) && str_contains($m_branch_id, ',')) {
-                    $q->whereIn('m_branch_id', explode(',', $m_branch_id));
-                } else {
-                    $q->where('m_branch_id', $m_branch_id);
-                }
-            })->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
-                if (is_string($m_subcomp_id) && str_starts_with($m_subcomp_id, '[') && str_ends_with($m_subcomp_id, ']')) {
-                    $m_subcomp_id = json_decode($m_subcomp_id, true);
-                }
-                
-                if (is_array($m_subcomp_id)) {
-                    $q->whereIn('m_subcomp_id', $m_subcomp_id);
-                } else if(is_string($m_subcomp_id) && str_contains($m_subcomp_id, ',')) {
-                    $q->whereIn('m_subcomp_id', explode(',', $m_subcomp_id));
-                } else {
-                    $q->where('m_subcomp_id', $m_subcomp_id);
-                }
-            });
-        });
+        return $model;
     }
 }
