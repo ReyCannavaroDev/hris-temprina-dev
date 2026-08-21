@@ -43,12 +43,23 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
         
     public function scopeName($model){
         return $model->leftjoin('m_general', 'm_divisi.name', 'm_general.id')
-                ->select('m_divisi.id', 'm_divisi.m_branch_id','m_general.value as name.value', 'm_divisi.nomor');
+                ->select(
+                    'm_divisi.id',
+                    'm_divisi.m_branch_id',
+                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as \"name.value\""),
+                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as value"),
+                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as name_old"),
+                    'm_divisi.nomor'
+                );
     }
 
     public function scopeNames($model){
         return $model->leftjoin('m_general', 'm_divisi.name', 'm_general.id')
-                ->select('m_divisi.id', 'm_general.value as value', 'm_divisi.nomor');
+                ->select(
+                    'm_divisi.id',
+                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as value"),
+                    'm_divisi.nomor'
+                );
     }
 
     public function custom_get_import_divisi()

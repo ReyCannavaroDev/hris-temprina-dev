@@ -201,16 +201,21 @@ function applyRequestPelatihan(obj) {
   }
 
   values.t_request_pelatihan_id = obj.id
-  values.m_comp_id = obj.m_comp_id
-  values.m_subcomp_id = obj.m_subcomp_id
-  values.m_branch_id = obj.m_branch_id
-  values.m_divisi_id = obj.m_divisi_id
-  values.trainer_id = obj.trainer_id
-  values.m_prog_pelatihan_id = obj.m_prog_pelatihan_id
-  values.date_from = obj.date_from
-  values.date_to = obj.date_to
-  values.desc = obj.desc
-  values.sarana = obj.sarana
+  values.m_comp_id = obj.m_comp_id ?? obj['t_request_pelatihan.m_comp_id'] ?? obj['m_comp.id'] ?? null
+  values.m_subcomp_id = obj.m_subcomp_id ?? obj['t_request_pelatihan.m_subcomp_id'] ?? obj['m_subcomp.id'] ?? null
+  values.m_branch_id = obj.m_branch_id ?? obj['t_request_pelatihan.m_branch_id'] ?? obj['m_branch.id'] ?? null
+  values.m_divisi_id = obj.m_divisi_id 
+    ?? obj['t_request_pelatihan.m_divisi_id'] 
+    ?? obj['m_divisi.id'] 
+    ?? obj.divisi_id 
+    ?? (obj.t_request_pelatihan_d_kary && obj.t_request_pelatihan_d_kary.length > 0 ? (obj.t_request_pelatihan_d_kary[0]['m_kary.m_divisi_id'] || obj.t_request_pelatihan_d_kary[0].m_divisi_id) : null)
+    ?? null
+  values.trainer_id = obj.trainer_id ?? obj['t_request_pelatihan.trainer_id'] ?? obj['trainer.id'] ?? null
+  values.m_prog_pelatihan_id = obj.m_prog_pelatihan_id ?? obj['t_request_pelatihan.m_prog_pelatihan_id'] ?? obj['m_prog_pelatihan.id'] ?? null
+  values.date_from = obj.date_from ?? obj['t_request_pelatihan.date_from'] ?? null
+  values.date_to = obj.date_to ?? obj['t_request_pelatihan.date_to'] ?? null
+  values.desc = obj.desc ?? obj['t_request_pelatihan.desc'] ?? null
+  values.sarana = obj.sarana ?? obj['t_request_pelatihan.sarana'] ?? null
   values.status = values.status || 'ACTIVE'
 
   detailArr.value = (obj.t_request_pelatihan_d_kary || []).map(row => mapKaryawanDetail(row, false))

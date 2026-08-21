@@ -96,15 +96,15 @@
       </div>
     </div>
   </div>
-  <div class="p-4 grid <md:grid-cols-1 grid-cols-3 gap-2 ">
-    <!-- START COLUMN -->
+  <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- ROW 1 -->
     <div>
-      <FieldX :bind="{ readonly: true }" type="text" :value="values.kode" class="w-full mt-3" @input="v=>values.kode=v"
+      <FieldX :bind="{ readonly: true }" type="text" :value="values.kode" class="w-full !mt-0" @input="v=>values.kode=v"
         :check="false" placeholder="Auto Generate by System" label="Nomor" />
     </div>
 
     <div>
-      <FieldPopup class="w-full mt-3" :bind="{ readonly: !actionText }" :value="values.t_request_pelatihan_id"
+      <FieldPopup class="w-full !mt-0" :bind="{ readonly: !actionText }" :value="values.t_request_pelatihan_id"
         @input="(v)=>values.t_request_pelatihan_id=v" :errorText="formErrors.t_request_pelatihan_id?'failed':''"
         :hints="formErrors.t_request_pelatihan_id" valueField="id" displayField="desc"
         @update:valueFull="obj => applyRequestPelatihan(obj)" :api="{
@@ -132,7 +132,7 @@
         {
           flex: 1,
           field: 'desc',
-          headerName:  'Code',
+          headerName:  'Deskripsi',
           sortable: false, resizable: true, filter: 'ColFilter',
           cellClass: ['border-r', '!border-gray-200', 'justify-center']
         },
@@ -146,124 +146,98 @@
         ]" />
     </div>
 
-    <!-- SBU  -->
     <div>
-      <FieldSelect :bind="{ disabled: values.m_comp_id !== null }" class="w-full !mt-3" :value="values.m_comp_id"
+      <FieldSelect :bind="{ disabled: values.m_comp_id !== null }" class="w-full !mt-0" :value="values.m_comp_id"
         @input="v => {
-    if (v) {
-      values.m_comp_id = v;
-    } else {
-      values.m_comp_id = null;
-      values.m_subcomp_id = null;
-      values.m_branch_id = null;
-      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
-    }
-  }" @update:valueFull="obj => {
-    if (obj) {
-      values.m_comp_id = obj.id;
-      values.m_subcomp_id = null;
-      values.m_branch_id = null;
-      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
-    } else {
-      values.m_comp_id = null;
-    }
-  }" :errorText="formErrors.m_comp_id ? 'failed' : ''" :hints="formErrors.m_comp_id" :check="false" label="SBU "
-        placeholder="Pilih SBU " valueField="id" displayField="name" :api="{
-    url: `${store.server.url_backend}/operation/m_comp`,
-    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` },
-    params: {
-      simplest: true,
-      single: true,
-      where: `this.is_active='true'`,
-      transform: false
-    }
-  }" />
-
+          if (v) {
+            values.m_comp_id = v;
+          } else {
+            values.m_comp_id = null;
+            values.m_subcomp_id = null;
+            values.m_branch_id = null;
+          }
+        }" @update:valueFull="obj => {
+          if (obj) {
+            values.m_comp_id = obj.id;
+            values.m_subcomp_id = null;
+            values.m_branch_id = null;
+          } else {
+            values.m_comp_id = null;
+          }
+        }" :errorText="formErrors.m_comp_id ? 'failed' : ''" :hints="formErrors.m_comp_id" :check="false" label="SBU"
+        placeholder="Pilih SBU" valueField="id" displayField="name" :api="{
+          url: `${store.server.url_backend}/operation/m_comp`,
+          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` },
+          params: {
+            simplest: true,
+            single: true,
+            where: `this.is_active='true'`,
+            transform: false
+          }
+        }" />
     </div>
-    <!-- SUB  -->
-    <div>
-      <FieldSelect :bind="{
-  disabled: values.m_subcomp_id !== null}" class="w-full !mt-3" :value="values.m_subcomp_id" @input="v => {
-    if (v) {
-      values.m_subcomp_id = v;
-    } else {
-      values.m_subcomp_id = null;
-      values.m_branch_id = null;
-      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
-    }
-  }" @update:valueFull="obj => {
-    if (obj) {
-      values.m_subcomp_id = obj.id;
-      values.m_branch_id = null;
-      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
-    } else {
-      values.m_subcomp_id = null;
-    }
-  }" :errorText="formErrors.m_subcomp_id ? 'failed' : ''" :hints="formErrors.m_subcomp_id" :check="false" label="SUB "
-        placeholder="Pilih SUB " valueField="id" displayField="name" :api="{
-    url: `${store.server.url_backend}/operation/m_subcomp`,
-    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` },
-    params: {
-      simplest: true,
-      single: true,
-      where: `this.is_active='true' AND this.m_comp_id='${values.m_comp_id}'`,
-      transform: false
-    }
-  }" />
 
-    </div>
-    <!-- CABANG -->
+    <!-- ROW 2 -->
     <div>
-      <FieldSelect :bind="{ disabled: values.t_request_pelatihan_id !== null }" class="w-full !mt-3" :value="values.m_branch_id"
+      <FieldSelect :bind="{ disabled: values.m_subcomp_id !== null }" class="w-full !mt-0" :value="values.m_subcomp_id"
         @input="v => {
-    if (v) {
-      values.m_branch_id = v;
-    } else {
-      values.m_branch_id = null;
-      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
-    }
-  }" @update:valueFull="obj => {
-    if (obj) {
-      values.m_branch_id = obj.id;
-      if (!values.t_request_pelatihan_id) values.m_divisi_id = null;
-    } else {
-      values.m_branch_id = null;
-    }
-  }" :errorText="formErrors.m_branch_id ? 'failed' : ''" :hints="formErrors.m_branch_id" :check="false" label="Cabang "
-        placeholder="Pilih Cabang " valueField="id" displayField="name" :api="{
-    url: `${store.server.url_backend}/operation/m_branch`,
-    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` },
-    params: {
-      simplest: true,
-      single: true,
-      where: `this.is_active='true' AND this.m_subcomp_id='${values.m_subcomp_id}'`,
-      transform: false
-    }
-  }" />
+          if (v) {
+            values.m_subcomp_id = v;
+          } else {
+            values.m_subcomp_id = null;
+            values.m_branch_id = null;
+          }
+        }" @update:valueFull="obj => {
+          if (obj) {
+            values.m_subcomp_id = obj.id;
+            values.m_branch_id = null;
+          } else {
+            values.m_subcomp_id = null;
+          }
+        }" :errorText="formErrors.m_subcomp_id ? 'failed' : ''" :hints="formErrors.m_subcomp_id" :check="false" label="SUB"
+        placeholder="Pilih SUB" valueField="id" displayField="name" :api="{
+          url: `${store.server.url_backend}/operation/m_subcomp`,
+          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` },
+          params: {
+            simplest: true,
+            single: true,
+            where: `this.is_active='true' AND this.m_comp_id='${values.m_comp_id}'`,
+            transform: false
+          }
+        }" />
     </div>
 
     <div>
-      <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_id || values.t_request_pelatihan_id !== null }"
-        class="w-full mt-3" :value="values.m_divisi_id" @input="v=>values.m_divisi_id=v"
-        :errorText="formErrors.m_divisi_id?'failed':''" @update:valueFull="(objVal)=>{
-                  values.m_dept_id = null
-                }" label="Divisi" placeholder="Pilih Divisi" :hints="formErrors.m_divisi_id" :api="{
-                    url: `${store.server.url_backend}/operation/m_divisi`,
-                    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-                    params: {
-                      //simplest:true,
-                      //selectfield: 'this.id,name.value,this.m_branch_id',
-                      where: `this.is_active = 'true' and this.m_branch_id='${values.m_branch_id}'`
-                    }
-                }" valueField="id" displayField="name_old" :check="false" />
+      <FieldSelect :bind="{ disabled: values.t_request_pelatihan_id !== null }" class="w-full !mt-0" :value="values.m_branch_id"
+        @input="v => {
+          if (v) {
+            values.m_branch_id = v;
+          } else {
+            values.m_branch_id = null;
+          }
+        }" @update:valueFull="obj => {
+          if (obj) {
+            values.m_branch_id = obj.id;
+          } else {
+            values.m_branch_id = null;
+          }
+        }" :errorText="formErrors.m_branch_id ? 'failed' : ''" :hints="formErrors.m_branch_id" :check="false" label="Cabang"
+        placeholder="Pilih Cabang" valueField="id" displayField="name" :api="{
+          url: `${store.server.url_backend}/operation/m_branch`,
+          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` },
+          params: {
+            simplest: true,
+            single: true,
+            where: `this.is_active='true' AND this.m_subcomp_id='${values.m_subcomp_id}'`,
+            transform: false
+          }
+        }" />
     </div>
 
     <div>
-      <FieldSelect placeholder="Masukan Trainer" label="Trainer" :bind="{ disabled: !actionText, clearable:false }"
-        class="w-full mt-3" :value="values.trainer_id" @input="v=>values.trainer_id=v"
-        :errorText="formErrors.trainer_id?'failed':''" @update:valueFull="(objVal)=>{
-                  $log('ini ',objVal)
-                }" label="" placeholder="" :hints="formErrors.trainer_id" :api="{
+      <FieldSelect placeholder="Pilih Trainer" label="Trainer" :bind="{ disabled: !actionText, clearable: false }"
+        class="w-full !mt-0" :value="values.trainer_id" @input="v=>values.trainer_id=v"
+        :errorText="formErrors.trainer_id?'failed':''" :hints="formErrors.trainer_id" :api="{
           url: `${store.server.url_backend}/operation/m_trainer`,
           headers: { 
             'Content-Type': 'Application/json',
@@ -272,82 +246,79 @@
           params: {
             simplest: true,
             where: `this.is_active='true'`,
-            selectfield: 'id, nama_trainer  '
+            selectfield: 'id, nama_trainer'
           }
         }" valueField="id" displayField="nama_trainer" :check="false" />
     </div>
 
+    <!-- ROW 3 -->
     <div>
-      <FieldSelect placeholder="Masukan Program Pelatihan" label="Program Pelatihan"
-        :bind="{ disabled: !actionText, clearable:false }" class="w-full mt-3" :value="values.m_prog_pelatihan_id"
+      <FieldSelect placeholder="Pilih Program Pelatihan" label="Program Pelatihan"
+        :bind="{ disabled: !actionText, clearable: false }" class="w-full !mt-0" :value="values.m_prog_pelatihan_id"
         @input="v=>values.m_prog_pelatihan_id=v" :errorText="formErrors.m_prog_pelatihan_id?'failed':''"
-        :hints="formErrors.m_prog_pelatihan_id" @update:valueFull="(objVal)=>{
-                  values.m_prog_pelatihan_id = null
-                }" displayField="tema_pelatihan" :api="{
-                    url: `${store.server.url_backend}/operation/m_prog_pelatihan`,
-                    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-                    params: {
-                      //where: `this.group='JENIS LOKER'`
-                    }
-              }" valueField="id" :check="false" />
+        :hints="formErrors.m_prog_pelatihan_id" displayField="tema_pelatihan" :api="{
+          url: `${store.server.url_backend}/operation/m_prog_pelatihan`,
+          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+          params: {}
+        }" valueField="id" :check="false" />
     </div>
 
     <div>
-      <FieldX :bind="{ readonly: !actionText }" type="date" class="w-full mt-3" :value="values.date_from"
+      <FieldX :bind="{ readonly: !actionText }" type="date" class="w-full !mt-0" :value="values.date_from"
         :errorText="formErrors.date_from?'failed':''" @input="v=>values.date_from=v" :hints="formErrors.date_from"
-        :check="false" label="Tanggal Awal" placeholder="Masukan Tanggal Awal" />
+        :check="false" label="Tanggal Awal" placeholder="Pilih Tanggal Awal" />
     </div>
 
     <div>
-      <FieldX :bind="{ readonly: !actionText }" type="date" class="w-full mt-3" :value="values.date_to"
+      <FieldX :bind="{ readonly: !actionText }" type="date" class="w-full !mt-0" :value="values.date_to"
         :errorText="formErrors.date_to?'failed':''" @input="v=>values.date_to=v" :hints="formErrors.date_to"
-        :check="false" label="Tanggal Akhir" placeholder="Masukan Tanggal Akhir" />
+        :check="false" label="Tanggal Akhir" placeholder="Pilih Tanggal Akhir" />
     </div>
 
+    <!-- ROW 4 -->
     <div>
-      <FieldX :bind="{ readonly: !actionText }" type="textarea" class="w-full mt-3" :value="values.desc"
-        :errorText="formErrors.desc?'failed':''" @input="v=>values.desc=v" :hints="formErrors.desc" :check="false"
-        label="Catatan" placeholder="Masukan Catatan" />
-    </div>
-
-    <div>
-      <FieldSelect class="w-full mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.sarana"
+      <FieldSelect class="w-full !mt-0" :bind="{ disabled: !actionText, clearable: false }" :value="values.sarana"
         @input="v=>values.sarana=v" :errorText="formErrors.sarana?'failed':''" :hints="formErrors.sarana"
         valueField="value" displayField="value" :options="[
-        { id: 1, value: 'ONLINE' },
-        { id: 2, value: 'OFFLINE' }
-      ]" placeholder="Pilih Sarana" label="Sarana" fa-icon="" :check="false" />
+          { id: 1, value: 'ONLINE' },
+          { id: 2, value: 'OFFLINE' }
+        ]" placeholder="Pilih Sarana" label="Sarana" fa-icon="" :check="false" />
     </div>
 
     <div>
-      <FieldSelect class="w-full mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.status"
+      <FieldSelect class="w-full !mt-0" :bind="{ disabled: !actionText, clearable: false }" :value="values.status"
         @input="v=>values.status=v" :errorText="formErrors.status?'failed':''" :hints="formErrors.status"
         valueField="value" displayField="value" :options="[
-        { id: 1, value: 'ACTIVE' },
-        { id: 2, value: 'INACTIVE' }
-      ]" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
+          { id: 1, value: 'ACTIVE' },
+          { id: 2, value: 'INACTIVE' }
+        ]" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
     </div>
 
     <div>
-      <FieldSelect class="w-full mt-3" v-show="route.query.action?.toLowerCase() === 'verifikasi'"
+      <FieldX :bind="{ readonly: !actionText }" type="text" class="w-full !mt-0" :value="values.desc"
+        :errorText="formErrors.desc?'failed':''" @input="v=>values.desc=v" :hints="formErrors.desc" :check="false"
+        label="Catatan" placeholder="Masukkan Catatan" />
+    </div>
+
+    <!-- CONDITIONAL APPROVAL -->
+    <div v-show="route.query.action?.toLowerCase() === 'verifikasi'" class="col-span-1 md:col-span-3">
+      <FieldSelect class="w-full !mt-0"
         :value="values.target_id" @input="v=>values.target_id=v" :errorText="formErrors.target_id?'failed':''"
         :hints="formErrors.target_id" valueField="id" displayField="nama_lengkap" :api="{
-              url: `${store.server.url_backend}/operation/m_kary`,
-              headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-              params: {
-                selectfield: 'this.id,this.nama_lengkap',
-                scopes: 'higherlevel'
-              }
-          }" placeholder="Pilih Target Approval" label="Target Approval" fa-icon="" :check="false" />
-
+          url: `${store.server.url_backend}/operation/m_kary`,
+          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+          params: {
+            selectfield: 'this.id,this.nama_lengkap',
+            scopes: 'higherlevel'
+          }
+        }" placeholder="Pilih Target Approval" label="Target Approval" fa-icon="" :check="false" />
     </div>
 
-    <div v-if="route.query.is_approval">
+    <div v-if="route.query.is_approval" class="col-span-1 md:col-span-3">
       <FieldX :bind="{ readonly: false }" :value="values.catatan" :errorText="formErrors.catatan?'failed':''"
         @input="v=>values.catatan=v" :hints="formErrors.catatan" :check="false" label="Catatan Approval"
-        placeholder="Tuliskan catatan Approval" />
+        placeholder="Tuliskan Catatan Approval" />
     </div>
-
   </div>
   <div class="col-span-8 md:col-span-12 p-5">
     <ButtonMultiSelect v-if="actionText" title="Add Detail" @add="onDetailAdd" :api="{
