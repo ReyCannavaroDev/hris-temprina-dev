@@ -43,10 +43,11 @@ const handleKeyDown = (event) => {
 let initialValues = {}
 
 let values = reactive({
-  status: 'AKTIF'
+  status: 'Active'
 })
 
 const defaultValues = () => {
+  values.status = values.status || 'Active'
 }
 
 const onReset = async (alert = false) => {
@@ -178,6 +179,7 @@ async function onSave() {
 
 //  @else----------------------- LANDING
 const activeBtn = ref()
+const statusFilter = ref(null)
 let data = reactive({})
 
 
@@ -227,11 +229,11 @@ function filterShowData(params, noBtn) {
 
   if (activeBtn.value == null) {
     // clear params filter
-    landing.api.params.where = null
+    statusFilter.value = null
   } else if (params) {
-    landing.api.params.where = `this.status='Active'`
+    statusFilter.value = `this.status='Active'`
   } else {
-    landing.api.params.where = `this.status='InActive'`
+    statusFilter.value = `this.status='InActive'`
   }
 
   apiTable.value.reload()
@@ -329,8 +331,9 @@ const landing = reactive({
     },
     params: computed(() => ({
       scopes: 'landing',
-      m_subcomp_id: data.subcomp_id,
-      m_branch_id: data.branch_id,
+      ...(data.subcomp_id ? { m_subcomp_id: data.subcomp_id } : {}),
+      ...(data.branch_id ? { m_branch_id: data.branch_id } : {}),
+      ...(statusFilter.value ? { where: statusFilter.value } : {}),
       simplest: true,
       searchfield: 'this.id, m_kary.nama_lengkap, this.tugas, this.tempat_tujuan, this.date_from, this.date_to, this.tanggal_surat_tugas, this.tanggal_rencana_biaya'
     })),
