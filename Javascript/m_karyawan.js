@@ -1182,6 +1182,7 @@ async function onSave() {
 //  @else----------------------- LANDING
 
 const activeBtn = ref()
+const statusFilter = ref(null)
 const page = ref(1)
 
 
@@ -1281,13 +1282,14 @@ function filterShowData(params, noBtn) {
 
   if (activeBtn.value == null) {
     // clear params filter
-    landing.api.params.where = null
+    statusFilter.value = null
   } else if (params) {
-    landing.api.params.where = `this.is_active=true`
+    statusFilter.value = `this.is_active=true`
   } else {
-    landing.api.params.where = `this.is_active=false`
+    statusFilter.value = `this.is_active=false`
   }
 
+  page.value = 1
   apiTable.value.reload()
 }
 
@@ -1390,11 +1392,9 @@ const landing = reactive({
       page: page.value,
       paginate: 25,
       kary_id: store.user.data.m_kary_id ?? 0,
-      m_subcomp_id: data.subcomp_id,
-      m_branch_id: data.branch_id,
+      ...(statusFilter.value ? { where: statusFilter.value } : {}),
       join: true,
-      transform: true,
-      scopes: 'nonos,respo'
+      transform: true
     })),
 
     onsuccess(response) {
