@@ -331,8 +331,6 @@ const landing = reactive({
     },
     params: computed(() => ({
       scopes: 'landing',
-      ...(data.subcomp_id ? { m_subcomp_id: data.subcomp_id } : {}),
-      ...(data.branch_id ? { m_branch_id: data.branch_id } : {}),
       ...(statusFilter.value ? { where: statusFilter.value } : {}),
       simplest: true,
       searchfield: 'this.id, m_kary.nama_lengkap, this.tugas, this.tempat_tujuan, this.date_from, this.date_to, this.tanggal_surat_tugas, this.tanggal_rencana_biaya'
