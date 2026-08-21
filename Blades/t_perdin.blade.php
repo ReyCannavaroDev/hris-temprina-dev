@@ -48,15 +48,15 @@
       </div>
 
       <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.m_kary_id"
-        @input="v=>values.m_kary_id=v" :errorText="formErrors.m_kary_id?'failed':''" :hints="formErrors.m_kary_id"
+        @input="v=>{
+          values.m_kary_id = v;
+          values.m_posisi_id = null;
+          values.m_atasan_id = null;
+        }" :errorText="formErrors.m_kary_id?'failed':''" :hints="formErrors.m_kary_id"
         valueField="id" displayField="nama_lengkap" :api="{
                 url: `${store.server.url_backend}/operation/m_kary`,
                 headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                 params: {
-                  where: [
-                    values.m_subcomp_id ? `m_subcomp_id = ${values.m_subcomp_id}` : '',
-                    values.m_branch_id ? `m_branch_id = ${values.m_branch_id}` : ''
-                  ].filter(Boolean).join(' AND '),
                   simplest:true,
                   transform:false,
                   join:false
@@ -65,23 +65,26 @@
     </div>
 
     <div>
-      <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText, clearable:true }" :value="values.m_posisi_id"
-        @input="v=>values.m_posisi_id=v" :errorText="formErrors.m_posisi_id?'failed':''" :hints="formErrors.m_posisi_id"
+      <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText || !values.m_kary_id, clearable:true }" :value="values.m_posisi_id"
+        @input="v=>{
+          values.m_posisi_id = v;
+          values.m_atasan_id = null;
+        }" :errorText="formErrors.m_posisi_id?'failed':''" :hints="formErrors.m_posisi_id"
         valueField="id" displayField="name" :api="{
                 url: `${store.server.url_backend}/operation/m_posisi`,
                 headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                 params: {
                   scopes: 'getbykary',
-                  m_kary_id: `${values.m_kary_id}`,
+                  m_kary_id: values.m_kary_id ? values.m_kary_id : null,
                   simplest:true,
                   transform:false,
                   join:false
                 }
-            }" placeholder="Pilih Jabatan" label="Jabatan" fa-icon="" :check="false" />
+            }" :placeholder="!values.m_kary_id ? 'Pilih Karyawan Terlebih Dahulu' : 'Pilih Jabatan'" label="Jabatan" fa-icon="" :check="false" />
     </div>
 
      <div>
-      <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText, clearable:true }" :value="values.m_atasan_id"
+      <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText || !values.m_kary_id || !values.m_posisi_id, clearable:true }" :value="values.m_atasan_id"
         @input="v=>values.m_atasan_id=v" :errorText="formErrors.m_atasan_id?'failed':''" :hints="formErrors.m_atasan_id"
         valueField="id" displayField="nama_lengkap" :api="{
               url: `${store.server.url_backend}/operation/m_kary`,
@@ -89,10 +92,11 @@
               params: {
                 selectfield: 'this.id,this.nama_lengkap',
                 scopes: 'higherlevel',
-                t_m_kary_id: `${values.m_kary_id}`,
+                t_m_kary_id: values.m_kary_id ? values.m_kary_id : null,
+                m_posisi_id: values.m_posisi_id ? values.m_posisi_id : null,
                 simplest:true,
               }
-          }" placeholder="Pilih Atasan" label="Atasan" fa-icon="" :check="false" />
+          }" :placeholder="!values.m_posisi_id ? 'Pilih Jabatan Terlebih Dahulu' : 'Pilih Atasan'" label="Atasan" fa-icon="" :check="false" />
 
     </div>
 

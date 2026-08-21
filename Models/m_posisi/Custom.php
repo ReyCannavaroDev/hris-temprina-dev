@@ -414,11 +414,31 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
     {
         $m_kary_id = app()->request->m_kary_id;
 
-        $data = m_posisi::whereHas('m_kary_det_jabatan', function($q) use ($m_kary_id){
-            $q->where('m_karyawan_id', $m_kary_id);
-        })->select('id', 'name');
+        if (!$m_kary_id || !is_numeric($m_kary_id)) {
+            return m_posisi::whereRaw("1 = 0")->select('m_posisi.id', 'm_posisi.name');
+        }
 
-        return $data;
+        $kary = \DB::table('m_kary')->where('id', $m_kary_id)->first();
+        $posisiIds = [];
+        if ($kary && $kary->m_posisi_id) {
+            $posisiIds[] = $kary->m_posisi_id;
+        }
+
+        $detPosisiIds = \DB::table('m_kary_det_jabatan')
+            ->where(function ($q) use ($m_kary_id) {
+                $q->where('m_karyawan_id', $m_kary_id)
+                  ->orWhere('m_kary_id', $m_kary_id);
+            })
+            ->pluck('m_posisi_id')
+            ->toArray();
+
+        $allPosisiIds = array_unique(array_filter(array_merge($posisiIds, $detPosisiIds)));
+
+        if (empty($allPosisiIds)) {
+            return m_posisi::whereRaw("1 = 0")->select('m_posisi.id', 'm_posisi.name');
+        }
+
+        return m_posisi::whereIn('id', $allPosisiIds)->select('id', 'name');
     }
 
     public function scopegetbylevel($model)

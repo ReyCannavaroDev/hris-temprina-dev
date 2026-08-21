@@ -2402,7 +2402,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $q->where("id", auth()->id());
         })->first();
 
-        if(app()->request?->t_m_kary_id)
+        if(app()->request?->t_m_kary_id && is_numeric(app()->request->t_m_kary_id))
         {
            $m_kary = m_kary::find(app()->request->t_m_kary_id);
         }
@@ -2422,25 +2422,46 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 ->value("parent_id");
         }
 
-        $level = m_level_posisi::whereHas("m_level_posisi_d", function (
-            $q
-        ) use ($m_kary) {
-            $q->where("m_posisi_id", $m_kary->m_posisi_id);
-        })->first();
+        $posisiId = (app()->request?->m_posisi_id && is_numeric(app()->request->m_posisi_id))
+            ? app()->request->m_posisi_id
+            : $m_kary->m_posisi_id;
+
+        $level = null;
+        if ($posisiId) {
+            $level = m_level_posisi::whereHas("m_level_posisi_d", function ($q) use ($posisiId) {
+                $q->where("m_posisi_id", $posisiId);
+            })->first();
+        }
 
         $maxLevel = m_level_posisi::max("sequence");
 
         return $query
-            ->whereIn("m_kary.m_divisi_id", $divisiIds)
-            ->when($level && $level->sequence < $maxLevel, function ($q) use (
-                $level
-            ) {
-                $q->whereExists(function ($query) use ($level) {
-                    $query->select(\DB::raw(1))
-                          ->from('m_level_posisi_d as ld')
-                          ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
-                          ->whereColumn('ld.m_posisi_id', 'm_kary.m_posisi_id')
-                          ->where('l.sequence', '>', $level->sequence);
+            ->where("m_kary.id", "!=", $m_kary->id)
+            ->when(!empty($divisiIds), function ($q) use ($divisiIds) {
+                $q->where(function($subQ) use ($divisiIds) {
+                    $subQ->whereIn("m_kary.m_divisi_id", $divisiIds)
+                         ->orWhereNull("m_kary.m_divisi_id");
+                });
+            })
+            ->when($level && $level->sequence < $maxLevel, function ($q) use ($level) {
+                $q->where(function ($subQ) use ($level) {
+                    $subQ->whereExists(function ($query) use ($level) {
+                        $query->select(\DB::raw(1))
+                              ->from('m_level_posisi_d as ld')
+                              ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                              ->whereColumn('ld.m_posisi_id', 'm_kary.m_posisi_id')
+                              ->where('l.sequence', '>', $level->sequence);
+                    })->orWhereExists(function ($query) use ($level) {
+                        $query->select(\DB::raw(1))
+                              ->from('m_kary_det_jabatan as mkdj')
+                              ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'mkdj.m_posisi_id')
+                              ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                              ->where(function($joinKary) {
+                                  $joinKary->whereColumn('mkdj.m_karyawan_id', 'm_kary.id')
+                                           ->orWhereColumn('mkdj.m_kary_id', 'm_kary.id');
+                              })
+                              ->where('l.sequence', '>', $level->sequence);
+                    });
                 });
             });
     }

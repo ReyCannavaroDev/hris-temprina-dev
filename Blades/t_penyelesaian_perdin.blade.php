@@ -425,7 +425,7 @@
               params: {
                 selectfield: 'this.id,this.nama_lengkap',
                 scopes: 'higherlevel',
-                t_m_kary_id: `${values.m_kary_id}`,
+                t_m_kary_id: values.m_kary_id ? values.m_kary_id : null,
               }
           }" placeholder="Pilih Target Approval" label="Target Approval" fa-icon="" :check="false" />
 
