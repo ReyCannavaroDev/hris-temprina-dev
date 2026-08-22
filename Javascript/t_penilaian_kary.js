@@ -56,10 +56,15 @@ const apiKary = computed(() => ({
     Authorization: `${store.user.token_type} ${store.user.token}`
   },
   params: {
-    simplest: true,
+    simplest: false,
     transform: false,
-    join: false,
-    searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name'
+    join: true,
+    searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name,m_divisi.name_old'
+  },
+  onsuccess(response) {
+    response.page = response.current_page
+    response.hasNext = response.has_next
+    return response
   }
 }))
 
@@ -76,6 +81,7 @@ function defaultValues() {
   values.penilaian = null
   values.nama_jabatan = null
   values.nama_divisi = null
+  values.nama_level = null
   values.catatan_1 = null
   values.catatan_2 = null
   values.catatan_3 = null
@@ -234,6 +240,70 @@ async function resolveNamaDivisi(karyawanObj) {
   return (raw && isNaN(raw)) ? raw : '';
 }
 
+async function resolveNamaLevel(karyawanObj) {
+  if (!karyawanObj) return '';
+
+  const raw = karyawanObj.nama_level || karyawanObj.level_name || karyawanObj['m_level_posisi.level_name'] || karyawanObj.level || karyawanObj.lvl;
+
+  if (raw && typeof raw === 'string' && isNaN(raw) && raw.trim() !== '') {
+    return raw.trim();
+  }
+
+  const posisiId = karyawanObj.m_posisi_id || karyawanObj['m_posisi.id'] || karyawanObj.posisi_id;
+  if (posisiId) {
+    try {
+      const resLvlD = await fetch(`${store.server.url_backend}/operation/m_level_posisi_d?where=this.m_posisi_id=${posisiId}&join=true&simplest=true&transform=false`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `${store.user.token_type} ${store.user.token}`
+        }
+      }).then(r => r.json()).then(j => j.data);
+
+      if (Array.isArray(resLvlD) && resLvlD.length > 0) {
+        const first = resLvlD[0];
+        const lvlName = first['m_level_posisi.level_name'] || first.level_name;
+        if (lvlName && typeof lvlName === 'string' && lvlName.trim() !== '') {
+          return lvlName.trim();
+        }
+
+        const lvlId = first.m_level_posisi_id || first['m_level_posisi.id'];
+        if (lvlId) {
+          const resLvl = await fetch(`${store.server.url_backend}/operation/m_level_posisi/${lvlId}?simplest=true&transform=false`, {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `${store.user.token_type} ${store.user.token}`
+            }
+          }).then(r => r.json()).then(j => j.data);
+          if (resLvl && resLvl.level_name) {
+            return String(resLvl.level_name).trim();
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Gagal resolve m_level_posisi_d:', e);
+    }
+  }
+
+  const directLevelId = karyawanObj.m_level_posisi_id || karyawanObj['m_level_posisi.id'];
+  if (directLevelId) {
+    try {
+      const resLvl = await fetch(`${store.server.url_backend}/operation/m_level_posisi/${directLevelId}?simplest=true&transform=false`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `${store.user.token_type} ${store.user.token}`
+        }
+      }).then(r => r.json()).then(j => j.data);
+      if (resLvl && resLvl.level_name) {
+        return String(resLvl.level_name).trim();
+      }
+    } catch (e) {
+      console.error('Gagal resolve direct m_level_posisi:', e);
+    }
+  }
+
+  return (raw && isNaN(raw)) ? String(raw).trim() : '';
+}
+
 async function onKaryawanSelected(karyawan) {
   values.m_assessment_kary_id = null;
   values.tipe_penilaian = null;
@@ -251,12 +321,19 @@ async function onKaryawanSelected(karyawan) {
   if (karyawan['m_posisi.name'] || karyawan?.jabatan) {
     values.nama_jabatan = karyawan['m_posisi.name'] || karyawan?.jabatan;
   }
-  
+
   const initialDivisi = karyawan['nama_divisi'] || karyawan['m_divisi.name'];
   if (initialDivisi && isNaN(initialDivisi)) {
     values.nama_divisi = initialDivisi;
   } else {
     values.nama_divisi = '';
+  }
+
+  const initialLevel = karyawan['nama_level'] || karyawan['level_name'] || karyawan['m_level_posisi.level_name'];
+  if (initialLevel && isNaN(initialLevel)) {
+    values.nama_level = initialLevel;
+  } else {
+    values.nama_level = '';
   }
 
   if (karyawan.m_comp_id) values.m_comp_id = karyawan.m_comp_id;
@@ -265,6 +342,10 @@ async function onKaryawanSelected(karyawan) {
 
   resolveNamaDivisi(karyawan).then(divName => {
     if (divName) values.nama_divisi = divName;
+  });
+
+  resolveNamaLevel(karyawan).then(lvlName => {
+    if (lvlName) values.nama_level = lvlName;
   });
 
   if (karyawan?.id) {
@@ -292,6 +373,11 @@ async function onKaryawanSelected(karyawan) {
         const divNameDetail = await resolveNamaDivisi(hasilData);
         if (divNameDetail) {
           values.nama_divisi = divNameDetail;
+        }
+
+        const lvlNameDetail = await resolveNamaLevel(hasilData);
+        if (lvlNameDetail) {
+          values.nama_level = lvlNameDetail;
         }
 
         const posisiId = hasilData.m_posisi_id || karyawan.m_posisi_id;
@@ -588,6 +674,10 @@ onBeforeMount(async () => {
             const resolvedDiv = await resolveNamaDivisi(hasilData);
             if (resolvedDiv) {
               values.nama_divisi = resolvedDiv;
+            }
+            const resolvedLvl = await resolveNamaLevel(hasilData);
+            if (resolvedLvl) {
+              values.nama_level = resolvedLvl;
             }
           }
         } catch (e) {

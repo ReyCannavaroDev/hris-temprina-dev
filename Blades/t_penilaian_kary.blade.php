@@ -73,6 +73,7 @@
             values.nama = '';
             values.nama_jabatan = '';
             values.nama_divisi = '';
+            values.nama_level = '';
           }
         }"
         :errorText="formErrors.m_kary_id?'failed':''" 
@@ -106,22 +107,25 @@
           flex: 1,
           field: 'atasan.nama_lengkap',
           headerName: 'Atasan',
+          valueGetter: (p) => p.data?.['atasan.nama_lengkap'] || p.data?.atasan?.nama_lengkap || p.data?.['atasan.nama_depan'] || p.data?.atasan?.nama_depan || p.data?.atasan || '-',
           sortable: false, resizable: true, filter: false,
-          cellClass: ['border-r', '!border-gray-200', 'justify-end']
+          cellClass: ['border-r', '!border-gray-200', 'justify-start']
         },
         {
           flex: 1,
           field: 'm_posisi.name',
           headerName: 'Posisi',
+          valueGetter: (p) => p.data?.['m_posisi.name'] || p.data?.m_posisi?.name || p.data?.posisi || p.data?.jabatan || '-',
           sortable: false, resizable: true, filter: false,
-          cellClass: ['border-r', '!border-gray-200', 'justify-end']
+          cellClass: ['border-r', '!border-gray-200', 'justify-start']
         },
         {
           flex: 1,
-          field: 'nama_divisi',
+          field: 'm_divisi.name_old',
           headerName: 'Divisi',
+          valueGetter: (p) => p.data?.['m_divisi.name_old'] || p.data?.['m_divisi.nama'] || (p.data?.nama_divisi && isNaN(p.data.nama_divisi) ? p.data.nama_divisi : null) || (p.data?.['m_divisi.name'] && isNaN(p.data['m_divisi.name']) ? p.data['m_divisi.name'] : null) || p.data?.divisi || '-',
           sortable: false, resizable: true, filter: false,
-          cellClass: ['border-r', '!border-gray-200', 'justify-end']
+          cellClass: ['border-r', '!border-gray-200', 'justify-start']
         }]"
       />
     </div>
@@ -136,6 +140,12 @@
       <FieldX class="w-full !mt-3" :bind="{ readonly: true }" :value="values.nama_divisi"
         :errorText="formErrors.nama_divisi?'failed':''" @input="v=>values.nama_divisi=v" :hints="formErrors.nama_divisi"
         placeholder="Divisi Terisi Otomatis" label="Divisi" fa-icon="building" :check="false" />
+    </div>
+
+    <div>
+      <FieldX class="w-full !mt-3" :bind="{ readonly: true }" :value="values.nama_level"
+        :errorText="formErrors.nama_level?'failed':''" @input="v=>values.nama_level=v" :hints="formErrors.nama_level"
+        placeholder="Level Terisi Otomatis" label="Level Karyawan" fa-icon="layer-group" :check="false" />
     </div>
 
     <div>
