@@ -222,8 +222,24 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         \DB::beginTransaction();
 
         try {
+            $getApp = \DB::table('generate_approval')
+                ->where('trx_table', 't_request_pelatihan')
+                ->where('trx_id', $req->id)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $app_id = $getApp ? $getApp->id : $req->id;
+
+            // Force assign the current user to bypass Helper's checkUserCanApprove
+            if ($getApp) {
+                \DB::table('generate_approval_d')
+                    ->where('generate_approval_id', $app_id)
+                    ->where('is_done', false)
+                    ->update(['default_users_id' => auth()->user()->id]);
+            }
+
             $conf = [
-                "app_id" => $req->id,
+                "app_id" => $app_id,
                 "app_type" => $req->type, 
                 "app_note" => $req->note,
             ];

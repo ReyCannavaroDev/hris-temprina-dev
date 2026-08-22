@@ -48,7 +48,7 @@ onBeforeMount(async () => {
 })
 
 const values = reactive({
-  status: 'ACTIVE',
+  status: 'DRAFT',
   // direktorat: store.user.data?.direktorat
 })
 
@@ -412,6 +412,57 @@ async function approval() {
 
 }
 
+async function actionProgress(type) {
+  let text = '';
+  
+  if (type !== 'APPROVED') {
+    const result = await swal.fire({
+      title: 'Catatan ' + type,
+      input: 'textarea',
+      inputPlaceholder: 'Tuliskan catatan di sini...',
+      showCancelButton: true
+    })
+    if (result.value === undefined) return; // user cancelled
+    text = result.value;
+  } else {
+    const result = await swal.fire({
+      title: 'Konfirmasi Approval',
+      text: 'Apakah Anda yakin ingin menyetujui pengajuan ini?',
+      icon: 'question',
+      showCancelButton: true
+    })
+    if (!result.isConfirmed) return;
+  }
+
+  const payload = {
+    id: parseInt(route.params.id),
+    type: type,
+    note: type === 'APPROVED' ? 'Disetujui' : text
+  }
+    try {
+      const dataURL = `${store.server.url_backend}/operation${endpointApi}/progress`
+      isRequesting.value = true
+      const res = await fetch(dataURL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'Application/json',
+          Authorization: `${store.user.token_type} ${store.user.token}`
+        },
+        body: JSON.stringify(payload)
+      })
+      
+      if (!res.ok) {
+        const responseJson = await res.json().catch(() => ({}));
+        throw (responseJson.message || responseJson.error || "Failed when trying to post data")
+      }
+      
+      router.replace('/' + modulPath + '?reload=' + (Date.parse(new Date())))
+    } catch (err) {
+      swal.fire({ icon: 'error', text: err })
+    }
+    isRequesting.value = false
+}
+
 async function onSave() {
   try {
     formErrors.value = {}
@@ -429,7 +480,7 @@ async function onSave() {
       isBadForm.value = true
       swal.fire({
         icon: 'error',
-        text: 'Maaf data belum valid, silahkan dikoreksi'
+        text: 'Lengkapi Data Terlebih Dahulu !'
       })
       return
     }
@@ -454,6 +505,11 @@ async function onSave() {
       
       return newRow
     })
+    // Jika status REVISED, otomatis kembalikan ke DRAFT saat disimpan ulang
+    if (values.status === 'REVISED') {
+      values.status = 'DRAFT';
+    }
+
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
     const dataURL = `${store.server.url_backend}/operation${endpointApi}${isCreating ? '' : ('/' + route.params.id)}`
     isRequesting.value = true
@@ -491,10 +547,10 @@ function filterShowData(statusLabel = null, noBtn = null) {
   const statusMap = {
     1: 'DRAFT',
     2: 'POSTED',
-    2: 'IN APPROVAL',
-    2: 'REVISED',
-    2: 'APPROVED',
-    2: 'REJECTED',
+    3: 'IN APPROVAL',
+    4: 'REVISED',
+    6: 'APPROVED',
+    7: 'REJECTED',
   }
 
   if (noBtn !== null) {
@@ -699,10 +755,22 @@ const landing = computed(() => {
       }
       ,
       {
-        icon: 'paper-plane',
-        title: "Posted Data",
+        icon: 'location-arrow',
+        title: "Send Approval",
         class: 'bg-rose-700 rounded-lg text-white',
         show: (row) => row.status?.toUpperCase() === 'POSTED' && data.can_update,
+        click(row) {
+          router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
+        }
+      },
+      {
+        icon: 'check-square',
+        title: "Review Data",
+        class: 'bg-blue-600 rounded-lg text-white',
+        show: (row) => {
+          const isAtasan = ['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase());
+          return row.status?.toUpperCase() === 'IN APPROVAL' && isAtasan;
+        },
         click(row) {
           router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
         }

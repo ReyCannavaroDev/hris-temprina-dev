@@ -285,11 +285,13 @@
     </div>
 
     <div>
-      <FieldSelect class="w-full mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.status"
+      <FieldSelect class="w-full mt-3" :bind="{ disabled: !actionText || actionText === 'Tambah', clearable:false }" :value="values.status"
         @input="v=>values.status=v" :errorText="formErrors.status?'failed':''" :hints="formErrors.status"
         valueField="value" displayField="value" :options="[
-        { id: 1, value: 'ACTIVE' },
-        { id: 2, value: 'INACTIVE' }
+        { id: 1, value: 'DRAFT' },
+        { id: 2, value: 'ACTIVE' },
+        { id: 3, value: 'INACTIVE' },
+        { id: 4, value: 'POSTED' }
       ]" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
     </div>
 
@@ -467,16 +469,26 @@
       </table>
     </div>
 
-    <div class="flex flex-row justify-end space-x-[20px] mt-[5em]">
-      <button v-show="route.query.action?.toLowerCase() === 'verifikasi'" @click="onBack" class="bg-[#EF4444] hover:bg-[#ed3232] text-white px-[36.5px] py-[12px] rounded-[6px] ">
+    <div class="flex flex-row justify-end space-x-[20px] mt-[5em]" v-show="route.query.action?.toLowerCase() === 'verifikasi'">
+      <button @click="onBack" class="bg-gray-500 hover:bg-gray-600 text-white px-[36.5px] py-[12px] rounded-[6px] ">
             Kembali
-          </button>
-      <button v-show="route.query.action?.toLowerCase() === 'verifikasi'" @click="posted" class="bg-orange-500 hover:bg-orange-600 text-white px-[36.5px] py-[12px] rounded-[6px] ">
-            Posted
-          </button>
-      <button v-show="route.query.action?.toLowerCase() === 'verifikasi'" @click="approval" class="bg-orange-500 hover:bg-orange-600 text-white px-[36.5px] py-[12px] rounded-[6px] ">
-            Approval
-          </button>
+      </button>
+
+      <!-- BUTTON FOR STAFF -->
+      <button v-show="values.status === 'POSTED'" @click="approval" class="bg-blue-500 hover:bg-blue-600 text-white px-[36.5px] py-[12px] rounded-[6px] ">
+            Send IN APPROVAL
+      </button>
+
+      <!-- BUTTONS FOR ATASAN -->
+      <button v-show="values.status === 'IN APPROVAL'" @click="actionProgress('REJECTED')" class="bg-red-500 hover:bg-red-600 text-white px-[36.5px] py-[12px] rounded-[6px] ">
+            REJECTED
+      </button>
+      <button v-show="values.status === 'IN APPROVAL'" @click="actionProgress('REVISED')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-[36.5px] py-[12px] rounded-[6px] ">
+            REVISED
+      </button>
+      <button v-show="values.status === 'IN APPROVAL'" @click="actionProgress('APPROVED')" class="bg-green-500 hover:bg-green-600 text-white px-[36.5px] py-[12px] rounded-[6px] ">
+            APPROVED
+      </button>
     </div>
     <!-- FORM END -->
   </div>
