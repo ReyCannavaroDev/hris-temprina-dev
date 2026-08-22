@@ -601,6 +601,30 @@ const data = reactive({
 
 const isAccessReady = ref(false)
 
+function openModal(id) {
+  dataLog.items = []
+  modalOpen.value = true
+  loadLog(id)
+}
+
+function closeModal(i) {
+  dataLog.items = []
+  modalOpen.value = false
+}
+
+async function loadLog(id) {
+  const url = `${store.server.url_backend}/operation${endpointApi}/app_log?id=${id}`
+  const res = await fetch(url, {
+    headers: {
+      'Content-Type': 'Application/json',
+      Authorization: `${store.user.token_type} ${store.user.token}`
+    },
+  })
+  if (!res.ok) throw new Error("Failed when trying to read data")
+  const result = await res.json()
+  dataLog.items = result
+}
+
 onBeforeMount(async () => {
   if (localStorage.getItem('respo')) {
     const v = JSON.parse(localStorage.getItem('respo'))
@@ -752,69 +776,83 @@ const landing = computed(() => {
         click(row) {
           router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
         }
-      }, {
-      icon: 'location-arrow',
-      title: "Approve HC",
-      class: 'bg-rose-700 rounded-lg text-white',
-      show: row => {
-        const status = row.status?.toUpperCase()
-        const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1
-        const isStatusValid = status === 'HALF APPROVED'
-        return isUserHC && isStatusValid && data.can_update
-      },
-      async click(row) {
-        swal.fire({
-          icon: 'warning',
-          text: 'Full Approve?',
-          iconColor: '#1469AE',
-          confirmButtonColor: '#1469AE',
+      },      {
+        icon: 'location-arrow',
+        title: "Approve HC",
+        class: 'bg-rose-700 rounded-lg text-white',
+        show: row => {
+          const status = row.status?.toUpperCase()
+          const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1
+          const isStatusValid = status === 'HALF APPROVED'
+          return isUserHC && isStatusValid && data.can_update
+        },
+        async click(row) {
+          swal.fire({
+            icon: 'warning',
+            text: 'Full Approve?',
+            iconColor: '#1469AE',
+            confirmButtonColor: '#1469AE',
 
-          showDenyButton: true
-        }).then(async (res) => {
-          if (res.isConfirmed) {
-            try {
-              const dataURL = `${store.server.url_backend}/operation/t_request_pelatihan/approveHC`
-              isRequesting.value = true
-              const res = await fetch(dataURL, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'Application/json',
-                  Authorization: `${store.user.token_type} ${store.user.token}`
-                },
-                body: JSON.stringify({ id: row.id })
-              })
-              if (!res.ok) {
-                if ([400, 422, 500].includes(res.status)) {
-                  const responseJson = await res.json()
-                  formErrors.value = responseJson.errors || {}
-                  throw (responseJson.message + " " + responseJson.data.errorText || "Failed when trying to post data")
-                } else {
-                  throw ("Failed when trying to post data")
+            showDenyButton: true
+          }).then(async (res) => {
+            if (res.isConfirmed) {
+              try {
+                const dataURL = `${store.server.url_backend}/operation/t_request_pelatihan/approveHC`
+                isRequesting.value = true
+                const res = await fetch(dataURL, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'Application/json',
+                    Authorization: `${store.user.token_type} ${store.user.token}`
+                  },
+                  body: JSON.stringify({ id: row.id })
+                })
+                if (!res.ok) {
+                  if ([400, 422, 500].includes(res.status)) {
+                    const responseJson = await res.json()
+                    formErrors.value = responseJson.errors || {}
+                    throw (responseJson.message + " " + responseJson.data.errorText || "Failed when trying to post data")
+                  } else {
+                    throw ("Failed when trying to post data")
+                  }
                 }
+                const responseJson = await res.json()
+                swal.fire({
+                  icon: 'success',
+                  text: responseJson.message
+                })
+                apiTable.value.reload()
+              } catch (err) {
+                isBadForm.value = true
+                swal.fire({
+                  icon: 'error',
+                  text: err
+                })
+              } finally {
+                isRequesting.value = false
               }
-              const responseJson = await res.json()
-              swal.fire({
-                icon: 'success',
-                text: responseJson.message
-              })
-              // const resultJson = await res.json()
-            } catch (err) {
-              isBadForm.value = true
-              swal.fire({
-                icon: 'error',
-                iconColor: '#1469AE',
-                confirmButtonColor: '#1469AE',
-                text: err
-              })
             }
-            isRequesting.value = false
-
-            apiTable.value.reload()
-          }
-        })
+          })
+        }
+      },
+      {
+        icon: 'table',
+        title: "Log Approval",
+        class: 'bg-gray-700 rounded-lg text-white',
+        show: (row) => ['APPROVED', 'IN APPROVAL', 'HALF APPROVED', 'REJECTED', 'REVISED'].includes(row['status']?.toUpperCase()) && data.can_read,
+        click(row) {
+          openModal(row.id)
+        }
+      },
+      {
+        icon: 'check',
+        title: "Approval",
+        class: 'bg-green-600 rounded-lg text-white',
+        show: (row) => row.status?.toUpperCase() === 'IN APPROVAL' && data.can_update,
+        click(row) {
+          router.push(`${route.path}/${row.id}?is_approval=true&` + tsId)
+        }
       }
-    },
-
     ],
 
     api: {

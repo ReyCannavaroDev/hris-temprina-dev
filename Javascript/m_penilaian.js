@@ -43,7 +43,8 @@ let initialValues = {}
 const changedValues = []
 
 const values = reactive({
-  is_active: true
+  is_active: true,
+  m_assessment_kary_d_level: []
 })
 
 // DEFAULT VALUE BEFORE MOUNT --UBAH DISINI
@@ -114,26 +115,28 @@ onBeforeMount(async () => {
       const resultJson = await res.json()
       initialValues = resultJson.data
 
+      // Biarkan sebagai array of integer (id) agar FieldSelect multiple dapat match via valueField="id"
       initialValues.m_assessment_kary_d_level =
         Array.isArray(initialValues.m_assessment_kary_d_level)
-          ? initialValues.m_assessment_kary_d_level.map(
-              item => item['m_level_posisi.id']
-            )
+          ? initialValues.m_assessment_kary_d_level
+            .map(item => typeof item === 'object' && item !== null ? (item.m_level_posisi_id || item['m_level_posisi.id'] || item.id) : item)
+            .map(val => parseInt(val))
+            .filter(val => !isNaN(val) && val > 0)
           : []
 
       if (Array.isArray(initialValues.m_assessment_kary_d)) {
         detailArr.value = initialValues.m_assessment_kary_d.map(item => {
           const sub = Array.isArray(item.m_assessment_kary_sub_d)
             ? [...item.m_assessment_kary_sub_d]
-                .filter(Boolean)
-                .sort((a, b) => (b.nilai ?? 0) - (a.nilai ?? 0))
+              .filter(Boolean)
+              .sort((a, b) => (b.nilai ?? 0) - (a.nilai ?? 0))
             : [
-                {
-                  m_assessment_kary_d_id: 0,
-                  keterangan: '',
-                  nilai: 0,
-                }
-              ]
+              {
+                m_assessment_kary_d_id: 0,
+                keterangan: '',
+                nilai: 0,
+              }
+            ]
 
           return {
             ...item,
@@ -275,11 +278,17 @@ async function onSave() {
     const level = values.m_assessment_kary_d_level
 
     if (Array.isArray(level)) {
-      values.m_assessment_kary_d_level = level.map(id => ({
-        m_assessment_kary_id: 1,
-        m_level_posisi_id: id,
-        creator_id: store.user?.data?.id
-      }))
+      values.m_assessment_kary_d_level = level
+        .map(id => {
+          const rawId = typeof id === 'object' && id !== null ? (id.m_level_posisi_id || id.id) : id
+          const numId = parseInt(rawId)
+          return isNaN(numId) ? null : {
+            m_assessment_kary_id: isNaN(parseInt(route.params.id)) ? 0 : parseInt(route.params.id),
+            m_level_posisi_id: numId,
+            creator_id: store.user?.data?.id
+          }
+        })
+        .filter(Boolean)
     } else {
       values.m_assessment_kary_d_level = []
     }
@@ -332,7 +341,7 @@ function filterShowData(params, noBtn) {
   } else {
     activeBtn.value = noBtn
   }
-  
+
   if (activeBtn.value == null) {
     // clear params filter
     landing.api.params.where = null
@@ -459,8 +468,8 @@ const landing = reactive({
   api: {
     // url: `${store.server.url_backend}/operation/${endpointApi}`,
     url: currentMenu?.can_read
-         ? `${store.server.url_backend}/operation/${endpointApi}` 
-         : '',
+      ? `${store.server.url_backend}/operation/${endpointApi}`
+      : '',
     headers: {
       'Content-Type': 'Application/json',
       authorization: `${store.user.token_type} ${store.user.token}`

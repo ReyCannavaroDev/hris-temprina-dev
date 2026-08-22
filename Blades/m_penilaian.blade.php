@@ -160,7 +160,14 @@
             <FieldSelect
               class="w-full col-span-9 !mt-3"
               :bind="{ disabled: !actionText, clearable:true, multiple: true }"
-              :value="values.m_assessment_kary_d_level" @input="v=>values.m_assessment_kary_d_level=v"
+              :value="values.m_assessment_kary_d_level" 
+              @input="v => {
+                values.m_assessment_kary_d_level = Array.isArray(v) 
+                  ? v.map(i => typeof i === 'object' && i !== null ? (i.id || i.m_level_posisi_id) : i)
+                     .map(i => parseInt(i))
+                     .filter(i => !isNaN(i) && i > 0)
+                  : []
+              }"
               :errorText="formErrors.m_assessment_kary_d_level?'failed':''" 
               :hints="formErrors.m_assessment_kary_d_level"
               valueField="id" displayField="level_name"

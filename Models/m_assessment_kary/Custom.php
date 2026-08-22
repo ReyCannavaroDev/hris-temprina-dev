@@ -14,9 +14,40 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
     //public $createAdditionalData = ["creator_id"=>"auth:id"];
     //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 
+    public $details = ['m_assessment_kary_d', 'm_assessment_kary_d_level'];
+
     public function m_assessment_kary_d_level() :\Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany('App\Models\CustomModels\m_assessment_kary_d_level', 'm_assessment_kary_id', 'id');
+    }
+
+    public function createBefore($model, $arrayData, $metaData, $id=null)
+    {
+        $req = app()->request;
+        if(empty($req->m_assessment_kary_d_level)){
+            $this->details = ['m_assessment_kary_d'];
+        } else {
+            $this->details = ['m_assessment_kary_d', 'm_assessment_kary_d_level'];
+        }
+        return [
+            "model"  => $model,
+            "data"   => $arrayData,
+        ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id=null)
+    {
+        $req = app()->request;
+        if(empty($req->m_assessment_kary_d_level)){
+            \App\Models\BasicModels\m_assessment_kary_d_level::where('m_assessment_kary_id', $id)->delete();
+            $this->details = ['m_assessment_kary_d'];
+        } else {
+            $this->details = ['m_assessment_kary_d', 'm_assessment_kary_d_level'];
+        }
+        return [
+            "model"  => $model,
+            "data"   => $arrayData,
+        ];
     }
 
     public function scopeForKaryawan($query)
@@ -53,13 +84,16 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
     public function transformRowData( array $row)
     {
         $data = [];
+        // Gunakan 'this.id' bila tersedia (generator join bisa menimpa 'id' dengan m_general.id)
+        $assessmentId = $row['this.id'] ?? $row['id'] ?? null;
+
         if(app()->request->group){
             $grouped = m_assessment_kary_d::with(['m_assessment_kary_sub_d' => function($query){
                 $query->orderBy('nilai','asc');
             }])
             ->leftJoin('m_general', 'm_assessment_kary_d.kategori', '=', 'm_general.id')
             ->addSelect('m_assessment_kary_d.*', 'm_general.value as kategori_name')
-            ->where('m_assessment_kary_id', $row['id'])
+            ->where('m_assessment_kary_id', $assessmentId)
             ->get()
             ->groupBy('kategori_name');
 
@@ -73,12 +107,17 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
             ];
         }
 
-        $levelString = m_assessment_kary_d_level::where('m_assessment_kary_id', $row['id'])
-                ->with('m_level_posisi')
-                ->get()
-                ->implode('m_level_posisi.level_name', ', ');
-        
-        $data['level'] = $levelString;
+        $levelNames = '';
+        if ($assessmentId) {
+            $levelNames = \DB::table('m_assessment_kary_d_level')
+                ->join('m_level_posisi', 'm_assessment_kary_d_level.m_level_posisi_id', '=', 'm_level_posisi.id')
+                ->where('m_assessment_kary_d_level.m_assessment_kary_id', $assessmentId)
+                ->pluck('m_level_posisi.level_name')
+                ->filter()
+                ->implode(', ');
+        }
+
+        $data['level'] = $levelNames;
         
         if(app()->request->divisi_name){
             $divisi_general_id = m_divisi::find($row['m_divisi_id'])?->name;
