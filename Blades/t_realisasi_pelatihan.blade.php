@@ -329,24 +329,20 @@
                       //where: `this.status!='DRAFT'`,
                       scopes:'divisi',
                       notin: detailArr.length > 0 ? `this.id:${detailArr.map(dt => dt.m_kary_id).join(',')}` : null,
-                      searchfield: 'this.id, this.code,this.name_short,this.name_long,type.value1'
+                      searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_subcomp.name,m_branch.name,nama_divisi'
                     },
                   onsuccess:(response) => {
                    response.data = [...response.data].map((dt) => {
                    dt['m_kary_id'] = dt['id'];
                    dt['nama_kary'] = dt['nama_lengkap'];
-                   dt['divisi_kary'] = dt['m_divisi.name'];
-                   dt['cabang_kary'] = dt['m_branch.name'];
-                   dt['posisi_kary'] = dt['m_posisi.name'];
-                   //dt['item_code'] = dt['code'];
-                   //dt['m_cat_id'] = dt['m_cat1_id'];
-                   //dt['m_cat'] = dt['m_cat1.name'];
-                   //dt['unit_id'] = dt['unit_price_id'];
-                   //dt['unit_1'] = dt['unit_price.value1'];
-                   //dt['unit_2_id'] = dt['unit_2_id'];
-                   //dt['unit_2'] = dt['unit_2.value1'];    
-                   //dt['desc'] = ''          
-                   $log(response.data)               
+                   dt['atasan_id'] = dt['atasan_id'] || dt['atasan.id'] || (dt['atasan'] ? dt['atasan'].id : null);
+                   dt['atasan_kary'] = dt['atasan.nama_lengkap'] || dt['atasan.nama_depan'] || (dt['atasan'] ? (dt['atasan'].nama_lengkap || dt['atasan'].nama_depan) : '') || '-';
+                   dt['m_divisi_id'] = dt['m_divisi_id'] || dt['m_kary.m_divisi_id'] || null;
+                   dt['divisi_kary'] = dt['nama_divisi'] || dt['m_divisi.name'] || dt['m_divisi']?.name || dt['divisi_kary'] || '';
+                   dt['m_branch_id'] = dt['m_branch_id'] || dt['m_kary.m_branch_id'] || null;
+                   dt['cabang_kary'] = dt['m_branch.name'] || dt['cabang_kary'] || '';
+                   dt['m_posisi_id'] = dt['m_posisi_id'] || dt['m_kary.m_posisi_id'] || null;
+                   dt['posisi_kary'] = dt['m_posisi.name'] || dt['posisi_kary'] || '';
                    return dt;
                   });
 
@@ -363,42 +359,54 @@
                         return ''
                       },
                       width:60,
+                      minWidth: 50,
                       sortable: false, resizable: true, filter: false,
                       cellClass: ['justify-center', 'bg-gray-50', '!border-gray-200']
                     },
                     {
                       flex: 1,
+                      minWidth: 100,
                       headerName:'Kode Karyawan',
-                      sortable: false, resizable: true, filter: false,filter:'ColFilter',
+                      sortable: false, resizable: true, filter: 'ColFilter',
                       field: 'kode',
                       cellClass: ['justify-start','!border-gray-200']
                     },
                     {
                       flex: 2,
+                      minWidth: 150,
                       headerName:'Nama Karyawan',
                       field: 'nama_lengkap',
-                      sortable: false, resizable: true, filter: false,filter:'ColFilter',
+                      sortable: false, resizable: true, filter: 'ColFilter',
+                      cellClass: ['justify-start','!border-gray-200']
+                    },
+                    {
+                      flex: 2,
+                      minWidth: 140,
+                      headerName:'Atasan',
+                      field: 'atasan.nama_lengkap',
+                      valueGetter: (p) => p.data?.['atasan.nama_lengkap'] || p.data?.['atasan.nama_depan'] || p.data?.atasan_kary || p.data?.atasan?.nama_lengkap || p.data?.atasan || '-',
+                      sortable: false, resizable: true, filter: 'ColFilter',
                       cellClass: ['justify-start','!border-gray-200']
                     },
                     {
                       flex: 2,
                       headerName:'SUB',
                       field: 'm_subcomp.name',
-                      sortable: false, resizable: true, filter: false,filter:'ColFilter',
+                      sortable: false, resizable: true, filter: 'ColFilter',
                       cellClass: ['justify-start','!border-gray-200']
                     },
                     {
                       flex: 2,
                       headerName:'Cabang',
                       field: 'm_branch.name',
-                      sortable: false, resizable: true, filter: false,filter:'ColFilter',
+                      sortable: false, resizable: true, filter: 'ColFilter',
                       cellClass: ['justify-start','!border-gray-200']
                     },
                     {
                       flex: 2,
                       headerName:'Divisi',
                       field: 'nama_divisi',
-                      sortable: false, resizable: true, filter: false,filter:'ColFilter',
+                      sortable: false, resizable: true, filter: 'ColFilter',
                       cellClass: ['justify-start','!border-gray-200']
                     },]">
       <div class="flex items-center space-x-2" v-if="actionText">
@@ -420,16 +428,19 @@
               class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[20%] border bg-[#f8f8f8] border-[#CACACA]">
               Nama Karyawan</td>
             <td
-              class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[20%] border bg-[#f8f8f8] border-[#CACACA]">
+              class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[18%] border bg-[#f8f8f8] border-[#CACACA]">
+              Atasan</td>
+            <td
+              class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[15%] border bg-[#f8f8f8] border-[#CACACA]">
               Cabang</td>
             <td
-              class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[12,8%] border bg-[#f8f8f8] border-[#CACACA]">
+              class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[12.8%] border bg-[#f8f8f8] border-[#CACACA]">
               Divisi</td>
             <td
-              class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[12,8%] border bg-[#f8f8f8] border-[#CACACA]">
+              class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[12.8%] border bg-[#f8f8f8] border-[#CACACA]">
               Posisi</td>
             <td
-              class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[12,8%] border bg-[#f8f8f8] border-[#CACACA]">
+              class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[10%] border bg-[#f8f8f8] border-[#CACACA]">
               Aksi</td>
           </tr>
         </thead>
@@ -456,6 +467,20 @@
                       join:false
                     }
                 }" placeholder="" fa-icon="" :check="false" />
+            </td>
+
+            <td class="text-center border border-[#CACACA]">
+              <FieldSelect class="mt-0 w-full" :bind="{ disabled: true, clearable:false }" :value="item.atasan_id"
+                @input="v=>item.atasan_id=v" :errorText="formErrors.atasan_id?'failed':''" :hints="formErrors.atasan_id"
+                valueField="id" displayField="nama_lengkap" :api="{
+                    url: `${store.server.url_backend}/operation/m_kary`,
+                    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+                    params: {
+                      simplest:true,
+                      transform:false,
+                      join:false
+                    }
+                }" placeholder="-" fa-icon="" :check="false" />
             </td>
 
             <td class="text-center border border-[#CACACA]">

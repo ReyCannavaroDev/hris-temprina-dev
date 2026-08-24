@@ -124,19 +124,15 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
             trigger_error("Realisasi pelatihan wajib dipilih");
         }
 
-        if (!$atasanId) {
-            trigger_error("Data atasan user login tidak ditemukan");
-        }
-
-        $allowedKaryIds = \DB::table('t_realisasi_pelatihan_d_kary as d')
+        $allowedKaryIds = $atasanId ? \DB::table('t_realisasi_pelatihan_d_kary as d')
             ->join('m_kary', 'm_kary.id', '=', 'd.m_kary_id')
             ->where('d.t_realisasi_pelatihan_id', $realisasiId)
             ->where('m_kary.atasan_id', $atasanId)
             ->pluck('m_kary.id')
-            ->toArray();
+            ->toArray() : [];
 
         if (empty($allowedKaryIds)) {
-            trigger_error("Tidak ada peserta pelatihan yang menjadi bawahan user login");
+            trigger_error("Tidak ada peserta pelatihan yang dapat dinilai oleh akun ini");
         }
 
         $cleanDetails = [];

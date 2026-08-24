@@ -86,14 +86,41 @@ onBeforeMount(async () => {
           const r = await fetch(url, { headers: { Authorization: `${store.user.token_type} ${store.user.token}` } })
           return r.ok ? (await r.json()).data?.name || '' : ''
         }
+        const fetchKaryInfo = async (mKaryId) => {
+          if (!mKaryId) return { atasan_id: null, atasan_kary: '-' }
+          try {
+            const r = await fetch(`${store.server.url_backend}/operation/m_kary/${mKaryId}?join=true`, {
+              headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
+            })
+            if (!r.ok) return { atasan_id: null, atasan_kary: '-' }
+            const json = await r.json()
+            const d = json.data || {}
+            return {
+              atasan_id: d.atasan_id || d['atasan.id'] || null,
+              atasan_kary: d['atasan.nama_lengkap'] || d['atasan.nama_depan'] || (d.atasan ? (d.atasan.nama_lengkap || d.atasan.nama_depan) : '') || '-'
+            }
+          } catch {
+            return { atasan_id: null, atasan_kary: '-' }
+          }
+        }
 
         detailArr.value = await Promise.all(
           arr.map(async dt => {
             const divisiId = dt['m_kary.m_divisi_id']
             const divisi_kary = divisiId ? await fetchName(`${store.server.url_backend}/operation/m_divisi/${divisiId}`) : ''
+            const mKaryId = dt.m_kary_id || dt['m_kary.id'] || null
+            let atasan_id = dt['m_kary.atasan_id'] || dt.atasan_id || null
+            let atasan_kary = dt['atasan.nama_lengkap'] || dt.atasan_kary || ''
+            if (!atasan_id && mKaryId) {
+              const info = await fetchKaryInfo(mKaryId)
+              atasan_id = info.atasan_id
+              atasan_kary = info.atasan_kary
+            }
             return {
               ...dt,
               nama_kary: dt['m_kary.nama_lengkap'],
+              atasan_id: atasan_id || null,
+              atasan_kary: atasan_kary || '-',
               divisi_kary,
               m_branch_id: dt['m_kary.m_branch_id'],
               m_posisi_id: dt['m_kary.m_posisi_id']
@@ -130,13 +157,40 @@ onBeforeMount(async () => {
           const r = await fetch(url, { headers: { Authorization: `${store.user.token_type} ${store.user.token}` } })
           return r.ok ? (await r.json()).data?.name || '' : ''
         }
+        const fetchKaryInfo = async (mKaryId) => {
+          if (!mKaryId) return { atasan_id: null, atasan_kary: '-' }
+          try {
+            const r = await fetch(`${store.server.url_backend}/operation/m_kary/${mKaryId}?join=true`, {
+              headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
+            })
+            if (!r.ok) return { atasan_id: null, atasan_kary: '-' }
+            const json = await r.json()
+            const d = json.data || {}
+            return {
+              atasan_id: d.atasan_id || d['atasan.id'] || null,
+              atasan_kary: d['atasan.nama_lengkap'] || d['atasan.nama_depan'] || (d.atasan ? (d.atasan.nama_lengkap || d.atasan.nama_depan) : '') || '-'
+            }
+          } catch {
+            return { atasan_id: null, atasan_kary: '-' }
+          }
+        }
         detailArr.value = await Promise.all(
           arr.map(async dt => {
             const divisiId = dt['m_kary.m_divisi_id']
             const divisi_kary = divisiId ? await fetchName(`${store.server.url_backend}/operation/m_divisi/${divisiId}`) : ''
+            const mKaryId = dt.m_kary_id || dt['m_kary.id'] || null
+            let atasan_id = dt['m_kary.atasan_id'] || dt.atasan_id || null
+            let atasan_kary = dt['atasan.nama_lengkap'] || dt.atasan_kary || ''
+            if (!atasan_id && mKaryId) {
+              const info = await fetchKaryInfo(mKaryId)
+              atasan_id = info.atasan_id
+              atasan_kary = info.atasan_kary
+            }
             return {
               ...dt,
               nama_kary: dt['m_kary.nama_lengkap'],
+              atasan_id: atasan_id || null,
+              atasan_kary: atasan_kary || '-',
               divisi_kary,
               m_branch_id: dt['m_kary.m_branch_id'],
               m_posisi_id: dt['m_kary.m_posisi_id']
@@ -174,9 +228,11 @@ function mapKaryawanDetail(row, keepDetailId = true) {
     id: keepDetailId ? (row?.id ?? null) : null,
     m_kary_id: mKaryId,
     nama_kary: row?.['m_kary.nama_lengkap'] || row?.nama_kary || row?.nama_lengkap || '',
+    atasan_id: row?.['m_kary.atasan_id'] || row?.atasan_id || row?.['atasan.id'] || (row?.atasan ? row.atasan.id : null) || null,
+    atasan_kary: row?.nama_atasan || row?.['atasan.nama_lengkap'] || row?.['atasan.nama_depan'] || row?.atasan_kary || row?.atasan?.nama_lengkap || row?.atasan || '-',
     cabang_kary: row?.cabang_kary || row?.['m_branch.name'] || '',
-    divisi_kary: row?.divisi_kary || row?.['m_divisi.name'] || row?.nama_divisi || '',
-    posisi_kary: row?.posisi_kary || row?.['m_posisi.name'] || '',
+    divisi_kary: row?.nama_divisi || row?.divisi_kary || row?.['m_divisi.name'] || (row?.['m_divisi'] ? row['m_divisi'].name : '') || '',
+    posisi_kary: row?.posisi_kary || row?.['m_posisi.name'] || (row?.['m_posisi'] ? row['m_posisi'].name : '') || '',
     m_branch_id: row?.['m_kary.m_branch_id'] || row?.m_branch_id || null,
     m_divisi_id: row?.['m_kary.m_divisi_id'] || row?.m_divisi_id || null,
     m_posisi_id: row?.['m_kary.m_posisi_id'] || row?.m_posisi_id || null
@@ -204,10 +260,10 @@ function applyRequestPelatihan(obj) {
   values.m_comp_id = obj.m_comp_id ?? obj['t_request_pelatihan.m_comp_id'] ?? obj['m_comp.id'] ?? null
   values.m_subcomp_id = obj.m_subcomp_id ?? obj['t_request_pelatihan.m_subcomp_id'] ?? obj['m_subcomp.id'] ?? null
   values.m_branch_id = obj.m_branch_id ?? obj['t_request_pelatihan.m_branch_id'] ?? obj['m_branch.id'] ?? null
-  values.m_divisi_id = obj.m_divisi_id 
-    ?? obj['t_request_pelatihan.m_divisi_id'] 
-    ?? obj['m_divisi.id'] 
-    ?? obj.divisi_id 
+  values.m_divisi_id = obj.m_divisi_id
+    ?? obj['t_request_pelatihan.m_divisi_id']
+    ?? obj['m_divisi.id']
+    ?? obj.divisi_id
     ?? (obj.t_request_pelatihan_d_kary && obj.t_request_pelatihan_d_kary.length > 0 ? (obj.t_request_pelatihan_d_kary[0]['m_kary.m_divisi_id'] || obj.t_request_pelatihan_d_kary[0].m_divisi_id) : null)
     ?? null
   values.trainer_id = obj.trainer_id ?? obj['t_request_pelatihan.trainer_id'] ?? obj['trainer.id'] ?? null
@@ -550,7 +606,7 @@ async function loadLog(id) {
   if (!res.ok) throw new Error("Failed when trying to read data")
   const result = await res.json()
   dataLog.items = result
-  console.log('cek',result)
+  console.log('cek', result)
 }
 
 let activeBtn = ref([])
@@ -800,7 +856,7 @@ const landing = reactive({
       icon: 'table',
       title: "Log Approval",
       class: 'bg-gray-700 rounded-lg text-white',
-      show: (row) => ['APPROVED', 'IN APPROVAL','HALF APPROVED'].includes(row['status']) && data.can_read,
+      show: (row) => ['APPROVED', 'IN APPROVAL', 'HALF APPROVED'].includes(row['status']) && data.can_read,
       click(row) {
         openModal(row.id)
       }

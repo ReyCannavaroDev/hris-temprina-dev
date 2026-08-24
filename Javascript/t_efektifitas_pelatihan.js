@@ -279,7 +279,7 @@ async function addKaryawanDetail(row) {
 }
 
 async function loadPesertaRealisasi() {
-  if (!values.t_realisasi_pelatihan_id || !values.m_kary_id) return
+  if (!values.t_realisasi_pelatihan_id) return
 
   try {
     isRequesting.value = true
@@ -287,12 +287,18 @@ async function loadPesertaRealisasi() {
     showForm.value = []
     seq = 1
 
+    const myKaryId = store.user?.data?.m_kary_id || user?.m_kary_id
+    if (!myKaryId) {
+      detailArr.value = []
+      showForm.value = []
+      return
+    }
+
     const params = new URLSearchParams({
       t_realisasi_pelatihan_id: values.t_realisasi_pelatihan_id,
-      kary_id: values.m_kary_id,
       scopes: 'Efektifitas',
-      where: 'this.is_active = true',
-      selectfield: 'id, kode, nama_lengkap',
+      where: `this.is_active = true and this.atasan_id = '${myKaryId}'`,
+      selectfield: 'id, kode, nama_lengkap, atasan_id',
       simplest: 'true'
     })
 
@@ -438,7 +444,7 @@ async function loadLog(id) {
   if (!res.ok) throw new Error("Failed when trying to read data")
   const result = await res.json()
   dataLog.items = result
-  console.log('cek',result)
+  console.log('cek', result)
 }
 
 // ========================== LOAD MASTER ==========================
@@ -477,6 +483,49 @@ async function loadTipePenilaianForKaryawan(index) {
 // ========================== SAVE ==========================
 async function onSave() {
   try {
+    if (!values.t_realisasi_pelatihan_id) {
+      swal.fire({
+        icon: 'warning',
+        title: 'Perhatian',
+        text: 'Silakan pilih Pelatihan terlebih dahulu.',
+        confirmButtonText: 'OK'
+      })
+      return
+    }
+
+    if (!detailArr.value || detailArr.value.length === 0) {
+      swal.fire({
+        icon: 'warning',
+        title: 'Tidak Dapat Menyimpan',
+        text: 'Form ini hanya dapat diisi oleh atasan dari peserta pelatihan. Anda tidak memiliki bawahan yang terdaftar pada pelatihan ini.',
+        confirmButtonText: 'OK'
+      })
+      return
+    }
+
+    // Validasi kelengkapan nilai pada setiap komponen penilaian
+    let isAllFilled = true
+    for (const group of detailArr.value) {
+      if (!group.komponen || group.komponen.length === 0) continue
+      for (const komp of group.komponen) {
+        if (komp.selectedKomponen === null || komp.selectedKomponen === undefined) {
+          isAllFilled = false
+          break
+        }
+      }
+      if (!isAllFilled) break
+    }
+
+    if (!isAllFilled) {
+      swal.fire({
+        icon: 'warning',
+        title: 'Penilaian Belum Lengkap',
+        text: 'Mohon lengkapi seluruh komponen penilaian efektivitas untuk setiap peserta sebelum menyimpan.',
+        confirmButtonText: 'OK'
+      })
+      return
+    }
+
     isRequesting.value = true
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
     const url = `${store.server.url_backend}/operation/${endpointApi}${isCreating ? '' : '/' + route.params.id}`

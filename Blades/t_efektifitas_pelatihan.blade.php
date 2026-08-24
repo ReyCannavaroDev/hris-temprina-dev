@@ -173,6 +173,9 @@
         Authorization: `${store.user.token_type} ${store.user.token}`
         },
         params: {
+          where: `this.status in ('POSTED', 'ACTIVE', 'APPROVED')`,
+          transform: true,
+          join: true
         }
         }" placeholder="" fa-icon="" :check="false" :columns="[{
         headerName: 'No',
@@ -188,7 +191,7 @@
         sortable: false, resizable: true, filter: false,
         cellClass: ['border-r', '!border-gray-200', 'justify-start']
         },
-         {
+        {
         flex: 1,
         field: 'm_prog_pelatihan.tema_pelatihan',
         headerName: 'Tema',
@@ -278,15 +281,22 @@
       </div>
     </div>
 
+    <!-- Banner Informasi / Panduan -->
+    <div v-show="actionText && !values.t_realisasi_pelatihan_id" class="p-3 mb-3 text-sm text-blue-800 rounded-lg bg-blue-50 border border-blue-200">
+      <icon fa="info-circle" class="mr-1" /> Silakan pilih <strong>Pelatihan</strong> terlebih dahulu untuk memuat daftar peserta yang menjadi bawahan Anda.
+    </div>
+
+    <div v-show="actionText && values.t_realisasi_pelatihan_id && detailArr.length === 0" class="p-3 mb-3 text-sm text-amber-800 rounded-lg bg-amber-50 border border-amber-200">
+      <icon fa="info-circle" class="mr-1" /> <strong>Informasi:</strong> Form ini hanya dapat diisi oleh atasan dari peserta pelatihan. Anda tidak memiliki bawahan yang terdaftar pada pelatihan ini sehingga tidak dapat melakukan penilaian.
+    </div>
+
     <ButtonMultiSelect v-show="actionText && values.t_realisasi_pelatihan_id" title="Add to list" @add="onDetailAdd" :api="{
             url: `${store.server.url_backend}/operation/m_kary`,
             headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
             params: { 
               t_realisasi_pelatihan_id : `${values.t_realisasi_pelatihan_id}`,
-              kary_id: `${values.m_kary_id}`,
               scopes:'Efektifitas',
-              //notin: `this.id:${detailArr.map(dt=> dt.m_kary_id)}`,
-              where: `this.is_active = true`,
+              where: `this.is_active = true and this.atasan_id = '${store.user?.data?.m_kary_id || 0}'`,
               selectfield: 'id, kode, nama_lengkap'
             },
             onsuccess:(response)=>{
@@ -397,6 +407,8 @@
       </button>
       <button
         class="bg-green-600 text-white font-semibold hover:bg-green-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
+        :class="{'opacity-50 !cursor-not-allowed hover:!translate-y-0': detailArr.length === 0}"
+        :disabled="detailArr.length === 0"
         v-show="actionText && route.query.action?.toLowerCase() !== 'verifikasi' && (['Tambah','Create','Copy'].includes(actionText) ? data.can_create : data.can_update)"
         @click="onSave"
       >

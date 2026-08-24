@@ -2838,29 +2838,17 @@ class m_kary extends \App\Models\BasicModels\m_kary
     public function scopeEfektifitas($model)
     {
         $req = app()->request;
-        $kary_id = $req->kary_id ?? default_users::find(auth()->user()->id)?->m_kary_id;
         
-        if ($kary_id === 'null' || empty($kary_id)) {
+        if (empty($req->t_realisasi_pelatihan_id) || $req->t_realisasi_pelatihan_id === 'null') {
             return $model->whereRaw('1 = 0');
         }
 
         return $model
-            ->distinct()
-            ->select("m_kary.*")
-            ->join(
-                "t_realisasi_pelatihan_d_kary as d",
-                "d.m_kary_id",
-                "=",
-                "m_kary.id"
-            )
-            ->join(
-                "t_realisasi_pelatihan as rp",
-                "rp.id",
-                "=",
-                "d.t_realisasi_pelatihan_id"
-            )
-            ->where("rp.id", $req->t_realisasi_pelatihan_id)
-            ->where("m_kary.atasan_id", $kary_id);
+            ->whereIn("m_kary.id", function ($query) use ($req) {
+                $query->select("d.m_kary_id")
+                    ->from("t_realisasi_pelatihan_d_kary as d")
+                    ->where("d.t_realisasi_pelatihan_id", $req->t_realisasi_pelatihan_id);
+            });
     }
 
     public function hitungRekap($kary_id, $start, $end): array
