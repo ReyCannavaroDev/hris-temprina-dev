@@ -923,7 +923,7 @@ const landing = computed(() => {
       cellClass: ['border-r', '!border-gray-200', 'justify-center'],
       cellRenderer: ({ value }) => {
         let color = 'gray'
-        if (value == 'POSTED')
+        if (value == 'POSTED' || value == 'APPROVED')
           color = 'green'
         else if (value == 'IN APPROVAL')
           color = 'blue'
