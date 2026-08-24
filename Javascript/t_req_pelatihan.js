@@ -49,7 +49,7 @@ onBeforeMount(async () => {
 
 const values = reactive({
   status: 'DRAFT',
-  // direktorat: store.user.data?.direktorat
+  catatan_revisi: ''
 })
 
 onBeforeMount(async () => {
@@ -175,6 +175,31 @@ onBeforeMount(async () => {
 
         if (initialValues['status']) {
           values.status_name = initialValues['status']
+          
+          if (initialValues['status'].toUpperCase() === 'REVISED') {
+            try {
+              const urlLog = `${store.server.url_backend}/operation${endpointApi}/app_log?id=${editedId}`
+              const resLog = await fetch(urlLog, { headers: { Authorization: `${store.user.token_type} ${store.user.token}` } })
+              if (resLog.ok) {
+                const resultLog = await resLog.json()
+                console.log('--- DEBUG REVISED LOG FETCH ---', resultLog)
+                const logsArray = Array.isArray(resultLog) ? resultLog : (resultLog.data || [])
+                console.log('--- DEBUG REVISED LOG ARRAY ---', logsArray)
+                if (logsArray && Array.isArray(logsArray)) {
+                  // Ambil catatan REVISED terbaru
+                  const revisedLog = logsArray.slice().reverse().find(log => log.action_type && log.action_type.toUpperCase() === 'REVISED')
+                  console.log('--- DEBUG REVISED LOG FOUND ---', revisedLog)
+                  if (revisedLog) {
+                    values.catatan_revisi = revisedLog.action_note || '(Tidak ada catatan)'
+                  } else {
+                    values.catatan_revisi = 'Belum ada log revisi'
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn('Gagal memuat log revisi', e)
+            }
+          }
         }
         if (actionText.value?.toLowerCase() === 'copy' && initialValues.id) {
           delete initialValues.id, delete initialValues.no, delete initialValues.date, delete initialValues.status
@@ -414,7 +439,7 @@ async function approval() {
 
 async function actionProgress(type) {
   let text = '';
-  
+
   if (type !== 'APPROVED') {
     const result = await swal.fire({
       title: 'Catatan ' + type,
@@ -439,36 +464,36 @@ async function actionProgress(type) {
     type: type,
     note: type === 'APPROVED' ? 'Disetujui' : text
   }
-    try {
-      const dataURL = `${store.server.url_backend}/operation${endpointApi}/progress`
-      isRequesting.value = true
-      const res = await fetch(dataURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'Application/json',
-          Authorization: `${store.user.token_type} ${store.user.token}`
-        },
-        body: JSON.stringify(payload)
-      })
-      
-      if (!res.ok) {
-        const responseJson = await res.json().catch(() => ({}));
-        throw (responseJson.message || responseJson.error || "Failed when trying to post data")
-      }
-      
-      router.replace('/' + modulPath + '?reload=' + (Date.parse(new Date())))
-    } catch (err) {
-      swal.fire({ icon: 'error', text: err })
+  try {
+    const dataURL = `${store.server.url_backend}/operation${endpointApi}/progress`
+    isRequesting.value = true
+    const res = await fetch(dataURL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'Application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      },
+      body: JSON.stringify(payload)
+    })
+
+    if (!res.ok) {
+      const responseJson = await res.json().catch(() => ({}));
+      throw (responseJson.message || responseJson.error || "Failed when trying to post data")
     }
-    isRequesting.value = false
+
+    router.replace('/' + modulPath + '?reload=' + (Date.parse(new Date())))
+  } catch (err) {
+    swal.fire({ icon: 'error', text: err })
+  }
+  isRequesting.value = false
 }
 
 async function onSave() {
   try {
     formErrors.value = {}
     let hasError = false
-    const requiredFields = ['date_from', 'date_to', 'm_comp_id', 'm_branch_id', 'm_prog_pelatihan_id', 'sarana', 'trainer_id']
-    
+    const requiredFields = ['date_from', 'date_to', 'm_comp_id', 'm_subcomp_id', 'm_branch_id', 'm_prog_pelatihan_id', 'sarana', 'trainer_id']
+
     requiredFields.forEach(field => {
       if (!values[field]) {
         formErrors.value[field] = ['Bidang ini wajib di isi']
@@ -498,21 +523,29 @@ async function onSave() {
       newRow['m_branch_id'] = row.m_branch_id || null
       newRow['m_divisi_id'] = row.m_divisi_id || null
       newRow['m_posisi_id'] = row.m_posisi_id || null
-      
+
       // BUANG tanggal bawaan dari m_kary agar generator tidak mencoba parse dan meledak
       delete newRow.created_at
       delete newRow.updated_at
-      
+
       return newRow
     })
     // Jika status REVISED, otomatis kembalikan ke DRAFT saat disimpan ulang
-    if (values.status === 'REVISED') {
+    if (values.status && values.status.toUpperCase() === 'REVISED') {
       values.status = 'DRAFT';
     }
 
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
+
+    if (isCreating) {
+      values.status = 'DRAFT';
+      if (!values.m_subcomp_id) values.m_subcomp_id = data.subcomp_id;
+      if (!values.m_branch_id) values.m_branch_id = data.branch_id;
+    }
+
     const dataURL = `${store.server.url_backend}/operation${endpointApi}${isCreating ? '' : ('/' + route.params.id)}`
     isRequesting.value = true
+    console.log('=== PAYLOAD YANG DIKIRIM ===', JSON.stringify(values))
     const res = await fetch(dataURL, {
       method: isCreating ? 'POST' : 'PUT',
       headers: {
@@ -521,21 +554,33 @@ async function onSave() {
       },
       body: JSON.stringify(values)
     })
+    console.log('=== RESPONSE STATUS ===', res.status, res.statusText)
     if (!res.ok) {
       if ([400, 422].includes(res.status)) {
         const responseJson = await res.json()
         formErrors.value = responseJson.errors || {}
         throw (responseJson.errors.length ? responseJson.errors[0] : responseJson.message || "Failed when trying to post data")
       } else {
-        throw ("Failed when trying to post data")
+        const errBody = await res.text()
+        console.log('=== ERROR BODY ===', errBody)
+        throw ("Failed when trying to post data (status: " + res.status + ")")
       }
     }
+    const responseJson = await res.json().catch(() => ({}))
+    console.log('=== RESPONSE BODY ===', responseJson)
+    await swal.fire({
+      icon: 'success',
+      title: 'Berhasil!',
+      text: 'Data berhasil disimpan' + (responseJson?.data?.id ? ' (ID: ' + responseJson.data.id + ')' : ''),
+      timer: 2000,
+      showConfirmButton: false
+    })
     router.replace('/' + modulPath + '?reload=' + (Date.parse(new Date())))
   } catch (err) {
     isBadForm.value = true
     swal.fire({
       icon: 'error',
-      text: err
+      text: typeof err === 'string' ? err : (err?.message || JSON.stringify(err))
     })
   }
   isRequesting.value = false
@@ -608,7 +653,7 @@ async function loadLog(id) {
   if (!res.ok) throw new Error("Failed when trying to read data")
   const result = await res.json()
   dataLog.items = result
-  console.log('cek',result)
+  console.log('cek', result)
 }
 
 onBeforeMount(async () => {
@@ -779,7 +824,7 @@ const landing = computed(() => {
         icon: 'table',
         title: "Log Approval",
         class: 'bg-gray-700 rounded-lg text-white',
-        show: (row) => ['APPROVED', 'IN APPROVAL', 'HALF APPROVED'].includes(row['status']) && data.can_read,
+        show: (row) => ['APPROVED', 'IN APPROVAL', 'HALF APPROVED', 'REVISED', 'REJECTED'].includes(row['status']) && data.can_read,
         click(row) {
           openModal(row.id)
         }
@@ -796,8 +841,6 @@ const landing = computed(() => {
         Authorization: `${store.user.token_type} ${store.user.token}`
       },
       params: {
-        m_subcomp_id: data.subcomp_id,
-        m_branch_id: data.branch_id,
         join: true,
         transform: true,
         scopes: 'respo'

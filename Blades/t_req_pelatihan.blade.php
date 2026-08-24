@@ -27,7 +27,7 @@
     </div>
   </div>
   <hr>
-  <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions"
+  <TableApi v-if="landing" ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions"
     class="max-h-[450px]">
     <!-- <template #header>
     </template> -->
@@ -275,6 +275,11 @@
         label="Catatan" placeholder="Masukan Catatan" />
     </div>
 
+    <div v-if="values.status === 'REVISED'">
+      <FieldX :bind="{ readonly: true }" type="textarea" class="w-full mt-3 !text-red-600 font-semibold" :value="values.catatan_revisi"
+        label="Catatan REVISI" placeholder="" :check="false" />
+    </div>
+
     <div>
       <FieldSelect class="w-full mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.sarana"
         @input="v=>values.sarana=v" :errorText="formErrors.sarana?'failed':''" :hints="formErrors.sarana"
@@ -285,13 +290,15 @@
     </div>
 
     <div>
-      <FieldSelect class="w-full mt-3" :bind="{ disabled: !actionText || actionText === 'Tambah', clearable:false }" :value="values.status"
+      <FieldSelect class="w-full mt-3" :bind="{ disabled: true, clearable:false }" :value="values.status"
         @input="v=>values.status=v" :errorText="formErrors.status?'failed':''" :hints="formErrors.status"
         valueField="value" displayField="value" :options="[
         { id: 1, value: 'DRAFT' },
-        { id: 2, value: 'ACTIVE' },
-        { id: 3, value: 'INACTIVE' },
-        { id: 4, value: 'POSTED' }
+        { id: 2, value: 'REVISED' },
+        { id: 3, value: 'POSTED' },
+        { id: 4, value: 'IN APPROVAL' },
+        { id: 5, value: 'APPROVED' },
+        { id: 6, value: 'REJECTED' }
       ]" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
     </div>
 
