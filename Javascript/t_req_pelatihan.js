@@ -742,7 +742,7 @@ const landing = computed(() => {
         icon: 'edit',
         title: "Edit",
         class: 'bg-blue-600 text-light-100',
-        show: (row) => row.status?.toUpperCase() !== 'POSTED' && data.can_update,
+        show: (row) => !['POSTED', 'REJECTED'].includes(row.status?.toUpperCase()) && data.can_update && !['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase()),
         click(row) {
           router.push(`${route.path}/${row.id}?action=Edit&` + tsId)
         }
@@ -751,7 +751,7 @@ const landing = computed(() => {
         icon: 'copy',
         title: "Copy",
         class: 'bg-gray-600 text-light-100',
-        show: (row) => row.status?.toUpperCase() !== 'POSTED' && data.can_create,
+        show: (row) => !['POSTED', 'REJECTED'].includes(row.status?.toUpperCase()) && data.can_create && !['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase()),
         click(row) {
           router.push(`${route.path}/${row.id}?action=Copy&` + tsId)
         }
@@ -760,7 +760,7 @@ const landing = computed(() => {
         icon: 'paper-plane',
         title: "Posted Data",
         class: 'bg-rose-700 rounded-lg text-white',
-        show: (row) => row.status?.toUpperCase() === 'DRAFT' && data.can_update,
+        show: (row) => row.status?.toUpperCase() === 'DRAFT' && data.can_update && !['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase()),
         async click(row) {
           const result = await swal.fire({
             icon: 'warning',
@@ -803,7 +803,7 @@ const landing = computed(() => {
         icon: 'location-arrow',
         title: "Send Approval",
         class: 'bg-rose-700 rounded-lg text-white',
-        show: (row) => row.status?.toUpperCase() === 'POSTED' && data.can_update,
+        show: (row) => row.status?.toUpperCase() === 'POSTED' && data.can_update && !['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase()),
         click(row) {
           router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
         }
