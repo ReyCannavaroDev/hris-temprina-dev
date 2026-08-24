@@ -119,7 +119,7 @@ onBeforeMount(async () => {
       initialValues.m_assessment_kary_d_level =
         Array.isArray(initialValues.m_assessment_kary_d_level)
           ? initialValues.m_assessment_kary_d_level
-            .map(item => typeof item === 'object' && item !== null ? (item.m_level_posisi_id || item['m_level_posisi.id'] || item.id) : item)
+            .map(item => typeof item === 'object' && item !== null ? item.m_level_posisi_id : item)
             .map(val => parseInt(val))
             .filter(val => !isNaN(val) && val > 0)
           : []
@@ -264,6 +264,18 @@ function onBack() {
 
 
 async function onSave() {
+  // Validasi: hanya bisa memilih 1 komponen per kategori
+  const categories = detailArr.value.map(d => d.kategori).filter(Boolean);
+  const uniqueCategories = new Set(categories);
+  if (categories.length !== uniqueCategories.size) {
+    swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Hanya bisa memilih 1 komponen per kategori'
+    });
+    return;
+  }
+
   //values.tags = JSON.stringify(values.tags)
   try {
     values.m_assessment_kary_d = detailArr.value

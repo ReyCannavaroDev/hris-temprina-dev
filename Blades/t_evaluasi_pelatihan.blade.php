@@ -122,8 +122,6 @@
                 Authorization: `${store.user.token_type} ${store.user.token}`
               },
               params: {
-                where: `this.status='POSTED'`,
-                scopes: 'owndata',
                 transform: true,
                 join: true
               }
