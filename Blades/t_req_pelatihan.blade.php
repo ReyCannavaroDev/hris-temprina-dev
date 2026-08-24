@@ -207,22 +207,6 @@
     </div>
 
     <div>
-      <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_id }"
-        class="w-full mt-3" :value="values.m_divisi_id" @input="v=>values.m_divisi_id=v"
-        :errorText="formErrors.m_divisi_id?'failed':''" @update:valueFull="(objVal)=>{
-                  values.m_dept_id = null
-                }" label="Divisi" placeholder="Pilih Divisi" :hints="formErrors.m_divisi_id" :api="{
-                    url: `${store.server.url_backend}/operation/m_divisi`,
-                    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-                    params: {
-                      scopes:'Name',
-                      //simplest:true,
-                      where: `this.is_active = 'true' AND this.m_branch_id='${values.m_branch_id}'`
-                    }
-                }" valueField="id" displayField="name.value" :check="false" />
-    </div>
-
-    <div>
       <FieldSelect placeholder="Masukan Trainer" label="Trainer" :bind="{ disabled: !actionText, clearable:false }"
         class="w-full mt-3" :value="values.trainer_id" @input="v=>values.trainer_id=v"
         :errorText="formErrors.trainer_id?'failed':''" @update:valueFull="(objVal)=>{
@@ -283,10 +267,13 @@
     <div>
       <FieldSelect class="w-full mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.sarana"
         @input="v=>values.sarana=v" :errorText="formErrors.sarana?'failed':''" :hints="formErrors.sarana"
-        valueField="value" displayField="value" :options="[
-        { id: 1, value: 'ONLINE' },
-        { id: 2, value: 'OFFLINE' }
-      ]" placeholder="Pilih Sarana" label="Sarana" fa-icon="" :check="false" />
+        valueField="value" displayField="value" :api="{
+            url: `${store.server.url_backend}/operation/m_general`,
+            headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+            params: {
+              where: `this.group='SARANA-PELATIHAN' AND this.is_active='true'`
+            }
+        }" placeholder="Pilih Sarana" label="Sarana" fa-icon="" :check="false" />
     </div>
 
     <div>
