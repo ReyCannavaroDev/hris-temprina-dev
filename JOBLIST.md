@@ -97,19 +97,19 @@ Berdasarkan penelusuran menyeluruh pada seluruh kode modul:
 ## 📋 5. Actionable Roadmap & Task Checklist
 
 ### 🚀 TAHAP 1: Perbaikan Pemilihan Perdin di Form Penyelesaian (Fokus Feedback Klien)
-- [ ] **[Models/t_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_perdin/Custom.php)**:
+- [x] **[Models/t_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_perdin/Custom.php)**:
   - Perbaiki `scopeusedPerdin`: Izinkan Admin / HC melihat semua perdin berstatus rencana `APPROVED`.
   - Normalisasi filter status case-insensitive: `upper(status) = 'APPROVED'`.
   - Gunakan `$user->m_kary_id` dengan fallback query `m_kary`.
-- [ ] **[Blades/t_penyelesaian_perdin.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_penyelesaian_perdin.blade.php)**:
+- [x] **[Blades/t_penyelesaian_perdin.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_penyelesaian_perdin.blade.php)** & **[Blades/t_penyelesaian_perdin_karyawan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_penyelesaian_perdin_karyawan.blade.php)**:
   - Perbaiki `searchfield` pada `FieldPopup` (tambahkan prefix `this.date_to`).
   - Pastikan event `@update:valueFull` memetakan seluruh data perdin ke form values secara presisi.
 
 ### 📦 TAHAP 2: Perbaikan Data Detail Biaya & Laporan Kegiatan
-- [ ] **[Models/t_penyelesaian_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_penyelesaian_perdin/Custom.php)**:
+- [x] **[Models/t_penyelesaian_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_penyelesaian_perdin/Custom.php)**:
   - Tambahkan method `transformRowData()` untuk mengambil `t_penyelesaian_perdin_det` dan `t_penyelesaian_perdin_d_laporan`.
   - Tambahkan method `updateBefore()` untuk menginisialisasi `$this->details = ["t_penyelesaian_perdin_det", "t_penyelesaian_perdin_d_laporan"]`.
-- [ ] **[Javascript/t_penyelesaian_perdin.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_penyelesaian_perdin.js)**:
+- [x] **[Javascript/t_penyelesaian_perdin.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_penyelesaian_perdin.js)**:
   - Beri proteksi fallback array kosong `(initialValues.t_penyelesaian_perdin_det || []).map(...)` saat read mode.
   - Hapus duplikasi looping `forEach` detail yang redundan.
   - Bersihkan sisa validasi inventory `qty/qty_2` pada `onSave()`.

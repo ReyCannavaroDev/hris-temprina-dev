@@ -216,10 +216,10 @@ onBeforeMount(async () => {
         values.nominal = initialValues['t_kbs.nominal']
         values.sisa_biaya = initialValues.sisa_biaya
 
-        detailArr.value = initialValues.t_penyelesaian_perdin_det.map((dt) => ({
+        detailArr.value = (initialValues.t_penyelesaian_perdin_det || []).map((dt) => ({
           ...dt,
         }))
-        detailArrLap.value = initialValues.t_penyelesaian_perdin_d_laporan.map((dt) => ({
+        detailArrLap.value = (initialValues.t_penyelesaian_perdin_d_laporan || []).map((dt) => ({
           ...dt,
         }))
 
@@ -231,7 +231,7 @@ onBeforeMount(async () => {
         const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
         isRequesting.value = true
 
-        const params = { join: true, transform: false }
+        const params = { join: true, transform: true }
         const fixedParams = new URLSearchParams(params)
         const res = await fetch(dataURL + '?' + fixedParams, {
           headers: {
@@ -247,14 +247,14 @@ onBeforeMount(async () => {
         values.total_biaya = initialValues['total_biaya']
         values.sisa_biaya = initialValues.sisa_biaya
 
-        values.provinsi_id = initialValues['t_perdin.provinsi_id']
-        values.kota_id = initialValues['t_perdin.kota_id']
-        values.tanggalAwal = initialValues['t_perdin.date_from']
-        values.tanggalAkhir = initialValues['t_perdin.date_to']
-        values.tujuan = initialValues['t_perdin.tempat_tujuan']
-        values.tugas = initialValues['t_perdin.tempat_tujuan']
-        values.alamat_tujuan = initialValues['t_perdin.alamat_tujuan']
-        values.m_posisi_id = initialValues['t_perdin.m_posisi_id']
+        values.provinsi_id = initialValues['t_perdin.provinsi_id'] || initialValues.provinsi_id
+        values.kota_id = initialValues['t_perdin.kota_id'] || initialValues.kota_id
+        values.tanggalAwal = initialValues['t_perdin.date_from'] || initialValues.date_from
+        values.tanggalAkhir = initialValues['t_perdin.date_to'] || initialValues.date_to
+        values.tujuan = initialValues['t_perdin.tempat_tujuan'] || initialValues.tempat_tujuan
+        values.tugas = initialValues['t_perdin.tugas'] || initialValues.tugas
+        values.alamat_tujuan = initialValues['t_perdin.alamat_tujuan'] || initialValues.alamat_tujuan
+        values.m_posisi_id = initialValues['t_perdin.m_posisi_id'] || initialValues.m_posisi_id
 
         if (initialValues['status']) {
           values.status_name = initialValues['status']
@@ -263,40 +263,27 @@ onBeforeMount(async () => {
           delete initialValues.id, delete initialValues.no, delete initialValues.date, delete initialValues.status
         }
 
-        // Menambahkan Data Ke Array
+        const detItems = initialValues.t_penyelesaian_perdin_det || []
+        const lapItems = initialValues.t_penyelesaian_perdin_d_laporan || []
 
-        initialValues.t_penyelesaian_perdin_det?.forEach((items) => {
-          if (actionText.value?.toLowerCase() === 'copy' && items.id) {
-            delete items.id, delete items.no
+        detailArr.value = detItems.map((dt) => {
+          if (actionText.value?.toLowerCase() === 'copy' && dt.id) {
+            const copyItem = { ...dt }
+            delete copyItem.id
+            delete copyItem.no
+            return copyItem
           }
-
-          detailArr.value = [items, ...detailArr.value]
+          return { ...dt }
         })
 
-        initialValues.t_penyelesaian_perdin_det?.forEach((items) => {
-          if (actionText.value?.toLowerCase() === 'copy' && items.id) {
-            delete items.id
+        detailArrLap.value = lapItems.map((dt) => {
+          if (actionText.value?.toLowerCase() === 'copy' && dt.id) {
+            const copyItem = { ...dt }
+            delete copyItem.id
+            return copyItem
           }
-          detailArr.value = [items, ...detailArr.value]
+          return { ...dt }
         })
-        // if(!initialValues.sopir_id){
-        //   initialValues.flag='customer'
-        // }
-
-        // initialValues.t_penyelesaian_perdin_det.forEach((dt) => {
-        //   // console.log('cek 3', dt.vi.qty_2_stock)
-        //   // console.log(dt)
-        // })
-
-
-        detailArr.value = initialValues.t_penyelesaian_perdin_det.map((dt) => ({
-          ...dt,
-        }))
-        detailArrLap.value = initialValues.t_penyelesaian_perdin_d_laporan.map((dt) => ({
-          ...dt,
-        }))
-
-        // console.log(initialValues.t_penyelesaian_perdin)
       }
     } catch (err) {
       isBadForm.value = true
@@ -381,11 +368,15 @@ const onReset = async (alert = false) => {
 
         if (isCopyMode) {
           detailArr.value = [];
+          detailArrLap.value = [];
           for (const key in values) {
             delete values[key];
           }
         } else if (isRead) {
-          detailArr.value = initialValues.t_penyelesaian_perdin_det.map((dt) => ({
+          detailArr.value = (initialValues.t_penyelesaian_perdin_det || []).map((dt) => ({
+            ...dt,
+          }));
+          detailArrLap.value = (initialValues.t_penyelesaian_perdin_d_laporan || []).map((dt) => ({
             ...dt,
           }));
 
@@ -393,7 +384,10 @@ const onReset = async (alert = false) => {
             values[key] = initialValues[key];
           }
         } else {
-          detailArr.value = detailArr.value.map((dt) => ({
+          detailArr.value = (detailArr.value || []).map((dt) => ({
+            ...dt,
+          }));
+          detailArrLap.value = (detailArrLap.value || []).map((dt) => ({
             ...dt,
           }));
 
@@ -419,20 +413,20 @@ const onReset = async (alert = false) => {
 
 async function onSave() {
 
-  if (detailArr.value.length === 0) {
+  if (!values.t_perdin_id) {
     swal.fire({
       icon: 'warning',
-      text: 'Data detail tidak boleh kosong. Silakan tambahkan detail terlebih dahulu.',
+      text: 'Silakan pilih Perjalanan Dinas terlebih dahulu.',
     });
     return;
   }
 
-  if (detailArr.value.some(item => item.qty === null || item.qty_2 === null)) {
+  if (detailArr.value.length === 0) {
     swal.fire({
       icon: 'warning',
-      text: 'Qty tidak boleh kosong. Silakan periksa kembali.',
+      text: 'Data detail rincian biaya tidak boleh kosong. Silakan tambahkan detail terlebih dahulu.',
     });
-    return
+    return;
   }
 
   //values.tags = JSON.stringify(values.tags)

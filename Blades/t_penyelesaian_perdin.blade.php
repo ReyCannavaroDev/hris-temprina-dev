@@ -6,27 +6,27 @@
     <div class="flex w-[60%] md:w-[80%] flex-wrap items-center gap-x-2 gap-y-2">
       <p class="font-semibold whitespace-nowrap lg:w-[10%]">Show Data :</p>
       <div class="flex items-center gap-x-2">
-        <button @click="filterShowData('DRAFT')" :class="activeBtn?.toUpperCase() === 'DRAFT'?'bg-gray-600 font-semibold !text-white hover:bg-gray-400':'border border-gray-600 text-gray-600 bg-white  hover:bg-gray-600 hover:text-white'" class="duration-300 transform transition hover:-translate-y-0.5 rounded-md py-1 px-2">DRAFT</button>
+        <button @click="filterShowData('DRAFT')" :class="activeBtn === 'DRAFT'?'bg-gray-600 font-semibold !text-white hover:bg-gray-400':'border border-gray-600 text-gray-600 bg-white  hover:bg-gray-600 hover:text-white'" class="duration-300 transform transition hover:-translate-y-0.5 rounded-md py-1 px-2">DRAFT</button>
         <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
       </div>
       <div class="flex items-center gap-x-2">
-        <button @click="filterShowData('POSTED')" :class="activeBtn?.toUpperCase() === 'POSTED'?'bg-amber-600 !text-white hover:bg-amber-400':'border border-amber-600 font-semibold bg-white text-amber-600  hover:bg-amber-600 hover:text-white'" class="duration-300 transition transform hover:-translate-y-0.5 rounded-md py-1 px-2">POST</button>
+        <button @click="filterShowData('POSTED')" :class="activeBtn === 'POSTED'?'bg-amber-600 !text-white hover:bg-amber-400':'border border-amber-600 font-semibold bg-white text-amber-600  hover:bg-amber-600 hover:text-white'" class="duration-300 transition transform hover:-translate-y-0.5 rounded-md py-1 px-2">POST</button>
         <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
       </div>
       <div class="flex items-center gap-x-2">
-        <button @click="filterShowData('IN APPROVAL')" :class="activeBtn?.toUpperCase() === 'IN APPROVAL'?'bg-blue-600 !text-white hover:bg-blue-400':'border border-blue-600 font-semibold hover:bg-blue-600 text-blue-600 hover:text-white'" class="duration-300 transform transition hover:-translate-y-0.5 rounded-md py-1 px-2"> APPROVAL</button>
+        <button @click="filterShowData('IN APPROVAL')" :class="activeBtn === 'IN APPROVAL'?'bg-blue-600 !text-white hover:bg-blue-400':'border border-blue-600 font-semibold hover:bg-blue-600 text-blue-600 hover:text-white'" class="duration-300 transform transition hover:-translate-y-0.5 rounded-md py-1 px-2"> APPROVAL</button>
         <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
       </div>
       <div class="flex items-center gap-x-2">
-        <button @click="filterShowData('APPROVED')" :class="activeBtn?.toUpperCase() === 'APPROVED'?'bg-green-600 !text-white hover:bg-green-400':'border border-green-600 font-semibold bg-white text-green-600 hover:bg-green-600 hover:text-white'" class="duration-300 transition transform hover:-translate-y-0.5 rounded-md py-1 px-2">APPROVED</button>
+        <button @click="filterShowData('APPROVED')" :class="activeBtn === 'APPROVED'?'bg-green-600 !text-white hover:bg-green-400':'border border-green-600 font-semibold bg-white text-green-600 hover:bg-green-600 hover:text-white'" class="duration-300 transition transform hover:-translate-y-0.5 rounded-md py-1 px-2">APPROVED</button>
         <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
       </div>
       <div class="flex items-center gap-x-2">
-        <button @click="filterShowData('REJECTED')" :class="activeBtn?.toUpperCase() === 'REJECTED'?'bg-red-600 !text-white hover:bg-red-400':'border border-red-600 font-semibold bg-white text-red-600 hover:bg-red-600 hover:text-white'" class="duration-300 transform transition hover:-translate-y-0.5 rounded-md py-1 px-2">REJECTED</button>
+        <button @click="filterShowData('REJECTED')" :class="activeBtn === 'REJECTED'?'bg-red-600 !text-white hover:bg-red-400':'border border-red-600 font-semibold bg-white text-red-600 hover:bg-red-600 hover:text-white'" class="duration-300 transform transition hover:-translate-y-0.5 rounded-md py-1 px-2">REJECTED</button>
         <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
       </div>
       <div class="flex items-center gap-x-2">
-        <button @click="filterShowData('REVISED')" :class="activeBtn?.toUpperCase() === 'REVISED'?'bg-purple-600 !text-white hover:bg-purple-400':'border border-purple-600 font-semibold bg-white text-purple-600 hover:bg-purple-600 hover:text-white'" class="duration-300 transition transform hover:-translate-y-0.5 rounded-md py-1 px-2">REVISED</button>
+        <button @click="filterShowData('REVISED')" :class="activeBtn === 'REVISED'?'bg-purple-600 !text-white hover:bg-purple-400':'border border-purple-600 font-semibold bg-white text-purple-600 hover:bg-purple-600 hover:text-white'" class="duration-300 transition transform hover:-translate-y-0.5 rounded-md py-1 px-2">REVISED</button>
       </div>
     </div>
     <div>
@@ -133,17 +133,16 @@
         :hints="formErrors.t_perdin_id" valueField="id" displayField="tugas" @update:valueFull="obj => {
           $log('res',obj)
                 if (obj) {
-                  values.provinsi_id = obj['provinsi.id']; 
-                  values.kota_id = obj['kota.id']; 
+                  values.provinsi_id = obj['provinsi.id'] || obj.provinsi_id; 
+                  values.kota_id = obj['kota.id'] || obj.kota_id; 
                   values.tugas = obj.tugas; 
-                  values.posisi_id = obj['m_kary.m_posisi_id']; 
-                  values.m_kary_id = obj.m_kary_id; 
-                  values.tujuan = obj.tujuan; 
+                  values.posisi_id = obj['m_kary.m_posisi_id'] || obj.m_posisi_id; 
+                  values.m_kary_id = obj.m_kary_id || obj['m_kary.id']; 
                   values.tanggalAwal = obj.date_from; 
                   values.tanggalAkhir = obj.date_to; 
-                  values.tujuan = obj.tempat_tujuan; 
+                  values.tujuan = obj.tempat_tujuan || obj.tujuan; 
                   values.alamat_tujuan = obj.alamat_tujuan;
-                  values.m_posisi_id = obj.m_posisi_id;
+                  values.m_posisi_id = obj.m_posisi_id || obj['m_posisi.id'];
                 } else {
                   values.m_kary_id = null;
                   values.tanggalAwal = null; 
@@ -163,9 +162,11 @@
           headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
           params: {
             simplest:true,
+            join: true,
+            transform: true,
             scopes: 'usedPerdin',
             //where: `this.m_kary_id = ${values.m_kary_id}`
-            searchfield: 'm_kary.nama_lengkap, this.tugas, this.date_from, date_to, this.alamat_tujuan'
+            searchfield: 'm_kary.nama_lengkap, this.tugas, this.date_from, this.date_to, this.alamat_tujuan'
           }
         }" placeholder="Pilih Perdin" label="Perdin" fa-icon="" :check="false" :columns="[{
           headerName: 'No',

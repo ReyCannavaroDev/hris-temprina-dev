@@ -36,11 +36,41 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
             // "nomor" => $this->helper->generateNomor("KODE RINCIAN PERDIN"),
             "nomor" => $nomor,
         ] );
+        $this->details = ["t_penyelesaian_perdin_det", "t_penyelesaian_perdin_d_laporan"];
         return [
             "model"  => $model,
             "data"   => $newArrayData,
             // "errors" => ['error1']
         ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id=null)
+    {
+        $this->details = ["t_penyelesaian_perdin_det", "t_penyelesaian_perdin_d_laporan"];
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
+        ];
+    }
+
+    public function transformRowData(array $row)
+    {
+        $id = $row['this.id'] ?? $row['id'] ?? null;
+        if ($id) {
+            if (!isset($row['t_penyelesaian_perdin_det']) || empty($row['t_penyelesaian_perdin_det'])) {
+                $details = \DB::table('t_penyelesaian_perdin_det')
+                    ->where('t_penyelesaian_perdin_id', $id)
+                    ->get();
+                $row['t_penyelesaian_perdin_det'] = json_decode(json_encode($details), true) ?? [];
+            }
+            if (!isset($row['t_penyelesaian_perdin_d_laporan']) || empty($row['t_penyelesaian_perdin_d_laporan'])) {
+                $laporan = \DB::table('t_penyelesaian_perdin_d_laporan')
+                    ->where('t_penyelesaian_perdin_id', $id)
+                    ->get();
+                $row['t_penyelesaian_perdin_d_laporan'] = json_decode(json_encode($laporan), true) ?? [];
+            }
+        }
+        return $row;
     }
 
     public function public_generateTarif()
@@ -59,7 +89,7 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
             // ->where("provinsi_id", $provinsi_id)
             // ->where("posisi_id", $posisi_id)
             ->where("t_perdin_id", $t_perdin_id)
-            ->where("status", "APPROVED")
+            ->whereRaw("upper(status) = 'APPROVED'")
             ;
         })
             ->get()
