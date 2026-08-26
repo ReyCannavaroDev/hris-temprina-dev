@@ -72,24 +72,63 @@ graph TD
 
 ## 🔍 4. Analisa Temuan Masalah & Potensi Bug pada Modul Perdin
 
-Berdasarkan penelusuran kode yang ada di repositori:
+Berdasarkan penelusuran menyeluruh pada seluruh kode modul:
 
-1. **Bug Query Tarif pada `t_rencana_perdin/Custom.php`**:
-   - Di `custom_generateTarif` / `public_generateTarif`, query `m_tarif_perdin` memfilter kolom `kota_id`, `provinsi_id`, dan `posisi_id`.
-   - **Fakta Skema Database**: Pada tabel `m_tarif_perdin`, kolom yang ada adalah `m_level_posisi_id` (bukan `posisi_id` / `kota_id`). Hal ini menyebabkan *auto-generate* tarif estimasi biaya sering kosong / gagal.
-2. **Duplikasi Join Atasan pada `t_perdin/Custom.php`**:
-   - Di `t_perdin/Basic.php`, terdapat default join `m_kary.id=t_perdin.m_atasan_id`. Di `Custom.php`, dilakukan override join manual `m_kary.id=t_perdin.m_kary_id`. Perlu dipastikan relasi atasan menggunakan alias terpisah (misal `atasan.nama_lengkap`) agar tidak bertabrakan dengan data karyawan pemohon.
-3. **Keterikatan Status Transaksi & Kasbon**:
-   - Filter `scopelistPerdin` dan `scopeusedPerdin` pada `t_perdin` bergantung pada status `APPROVED` di `t_rencana_perdin`. Jika status tersimpan dengan case berbeda (misal `Approved` vs `APPROVED`), relasi dropdown di `t_penyelesaian_perdin` tidak memunculkan nomor perdin terkait.
-4. **Penyelesaian Kasbon (`sisa_biaya`)**:
-   - Sinkronisasi nominal kasbon (`nominal_kbs`) dengan total realisasi (`total_biaya`) pada `t_penyelesaian_perdin` membutuhkan validasi presisi saat mode edit atau revisi agar selisih biaya tetap akurat.
+1. **Bug Pemilihan Perdin Kosong di Penyelesaian (`t_penyelesaian_perdin`)**:
+   - **Penyebab**: Filter `scopeusedPerdin` di `t_perdin/Custom.php` melakukan filter `where('m_kary_id', $m_kary_id)`. Jika user bertipe `admin`, `$m_kary_id` bernilai `null` sehingga query mengembalikan **0 baris**.
+   - Selain itu, filter status `whereHas('t_rencana_perdin', fn($q) => $q->where('status', 'APPROVED'))` bersifat *case-sensitive* di PostgreSQL sehingga rentan *mismatch*.
+   - Parameter `searchfield` di `Blades/t_penyelesaian_perdin.blade.php` memiliki kolom `date_to` tanpa prefix `this.`.
+
+2. **Bug Data Detail (Biaya & Laporan) Tidak Muncul / Hilang saat Read & Update**:
+   - **Penyebab**: Di `Models/t_penyelesaian_perdin/Custom.php` belum ada method `transformRowData()` dan `updateBefore()`.
+   - Di `Javascript/t_penyelesaian_perdin.js` baris 292–297, kode langsung melakukan `initialValues.t_penyelesaian_perdin_det.map(...)` tanpa fallback array kosong `|| []`, memicu *crash TypeError* (`Cannot read properties of undefined`) yang mematikan form.
+   - Masih ada sisa validasi inventory `item.qty === null` (baris 430) pada form perdin.
+
+3. **Bug Auto-Generate Tarif Rencana Perdin (`t_rencana_perdin`)**:
+   - **Penyebab**: Method `custom_generateTarif` di `Models/t_rencana_perdin/Custom.php` mencari kolom `kota_id, provinsi_id, posisi_id` pada `m_tarif_perdin`, padahal kolom skema database adalah `m_level_posisi_id`.
+
+4. **Konsep & Standarisasi Alur Approval (`Approval Workflow`)**:
+   - Ticket approval pada `t_rencana_perdin` (`APPROVAL RINCIAN PERDIN`) dan `t_penyelesaian_perdin` (`APPROVAL PENYELESAIAN PERDIN`) perlu standarisasi penanganan target approval ke atasan pemohon.
+   - Proteksi notifikasi Firebase agar tidak melempar error saat token FCM target kosong.
+   - Penyeragaman status approval menjadi `IN APPROVAL`, `APPROVED`, `REJECTED`, `REVISED`, dan `POSTED`.
 
 ---
 
-## 📋 5. Checklist Pekerjaan (Joblist)
+## 📋 5. Actionable Roadmap & Task Checklist
 
-- [ ] Konfirmasi feedback spesifik klien untuk modul Perjalanan Dinas
-- [ ] Review & sinkronisasi relasi `m_tarif_perdin` dengan level posisi karyawan pada `t_rencana_perdin`
-- [ ] Validasi flow approval notifikasi pada `t_perdin` dan `t_rencana_perdin`
-- [ ] Verifikasi penarikan kasbon dan perhitungan sisa biaya pada `t_penyelesaian_perdin`
-- [ ] Pengujian menyeluruh alur pengajuan -> rencana -> LPJ penyelesaian
+### 🚀 TAHAP 1: Perbaikan Pemilihan Perdin di Form Penyelesaian (Fokus Feedback Klien)
+- [ ] **[Models/t_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_perdin/Custom.php)**:
+  - Perbaiki `scopeusedPerdin`: Izinkan Admin / HC melihat semua perdin berstatus rencana `APPROVED`.
+  - Normalisasi filter status case-insensitive: `upper(status) = 'APPROVED'`.
+  - Gunakan `$user->m_kary_id` dengan fallback query `m_kary`.
+- [ ] **[Blades/t_penyelesaian_perdin.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_penyelesaian_perdin.blade.php)**:
+  - Perbaiki `searchfield` pada `FieldPopup` (tambahkan prefix `this.date_to`).
+  - Pastikan event `@update:valueFull` memetakan seluruh data perdin ke form values secara presisi.
+
+### 📦 TAHAP 2: Perbaikan Data Detail Biaya & Laporan Kegiatan
+- [ ] **[Models/t_penyelesaian_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_penyelesaian_perdin/Custom.php)**:
+  - Tambahkan method `transformRowData()` untuk mengambil `t_penyelesaian_perdin_det` dan `t_penyelesaian_perdin_d_laporan`.
+  - Tambahkan method `updateBefore()` untuk menginisialisasi `$this->details = ["t_penyelesaian_perdin_det", "t_penyelesaian_perdin_d_laporan"]`.
+- [ ] **[Javascript/t_penyelesaian_perdin.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_penyelesaian_perdin.js)**:
+  - Beri proteksi fallback array kosong `(initialValues.t_penyelesaian_perdin_det || []).map(...)` saat read mode.
+  - Hapus duplikasi looping `forEach` detail yang redundan.
+  - Bersihkan sisa validasi inventory `qty/qty_2` pada `onSave()`.
+
+### 💵 TAHAP 3: Perbaikan Penarikan Tarif Rencana Perdin
+- [ ] **[Models/t_rencana_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_rencana_perdin/Custom.php)**:
+  - Perbaiki `custom_generateTarif` & `public_generateTarif` agar membaca `m_level_posisi_id` dari posisi karyawan pemohon.
+- [ ] **[Javascript/t_rencana_perdin.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_rencana_perdin.js)**:
+  - Sesuaikan payload request generate tarif agar mengirimkan `m_posisi_id` / `m_level_posisi_id`.
+
+### 🛡️ TAHAP 4: Standarisasi Konsep Approval & Notifikasi
+- [ ] **[Models/t_penyelesaian_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_penyelesaian_perdin/Custom.php)**:
+  - Sinkronisasi `createAppTicket`, `custom_progress`, dan `custom_approveHC`.
+  - Proteksi exception saat generate KBR jika koneksi ERP tidak aktif.
+- [ ] **[Models/t_rencana_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_rencana_perdin/Custom.php)**:
+  - Sinkronisasi ticket approval dan notifikasi FCM.
+
+### ✅ TAHAP 5: Pengujian & Validasi End-to-End
+- [ ] Verifikasi pemilihan nomor perdin di form Penyelesaian Perjalanan Dinas.
+- [ ] Verifikasi simpan, read, dan edit detail biaya serta laporan kegiatan.
+- [ ] Verifikasi kalkulasi selisih kasbon (`nominal_kbs - total_biaya`).
+- [ ] Verifikasi alur approval dari status `DRAFT` -> `IN APPROVAL` -> `APPROVED` -> `POSTED`.
