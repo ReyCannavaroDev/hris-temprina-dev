@@ -49,6 +49,29 @@ const values = reactive({
 
 // DEFAULT VALUE BEFORE MOUNT --UBAH DISINI
 const defaultValues = () => {
+  values.is_active = true
+  values.m_assessment_kary_d_level = []
+  values.m_comp_id = null
+  values.m_subcomp_id = null
+  values.m_branch_id = null
+  values.m_divisi_id = null
+  values.type = null
+  values.deskripsi = null
+  detailArr.value = [
+    {
+      m_assessment_kary_id: 0,
+      nama_assessment: '',
+      kategori: null,
+      bobot: 0,
+      m_assessment_kary_sub_d: [
+        {
+          m_assessment_kary_d_id: 0,
+          keterangan: '',
+          nilai: 0,
+        }
+      ]
+    }
+  ]
 }
 
 function validateNumericInput(event) {

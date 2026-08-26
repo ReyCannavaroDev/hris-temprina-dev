@@ -35,6 +35,14 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
     public function createBefore($model, $arrayData, $metaData, $id=null)
     {
         $req = app()->request;
+
+        if (!empty($req->m_assessment_kary_d) && is_array($req->m_assessment_kary_d)) {
+            $categories = array_filter(array_column($req->m_assessment_kary_d, 'kategori'));
+            if (count($categories) !== count(array_unique($categories))) {
+                trigger_error("Hanya bisa memilih 1 komponen per kategori");
+            }
+        }
+
         if(empty($req->m_assessment_kary_d_level)){
             $this->details = ['m_assessment_kary_d'];
         } else {
@@ -49,6 +57,14 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
     public function updateBefore($model, $arrayData, $metaData, $id=null)
     {
         $req = app()->request;
+
+        if (!empty($req->m_assessment_kary_d) && is_array($req->m_assessment_kary_d)) {
+            $categories = array_filter(array_column($req->m_assessment_kary_d, 'kategori'));
+            if (count($categories) !== count(array_unique($categories))) {
+                trigger_error("Hanya bisa memilih 1 komponen per kategori");
+            }
+        }
+
         if(empty($req->m_assessment_kary_d_level)){
             \App\Models\BasicModels\m_assessment_kary_d_level::where('m_assessment_kary_id', $id)->delete();
             $this->details = ['m_assessment_kary_d'];
