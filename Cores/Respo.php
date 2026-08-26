@@ -106,12 +106,7 @@ class Respo
 
         foreach ($level1 as $dt) {
             if ($dt["type"] === "multi") {
-                $children = $this->qMenu("menu", $dt["modul"]);
-                foreach ($children as &$child) {
-                    $child["modul"] = $dt["modul"];
-                }
-                unset($child);
-                $dt["children"] = $children;
+                $dt["children"] = $this->getMenuItemsByModul($dt["modul"]);
             }
             $fixedMenu[] = $dt;
             // tambahakan separator untuk pemisah modul
@@ -315,6 +310,132 @@ class Respo
         }
 
         return $tamp;
+    }
+
+    private function getMenuItemsByModul($modulName)
+    {
+        $menu_respo = $this->getMenuRespo();
+        if (empty($menu_respo)) {
+            return [];
+        }
+
+        $respo_condition = "";
+        if (count($menu_respo)) {
+            $menu_ids = implode(",", $menu_respo);
+            $respo_condition = " and b.id in($menu_ids)";
+        }
+
+        $rows = \DB::select("
+            select 
+                b.id,
+                b.modul,
+                b.submodul,
+                b.menu,
+                b.path,
+                b.endpoint,
+                b.icon,
+                b.sequence,
+                b.description,
+                b.truncatable
+            from m_menu b
+            where b.is_active = true 
+              and b.modul = ? 
+              $respo_condition
+            order by b.sequence asc, b.id asc
+        ", [$modulName]);
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        // Cek apakah modul ini memiliki submodul
+        $hasSubmodul = false;
+        foreach ($rows as $r) {
+            $sub = trim($r->submodul ?? '');
+            if (!empty($sub) && $sub !== '-' && strtolower($sub) !== strtolower($modulName)) {
+                $hasSubmodul = true;
+                break;
+            }
+        }
+
+        // Jika TIDAK ADA submodul, return flat list
+        if (!$hasSubmodul) {
+            $children = [];
+            foreach ($rows as $r) {
+                $access = $this->checkAccessForm($r->path);
+                $children[] = array_merge([
+                    'modul'       => $r->modul,
+                    'text'        => $r->menu,
+                    'path'        => $r->path,
+                    'truncatable' => @$r->truncatable ? true : false,
+                    'icon'        => $r->icon ?? 'arrow-right',
+                    'description' => $r->description,
+                    'endpoint'    => $r->endpoint ?? $r->path,
+                    'type'        => 'single',
+                ], $access);
+            }
+            return $children;
+        }
+
+        // Jika ADA submodul, kelompokkan per submodul
+        $grouped = [];
+        $standalone = [];
+
+        foreach ($rows as $r) {
+            $sub = trim($r->submodul ?? '');
+            $access = $this->checkAccessForm($r->path);
+            $itemFormatted = array_merge([
+                'modul'       => $r->modul,
+                'submodul'    => $r->submodul,
+                'text'        => $r->menu,
+                'path'        => $r->path,
+                'truncatable' => @$r->truncatable ? true : false,
+                'icon'        => $r->icon ?? 'arrow-right',
+                'description' => $r->description,
+                'endpoint'    => $r->endpoint ?? $r->path,
+                'type'        => 'single',
+            ], $access);
+
+            if (!empty($sub) && $sub !== '-' && strtolower($sub) !== strtolower($modulName)) {
+                if (!isset($grouped[$sub])) {
+                    $grouped[$sub] = [
+                        'sequence' => $r->sequence ?? 999,
+                        'items'    => []
+                    ];
+                }
+                $grouped[$sub]['items'][] = $itemFormatted;
+            } else {
+                $standalone[] = $itemFormatted;
+            }
+        }
+
+        $resultChildren = [];
+        foreach ($grouped as $subName => $groupData) {
+            $subAccess = [
+                'can_read'   => true,
+                'can_create' => true,
+                'can_update' => true,
+                'can_delete' => true,
+                'own_data'   => false,
+            ];
+            $resultChildren[] = array_merge([
+                'modul'       => $modulName,
+                'text'        => $subName,
+                'path'        => '#',
+                'truncatable' => true,
+                'icon'        => 'arrow-right',
+                'description' => null,
+                'endpoint'    => '#',
+                'type'        => 'multi',
+                'children'    => $groupData['items'],
+            ], $subAccess);
+        }
+
+        foreach ($standalone as $st) {
+            $resultChildren[] = $st;
+        }
+
+        return $resultChildren;
     }
 
     private function getMenuRespo()
