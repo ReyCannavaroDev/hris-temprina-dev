@@ -176,12 +176,16 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
         }
 
         if ($user_target) {
-            $fcm_tokens = \App\Models\BasicModels\default_users_fcm::where('default_users_id', $user_target)->pluck('token_fcm');
-            if (count($fcm_tokens) > 0) {
-                $firebase = app(\App\Services\FirebaseMessagingService::class);
-                foreach ($fcm_tokens as $token) {
-                    $firebase->sendToDevice($token, "Approval Rencana Perdin", "Ada pengajuan rencana perdin yang butuh approval Anda.", ["title" => "Approval Rencana Perdin"]);
+            try {
+                $fcm_tokens = \App\Models\BasicModels\default_users_fcm::where('default_users_id', $user_target)->pluck('token_fcm');
+                if (count($fcm_tokens) > 0) {
+                    $firebase = app(\App\Services\FirebaseMessagingService::class);
+                    foreach ($fcm_tokens as $token) {
+                        $firebase->sendToDevice($token, "Approval Rencana Perdin", "Ada pengajuan rencana perdin yang butuh approval Anda.", ["title" => "Approval Rencana Perdin"]);
+                    }
                 }
+            } catch (\Throwable $e) {
+                // Ignore FCM notification error
             }
         }
 

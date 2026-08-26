@@ -115,20 +115,21 @@ Berdasarkan penelusuran menyeluruh pada seluruh kode modul:
   - Bersihkan sisa validasi inventory `qty/qty_2` pada `onSave()`.
 
 ### 💵 TAHAP 3: Perbaikan Penarikan Tarif Rencana Perdin
-- [ ] **[Models/t_rencana_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_rencana_perdin/Custom.php)**:
+- [x] **[Models/t_rencana_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_rencana_perdin/Custom.php)**:
   - Perbaiki `custom_generateTarif` & `public_generateTarif` agar membaca `m_level_posisi_id` dari posisi karyawan pemohon.
-- [ ] **[Javascript/t_rencana_perdin.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_rencana_perdin.js)**:
+- [x] **[Javascript/t_rencana_perdin.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_rencana_perdin.js)**:
   - Sesuaikan payload request generate tarif agar mengirimkan `m_posisi_id` / `m_level_posisi_id`.
 
 ### 🛡️ TAHAP 4: Standarisasi Konsep Approval & Notifikasi
-- [ ] **[Models/t_penyelesaian_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_penyelesaian_perdin/Custom.php)**:
+- [x] **[Models/t_penyelesaian_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_penyelesaian_perdin/Custom.php)**:
   - Sinkronisasi `createAppTicket`, `custom_progress`, dan `custom_approveHC`.
   - Proteksi exception saat generate KBR jika koneksi ERP tidak aktif.
-- [ ] **[Models/t_rencana_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_rencana_perdin/Custom.php)**:
+- [x] **[Models/t_rencana_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_rencana_perdin/Custom.php)**:
   - Sinkronisasi ticket approval dan notifikasi FCM.
+  - Fallback auto note `Approved` saat approve data.
 
 ### ✅ TAHAP 5: Pengujian & Validasi End-to-End
-- [ ] Verifikasi pemilihan nomor perdin di form Penyelesaian Perjalanan Dinas.
-- [ ] Verifikasi simpan, read, dan edit detail biaya serta laporan kegiatan.
-- [ ] Verifikasi kalkulasi selisih kasbon (`nominal_kbs - total_biaya`).
-- [ ] Verifikasi alur approval dari status `DRAFT` -> `IN APPROVAL` -> `APPROVED` -> `POSTED`.
+- [x] Verifikasi pemilihan nomor perdin di form Penyelesaian Perjalanan Dinas.
+- [x] Verifikasi simpan, read, dan edit detail biaya serta laporan kegiatan.
+- [x] Verifikasi kalkulasi selisih kasbon (`nominal_kbs - total_biaya`).
+- [x] Verifikasi alur approval dari status `DRAFT` -> `IN APPROVAL` -> `APPROVED` -> `POSTED`.
