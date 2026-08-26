@@ -191,6 +191,8 @@ onBeforeMount(async () => {
     const currentYear = new Date().getFullYear()
     for (let i = currentYear; i >= currentYear - 50; i--) tahun.push(String(i))
 
+    await loadPosisiLevel()
+
     if (isRead && currentMenu?.can_read) {
       try {
         const editedId = route.params.id
@@ -262,6 +264,7 @@ onBeforeMount(async () => {
           )
           return {
             ...jabatan,
+            level_name: jabatan.level_name ?? posisiLevelMap.value[jabatan.m_posisi_id] ?? jabatan['m_level_posisi.level_name'] ?? jabatan['lp.level_name'] ?? null,
             subDetails:
               subDetails.length > 0
                 ? subDetails
@@ -532,6 +535,32 @@ function onDetailAdd_Lokasi(rows) {
 
   detail_lokasi.value = detail_lokasi.value.concat(newItems);
   tableKey.value++;
+}
+
+const posisiLevelMap = ref({})
+
+const loadPosisiLevel = async () => {
+  try {
+    const res = await fetch(`${store.server.url_backend}/operation/m_posisi?scopes=GetValueGen&transform=false&join=true`, {
+      headers: {
+        'Content-Type': 'Application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    })
+    if (res.ok) {
+      const json = await res.json()
+      const list = json.data || []
+      const map = {}
+      list.forEach((p) => {
+        if (p.id) {
+          map[p.id] = p.level_name || p['m_level_posisi.level_name'] || p['lp.level_name'] || '-'
+        }
+      })
+      posisiLevelMap.value = map
+    }
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 const inDetailArr = ref([]);

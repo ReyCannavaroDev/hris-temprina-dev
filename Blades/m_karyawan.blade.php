@@ -1202,6 +1202,7 @@
                       <th class="p-3 border text-center w-[10%]">CABANG</th>
                       <th class="p-3 border text-center w-[10%]">DIVISI</th>
                       <th class="p-3 border text-center w-[10%]">JABATAN</th>
+                      <th class="p-3 border text-center w-[10%]">LEVEL</th>
                       <th class="p-3 border text-center w-[10%]">START</th>
                       <th class="p-3 border text-center w-[10%]">END</th>
                       <th class="p-3 border text-center w-[5%]">PRIMARY</th>
@@ -1214,7 +1215,7 @@
                   <tbody>
 
                     <tr v-if="inDetailArr.length === 0">
-                      <td colspan="13" class="py-6 text-center text-gray-500">
+                      <td colspan="14" class="py-6 text-center text-gray-500">
                         No Data to Show
                       </td>
                     </tr>
@@ -1236,20 +1237,9 @@
                         <td class="p-3 text-center border font-bold">{{ i + 1 }}</td>
                         <!-- COMPANY -->
                         <td class="p-3 text-center border">
-                          <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="w-full !mt-0"
-                            :value="item.m_company_id" @input="v=>{
-                                if(v){
-                                  item.m_company_id=v
-                                }else{
-                                  item.m_company_id=null;
-                                }
-                              }" @update:valueFull="obj => {
-                                  if (obj) {
-                                    item.m_company_id = obj.id; 
-                                  } else {
-                                    item.m_company_id = null;
-                                  }
-                                }" :errorText="formErrors.m_company_id?'failed':''" :hints="formErrors.m_company_id"
+                          <FieldSelect :bind="{ disabled: true }" class="w-full !mt-0"
+                            :value="item.m_company_id"
+                            :errorText="formErrors.m_company_id?'failed':''" :hints="formErrors.m_company_id"
                             valueField="id" displayField="name" :api="{
                                   url: `${store.server.url_backend}/operation/m_company`,
                                   headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
@@ -1257,7 +1247,6 @@
                                     simplest:true,
                                     transform:false,
                                     join:false,
-                                    where:`this.is_active='true'`
                                   }
                             }" placeholder="" label="" fa-icon="sort-desc" :check="false" />
                         </td>
@@ -1270,6 +1259,7 @@
                                 }else{
                                   item.m_comp_id=null
                                   item.m_subcomp_id=null
+                                  item.m_company_id=null
                                   item.m_branch_id=null
                                   item.m_divisi_id = null;
                                   item.m_posisi_id = null; 
@@ -1278,18 +1268,20 @@
                                   if (obj) {
                                     item.m_comp_id = obj.id; 
                                     item.m_subcomp_id = null; 
+                                    item.m_company_id = null;
                                     item.m_branch_id = null;
                                     item.m_divisi_id = null;
                                     item.m_posisi_id = null; 
                                   } else {
                                     item.m_comp_id = null;
+                                    item.m_subcomp_id = null;
+                                    item.m_company_id = null;
                                   }
                                 }" :errorText="formErrors.m_comp_id?'failed':''" :hints="formErrors.m_comp_id"
                             valueField="id" displayField="name" :api="{
                                   url: `${store.server.url_backend}/operation/m_comp`,
                                   headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                                   params: {
-                                    simplest:true,
                                     transform:false,
                                     join:false,
                                     where:`this.is_active='true'`
@@ -1304,6 +1296,7 @@
                             item.m_subcomp_id=v
                           }else{
                             item.m_subcomp_id=null
+                            item.m_company_id=null
                             item.m_branch_id=null
                             item.m_divisi_id = null;
                             item.m_posisi_id = null; 
@@ -1311,18 +1304,22 @@
                         }" @update:valueFull="obj => {
                             if (obj) {
                               item.m_subcomp_id = obj.id; 
+                              item.m_company_id = obj.m_company_id ?? obj.company_id ?? obj.m_comp_id ?? item.m_comp_id ?? null;
                               item.m_branch_id = null; 
-                              item.m_divisi_id = null;
+                              item.m_divisi_id = null; 
                               item.m_posisi_id = null; 
                             } else {
                               item.m_subcomp_id = null;
+                              item.m_company_id = null;
+                              item.m_branch_id = null;
+                              item.m_divisi_id = null;
+                              item.m_posisi_id = null; 
                             }
                           }" :errorText="formErrors.m_subcomp_id?'failed':''" :hints="formErrors.m_subcomp_id"
                             valueField="id" displayField="name" :api="{
                             url: `${store.server.url_backend}/operation/m_subcomp`,
                             headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                             params: {
-                              simplest:true,
                               transform:false,
                               join:false,
                               where: `this.is_active='true' AND this.m_comp_id='${item.m_comp_id}'`
@@ -1390,7 +1387,17 @@
                         <!-- JABATAN -->
                         <td class="p-3 text-center border">
                           <FieldSelect :bind="{ disabled: !actionText}" class="w-full !mt-0" :value="item.m_posisi_id"
-                            @input="v => item.m_posisi_id = v" :errorText="formErrors.m_posisi_id ? 'failed' : ''"
+                            @input="v => item.m_posisi_id = v"
+                            @update:valueFull="obj => {
+                              if (obj) {
+                                item.m_posisi_id = obj.id;
+                                item.level_name = obj.level_name ?? obj['m_level_posisi.level_name'] ?? obj['lp.level_name'] ?? '-';
+                              } else {
+                                item.m_posisi_id = null;
+                                item.level_name = null;
+                              }
+                            }"
+                            :errorText="formErrors.m_posisi_id ? 'failed' : ''"
                             :hints="formErrors.m_posisi_id" label="" placeholder="Pilih Jabatan" valueField="id"
                             displayField="name" :api="{
                                     url: `${store.server.url_backend}/operation/m_posisi`,
@@ -1399,13 +1406,19 @@
                                       Authorization: `${store.user.token_type} ${store.user.token}`
                                     },
                                     params: {
-                                      simplest: true,
+                                      scopes: 'GetValueGen',
                                       transform: false,
                                       where: `this.is_active='true' `,
                                       join: true,
-                                      //notin: inDetailArr.length > 0 ? `this.id:${inDetailArr.map(item => item.m_posisi_id)?.filter(m_posisi_id => m_posisi_id)?.join(',')}` : null
                                     }
                                   }" :check="false" />
+                        </td>
+
+                        <!-- LEVEL -->
+                        <td class="p-3 text-center border">
+                          <FieldX class="!mt-0" label="" :bind="{ readonly: true, disabled: true }"
+                            :value="item.level_name ?? item['m_level_posisi.level_name'] ?? item['lp.level_name'] ?? '-'"
+                            placeholder="" :check="false" />
                         </td>
 
                         <!-- START -->
