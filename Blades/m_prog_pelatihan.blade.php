@@ -3,9 +3,9 @@
       <div class="flex items-center gap-x-4">
         <p>Filter Status :</p>
         <div class="flex gap-x-2">
-          <button @click="filterShowData(true,1)" :class="activeBtn === 1?'bg-green-600 text-white hover:bg-green-400':'border border-green-600 text-green-600 bg-white  hover:bg-green-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">Aktif</button>
+          <button @click="filterShowData(true,1)" :class="activeBtn === 1?'bg-green-600 text-white hover:bg-green-400':'border border-green-600 text-green-600 bg-white  hover:bg-green-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">Active</button>
           <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
-          <button @click="filterShowData(false,2)" :class="activeBtn === 2?'bg-red-600 text-white hover:bg-red-400':'border border-red-600 text-red-600 bg-white  hover:bg-red-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">Inaktif</button>
+          <button @click="filterShowData(false,2)" :class="activeBtn === 2?'bg-red-600 text-white hover:bg-red-400':'border border-red-600 text-red-600 bg-white  hover:bg-red-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">Inactive</button>
         </div>
       </div>
   <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions">
@@ -67,7 +67,7 @@
           <!-- <FieldX class="w-full py-2 !mt-0" :bind="{ readonly: !actionText }" :value="values.sasaran" :errorText="formErrors.sasaran?'failed':''"
             @input="v=>values.sasaran=v" :hints="formErrors.sasaran" placeholder="" label="" fa-icon=""
             :check="false" /> -->
-          <FieldSelect class="w-full py-2 !mt-0" :bind="{ disabled: !actionText, clearable:false, multiple: true }"
+          <FieldSelect class="w-full py-2 !mt-0" :bind="{ disabled: !actionText, clearable:true, multiple: true }"
             :value="values.m_prog_pelatihan_d_level" @input="v=>values.m_prog_pelatihan_d_level=v"
             :errorText="formErrors.m_prog_pelatihan_d_level?'failed':''" :hints="formErrors.m_prog_pelatihan_d_level"
             valueField="id" displayField="level_name" :api="{
@@ -362,7 +362,7 @@
           <FieldSelect class="w-full py-2 !mt-0" :bind="{ disabled: !actionText, clearable:false }"
             :value="values.is_active" @input="v=>values.is_active=v" :errorText="formErrors.is_active?'failed':''"
             :hints="formErrors.is_active" valueField="id" displayField="key"
-            :options="[{'id' : 1 , 'key' : 'Aktif'}, {'id': 0, 'key' : 'Nonaktif'}]" placeholder="" label="" fa-icon=""
+            :options="[{'id' : 1 , 'key' : 'Active'}, {'id': 0, 'key' : 'Inactive'}]" placeholder="" label="" fa-icon=""
             :check="false" />
         </div>
       </div>

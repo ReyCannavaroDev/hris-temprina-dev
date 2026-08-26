@@ -126,14 +126,25 @@ onBeforeMount(async () => {
       const resultJson = await res.json()
       initialValues = resultJson.data
       initialValues.tampilDivisi = (initialValues.m_prog_pelatihan_d_divisi || []).map(item => typeof item === 'object' ? (item['m_divisi.id'] || item.m_divisi_id || item.id) : item)
-      initialValues.tampilLevel = (initialValues.m_prog_pelatihan_d_level || []).map(item => typeof item === 'object' ? (item['m_level_posisi.id'] || item.m_level_posisi_id || item.id) : item)
+      initialValues.tampilLevel = (initialValues.m_prog_pelatihan_d_level || []).map(item => {
+        if (typeof item === 'object') {
+          return Number(item.m_level_posisi_id || item['m_level_posisi.id'])
+        }
+        return Number(item)
+      }).filter(v => Number.isInteger(v) && v > 0)
+      
       initialValues.mont = initialValues.month.slice(0, 7)
       initialValues.is_active = initialValues.is_active ? 1 : 0
-      //console.log('kontol', initialValues)
-      initialValues.m_prog_pelatihan_d_level =
-        Array.isArray(initialValues.m_prog_pelatihan_d_level)
-          ? initialValues.m_prog_pelatihan_d_level.map(item => typeof item === 'object' ? (item['m_level_posisi.id'] || item.m_level_posisi_id || item.id) : item)
-          : []
+      
+      console.log('--- DEBUG DETAIL LEVEL RAW ---', resultJson.data.m_prog_pelatihan_d_level)
+      
+      const rawLevels = Array.isArray(resultJson.data.m_prog_pelatihan_d_level) ? resultJson.data.m_prog_pelatihan_d_level : []
+      initialValues.m_prog_pelatihan_d_level = rawLevels.map(item => {
+          if (typeof item === 'object') {
+            return Number(item.m_level_posisi_id || item['m_level_posisi.id'])
+          }
+          return Number(item)
+        }).filter(v => Number.isInteger(v) && v > 0)
 
     } catch (err) {
       isBadForm.value = true
@@ -173,8 +184,14 @@ async function onSave() {
     values.is_active = values.is_active ? 1 : 0
     values.kode = '1'
     values.month = `${values.mont}-01`
-    values.m_prog_pelatihan_d_level =
-      values.m_prog_pelatihan_d_level.map(id => ({
+    const levelArr = Array.isArray(values.m_prog_pelatihan_d_level) ? values.m_prog_pelatihan_d_level : []
+    values.m_prog_pelatihan_d_level = levelArr
+      .map(id => {
+        const levelId = typeof id === 'object' ? (id.m_level_posisi_id || id['m_level_posisi.id']) : id
+        return Number(levelId)
+      })
+      .filter(v => !isNaN(v) && v > 0)
+      .map(id => ({
         m_prog_pelatihan_id: 1,
         m_level_posisi_id: id,
         creator_id: store.user?.data?.id
@@ -275,7 +292,7 @@ const landing = reactive({
       class: 'bg-red-600 text-light-100',
       // show: (row) =>row.status?.toUpperCase() === 'DRAFT',
       title: "Hapus",
-      show: (row) => { data.can_delete },
+      show: (row) => data.can_delete,
       // show: () => store.user.data.username==='developer',
       click(row) {
         swal.fire({
@@ -314,7 +331,7 @@ const landing = reactive({
       icon: 'eye',
       title: "Read",
       class: 'bg-green-600 text-light-100',
-      show: (row) => { data.can_read },
+      show: (row) => data.can_read,
       // show: (row) => (currentMenu?.can_read)||store.user.data.username==='developer',
       click(row) {
         router.push(`${route.path}/${row.id}?` + tsId)
@@ -419,7 +436,7 @@ const landing = reactive({
     filter: 'ColFilter',
     cellClass: ['border-r', '!border-gray-200', 'justify-left'],
     cellRenderer: ({ value }) => {
-      const statusText = value ? 'Aktif' : 'Non Aktif'
+      const statusText = value ? 'Active' : 'Inactive'
       const colorClass = value ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'
       return `<span class="${colorClass}">${statusText}</span>`
     }

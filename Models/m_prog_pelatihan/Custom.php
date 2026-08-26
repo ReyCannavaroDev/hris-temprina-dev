@@ -28,8 +28,8 @@ class m_prog_pelatihan extends \App\Models\BasicModels\m_prog_pelatihan
 
     public function createBefore($model, $arrayData, $metaData, $id=null)
     {
-        $req = app()->request;
-        if(empty($req->m_prog_pelatihan_d_level)){
+        $levelData = $arrayData['m_prog_pelatihan_d_level'] ?? (app()->request->input('m_prog_pelatihan_d_level') ?? []);
+        if(empty($levelData)){
             $this->details = [];
         }
         return [
@@ -40,8 +40,8 @@ class m_prog_pelatihan extends \App\Models\BasicModels\m_prog_pelatihan
 
     public function updateBefore($model, $arrayData, $metaData, $id=null)
     {
-        $req = app()->request;
-        if(empty($req->m_prog_pelatihan_d_level)){
+        $levelData = $arrayData['m_prog_pelatihan_d_level'] ?? (app()->request->input('m_prog_pelatihan_d_level') ?? []);
+        if(empty($levelData)){
             \App\Models\BasicModels\m_prog_pelatihan_d_level::where('m_prog_pelatihan_id', $id)->delete();
             $this->details = [];
         }
@@ -54,14 +54,63 @@ class m_prog_pelatihan extends \App\Models\BasicModels\m_prog_pelatihan
     public function createAfter($model, $arrayData, $metaData, $id=null)
     {
         $realId = is_object($model) ? $model->id : $id;
-        $this->updateSasaran($realId);
+        $req = app()->request;
+
+        $levelData = $req->input('m_prog_pelatihan_d_level', $req->m_prog_pelatihan_d_level ?? []);
+        if (empty($levelData) && isset($arrayData['m_prog_pelatihan_d_level'])) {
+            $levelData = $arrayData['m_prog_pelatihan_d_level'];
+        }
+        
+        $levelIds = collect($levelData)
+            ->pluck('m_level_posisi_id')
+            ->filter()
+            ->toArray();
+
+        if (!empty($levelIds)) {
+            $prog = $this->find($realId);
+            if ($prog) {
+                $levels = \App\Models\BasicModels\m_level_posisi::whereIn('id', $levelIds)
+                    ->pluck('level_name')
+                    ->toArray();
+                $prog->sasaran = implode(', ', $levels);
+                $prog->save();
+            }
+        } else {
+            // Fallback: coba dari tabel detail (untuk kasus lain)
+            $this->updateSasaran($realId);
+        }
+
         return true;
     }
 
     public function updateAfter($model, $arrayData, $metaData, $id=null)
     {
         $realId = is_object($model) ? $model->id : $id;
-        $this->updateSasaran($realId);
+        $req = app()->request;
+        
+        $levelData = $req->input('m_prog_pelatihan_d_level', $req->m_prog_pelatihan_d_level ?? []);
+        if (empty($levelData) && isset($arrayData['m_prog_pelatihan_d_level'])) {
+            $levelData = $arrayData['m_prog_pelatihan_d_level'];
+        }
+
+        $levelIds = collect($levelData)
+            ->pluck('m_level_posisi_id')
+            ->filter()
+            ->toArray();
+
+        if (!empty($levelIds)) {
+            $prog = $this->find($realId);
+            if ($prog) {
+                $levels = \App\Models\BasicModels\m_level_posisi::whereIn('id', $levelIds)
+                    ->pluck('level_name')
+                    ->toArray();
+                $prog->sasaran = implode(', ', $levels);
+                $prog->save();
+            }
+        } else {
+            $this->updateSasaran($realId);
+        }
+        
         return true;
     }
 
