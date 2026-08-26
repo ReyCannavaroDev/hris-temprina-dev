@@ -18,24 +18,47 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
         /*file_column*/
     ];
 
-    //public $createAdditionalData = ["creator_id"=>"auth:id"];
-    //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
+    public function t_rencana_perdin_det()
+    {
+        return $this->hasMany('App\Models\BasicModels\t_rencana_perdin_det', 't_rencana_perdin_id', 'id');
+    }
 
-    public function createBefore( $model, $arrayData, $metaData, $id=null )
+    public function createBefore($model, $arrayData, $metaData, $id = null)
     {
         $perdin = t_perdin::find($arrayData['t_perdin_id']);
         $nomor = $perdin?->nomor ?? '';
-        $newArrayData  = array_merge( $arrayData,[
-            // "nomor" => $this->helper->generateNomor("KODE RINCIAN PERDIN"),
+        $newArrayData = array_merge($arrayData, [
             "nomor" => $nomor,
-        ] );
+        ]);
+
+        $this->details = ["t_rencana_perdin_det"];
         return [
-            "model"  => $model,
-            "data"   => $newArrayData,
-            // "errors" => ['error1']
+            "model" => $model,
+            "data" => $newArrayData,
         ];
     }
-    
+
+    public function updateBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $this->details = ["t_rencana_perdin_det"];
+        return [
+            "model" => $model,
+            "data" => $arrayData,
+        ];
+    }
+
+    public function transformRowData(array $row)
+    {
+        $id = $row['this.id'] ?? $row['id'] ?? null;
+        if ($id && (!isset($row['t_rencana_perdin_det']) || empty($row['t_rencana_perdin_det']))) {
+            $details = \DB::table('t_rencana_perdin_det')
+                ->where('t_rencana_perdin_id', $id)
+                ->get();
+            $row['t_rencana_perdin_det'] = json_decode(json_encode($details), true) ?? [];
+        }
+        return $row;
+    }
+
 
     public function custom_generateTarif()
     {
@@ -47,9 +70,7 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
         $kota_id = $req->kota_id;
         $provinsi_id = $req->provinsi_id;
 
-        $m_tarif = m_tarif_perdin_det::whereHas("m_tarif_perdin", function (
-            $q
-        ) use ($kota_id, $posisi_id, $provinsi_id) {
+        $m_tarif = m_tarif_perdin_det::whereHas("m_tarif_perdin", function ($q) use ($kota_id, $posisi_id, $provinsi_id) {
             $q->where("kota_id", $kota_id)
                 ->where("provinsi_id", $provinsi_id)
                 ->where("posisi_id", $posisi_id);
@@ -70,14 +91,12 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
     public function public_generateTarif()
     {
         $req = app()->request;
-        
+
         $posisi_id = $req->posisi_id;
         $kota_id = $req->kota_id;
         $provinsi_id = $req->provinsi_id;
 
-        $m_tarif = m_tarif_perdin_det::whereHas("m_tarif_perdin", function (
-            $q
-        ) use ($kota_id, $posisi_id, $provinsi_id) {
+        $m_tarif = m_tarif_perdin_det::whereHas("m_tarif_perdin", function ($q) use ($kota_id, $posisi_id, $provinsi_id) {
             $q->where("kota_id", $kota_id)
                 ->where("provinsi_id", $provinsi_id)
                 ->where("posisi_id", $posisi_id);
@@ -264,7 +283,7 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
             \Log::error("Error Approve HC: " . $e->getMessage());
 
             return $this->helper->customResponse(
-                "Terjadi kesalahan sistem: " . $e->getMessage(), 
+                "Terjadi kesalahan sistem: " . $e->getMessage(),
                 500
             );
         }
@@ -273,25 +292,25 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
     public function logHc($trxId)
     {
         $prevLog = generate_approval_log::where('trx_id', $trxId)->where('action_type', 'HALF APPROVED');
-        if($check = $prevLog->exists()){
+        if ($check = $prevLog->exists()) {
             $prev = $prevLog->first();
             $log_insert = generate_approval_log::create([
-                'nomor'                     => $prev->nomor,
-                'generate_approval_id'      => $prev->id,
-                'generate_approval_det_id'  => null,
-                'trx_id'                    => $prev->trx_id,
-                'trx_table'                 => $prev->trx_table,
-                'trx_name'                  => $prev->trx_name,
-                'trx_nomor'                 => $prev->trx_nomor,
-                'trx_date'                  => $prev->trx_date,
-                'form_name'                 => $prev->form_name,
-                'trx_creator_id'            => $prev->trx_creator_id,
-                'action_type'               => 'APPROVED',
-                'action_user_id'            => auth()->user()->id,
-                'creator_id'                => auth()->user()->id,
-                'action_at'                 => Carbon::now(),
-                'action_note'               => 'APPROVED BY HC'
-            ]); 
+                'nomor' => $prev->nomor,
+                'generate_approval_id' => $prev->id,
+                'generate_approval_det_id' => null,
+                'trx_id' => $prev->trx_id,
+                'trx_table' => $prev->trx_table,
+                'trx_name' => $prev->trx_name,
+                'trx_nomor' => $prev->trx_nomor,
+                'trx_date' => $prev->trx_date,
+                'form_name' => $prev->form_name,
+                'trx_creator_id' => $prev->trx_creator_id,
+                'action_type' => 'APPROVED',
+                'action_user_id' => auth()->user()->id,
+                'creator_id' => auth()->user()->id,
+                'action_at' => Carbon::now(),
+                'action_note' => 'APPROVED BY HC'
+            ]);
         }
     }
 

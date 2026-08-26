@@ -154,9 +154,9 @@ onBeforeMount(async () => {
 
 
 
-        detailArr.value = initialValues.t_rencana_perdin_det.map((dt) => ({
+        detailArr.value = initialValues.t_rencana_perdin_det?.map((dt) => ({
           ...dt,
-        }))
+        })) || []
 
 
         // logic finish & Approved data
@@ -167,7 +167,7 @@ onBeforeMount(async () => {
         const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
         isRequesting.value = true
 
-        const params = { join: true, transform: false }
+        const params = { join: true, transform: true }
         const fixedParams = new URLSearchParams(params)
         const res = await fetch(dataURL + '?' + fixedParams, {
           headers: {
@@ -212,9 +212,9 @@ onBeforeMount(async () => {
         // })
 
 
-        detailArr.value = initialValues.t_rencana_perdin_det.map((dt) => ({
+        detailArr.value = initialValues.t_rencana_perdin_det?.map((dt) => ({
           ...dt,
-        }))
+        })) || []
 
         console.log(initialValues.t_rencana_perdin_det)
       }

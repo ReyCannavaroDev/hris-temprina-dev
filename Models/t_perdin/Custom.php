@@ -4,7 +4,7 @@ namespace App\Models\CustomModels;
 use Carbon;
 
 class t_perdin extends \App\Models\BasicModels\t_perdin
-{    
+{
     private $helper;
     public function __construct()
     {
@@ -17,7 +17,7 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         $this->heirs = array_values(array_unique(array_merge($this->heirs, [
             "m_kary",
         ])));
-        
+
         $newCols = ["tanggal_surat_tugas", "tanggal_rencana_biaya"];
         $this->fillable = array_merge($this->fillable, $newCols);
         $this->columns = array_merge($this->columns, $newCols);
@@ -26,27 +26,27 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         $this->updateable = array_merge($this->updateable, $newCols);
         $this->searchable = array_merge($this->searchable, $newCols);
     }
-    
-    public $fileColumns    = [ /*file_column*/ ];
 
-    public $createAdditionalData = ["creator_id"=>"auth:id"];
+    public $fileColumns = [ /*file_column*/];
 
-    public function t_rencana_perdin() :\HasMany
+    public $createAdditionalData = ["creator_id" => "auth:id"];
+
+    public function t_rencana_perdin(): \HasMany
     {
         return $this->hasMany('App\Models\BasicModels\t_rencana_perdin', 't_perdin_id', 'id');
     }
 
-    public function t_penyelesaian_perdin() :\HasMany
+    public function t_penyelesaian_perdin(): \HasMany
     {
         return $this->hasMany('App\Models\BasicModels\t_penyelesaian_perdin', 't_perdin_id', 'id');
     }
 
-    public function m_kary() :\BelongsTo
+    public function m_kary(): \BelongsTo
     {
         return $this->belongsTo('App\Models\BasicModels\m_kary', 'm_kary_id', 'id');
     }
 
-    private function normalizeDate(?string $value) : ?string
+    private function normalizeDate(?string $value): ?string
     {
         if (!$value) {
             return null;
@@ -67,7 +67,7 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         }
     }
 
-    private function getHariCode(string $date) : string
+    private function getHariCode(string $date): string
     {
         $map = [
             0 => 'MG',
@@ -82,7 +82,7 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         return $map[(int) Carbon::parse($date)->dayOfWeek] ?? 'SN';
     }
 
-    public function createBefore( $model, $arrayData, $metaData, $id=null )
+    public function createBefore($model, $arrayData, $metaData, $id = null)
     {
         $newArrayData = array_merge($arrayData, [
             "nomor" => $this->helper->generateNomor("PERDIN", true, null, $arrayData['date_from'] ?? null),
@@ -91,8 +91,8 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         ]);
 
         return [
-            "model"  => $model,
-            "data"   => $newArrayData,
+            "model" => $model,
+            "data" => $newArrayData,
             // "errors" => ['error1']
         ];
     }
@@ -100,32 +100,31 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     public function scopelistPerdin($model)
     {
         $user_id = auth()->user()->id;
-        $m_kary_id = m_kary::whereHas('default_users', function($q) use ($user_id){
+        $m_kary_id = m_kary::whereHas('default_users', function ($q) use ($user_id) {
             $q->where('id', $user_id);
         })->first()?->id;
 
-        return $model->whereDoesntHave('t_rencana_perdin', function($q){
+        return $model->whereDoesntHave('t_rencana_perdin', function ($q) {
             $q->where('status', 'APPROVED');
         })
-        ->where('m_kary_id', $m_kary_id);
+            ->where('m_kary_id', $m_kary_id);
     }
 
     public function scopeusedPerdin($model)
     {
         $user = auth()->user();
         $user_id = $user->id;
-        $m_kary_id = m_kary::whereHas('default_users', function($q) use ($user_id){
+        $m_kary_id = m_kary::whereHas('default_users', function ($q) use ($user_id) {
             $q->where('id', $user_id);
         })->first()?->id;
 
-        if($user->is_hc)
-        {
-            return $model->whereHas('t_rencana_perdin', function($q){
+        if ($user->is_hc) {
+            return $model->whereHas('t_rencana_perdin', function ($q) {
                 $q->where('status', 'APPROVED');
             });
         }
 
-        return $model->whereHas('t_rencana_perdin', function($q){
+        return $model->whereHas('t_rencana_perdin', function ($q) {
             $q->where('status', 'APPROVED');
         })->where('m_kary_id', $m_kary_id);
     }
@@ -134,7 +133,7 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     {
         return $model;
     }
-    
+
     public function scoperincian($model)
     {
         return $model->with(['t_rencana_perdin', 't_penyelesaian_perdin']);

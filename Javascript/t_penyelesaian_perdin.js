@@ -1046,13 +1046,15 @@ const landing = reactive({
     // url: `${store.server.url_backend}/operation${endpointApi}`,
     url: currentMenu?.can_read
       ? `${store.server.url_backend}/operation${endpointApi}`
-      : '',
+      : null,
     headers: {
       'Content-Type': 'Application/json',
       authorization: `${store.user.token_type} ${store.user.token}`
     },
     params: {
       simplest: true,
+      join: true,
+      transform: true,
       searchfield: 'this.id, this.total_biaya, m_kary.nama_lengkap, t_perdin.tugas',
     },
     onsuccess(response) {
