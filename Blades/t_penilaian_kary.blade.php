@@ -171,20 +171,33 @@
 
     <div>
       <FieldSelect class="w-full col-span-9 !mt-3" :bind="{ disabled: !['Tambah', 'Edit', 'Copy'].includes(actionText), clearable:true }"
-        :value="values.tipe_penilaian" 
+        :value="values.tipe_penilaian_id" 
         @input="v => { 
-          values.tipe_penilaian = v; 
+          values.tipe_penilaian_id = v; 
           values.m_assessment_kary_id = null; 
-          values.penilaian = v || ''; 
+          values.penilaian = ''; 
           detailArr = []; 
           selectedSeq = {};
         }"
-        :errorText="formErrors.tipe_penilaian?'failed':''" :hints="formErrors.tipe_penilaian" valueField="value"
+        @update:valueFull="obj => {
+          if (obj) {
+            values.tipe_penilaian_id = obj.id;
+            values.tipe_penilaian = obj.value;
+          } else {
+            values.tipe_penilaian_id = null;
+            values.tipe_penilaian = null;
+            values.m_assessment_kary_id = null;
+            values.penilaian = '';
+            detailArr = [];
+            selectedSeq = {};
+          }
+        }"
+        :errorText="formErrors.tipe_penilaian?'failed':''" :hints="formErrors.tipe_penilaian" valueField="id"
         displayField="value" :api="{
               url: `${store.server.url_backend}/operation/m_general`,
               headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
               params: {
-                where: `this.group = 'TIPE_PENILAIAN'`,
+                where: `this.group = 'TIPE_PENILAIAN' AND this.is_active='true'`,
                 simplest:true,
                 transform:false,
                 join:false
@@ -193,11 +206,11 @@
     </div>
 
     <div>
-      <FieldSelect class="w-full col-span-9 !mt-3" :bind="{ disabled: actionText !== 'Tambah', clearable:true }"
+      <FieldSelect class="w-full col-span-9 !mt-3" :bind="{ disabled: !['Tambah', 'Edit', 'Copy'].includes(actionText) || !values.tipe_penilaian_id, clearable:true }"
         :value="values.m_assessment_kary_id" 
         @input="v => {
           values.m_assessment_kary_id = v;
-          if (actionText === 'Tambah') {
+          if (['Tambah', 'Edit', 'Copy'].includes(actionText)) {
             if (v) {
               onTipePenilaianSelected(v);
             } else {
@@ -210,10 +223,14 @@
         valueField="id" displayField="deskripsi" 
         @update:valueFull="(response)=>{
           if (response && response.id) {
-            values.penilaian = response['m_general.value'] || response['type.value'] || values.tipe_penilaian || response.deskripsi || '';
-            if (actionText === 'Tambah') {
+            values.penilaian = response.deskripsi || values.tipe_penilaian || '';
+            if (['Tambah', 'Edit', 'Copy'].includes(actionText)) {
               onTipePenilaianSelected(response.id);
             }
+          } else {
+            values.penilaian = '';
+            detailArr = [];
+            selectedSeq = {};
           }
         }" 
         :api="{
@@ -223,7 +240,7 @@
             Authorization: `${store.user.token_type} ${store.user.token}`
           },
           params: { 
-            where: values.tipe_penilaian ? `type.value = '${values.tipe_penilaian}'` : null, 
+            where: values.tipe_penilaian_id ? `this.type = '${values.tipe_penilaian_id}' AND this.is_active='true'` : `this.is_active='true'`, 
             transform: false,
             simplest: true 
           }

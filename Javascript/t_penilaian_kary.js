@@ -77,6 +77,7 @@ function defaultValues() {
   values.atasan_id = store.user?.data?.m_kary_id || null
   values.tanggal = null
   values.m_assessment_kary_id = null
+  values.tipe_penilaian_id = null
   values.tipe_penilaian = null
   values.penilaian = null
   values.nama_jabatan = null
@@ -306,6 +307,7 @@ async function resolveNamaLevel(karyawanObj) {
 
 async function onKaryawanSelected(karyawan) {
   values.m_assessment_kary_id = null;
+  values.tipe_penilaian_id = null;
   values.tipe_penilaian = null;
   values.penilaian = null;
   detailArr.value = [];
@@ -404,8 +406,8 @@ async function onKaryawanSelected(karyawan) {
 }
 
 const onTipePenilaianSelected = async (v) => {
-  if (isRead || !['Tambah', 'Create', 'Copy'].includes(actionText.value)) {
-    console.log('Skip onTipePenilaianSelected: bukan mode Tambah atau isRead aktif');
+  if (!['Tambah', 'Create', 'Copy', 'Edit'].includes(actionText.value)) {
+    console.log('Skip onTipePenilaianSelected: bukan mode Tambah/Edit/Copy');
     return;
   }
 
@@ -528,6 +530,9 @@ onBeforeMount(async () => {
         values[key] = initialValues[key];
       }
 
+      if (initialValues.tipe_penilaian_id) {
+        values.tipe_penilaian_id = initialValues.tipe_penilaian_id;
+      }
       if (initialValues.tipe_penilaian) {
         values.tipe_penilaian = initialValues.tipe_penilaian;
       }
@@ -535,9 +540,33 @@ onBeforeMount(async () => {
         values.penilaian = initialValues.penilaian;
       }
 
-      if (!values.tipe_penilaian && values.m_assessment_kary_id) {
+      // Resolve tipe_penilaian_id dari m_general jika belum tersedia
+      if (values.tipe_penilaian && !values.tipe_penilaian_id) {
         try {
-          const urlAss = `${store.server.url_backend}/operation/m_assessment_kary?where=this.id=${values.m_assessment_kary_id}&simplest=true&transform=false&join=true`;
+          const resGen = await fetch(
+            `${store.server.url_backend}/operation/m_general?where=this.group='TIPE_PENILAIAN' AND this.value='${values.tipe_penilaian}'&simplest=true&transform=false`,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `${store.user.token_type} ${store.user.token}`,
+              },
+            }
+          );
+          if (resGen.ok) {
+            const jsonGen = await resGen.json();
+            if (jsonGen.data && jsonGen.data[0]) {
+              values.tipe_penilaian_id = jsonGen.data[0].id;
+            }
+          }
+        } catch (e) {
+          console.error('Gagal resolve tipe_penilaian_id dari tipe_penilaian:', e);
+        }
+      }
+
+      // Resolve m_assessment_kary dari ID atau deskripsi penilaian
+      if (values.m_assessment_kary_id) {
+        try {
+          const urlAss = `${store.server.url_backend}/operation/m_assessment_kary?where=this.id=${values.m_assessment_kary_id}&simplest=false&transform=false&join=false`;
           const resAss = await fetch(urlAss, {
             headers: {
               'Content-Type': 'application/json',
@@ -547,13 +576,41 @@ onBeforeMount(async () => {
           if (resAss.ok) {
             const jsonAss = await resAss.json();
             const assData = (jsonAss.data && jsonAss.data[0]) ? jsonAss.data[0] : {};
-            values.tipe_penilaian = assData['type.value'] || assData.tipe_penilaian || '';
+            if (assData.type && !values.tipe_penilaian_id) {
+              values.tipe_penilaian_id = assData.type;
+            }
+            if ((assData['type.value'] || assData.tipe_penilaian) && !values.tipe_penilaian) {
+              values.tipe_penilaian = assData['type.value'] || assData.tipe_penilaian;
+            }
             if (!values.penilaian) {
-              values.penilaian = assData['type.value'] || assData.deskripsi || '';
+              values.penilaian = assData.deskripsi || values.tipe_penilaian || '';
             }
           }
         } catch (e) {
           console.error('Gagal resolve tipe_penilaian master:', e);
+        }
+      } else if (values.penilaian) {
+        try {
+          const resAssSearch = await fetch(
+            `${store.server.url_backend}/operation/m_assessment_kary?where=this.deskripsi='${encodeURIComponent(values.penilaian)}'&simplest=false&transform=false`,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `${store.user.token_type} ${store.user.token}`,
+              },
+            }
+          );
+          if (resAssSearch.ok) {
+            const jsonSearch = await resAssSearch.json();
+            if (jsonSearch.data && jsonSearch.data[0]) {
+              values.m_assessment_kary_id = jsonSearch.data[0].id;
+              if (jsonSearch.data[0].type && !values.tipe_penilaian_id) {
+                values.tipe_penilaian_id = jsonSearch.data[0].type;
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Gagal resolve m_assessment_kary_id dari deskripsi penilaian:', e);
         }
       }
 
@@ -741,26 +798,34 @@ async function onSave() {
       const bobotNum = parseFloat(item.bobot) || 1;
       const totalNilai = subTerpilih ? (parseFloat(subTerpilih.nilai) || 0) * bobotNum : (parseFloat(item.total_nilai) || 0);
 
-      const subListPayload = (item.t_assessment_kary_sub_d || []).map(sub => ({
-        t_assessment_kary_d_id: sub.t_assessment_kary_d_id || 0,
-        nama_keterangan: String(sub.nama_keterangan || sub.keterangan || '-'),
-        nilai: parseFloat(sub.nilai) || 0,
-        is_selected: isNilaiMatch(sub.nilai, selectedVal)
-      }));
+      const subListPayload = (item.t_assessment_kary_sub_d || []).map(sub => {
+        const subObj = {
+          t_assessment_kary_d_id: sub.t_assessment_kary_d_id || item.id || 0,
+          nama_keterangan: String(sub.nama_keterangan || sub.keterangan || '-'),
+          nilai: parseFloat(sub.nilai) || 0,
+          is_selected: isNilaiMatch(sub.nilai, selectedVal)
+        };
+        if (sub.id && !isCreating) {
+          subObj.id = sub.id;
+        }
+        return subObj;
+      });
 
       const kategoriStr = String(item.nama_kategori || item['m_general.value'] || item.kategori_name || 'Kategori Penilaian');
 
-      return {
-        t_assessment_kary_id: item.t_assessment_kary_id || 0,
+      const itemObj = {
+        t_assessment_kary_id: item.t_assessment_kary_id || (isCreating ? 0 : Number(route.params.id)),
         nama_assessment: String(item.nama_assessment || '-'),
         nama_kategori: kategoriStr,
         bobot: bobotNum,
         total_nilai: totalNilai,
         t_assessment_kary_sub_d: subListPayload
       };
+      if (item.id && !isCreating) {
+        itemObj.id = item.id;
+      }
+      return itemObj;
     });
-
-    values.t_assessment_kary_d = detailPayload;
 
     if (localStorage.getItem('respo')) {
       const respo = JSON.parse(localStorage.getItem('respo'));
@@ -775,8 +840,26 @@ async function onSave() {
     hitungNilaiAkhirLangsung();
 
     const payload = {
-      ...values,
-      status: 'DRAFT',
+      m_kary_id: values.m_kary_id,
+      atasan_id: values.atasan_id,
+      tanggal: values.tanggal,
+      m_assessment_kary_id: values.m_assessment_kary_id,
+      tipe_penilaian: values.tipe_penilaian,
+      penilaian: values.penilaian,
+      nama: values.nama,
+      nama_jabatan: values.nama_jabatan,
+      nama_divisi: values.nama_divisi,
+      nama_level: values.nama_level,
+      m_comp_id: values.m_comp_id,
+      m_subcomp_id: values.m_subcomp_id,
+      m_branch_id: values.m_branch_id,
+      rata_rata: values.rata_rata,
+      catatan_1: values.catatan_1,
+      catatan_2: values.catatan_2,
+      catatan_3: values.catatan_3,
+      catatan_4: values.catatan_4,
+      status: values.status || 'DRAFT',
+      t_assessment_kary_d: detailPayload
     };
 
     console.log('Payload yang dikirim ke server:', payload);
