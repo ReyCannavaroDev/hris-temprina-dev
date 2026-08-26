@@ -44,12 +44,14 @@ const changedValues = []
 
 const values = reactive({
   is_active: true,
+  m_level_posisi_id: null,
   m_assessment_kary_d_level: []
 })
 
 // DEFAULT VALUE BEFORE MOUNT --UBAH DISINI
 const defaultValues = () => {
   values.is_active = true
+  values.m_level_posisi_id = null
   values.m_assessment_kary_d_level = []
   values.m_comp_id = null
   values.m_subcomp_id = null
@@ -138,14 +140,18 @@ onBeforeMount(async () => {
       const resultJson = await res.json()
       initialValues = resultJson.data
 
-      // Biarkan sebagai array of integer (id) agar FieldSelect multiple dapat match via valueField="id"
-      initialValues.m_assessment_kary_d_level =
-        Array.isArray(initialValues.m_assessment_kary_d_level)
-          ? initialValues.m_assessment_kary_d_level
-            .map(item => typeof item === 'object' && item !== null ? item.m_level_posisi_id : item)
-            .map(val => parseInt(val))
-            .filter(val => !isNaN(val) && val > 0)
-          : []
+      // Ambil m_level_posisi_id (single level) jika ada data tersimpan di m_assessment_kary_d_level
+      if (Array.isArray(initialValues.m_assessment_kary_d_level) && initialValues.m_assessment_kary_d_level.length > 0) {
+        const firstItem = initialValues.m_assessment_kary_d_level[0]
+        const rawLvl = typeof firstItem === 'object' && firstItem !== null ? (firstItem.m_level_posisi_id || firstItem.id) : firstItem
+        const numLvl = parseInt(rawLvl)
+        values.m_level_posisi_id = !isNaN(numLvl) && numLvl > 0 ? numLvl : null
+      } else if (initialValues.m_level_posisi_id) {
+        const numLvl = parseInt(initialValues.m_level_posisi_id)
+        values.m_level_posisi_id = !isNaN(numLvl) && numLvl > 0 ? numLvl : null
+      } else {
+        values.m_level_posisi_id = null
+      }
 
       if (Array.isArray(initialValues.m_assessment_kary_d)) {
         detailArr.value = initialValues.m_assessment_kary_d.map(item => {
@@ -310,20 +316,15 @@ async function onSave() {
     //     creator_id: store.user?.data?.id
     //   }))
 
-    const level = values.m_assessment_kary_d_level
-
-    if (Array.isArray(level)) {
-      values.m_assessment_kary_d_level = level
-        .map(id => {
-          const rawId = typeof id === 'object' && id !== null ? (id.m_level_posisi_id || id.id) : id
-          const numId = parseInt(rawId)
-          return isNaN(numId) ? null : {
-            m_assessment_kary_id: isNaN(parseInt(route.params.id)) ? 0 : parseInt(route.params.id),
-            m_level_posisi_id: numId,
-            creator_id: store.user?.data?.id
-          }
-        })
-        .filter(Boolean)
+    const lvlId = parseInt(values.m_level_posisi_id)
+    if (!isNaN(lvlId) && lvlId > 0) {
+      values.m_assessment_kary_d_level = [
+        {
+          m_assessment_kary_id: isNaN(parseInt(route.params.id)) ? 0 : parseInt(route.params.id),
+          m_level_posisi_id: lvlId,
+          creator_id: store.user?.data?.id
+        }
+      ]
     } else {
       values.m_assessment_kary_d_level = []
     }
