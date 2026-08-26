@@ -63,53 +63,63 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
     public function custom_generateTarif()
     {
         $req = app()->request;
-        // dd($req->kota_id);
-        // $tgl_awal = $req->tgl_awal;
-        // $tgl_akhir = $req->tgl_akhir;
-        $posisi_id = $req->posisi_id;
-        $kota_id = $req->kota_id;
-        $provinsi_id = $req->provinsi_id;
+        $posisi_id = $req->posisi_id ?? $req->m_posisi_id;
+        $level_posisi_id = $req->m_level_posisi_id;
 
-        $m_tarif = m_tarif_perdin_det::whereHas("m_tarif_perdin", function ($q) use ($kota_id, $posisi_id, $provinsi_id) {
-            $q->where("kota_id", $kota_id)
-                ->where("provinsi_id", $provinsi_id)
-                ->where("posisi_id", $posisi_id);
-        })
+        if (!$level_posisi_id && $posisi_id) {
+            $level_posisi_id = \DB::table('m_level_posisi_d')
+                ->where('m_posisi_id', $posisi_id)
+                ->value('m_level_posisi_id');
+        }
+
+        if (!$level_posisi_id && !empty($req->m_kary_id)) {
+            $posisi_id = \DB::table('m_kary')->where('id', $req->m_kary_id)->value('m_posisi_id');
+            if ($posisi_id) {
+                $level_posisi_id = \DB::table('m_level_posisi_d')
+                    ->where('m_posisi_id', $posisi_id)
+                    ->value('m_level_posisi_id');
+            }
+        }
+
+        if (!$level_posisi_id) {
+            return response()->json(["data" => []]);
+        }
+
+        $tarifHeader = \DB::table('m_tarif_perdin')
+            ->where('m_level_posisi_id', $level_posisi_id)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$tarifHeader) {
+            $tarifHeader = \DB::table('m_tarif_perdin')
+                ->where('m_level_posisi_id', $level_posisi_id)
+                ->orderBy('id', 'desc')
+                ->first();
+        }
+
+        if (!$tarifHeader) {
+            return response()->json(["data" => []]);
+        }
+
+        $details = \DB::table('m_tarif_perdin_det')
+            ->where('m_tarif_perdin_id', $tarifHeader->id)
             ->get()
             ->map(function ($item) {
                 return [
                     "komponen" => $item->komponen,
-                    "nominal" => $item->nominal,
-                    "jumlah" => 1,
-                    "catatan" => $item->catatan,
+                    "nominal"  => (float) $item->nominal,
+                    "jumlah"   => 1,
+                    "total"    => (float) $item->nominal,
+                    "catatan"  => $item->catatan ?? '',
                 ];
             });
 
-        return response()->json(["data" => $m_tarif]);
+        return response()->json(["data" => $details]);
     }
 
     public function public_generateTarif()
     {
-        $req = app()->request;
-
-        $posisi_id = $req->posisi_id;
-        $kota_id = $req->kota_id;
-        $provinsi_id = $req->provinsi_id;
-
-        $m_tarif = m_tarif_perdin_det::whereHas("m_tarif_perdin", function ($q) use ($kota_id, $posisi_id, $provinsi_id) {
-            $q->where("kota_id", $kota_id)
-                ->where("provinsi_id", $provinsi_id)
-                ->where("posisi_id", $posisi_id);
-        })
-            ->get()
-            ->map(function ($item) {
-                return [
-                    "komponen" => $item->komponen,
-                    "nominal" => $item->nominal,
-                ];
-            });
-
-        return response()->json(["data" => $m_tarif]);
+        return $this->custom_generateTarif();
     }
 
     public function custom_app_log($req)
@@ -226,10 +236,25 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
         \DB::beginTransaction();
 
         try {
+            $getApp = \DB::table('generate_approval')
+                ->where('trx_table', $this->getTable())
+                ->where('trx_id', $req->id)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $app_id = $getApp ? $getApp->id : $req->id;
+
+            $type = strtoupper($req->type ?? 'APPROVED');
+            if ($type === 'APPROVE') $type = 'APPROVED';
+            if ($type === 'REJECT') $type = 'REJECTED';
+            if ($type === 'REVISE') $type = 'REVISED';
+
+            $note = $req->note ?: ($req->note_approval ?: ($req->catatan ?: ($type === 'APPROVED' ? 'Approved' : '-')));
+
             $conf = [
-                "app_id" => $req->id,
-                "app_type" => $req->type, // APPROVED, REVISED, REJECTED,
-                "app_note" => $req->note, // alasan approve
+                "app_id" => $app_id,
+                "app_type" => $type,
+                "app_note" => $note,
             ];
 
             $app = $this->helper->approvalProgress($conf, true);
@@ -237,7 +262,7 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
                 $data = $this->find($app->trx_id);
                 if ($app->finish) {
                     $data->update([
-                        "status" => $req->type,
+                        "status" => $type,
                     ]);
                 } else {
                     $data->update([

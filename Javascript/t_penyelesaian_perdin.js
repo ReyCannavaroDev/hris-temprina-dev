@@ -518,7 +518,7 @@ function onProcess(typePar) {
   const payload = {
     id: route.params.id,
     type: typePar === 'revise' ? 'REVISED' : (typePar === 'reject' ? 'REJECTED' : 'APPROVED'),
-    note: values.catatan,
+    note: values.catatan || values.note_approval || values.note || (typePar === 'approve' || typePar === 'APPROVED' ? 'Approved' : '-'),
   };
   // if(!payload.note) {
   //   swal.fire({

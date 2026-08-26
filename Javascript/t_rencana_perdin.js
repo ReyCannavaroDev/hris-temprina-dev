@@ -471,8 +471,8 @@ function onProcess(typePar) {
 
   const payload = {
     id: route.params.id,
-    type: typePar,
-    note: values.note,
+    type: typePar?.toUpperCase() === 'APPROVE' ? 'APPROVED' : (typePar?.toUpperCase() === 'REJECT' ? 'REJECTED' : (typePar?.toUpperCase() === 'REVISE' ? 'REVISED' : typePar)),
+    note: values.note_approval || values.note || (typePar?.toLowerCase() === 'approve' || typePar?.toUpperCase() === 'APPROVED' ? 'Approved' : '-'),
   };
   // if(!payload.note) {
   //   swal.fire({
@@ -955,4 +955,3 @@ onActivated(() => {
 
 //  @endif -------------------------------------------------END
 watchEffect(() => store.commit('set', ['isRequesting', isRequesting.value]))
-

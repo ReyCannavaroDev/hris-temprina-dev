@@ -240,10 +240,25 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
         \DB::beginTransaction();
 
         try {
+            $getApp = \DB::table('generate_approval')
+                ->where('trx_table', $this->getTable())
+                ->where('trx_id', $req->id)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $app_id = $getApp ? $getApp->id : $req->id;
+
+            $type = strtoupper($req->type ?? 'APPROVED');
+            if ($type === 'APPROVE') $type = 'APPROVED';
+            if ($type === 'REJECT') $type = 'REJECTED';
+            if ($type === 'REVISE') $type = 'REVISED';
+
+            $note = $req->note ?: ($req->note_approval ?: ($req->catatan ?: ($type === 'APPROVED' ? 'Approved' : '-')));
+
             $conf = [
-                "app_id" => $req->id,
-                "app_type" => $req->type, // APPROVED, REVISED, REJECTED,
-                "app_note" => $req->note, // alasan approve
+                "app_id" => $app_id,
+                "app_type" => $type,
+                "app_note" => $note,
             ];
 
             $app = $this->helper->approvalProgress($conf, true);
@@ -251,7 +266,7 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
                 $data = $this->find($app->trx_id);
                 if ($app->finish) {
                     $data->update([
-                        "status" => $req->type,
+                        "status" => $type,
                     ]);
 
                     // $t_kbs = t_kbs::find($data->t_kbs_id);
@@ -260,7 +275,7 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
                     //         "is_active" => false,
                     //     ]);
                     // }
-                    if($req->type === 'APPROVED')
+                    if($type === 'APPROVED')
                     {
                         $payload = [
                             "date"        => Carbon::now()->format('Y-m-d'),
