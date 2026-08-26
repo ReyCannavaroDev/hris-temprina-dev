@@ -8,15 +8,19 @@ use Carbon\Carbon;
 class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
 {
     private $helper;
-    public function __construct()
+    public function __construct(array $attributes = [])
     {
-        parent::__construct();
+        parent::__construct($attributes);
         $this->helper = getCore("Helper");
+        if (app()->request->isMethod('GET')) {
+            $this->details = [];
+        }
     }
 
     public $fileColumns = [
         /*file_column*/
     ];
+    public $details = ["t_rencana_perdin_det"];
 
     public function t_rencana_perdin_det()
     {
@@ -31,7 +35,25 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
             "nomor" => $nomor,
         ]);
 
-        $this->details = ["t_rencana_perdin_det"];
+        $req = app()->request;
+        $details = [];
+        if (!empty($req->t_rencana_perdin_det) && is_array($req->t_rencana_perdin_det)) {
+            $cleanDetails = [];
+            foreach ($req->t_rencana_perdin_det as $row) {
+                $cleanRow = $row;
+                unset($cleanRow['id']);
+                unset($cleanRow['created_at']);
+                unset($cleanRow['updated_at']);
+                $cleanRow['jumlah'] = (int)($cleanRow['jumlah'] ?? 1);
+                $cleanRow['nominal'] = (float)($cleanRow['nominal'] ?? 0);
+                $cleanRow['total'] = (float)($cleanRow['total'] ?? ($cleanRow['nominal'] * $cleanRow['jumlah']));
+                $cleanDetails[] = $cleanRow;
+            }
+            $req->merge(['t_rencana_perdin_det' => $cleanDetails]);
+            $details[] = 't_rencana_perdin_det';
+        }
+        $this->details = $details;
+
         return [
             "model" => $model,
             "data" => $newArrayData,
@@ -40,7 +62,29 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
 
     public function updateBefore($model, $arrayData, $metaData, $id = null)
     {
-        $this->details = ["t_rencana_perdin_det"];
+        $req = app()->request;
+        $details = [];
+        if (!empty($req->t_rencana_perdin_det) && is_array($req->t_rencana_perdin_det)) {
+            $cleanDetails = [];
+            foreach ($req->t_rencana_perdin_det as $row) {
+                $cleanRow = $row;
+                if (isset($cleanRow['m_tarif_perdin_id'])) {
+                    unset($cleanRow['id']);
+                }
+                unset($cleanRow['created_at']);
+                unset($cleanRow['updated_at']);
+                $cleanRow['jumlah'] = (int)($cleanRow['jumlah'] ?? 1);
+                $cleanRow['nominal'] = (float)($cleanRow['nominal'] ?? 0);
+                $cleanRow['total'] = (float)($cleanRow['total'] ?? ($cleanRow['nominal'] * $cleanRow['jumlah']));
+                $cleanDetails[] = $cleanRow;
+            }
+            $req->merge(['t_rencana_perdin_det' => $cleanDetails]);
+            $details[] = 't_rencana_perdin_det';
+        } else {
+            \DB::table('t_rencana_perdin_det')->where('t_rencana_perdin_id', $id)->delete();
+        }
+        $this->details = $details;
+
         return [
             "model" => $model,
             "data" => $arrayData,

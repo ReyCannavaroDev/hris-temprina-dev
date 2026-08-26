@@ -339,6 +339,14 @@ const onReset = async (alert = false) => {
 
 async function onSave() {
 
+  if (!values.t_perdin_id) {
+    swal.fire({
+      icon: 'warning',
+      text: 'Silakan pilih Perjalanan Dinas terlebih dahulu.',
+    });
+    return;
+  }
+
   if (detailArr.value.length === 0) {
     swal.fire({
       icon: 'warning',
@@ -347,21 +355,20 @@ async function onSave() {
     return;
   }
 
-  if (detailArr.value.some(item => item.qty === null || item.qty_2 === null)) {
-    swal.fire({
-      icon: 'warning',
-      text: 'Qty tidak boleh kosong. Silakan periksa kembali.',
-    });
-    return
-  }
-
-  //values.tags = JSON.stringify(values.tags)
   try {
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value);
     const dataURL = `${store.server.url_backend}/operation${endpointApi}${isCreating ? '' : ('/' + route.params.id)}`;
     isRequesting.value = true;
-    //values.is_change_default = values.is_change_default ? 1 : 0
-    values.t_rencana_perdin_det = detailArr.value//./
+    values.t_rencana_perdin_det = detailArr.value.map(item => {
+      const clean = { ...item };
+      if (isCreating || clean.m_tarif_perdin_id) {
+        delete clean.id;
+      }
+      clean.jumlah = Number(clean.jumlah || 1);
+      clean.nominal = Number(clean.nominal || 0);
+      clean.total = Number(clean.total || (clean.nominal * clean.jumlah));
+      return clean;
+    });
     if (isCreating) {
       values.no = "1"
       values.currency_id = "1"
