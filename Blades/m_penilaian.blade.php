@@ -45,21 +45,19 @@
     <div>
       <FieldSelect :bind="{ disabled: !actionText }" class="w-full !mt-3" :value="values.m_comp_id" @input="v => {
     if (v) {
+      if (values.m_comp_id !== v && actionText) {
+        values.m_subcomp_id = null;
+        values.m_branch_id = null;
+        values.m_divisi_id = null;
+      }
       values.m_comp_id = v;
     } else {
       values.m_comp_id = null;
-      values.m_subcomp_id = null;
-      values.m_branch_id = null;
-      values.m_divisi_id = null;
-    }
-  }" @update:valueFull="obj => {
-    if (obj) {
-      values.m_comp_id = obj.id;
-      values.m_subcomp_id = null;
-      values.m_branch_id = null;
-      values.m_divisi_id = null;
-    } else {
-      values.m_comp_id = null;
+      if (actionText) {
+        values.m_subcomp_id = null;
+        values.m_branch_id = null;
+        values.m_divisi_id = null;
+      }
     }
   }" :errorText="formErrors.m_comp_id ? 'failed' : ''" :hints="formErrors.m_comp_id" :check="false" label="SBU "
         placeholder="Pilih SBU " valueField="id" displayField="name" :api="{
@@ -79,19 +77,17 @@
       <FieldSelect :bind="{ disabled: !actionText || !values.m_comp_id }" class="w-full !mt-3"
         :value="values.m_subcomp_id" @input="v => {
     if (v) {
+      if (values.m_subcomp_id !== v && actionText) {
+        values.m_branch_id = null;
+        values.m_divisi_id = null;
+      }
       values.m_subcomp_id = v;
     } else {
       values.m_subcomp_id = null;
-      values.m_branch_id = null;
-      values.m_divisi_id = null;
-    }
-  }" @update:valueFull="obj => {
-    if (obj) {
-      values.m_subcomp_id = obj.id;
-      values.m_branch_id = null;
-      values.m_divisi_id = null;
-    } else {
-      values.m_subcomp_id = null;
+      if (actionText) {
+        values.m_branch_id = null;
+        values.m_divisi_id = null;
+      }
     }
   }" :errorText="formErrors.m_subcomp_id ? 'failed' : ''" :hints="formErrors.m_subcomp_id" :check="false" label="SUB "
         placeholder="Pilih SUB " valueField="id" displayField="name" :api="{
@@ -111,17 +107,15 @@
       <FieldSelect :bind="{ disabled: !actionText || !values.m_subcomp_id }" class="w-full !mt-3"
         :value="values.m_branch_id" @input="v => {
     if (v) {
+      if (values.m_branch_id !== v && actionText) {
+        values.m_divisi_id = null;
+      }
       values.m_branch_id = v;
     } else {
       values.m_branch_id = null;
-      values.m_divisi_id = null;
-    }
-  }" @update:valueFull="obj => {
-    if (obj) {
-      values.m_branch_id = obj.id;
-      values.m_divisi_id = null;
-    } else {
-      values.m_branch_id = null;
+      if (actionText) {
+        values.m_divisi_id = null;
+      }
     }
   }" :errorText="formErrors.m_branch_id ? 'failed' : ''" :hints="formErrors.m_branch_id" :check="false" label="Cabang "
         placeholder="Pilih Cabang " valueField="id" displayField="name" :api="{
@@ -181,9 +175,8 @@
 
      <div>
             <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_id, clearable:true }" class="w-full mt-3" :value="values.m_divisi_id"
-              @input="v=>values.m_divisi_id=v" :errorText="formErrors.m_divisi_id?'failed':''" @update:valueFull="(objVal)=>{
-                  values.m_dept_id = null
-                }" label="Divisi" placeholder="Pilih Divisi" :hints="formErrors.m_divisi_id" :api="{
+              @input="v=>values.m_divisi_id=v ? parseInt(v) : null" :errorText="formErrors.m_divisi_id?'failed':''"
+              label="Divisi" placeholder="Pilih Divisi" :hints="formErrors.m_divisi_id" :api="{
                     url: `${store.server.url_backend}/operation/m_divisi`,
                     headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                     params: {

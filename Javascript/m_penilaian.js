@@ -210,6 +210,10 @@ onBeforeMount(async () => {
     for (const key in initialValues) {
       values[key] = initialValues[key]
     }
+    if (initialValues.m_comp_id) values.m_comp_id = parseInt(initialValues.m_comp_id) || null
+    if (initialValues.m_subcomp_id) values.m_subcomp_id = parseInt(initialValues.m_subcomp_id) || null
+    if (initialValues.m_branch_id) values.m_branch_id = parseInt(initialValues.m_branch_id) || null
+    if (initialValues.m_divisi_id) values.m_divisi_id = parseInt(initialValues.m_divisi_id) || null
   }
 })
 
