@@ -18,15 +18,28 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
     public function transformRowData( array $row )
     {
         $data = [];
+
+        $divisiVal = '';
+        if (!empty($row['name'])) {
+            $gen = \App\Models\BasicModels\m_general::find($row['name']);
+            if ($gen && !empty($gen->value)) {
+                $divisiVal = $gen->value;
+            }
+        }
+        if (empty($divisiVal) && !empty($row['name_old'])) {
+            $divisiVal = $row['name_old'];
+        }
+
+        $data['name.value'] = $divisiVal;
+        $data['value'] = $divisiVal;
+
         if(app()->request->concat_branch){
             $getData = $this->where('m_divisi.id',$row['id'])
             ->leftjoin('m_branch','m_branch.id','m_divisi.m_branch_id')
             ->select('m_branch.name as branch_name','m_divisi.name as divisi_name')
             ->first();
-            $concat = $getData['divisi_name'].($getData['branch_name'] ? ' - ' : '').($getData['branch_name'] ?? '');
-            $data = [
-                'concat_divisi_branch' => $concat,
-            ];
+            $concat = ($getData['divisi_name'] ?? '') . (($getData['branch_name'] ?? false) ? ' - ' : '') . ($getData['branch_name'] ?? '');
+            $data['concat_divisi_branch'] = $concat;
         }
         return array_merge( $row, $data );
     }
