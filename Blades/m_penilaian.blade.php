@@ -192,7 +192,7 @@
            }
          }"
          valueField="id"
-         displayField="name.value"
+         displayField="name_old"
          :check="false"
        />
      </div>
