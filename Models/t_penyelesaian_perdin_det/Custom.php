@@ -9,10 +9,8 @@ class t_penyelesaian_perdin_det extends \App\Models\BasicModels\t_penyelesaian_p
         parent::__construct();
     }
     
-    public $fileColumns    = [ /*file_column*/ ];
-
-    //public $createAdditionalData = ["creator_id"=>"auth:id"];
-    //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
-
-    
+    public function t_penyelesaian_perdin()
+    {
+        return $this->belongsTo('App\Models\BasicModels\t_penyelesaian_perdin', 't_penyelesaian_perdin_id', 'id');
+    }
 }

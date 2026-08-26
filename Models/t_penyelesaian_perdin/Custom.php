@@ -7,21 +7,24 @@ use Illuminate\Support\Facades\Http;
 class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdin
 {    
     private $helper;
-    public function __construct()
+    public function __construct(array $attributes = [])
     {
-        parent::__construct();
+        parent::__construct($attributes);
         $this->helper = getCore('Helper');
+        if (app()->request->isMethod('GET')) {
+            $this->details = [];
+        }
     }
     
     public $fileColumns    = [ /*file_column*/ ];
     public $details = ["t_penyelesaian_perdin_det", "t_penyelesaian_perdin_d_laporan"];
 
-    public function t_penyelesaian_perdin_det() :\HasMany
+    public function t_penyelesaian_perdin_det()
     {
         return $this->hasMany('App\Models\BasicModels\t_penyelesaian_perdin_det', 't_penyelesaian_perdin_id', 'id');
     }
 
-    public function t_penyelesaian_perdin_d_laporan() :\HasMany
+    public function t_penyelesaian_perdin_d_laporan()
     {
         return $this->hasMany('App\Models\BasicModels\t_penyelesaian_perdin_d_laporan', 't_penyelesaian_perdin_id', 'id');
     }
@@ -36,7 +39,17 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
             // "nomor" => $this->helper->generateNomor("KODE RINCIAN PERDIN"),
             "nomor" => $nomor,
         ] );
-        $this->details = ["t_penyelesaian_perdin_det", "t_penyelesaian_perdin_d_laporan"];
+
+        $req = app()->request;
+        $details = [];
+        if (!empty($req->t_penyelesaian_perdin_det) && is_array($req->t_penyelesaian_perdin_det)) {
+            $details[] = 't_penyelesaian_perdin_det';
+        }
+        if (!empty($req->t_penyelesaian_perdin_d_laporan) && is_array($req->t_penyelesaian_perdin_d_laporan)) {
+            $details[] = 't_penyelesaian_perdin_d_laporan';
+        }
+        $this->details = $details;
+
         return [
             "model"  => $model,
             "data"   => $newArrayData,
@@ -46,7 +59,22 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
 
     public function updateBefore($model, $arrayData, $metaData, $id=null)
     {
-        $this->details = ["t_penyelesaian_perdin_det", "t_penyelesaian_perdin_d_laporan"];
+        $req = app()->request;
+        $details = [];
+        if (!empty($req->t_penyelesaian_perdin_det) && is_array($req->t_penyelesaian_perdin_det)) {
+            $details[] = 't_penyelesaian_perdin_det';
+        } else {
+            \DB::table('t_penyelesaian_perdin_det')->where('t_penyelesaian_perdin_id', $id)->delete();
+        }
+
+        if (!empty($req->t_penyelesaian_perdin_d_laporan) && is_array($req->t_penyelesaian_perdin_d_laporan)) {
+            $details[] = 't_penyelesaian_perdin_d_laporan';
+        } else {
+            \DB::table('t_penyelesaian_perdin_d_laporan')->where('t_penyelesaian_perdin_id', $id)->delete();
+        }
+
+        $this->details = $details;
+
         return [
             "model" => $model,
             "data"  => $arrayData,
