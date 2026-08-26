@@ -9,10 +9,8 @@ class m_tarif_perdin_det extends \App\Models\BasicModels\m_tarif_perdin_det
         parent::__construct();
     }
     
-    public $fileColumns    = [ /*file_column*/ ];
-
-    //public $createAdditionalData = ["creator_id"=>"auth:id"];
-    //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
-
-    
+    public function m_tarif_perdin()
+    {
+        return $this->belongsTo('App\Models\BasicModels\m_tarif_perdin', 'm_tarif_perdin_id', 'id');
+    }
 }
