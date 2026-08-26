@@ -76,34 +76,40 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
     public function public_generateTarif()
     {
         $req = app()->request;
-        
-        // $posisi_id = $req->posisi_id;
-        // $kota_id = $req->kota_id;
-        // $provinsi_id = $req->provinsi_id;
-        $t_perdin_id = $req->t_perdin;
+        $t_perdin_id = $req->t_perdin ?? $req->t_perdin_id;
 
+        if (!$t_perdin_id) {
+            return response()->json(["data" => []]);
+        }
 
-        $t_rencana = t_rencana_perdin_det::whereHas("t_rencana_perdin", function ($q) use ($t_perdin_id) {
-            $q
-            // ->where("kota_id", $kota_id)
-            // ->where("provinsi_id", $provinsi_id)
-            // ->where("posisi_id", $posisi_id)
-            ->where("t_perdin_id", $t_perdin_id)
-            ->whereRaw("upper(status) = 'APPROVED'")
-            ;
-        })
-            ->get()
-            ->map(function ($item) {
-                return [
-                    "komponen" => $item->komponen,
-                    "nominal" => $item->nominal,
-                    "jumlah" => $item->jumlah,
-                    "total" => $item->total,
-                    "catatan" => $item->catatan,
-                ];
-            });
+        // Ambil rincian rencana perdin yang statusnya APPROVED
+        $details = \DB::table('t_rencana_perdin_det as d')
+            ->join('t_rencana_perdin as r', 'r.id', '=', 'd.t_rencana_perdin_id')
+            ->where('r.t_perdin_id', $t_perdin_id)
+            ->whereRaw("upper(r.status) = 'APPROVED'")
+            ->select('d.komponen', 'd.nominal', 'd.jumlah', 'd.total', 'd.catatan')
+            ->get();
 
-        return response()->json(["data" => $t_rencana]);
+        // Fallback: jika belum ada APPROVED atau format status berbeda, ambil rincian rencana perdin terkait
+        if ($details->isEmpty()) {
+            $details = \DB::table('t_rencana_perdin_det as d')
+                ->join('t_rencana_perdin as r', 'r.id', '=', 'd.t_rencana_perdin_id')
+                ->where('r.t_perdin_id', $t_perdin_id)
+                ->select('d.komponen', 'd.nominal', 'd.jumlah', 'd.total', 'd.catatan')
+                ->get();
+        }
+
+        $formatted = $details->map(function ($item) {
+            return [
+                "komponen" => $item->komponen,
+                "nominal"  => (float) $item->nominal,
+                "jumlah"   => (int) $item->jumlah,
+                "total"    => (float) $item->total,
+                "catatan"  => $item->catatan,
+            ];
+        });
+
+        return response()->json(["data" => $formatted]);
     }
 
      public function custom_app_log($req)
