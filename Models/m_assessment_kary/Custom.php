@@ -183,10 +183,29 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
                 $data['m_assessment_kary_d'] = [];
             }
 
-            if (app()->request->divisi_name && !empty($row['m_divisi_id'])) {
-                $divisi_general_id = m_divisi::find($row['m_divisi_id'])?->name;
-                $data['m_divisi_name'] = $divisi_general_id ? ( m_general::find($divisi_general_id)?->value ?? '') : '';
+            // Divisi Name untuk landing table & detail
+            $divisiName = '';
+            if (!empty($row['m_divisi_id'])) {
+                $divisi = \App\Models\BasicModels\m_divisi::find($row['m_divisi_id']);
+                if ($divisi) {
+                    if ($divisi->name) {
+                        $divisiName = \App\Models\BasicModels\m_general::find($divisi->name)?->value ?? '';
+                    }
+                    if (empty($divisiName)) {
+                        $divisiName = $divisi->name_old ?? '';
+                    }
+                }
             }
+            $data['m_divisi_name'] = $divisiName ?: '-';
+
+            // Tipe Penilaian (type) untuk landing table & detail
+            $typeId = $row['type'] ?? $row['this.type'] ?? null;
+            $typeName = '';
+            if ($typeId) {
+                $typeName = \App\Models\BasicModels\m_general::find($typeId)?->value ?? '';
+            }
+            $data['type.value'] = $typeName ?: '-';
+            $data['type_name'] = $typeName ?: '-';
 
             return array_merge( $row, $data );
         } catch (\Exception $e) {

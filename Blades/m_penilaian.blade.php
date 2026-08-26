@@ -192,7 +192,7 @@
            }
          }"
          valueField="id"
-         displayField="name.value"
+         displayField="value"
          :check="false"
        />
      </div>

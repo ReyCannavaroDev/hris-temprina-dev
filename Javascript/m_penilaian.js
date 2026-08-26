@@ -87,7 +87,6 @@ function validateNumericInput(event) {
 }
 
 const onReset = async (alert = false) => {
-  let next = false
   if (alert) {
     swal.fire({
       icon: 'warning',
@@ -107,11 +106,9 @@ const onReset = async (alert = false) => {
         }
       }
     })
-  }
-
-  setTimeout(() => {
+  } else {
     defaultValues()
-  }, 100)
+  }
 }
 
 
@@ -585,6 +582,7 @@ const landing = reactive({
   {
     headerName: 'DIVISI',
     field: 'm_divisi_name',
+    valueGetter: (params) => params.data?.m_divisi_name || params.data?.['m_divisi.name'] || params.data?.['m_divisi.name_old'] || '-',
     filter: true,
     sortable: true,
     flex: 1,
@@ -596,6 +594,7 @@ const landing = reactive({
   {
     headerName: 'Tipe Penilaian',
     field: 'type.value',
+    valueGetter: (params) => params.data?.['type.value'] || params.data?.type_name || (typeof params.data?.type === 'object' ? params.data?.type?.value : null) || '-',
     filter: true,
     sortable: true,
     flex: 1,
