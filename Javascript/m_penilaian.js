@@ -207,10 +207,22 @@ onBeforeMount(async () => {
     for (const key in initialValues) {
       values[key] = initialValues[key]
     }
-    if (initialValues.m_comp_id) values.m_comp_id = parseInt(initialValues.m_comp_id) || null
-    if (initialValues.m_subcomp_id) values.m_subcomp_id = parseInt(initialValues.m_subcomp_id) || null
-    if (initialValues.m_branch_id) values.m_branch_id = parseInt(initialValues.m_branch_id) || null
-    if (initialValues.m_divisi_id) values.m_divisi_id = parseInt(initialValues.m_divisi_id) || null
+    const getCleanId = (raw) => {
+      if (!raw) return null
+      if (typeof raw === 'object' && raw !== null) {
+        const id = raw.id || raw.m_divisi_id || raw.m_comp_id || raw.m_subcomp_id || raw.m_branch_id || raw.m_level_posisi_id || raw.value
+        const num = parseInt(id)
+        return !isNaN(num) && num > 0 ? num : null
+      }
+      const num = parseInt(raw)
+      return !isNaN(num) && num > 0 ? num : null
+    }
+
+    values.m_comp_id = getCleanId(initialValues.m_comp_id ?? initialValues['this.m_comp_id'] ?? initialValues['m_comp.id'])
+    values.m_subcomp_id = getCleanId(initialValues.m_subcomp_id ?? initialValues['this.m_subcomp_id'] ?? initialValues['m_subcomp.id'])
+    values.m_branch_id = getCleanId(initialValues.m_branch_id ?? initialValues['this.m_branch_id'] ?? initialValues['m_branch.id'])
+    values.m_divisi_id = getCleanId(initialValues.m_divisi_id ?? initialValues['this.m_divisi_id'] ?? initialValues['m_divisi.id'] ?? initialValues.m_divisi)
+    values.type = getCleanId(initialValues.type ?? initialValues['this.type'] ?? initialValues['type.id'] ?? initialValues.type_id)
   }
 })
 

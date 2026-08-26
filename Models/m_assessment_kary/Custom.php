@@ -183,10 +183,13 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
                 $data['m_assessment_kary_d'] = [];
             }
 
-            // Divisi Name untuk landing table & detail
+            // Pastikan m_divisi_id dan m_divisi_name selalu tersedia di response
+            $divisiId = $row['m_divisi_id'] ?? $row['this.m_divisi_id'] ?? null;
+            $data['m_divisi_id'] = $divisiId ? (int)$divisiId : null;
+
             $divisiName = '';
-            if (!empty($row['m_divisi_id'])) {
-                $divisi = \App\Models\BasicModels\m_divisi::find($row['m_divisi_id']);
+            if (!empty($divisiId)) {
+                $divisi = \App\Models\BasicModels\m_divisi::find($divisiId);
                 if ($divisi) {
                     if ($divisi->name) {
                         $divisiName = \App\Models\BasicModels\m_general::find($divisi->name)?->value ?? '';
@@ -200,6 +203,7 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
 
             // Tipe Penilaian (type) untuk landing table & detail
             $typeId = $row['type'] ?? $row['this.type'] ?? null;
+            $data['type'] = $typeId ? (int)$typeId : null;
             $typeName = '';
             if ($typeId) {
                 $typeName = \App\Models\BasicModels\m_general::find($typeId)?->value ?? '';
