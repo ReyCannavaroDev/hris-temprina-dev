@@ -275,22 +275,23 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
                     //         "is_active" => false,
                     //     ]);
                     // }
-                    if($type === 'APPROVED')
-                    {
-                        $payload = [
-                            "date"        => Carbon::now()->format('Y-m-d'),
-                            "t_kbs_id"    => $data->t_kbs_id,
-                            "total_real"  => $data->total_biaya ?? 0,
-                            "selisih"     => $data->sisa_biaya ?? 0,
-                        ];
+                    if ($type === 'APPROVED' && !empty($data->t_kbs_id) && env('ERP_URL')) {
+                        try {
+                            $payload = [
+                                "date"        => Carbon::now()->format('Y-m-d'),
+                                "t_kbs_id"    => $data->t_kbs_id,
+                                "total_real"  => $data->total_biaya ?? 0,
+                                "selisih"     => $data->sisa_biaya ?? 0,
+                            ];
 
-                        $response = Http::timeout(30)
-                            ->post( env('ERP_URL') .'/public/t_kbr/generatekbr', $payload);
+                            $response = Http::timeout(10)
+                                ->post(env('ERP_URL') . '/public/t_kbr/generatekbr', $payload);
 
-                        if (!$response->successful()) {
-                            throw new \Exception(
-                                'Gagal generate KBR: ' . $response->body()
-                            );
+                            if (!$response->successful()) {
+                                \Log::error('Gagal generate KBR: ' . $response->body());
+                            }
+                        } catch (\Throwable $e) {
+                            \Log::error('Exception generate KBR: ' . $e->getMessage());
                         }
                     }
 
