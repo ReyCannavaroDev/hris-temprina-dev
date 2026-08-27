@@ -87,13 +87,7 @@
       <FieldPopup :bind="{ readonly: !actionText }" class="w-full !mt-3" :value="values.m_kary_id"
         @input="(v)=>values.m_kary_id=v" :errorText="formErrors.m_kary_id?'failed':''" :hints="formErrors.m_kary_id"
         valueField="id" displayField="nama_lengkap" :api="apiKary" @update:valueFull="obj => {
-                if (obj) {
-                  values.m_kary_id = obj.id; 
-                } else {
-                  values.sisa_plafond = null;
-                  values.plafond = null;
-                  detailArr = [];
-                }
+                values.m_kary_id = obj ? obj.id : null;
               }" placeholder="Pilih Karyawan" label="Karyawan" :check="false" :columns="[
             {
               headerName: 'No',

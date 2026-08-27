@@ -125,11 +125,67 @@ function onProcess(typePar) {
   }
 }
 
+async function autoLoadKeluarga(karyId) {
+  if (isRead) return
+  if (!karyId) {
+    detailArr.value = []
+    return
+  }
+
+  try {
+    const res = await fetch(
+      `${store.server.url_backend}/operation/m_kary/getAskes?m_kary_id=${karyId}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `${store.user.token_type} ${store.user.token}`,
+        }
+      }
+    )
+    if (!res.ok) return
+    const rawData = await res.json()
+    const list = Array.isArray(rawData.data) ? rawData.data : (Array.isArray(rawData) ? rawData : [])
+
+    detailArr.value = list.map(item => {
+      const klaimTable = item.klaim_type === 'm_kary_det_kel' ? '70' : '80'
+      return {
+        ...item,
+        id: item.id || item.klaim_id || ++_id,
+        t_klaim_askes_id: item.id || item.klaim_id || null,
+        klaim_id: item.klaim_id || item.id || null,
+        klaim_nama: item.klaim_nama || '',
+        klaim_type: item.klaim_type || 'm_kary',
+        klaim_table: item.klaim_table || klaimTable,
+        nominal: null,
+        accepted: null,
+        reject: null,
+        tanggal: null,
+        bukti: null,
+        keterangan: null,
+        santunan: null,
+        santunanPct: null
+      }
+    })
+  } catch (err) {
+    console.error('Gagal auto-load keluarga:', err)
+  }
+}
+
 watch(
   () => values.m_kary_id,
   async (newVal) => {
-    if (!newVal) return
+    if (!newVal) {
+      values.sisa_plafond = null
+      values.plafond = null
+      if (!isRead) {
+        detailArr.value = []
+      }
+      return
+    }
     await fetchPlafond()
+    if (!isRead) {
+      await autoLoadKeluarga(newVal)
+    }
   }
 )
 
