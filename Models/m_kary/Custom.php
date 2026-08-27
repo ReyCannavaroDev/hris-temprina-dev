@@ -80,6 +80,17 @@ class m_kary extends \App\Models\BasicModels\m_kary
         ];
     }
 
+    public function createAfter($model, $arrayData, $metaData, $id = null)
+    {
+        $karyId = $id ?? $model->id ?? null;
+        $this->syncKaryawanJabatan($karyId);
+
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
+        ];
+    }
+
     public function updateBefore($model, $arrayData, $metaData, $id = null)
     {
         $arrayData['is_sync'] = false;
@@ -92,14 +103,17 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
     public function updateAfter($model, $arrayData, $metaData, $id = null)
     {
+        $karyId = $id ?? $model->id ?? null;
+        $this->syncKaryawanJabatan($karyId);
+
         if (@$arrayData["m_dir_id"]) {
-            default_users::where("m_kary_id", $id)->update([
+            default_users::where("m_kary_id", $karyId)->update([
                 "m_dir_id" => $arrayData["m_dir_id"],
             ]);
         }
 
         if (@$arrayData["is_active"]) {
-            default_users::where("m_kary_id", $id)->update([
+            default_users::where("m_kary_id", $karyId)->update([
                 "is_active" => $arrayData["is_active"],
             ]);
         }
@@ -112,9 +126,59 @@ class m_kary extends \App\Models\BasicModels\m_kary
         ];
     }
 
+    private function syncKaryawanJabatan($karyId)
+    {
+        if (!$karyId) return;
+
+        // 1. Sinkronkan foreign key m_kary_id dan m_karyawan_id di detail jabatan
+        \DB::table('m_kary_det_jabatan')
+            ->where('m_karyawan_id', $karyId)
+            ->whereNull('m_kary_id')
+            ->update(['m_kary_id' => $karyId]);
+
+        \DB::table('m_kary_det_jabatan')
+            ->where('m_kary_id', $karyId)
+            ->whereNull('m_karyawan_id')
+            ->update(['m_karyawan_id' => $karyId]);
+
+        // 2. Sinkronkan ke tabel induk m_kary (posisi, comp, subcomp, branch, divisi)
+        $primaryJabatan = \DB::table('m_kary_det_jabatan')
+            ->where(function($q) use ($karyId) {
+                $q->where('m_kary_id', $karyId)->orWhere('m_karyawan_id', $karyId);
+            })
+            ->where('is_active', true)
+            ->orderBy('is_primary', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($primaryJabatan && !empty($primaryJabatan->m_posisi_id)) {
+            \DB::table('m_kary')->where('id', $karyId)->update([
+                'm_posisi_id'  => $primaryJabatan->m_posisi_id,
+                'm_comp_id'    => $primaryJabatan->m_comp_id ?? \DB::raw('m_comp_id'),
+                'm_subcomp_id' => $primaryJabatan->m_subcomp_id ?? \DB::raw('m_subcomp_id'),
+                'm_branch_id'  => $primaryJabatan->m_branch_id ?? \DB::raw('m_branch_id'),
+                'm_divisi_id'  => $primaryJabatan->m_divisi_id ?? \DB::raw('m_divisi_id'),
+            ]);
+        }
+    }
+
     public function transformRowData(array $row)
     {
         $object = [];
+
+        // Auto-heal foreign keys detail jabatan saat baris karyawan dibaca
+        if (!empty($row['id'])) {
+            \DB::table('m_kary_det_jabatan')
+                ->where('m_karyawan_id', $row['id'])
+                ->whereNull('m_kary_id')
+                ->update(['m_kary_id' => $row['id']]);
+
+            \DB::table('m_kary_det_jabatan')
+                ->where('m_kary_id', $row['id'])
+                ->whereNull('m_karyawan_id')
+                ->update(['m_karyawan_id' => $row['id']]);
+        }
+
         if (app()->request->detail) {
             // $data = \DB::select("select public.employee_attendance(?,?)",[Date('Y-m-d'),$row['id'] ??0]);
             // $data = json_decode($data[0]->employee_attendance);

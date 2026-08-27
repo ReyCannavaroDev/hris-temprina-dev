@@ -54,7 +54,10 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
             // 1. Logika Update Jabatan
             if (in_array($kodeSurat, ['J12', 'J09', 'J02'])) { 
                 // DEMOSI (J12), PROMOSI (J09), MUTASI (J02) -> Non-aktifkan jabatan lama
-                m_kary_det_jabatan::where('m_karyawan_id', $karyawan->id)
+                m_kary_det_jabatan::where(function($q) use ($karyawan) {
+                        $q->where('m_karyawan_id', $karyawan->id)
+                          ->orWhere('m_kary_id', $karyawan->id);
+                    })
                     ->where('is_active', true)
                     ->where('is_primary', true)
                     ->update([
@@ -68,6 +71,7 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
             $isPrimaryNew = ($kodeSurat === 'J05') ? false : true;
             // dd($isPrimaryNew, $kodeSurat, $tipeSurat);
             $newJabatan = m_kary_det_jabatan::create([
+                'm_kary_id'     => $karyawan->id,
                 'm_karyawan_id' => $karyawan->id,
                 'm_comp_id'     => $data["m_sbu_baru_id"],
                 'm_subcomp_id'  => $data["m_sub_baru_id"],

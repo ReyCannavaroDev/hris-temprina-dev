@@ -120,10 +120,16 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 ]
               );
 
-              DB::table('m_kary_det_jabatan')->where('m_karyawan_id', $kary->id)->delete();
+              DB::table('m_kary_det_jabatan')
+                  ->where(function($q) use ($kary) {
+                      $q->where('m_karyawan_id', $kary->id)
+                        ->orWhere('m_kary_id', $kary->id);
+                  })
+                  ->delete();
 
               // Insert Jabatan baru berdasarkan Loker yang dilamar
               DB::table('m_kary_det_jabatan')->insert([
+                  'm_kary_id'      => $kary->id,
                   'm_karyawan_id'  => $kary->id,
                   'm_comp_id'      => $loker->m_comp_id ?? null,
                   'm_subcomp_id'   => $loker->m_subcomp_id ?? null, // Sesuaikan jika ada di t_loker
