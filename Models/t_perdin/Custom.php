@@ -125,49 +125,10 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         // Kode Company (contoh: TMG, TSM, TWL, ALNG, JPM, DCI, NGMS, DCP, DIM, IPBOOK)
         $compCode = $company?->kode ?? $company?->code ?? 'TMG';
 
-        // 2. Ambil Singkatan Kota secara Dinamis dari Database m_general / m_branch / m_company
-        $branch = null;
-        if ($kary && !empty($kary->m_branch_id)) {
-            $branch = \DB::table('m_branch')->where('id', $kary->m_branch_id)->first();
-        }
-
-        // a. Cek prioritas langsung ke kolom `code` atau `value_2` di database m_general
-        $cityId = $branch?->city_id ?? $branch?->kota_id ?? $company?->city_id ?? $company?->kota_id ?? $kary?->kota_id ?? null;
-        if ($cityId) {
-            $genCity = \DB::table('m_general')->where('id', $cityId)->first();
-            if (!empty($genCity?->code) && strlen(trim($genCity->code)) <= 5) {
-                return [
-                    'company' => $compCode,
-                    'kota'    => strtoupper(trim($genCity->code)),
-                ];
-            }
-            if (!empty($genCity?->value_2) && strlen(trim($genCity->value_2)) <= 5 && !is_numeric($genCity->value_2)) {
-                return [
-                    'company' => $compCode,
-                    'kota'    => strtoupper(trim($genCity->value_2)),
-                ];
-            }
-        }
-
+        // 2. Ambil Singkatan Kota (Prioritas Opsi A: Mengikuti Kota dari m_company)
         $candidates = [];
 
-        if ($branch) {
-            if (!empty($branch->city_id)) {
-                $c = \DB::table('m_general')->where('id', $branch->city_id)->value('value');
-                if ($c) $candidates[] = $c;
-            }
-            if (!empty($branch->kota_id)) {
-                $c = \DB::table('m_general')->where('id', $branch->kota_id)->value('value');
-                if ($c) $candidates[] = $c;
-            }
-            if (!empty($branch->city)) $candidates[] = $branch->city;
-            if (!empty($branch->kota)) $candidates[] = $branch->kota;
-            if (!empty($branch->name)) $candidates[] = $branch->name;
-            if (!empty($branch->code) && !in_array(strtoupper($branch->code), ['HLD', 'HO', 'PST'])) {
-                $candidates[] = $branch->code;
-            }
-        }
-
+        // a. Prioritas 1: Ambil dari tabel m_company (kolom kota / city / city_id)
         if ($company) {
             if (!empty($company->kota)) $candidates[] = $company->kota;
             if (!empty($company->city)) $candidates[] = $company->city;
@@ -181,12 +142,39 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
             }
         }
 
-        if ($kary && !empty($kary->kota_id)) {
-            $c = \DB::table('m_general')->where('id', $kary->kota_id)->value('value');
-            if ($c) $candidates[] = $c;
+        // b. Prioritas 2 (Fallback jika m_company tidak punya kota): Ambil dari m_branch / m_kary
+        if (empty($candidates)) {
+            $branch = null;
+            if ($kary && !empty($kary->m_branch_id)) {
+                $branch = \DB::table('m_branch')->where('id', $kary->m_branch_id)->first();
+            }
+
+            if ($branch) {
+                if (!empty($branch->city_id)) {
+                    $c = \DB::table('m_general')->where('id', $branch->city_id)->value('value');
+                    if ($c) $candidates[] = $c;
+                }
+                if (!empty($branch->kota_id)) {
+                    $c = \DB::table('m_general')->where('id', $branch->kota_id)->value('value');
+                    if ($c) $candidates[] = $c;
+                }
+                if (!empty($branch->city)) $candidates[] = $branch->city;
+                if (!empty($branch->kota)) $candidates[] = $branch->kota;
+                if (!empty($branch->name) && !in_array(strtoupper($branch->name), ['HOLDING MP', 'HOLDING', 'PUSAT'])) {
+                    $candidates[] = $branch->name;
+                }
+                if (!empty($branch->code) && !in_array(strtoupper($branch->code), ['HLD', 'HO', 'PST'])) {
+                    $candidates[] = $branch->code;
+                }
+            }
+
+            if ($kary && !empty($kary->kota_id)) {
+                $c = \DB::table('m_general')->where('id', $kary->kota_id)->value('value');
+                if ($c) $candidates[] = $c;
+            }
         }
 
-        // b. Cek apakah ada record di m_general dengan nama kota tersebut yang memiliki `code`
+        // c. Cek apakah ada record di m_general yang memiliki kolom `code`
         foreach ($candidates as $cand) {
             $cleanName = strtoupper(trim((string)$cand));
             $cleanName = preg_replace('/^(KOTA|KABUPATEN|KAB\.?)\s+/i', '', $cleanName);
@@ -209,7 +197,7 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
             }
         }
 
-        // c. Kamus singkatan kota standar Indonesia
+        // d. Kamus singkatan kota standar Indonesia
         $cityMap = [
             'SURABAYA'    => 'SBY',
             'SIDOARJO'    => 'SDA',
@@ -262,7 +250,7 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
             }
         }
 
-        // d. Fallback cerdas: Jika ada nama kota baru di luar kamus, ekstrak 3 huruf pertama / konsonan secara dinamis
+        // e. Fallback jika kota baru di luar kamus
         if (!$kotaCode && !empty($candidates)) {
             $firstCand = strtoupper(trim($candidates[0]));
             $firstCand = preg_replace('/^(KOTA|KABUPATEN|KAB\.?)\s+/i', '', $firstCand);
