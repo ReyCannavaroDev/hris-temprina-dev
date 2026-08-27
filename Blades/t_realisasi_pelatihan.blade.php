@@ -6,11 +6,9 @@
     <div class="flex items-center gap-x-4">
       <p>Filter Status :</p>
       <div class="flex gap-x-2">
-        <button @click="filterShowData('DRAFT',1)" :class="activeBtn.includes(1)?'bg-gray-600 text-white hover:bg-gray-400':'border border-gray-600 text-gray-600 bg-white  hover:bg-gray-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">DRAFT</button>
+        <button @click="filterShowData('ACTIVE',1)" :class="activeBtn.includes(1)?'bg-green-600 text-white hover:bg-green-400':'border border-green-600 text-green-600 bg-white  hover:bg-green-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">ACTIVE</button>
         <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
-        <button @click="filterShowData('POSTED',2)" :class="activeBtn.includes(2)?'bg-amber-600 text-white hover:bg-amber-400':'border border-amber-600 text-amber-600 bg-white  hover:bg-amber-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">POSTED</button>
-        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
-        <button @click="filterShowData('IN APPROVAL',3)" :class="activeBtn.includes(3)?'bg-blue-600 text-white hover:bg-blue-400':'border border-blue-600 text-blue-600 bg-white  hover:bg-blue-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">IN APPROVAL</button>
+        <button @click="filterShowData('INACTIVE',0)" :class="activeBtn.includes(0)?'bg-red-600 text-white hover:bg-red-400':'border border-red-600 text-red-600 bg-white  hover:bg-red-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">INACTIVE</button>
       </div>
     </div>
     <div>

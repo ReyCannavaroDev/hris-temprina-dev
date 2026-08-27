@@ -614,9 +614,8 @@ let activeBtn = ref([])
 
 function filterShowData(statusLabel = null, noBtn = null) {
   const statusMap = {
-    1: 'DRAFT',
-    2: 'POSTED',
-    3: 'IN APPROVAL',
+    1: 'ACTIVE',
+    0: 'INACTIVE',
   }
 
   if (noBtn !== null) {
