@@ -34,7 +34,7 @@ let initialValues = {}
 const changedValues = []
 
 onBeforeMount(async () => {
-  document.title = is_approval ? 'Approval Cuti' : 'Transaksi Cuti'
+  document.title = is_approval ? 'Approval Klaim Askes' : 'Transaksi Klaim Askes'
   // console.log('cek hc', store.user.data.is_hc)
 
   const respoData = localStorage.getItem('respo')
@@ -195,38 +195,18 @@ watch(
 
 
 const apiKary = computed(() => {
-  const params = {
-    join: false,
-    transform: false,
-    scopes: 'respo',
-    skip_m_kary_details: true,
-    where: '',
-  }
+  const userType = String(store.user?.data?.user_type || '').toLowerCase()
+  const isAdmin = userType === 'admin' || userType === 'superadmin'
 
-  // Jika is_approval tidak true, baru masukkan params filter
-  if (!is_approval) {
-    params.m_subcomp_id = values.m_subcomp_id ?? null
-    params.m_branch_id = values.m_branch_id ?? null
-  }
+  const where = ['this.is_active = true']
 
-  console.log('Mode Approval:', is_approval)
-  console.log('branch', params.m_branch_id)
-  console.log('subcomp', params.m_subcomp_id)
-
-  const where = []
-
-  // Logika 'where' juga bisa dibungkus kondisi yang sama jika diperlukan
-  if (!is_approval) {
-    if (values.m_subcomp_id != null) {
+  if (!isAdmin && !is_approval) {
+    if (values.m_subcomp_id && values.m_subcomp_id !== 'null') {
       where.push(`this.m_subcomp_id = ${values.m_subcomp_id}`)
     }
-    if (values.m_branch_id != null) {
+    if (values.m_branch_id && values.m_branch_id !== 'null') {
       where.push(`this.m_branch_id = ${values.m_branch_id}`)
     }
-  }
-
-  if (where.length) {
-    params.where = where.join(' AND ')
   }
 
   return {
@@ -235,11 +215,18 @@ const apiKary = computed(() => {
       'Content-Type': 'application/json',
       Authorization: `${store.user.token_type} ${store.user.token}`,
     },
-    params,
+    params: {
+      simplest: true,
+      transform: false,
+      join: false,
+      skip_m_kary_details: true,
+      searchfield: 'this.kode,this.nama_lengkap,this.nama_depan,this.nik',
+      where: where.join(' AND '),
+    },
     onsuccess(response) {
-      response.page = response.current_page;
-      response.hasNext = response.has_next;
-      return response;
+      response.page = response.current_page
+      response.hasNext = response.has_next
+      return response
     }
   }
 })
@@ -635,8 +622,24 @@ onBeforeMount(async () => {
 let _id = 0
 const onDetailAdd = (e) => {
   e.forEach(row => {
-    row.t_klaim_askes_id = row.id;
-    detailArr.value.push(row)
+    const detailRow = {
+      ...row,
+      id: row.id || row.klaim_id || ++_id,
+      t_klaim_askes_id: row.id || row.klaim_id || null,
+      klaim_id: row.klaim_id || row.id || null,
+      klaim_nama: row.klaim_nama || '',
+      klaim_type: row.klaim_type || 'm_kary',
+      klaim_table: row.klaim_table || (row.klaim_type === 'm_kary_det_kel' ? '70' : '80'),
+      nominal: row.nominal ?? null,
+      accepted: row.accepted ?? null,
+      reject: row.reject ?? null,
+      tanggal: row.tanggal ?? null,
+      bukti: row.bukti ?? null,
+      keterangan: row.keterangan ?? null,
+      santunan: row.santunan ?? null,
+      santunanPct: row.santunanPct ?? null
+    }
+    detailArr.value.push(detailRow)
   });
 }
 

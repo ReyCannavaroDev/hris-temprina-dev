@@ -3465,27 +3465,39 @@ class m_kary extends \App\Models\BasicModels\m_kary
     {
         $m_kary_id = app()->request->m_kary_id;
 
+        if (!$m_kary_id) {
+            return response()->json([]);
+        }
+
         $karyawan = DB::table('m_kary')
             ->select(
+                'id as id',
                 'id as klaim_id',
                 'nama_lengkap as klaim_nama',
                 DB::raw("'m_kary' as klaim_type"),
-                'id as m_kary_id'
+                'id as m_kary_id',
+                DB::raw("'Karyawan' as hubungan")
             )
             ->where('is_active', true)
             ->where('id', $m_kary_id);
 
         $data = DB::table('m_kary_det_kel as dk')
             ->join('m_kary as mk', 'dk.m_kary_id', '=', 'mk.id')
+            ->leftJoin('m_general as mg', 'mg.id', '=', 'dk.keluarga_id')
             ->select(
+                'dk.id as id',
                 'dk.id as klaim_id',
-                'dk.nama as klaim_nama',
+                DB::raw("CASE WHEN mg.value IS NOT NULL THEN CONCAT(dk.nama, ' (', mg.value, ')') ELSE dk.nama END as klaim_nama"),
                 DB::raw("'m_kary_det_kel' as klaim_type"),
-                'dk.m_kary_id'
+                'dk.m_kary_id',
+                DB::raw("COALESCE(mg.value, 'Keluarga') as hubungan")
             )
             ->where('mk.is_active', true)
             ->where('dk.m_kary_id', $m_kary_id)
-            ->where('dk.include_askes', true)
+            ->where(function ($q) {
+                $q->where('dk.include_askes', true)
+                  ->orWhereNull('dk.include_askes');
+            })
             ->union($karyawan)
             ->get();
 
@@ -3496,27 +3508,39 @@ class m_kary extends \App\Models\BasicModels\m_kary
     {
         $m_kary_id = app()->request->m_kary_id;
 
+        if (!$m_kary_id) {
+            return response()->json([]);
+        }
+
         $karyawan = DB::table('m_kary')
             ->select(
+                'id as id',
                 'id as klaim_id',
                 'nama_lengkap as klaim_nama',
                 DB::raw("'m_kary' as klaim_type"),
-                'id as m_kary_id'
+                'id as m_kary_id',
+                DB::raw("'Karyawan' as hubungan")
             )
             ->where('is_active', true)
             ->where('id', $m_kary_id);
 
         $data = DB::table('m_kary_det_kel as dk')
             ->join('m_kary as mk', 'dk.m_kary_id', '=', 'mk.id')
+            ->leftJoin('m_general as mg', 'mg.id', '=', 'dk.keluarga_id')
             ->select(
+                'dk.id as id',
                 'dk.id as klaim_id',
-                'dk.nama as klaim_nama',
+                DB::raw("CASE WHEN mg.value IS NOT NULL THEN CONCAT(dk.nama, ' (', mg.value, ')') ELSE dk.nama END as klaim_nama"),
                 DB::raw("'m_kary_det_kel' as klaim_type"),
-                'dk.m_kary_id'
+                'dk.m_kary_id',
+                DB::raw("COALESCE(mg.value, 'Keluarga') as hubungan")
             )
             ->where('mk.is_active', true)
             ->where('dk.m_kary_id', $m_kary_id)
-            ->where('dk.include_askes', true)
+            ->where(function ($q) {
+                $q->where('dk.include_askes', true)
+                  ->orWhereNull('dk.include_askes');
+            })
             ->union($karyawan)
             ->get();
 

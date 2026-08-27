@@ -191,7 +191,7 @@
   </div>
   <div class="col-span-8 md:col-span-12 p-5">
 
-    <ButtonMultiSelect v-if="actionText" title="Add Detail" @add="onDetailAdd" :api="apiAskes" :columns="[{
+    <ButtonMultiSelect v-if="actionText && values.m_kary_id" title="Add Detail" @add="onDetailAdd" :api="apiAskes" :columns="[{
                       checkboxSelection: true,
                       headerCheckboxSelection: true,
                       headerName: 'No',
@@ -309,13 +309,14 @@
                 :hints="formErrors.santunanPct" fa-icon="" :check="false" />
             </td> -->
             <td class="text-center border border-[#CACACA]">
-              <FieldSelect class="mt-0 w-full" :bind="{ disabled: !actionText, clearable:false }"
-                :value="item.santunan" @input="v=>item.santunan=v" :errorText="formErrors.santunan?'failed':''"
+              <FieldSelect class="mt-0 w-full" :bind="{ disabled: !actionText, clearable: true }"
+                :value="item.santunan" @input="v => item.santunan = v" :errorText="formErrors.santunan ? 'failed' : ''"
                 :hints="formErrors.santunan" valueField="value" displayField="value" @update:valueFull="res => {
-                  if (res){
+                  if (res) {
                     item.santunan = res.value
                     item.santunanPct = res.value_2
                   } else {
+                    item.santunan = null
                     item.santunanPct = null
                   }
                 }" :api="{
@@ -325,10 +326,10 @@
                       simplest: true,
                       transform: false,
                       join: false,
-                      where: `this.group = 'TIPE SANTUNAN'`,
-                      selectfield: 'id,value,value_2'
+                      where: `UPPER(this.group) IN ('TIPE SANTUNAN', 'SANTUNAN', 'JENIS SANTUNAN') AND this.is_active = true`,
+                      selectfield: 'this.id,this.value,this.value_2,this.code'
                     }
-                }" placeholder="" fa-icon="" :check="false" />
+                }" placeholder="Pilih Santunan" fa-icon="" :check="false" />
             </td>
             <td class="p-2 border border-[#CACACA]">
               <div class="flex justify-center">

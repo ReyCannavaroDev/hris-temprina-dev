@@ -33,6 +33,15 @@ class t_klaim_askes extends \App\Models\BasicModels\t_klaim_askes
         ];
     }
 
+    public function updateBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $this->details = ["t_klaim_askes_d"];
+        return [
+            "model" => $model,
+            "data" => $arrayData,
+        ];
+    }
+
     public function transformRowData(array $row)
     {
         $data = [];
