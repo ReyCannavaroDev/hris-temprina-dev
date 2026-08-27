@@ -82,33 +82,217 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         return $map[(int) Carbon::parse($date)->dayOfWeek] ?? 'SN';
     }
 
+    private function getCompanyAndKotaCode($karyId) : array
+    {
+        $kary = !empty($karyId) ? \DB::table('m_kary')->where('id', $karyId)->first() : null;
+
+        // 1. Ambil Company dari tabel m_company
+        $company = null;
+        $companyId = null;
+
+        if ($kary && !empty($kary->m_company_id)) {
+            $companyId = $kary->m_company_id;
+        }
+
+        if (!$companyId && $kary) {
+            $jabatan = \DB::table('m_kary_det_jabatan')
+                ->where('m_kary_id', $kary->id)
+                ->where('is_primary', true)
+                ->first();
+            $companyId = $jabatan?->m_company_id ?? null;
+        }
+
+        if (!$companyId && $kary && !empty($kary->m_subcomp_id)) {
+            $subcomp = \DB::table('m_subcomp')->where('id', $kary->m_subcomp_id)->first();
+            $companyId = $subcomp?->m_company_id ?? $subcomp?->company_id ?? null;
+        }
+
+        if ($companyId) {
+            $company = \DB::table('m_company')->where('id', $companyId)->first();
+        }
+
+        if (!$company && $kary && !empty($kary->m_comp_id)) {
+            $company = \DB::table('m_company')->where('id', $kary->m_comp_id)->first();
+        }
+
+        if (!$company && auth()->check()) {
+            $user = auth()->user();
+            if (!empty($user->m_company_id)) {
+                $company = \DB::table('m_company')->where('id', $user->m_company_id)->first();
+            }
+        }
+
+        // Kode Company (contoh: TMG, TSM, TWL, ALNG, JPM, DCI, NGMS, DCP, DIM, IPBOOK)
+        $compCode = $company?->kode ?? $company?->code ?? 'TMG';
+
+        // 2. Ambil Singkatan Kota secara Dinamis dari Database m_general / m_branch / m_company
+        $branch = null;
+        if ($kary && !empty($kary->m_branch_id)) {
+            $branch = \DB::table('m_branch')->where('id', $kary->m_branch_id)->first();
+        }
+
+        // a. Cek prioritas langsung ke kolom `code` atau `value_2` di database m_general
+        $cityId = $branch?->city_id ?? $branch?->kota_id ?? $company?->city_id ?? $company?->kota_id ?? $kary?->kota_id ?? null;
+        if ($cityId) {
+            $genCity = \DB::table('m_general')->where('id', $cityId)->first();
+            if (!empty($genCity?->code) && strlen(trim($genCity->code)) <= 5) {
+                return [
+                    'company' => $compCode,
+                    'kota'    => strtoupper(trim($genCity->code)),
+                ];
+            }
+            if (!empty($genCity?->value_2) && strlen(trim($genCity->value_2)) <= 5 && !is_numeric($genCity->value_2)) {
+                return [
+                    'company' => $compCode,
+                    'kota'    => strtoupper(trim($genCity->value_2)),
+                ];
+            }
+        }
+
+        $candidates = [];
+
+        if ($branch) {
+            if (!empty($branch->city_id)) {
+                $c = \DB::table('m_general')->where('id', $branch->city_id)->value('value');
+                if ($c) $candidates[] = $c;
+            }
+            if (!empty($branch->kota_id)) {
+                $c = \DB::table('m_general')->where('id', $branch->kota_id)->value('value');
+                if ($c) $candidates[] = $c;
+            }
+            if (!empty($branch->city)) $candidates[] = $branch->city;
+            if (!empty($branch->kota)) $candidates[] = $branch->kota;
+            if (!empty($branch->name)) $candidates[] = $branch->name;
+            if (!empty($branch->code) && !in_array(strtoupper($branch->code), ['HLD', 'HO', 'PST'])) {
+                $candidates[] = $branch->code;
+            }
+        }
+
+        if ($company) {
+            if (!empty($company->kota)) $candidates[] = $company->kota;
+            if (!empty($company->city)) $candidates[] = $company->city;
+            if (!empty($company->city_id)) {
+                $c = \DB::table('m_general')->where('id', $company->city_id)->value('value');
+                if ($c) $candidates[] = $c;
+            }
+            if (!empty($company->kota_id)) {
+                $c = \DB::table('m_general')->where('id', $company->kota_id)->value('value');
+                if ($c) $candidates[] = $c;
+            }
+        }
+
+        if ($kary && !empty($kary->kota_id)) {
+            $c = \DB::table('m_general')->where('id', $kary->kota_id)->value('value');
+            if ($c) $candidates[] = $c;
+        }
+
+        // b. Cek apakah ada record di m_general dengan nama kota tersebut yang memiliki `code`
+        foreach ($candidates as $cand) {
+            $cleanName = strtoupper(trim((string)$cand));
+            $cleanName = preg_replace('/^(KOTA|KABUPATEN|KAB\.?)\s+/i', '', $cleanName);
+            $cleanName = trim($cleanName);
+
+            $genFound = \DB::table('m_general')
+                ->where(function($q) use ($cleanName, $cand){
+                    $q->whereRaw('upper(value) = ?', [$cleanName])
+                      ->orWhereRaw('upper(value) = ?', [strtoupper(trim($cand))]);
+                })
+                ->whereNotNull('code')
+                ->where('code', '!=', '')
+                ->first();
+
+            if ($genFound && !empty($genFound->code) && strlen(trim($genFound->code)) <= 5) {
+                return [
+                    'company' => $compCode,
+                    'kota'    => strtoupper(trim($genFound->code)),
+                ];
+            }
+        }
+
+        // c. Kamus singkatan kota standar Indonesia
+        $cityMap = [
+            'SURABAYA'    => 'SBY',
+            'SIDOARJO'    => 'SDA',
+            'MALANG'      => 'MLG',
+            'JEMBER'      => 'JBR',
+            'TANGERANG'   => 'TNG',
+            'SURAKARTA'   => 'SKT',
+            'SOLO'        => 'SLO',
+            'NGANJUK'     => 'NGK',
+            'GRESIK'      => 'GSK',
+            'SEMARANG'    => 'SMG',
+            'DENPASAR'    => 'DPS',
+            'BALI'        => 'DPS',
+            'JAKARTA'     => 'JKT',
+            'BEKASI'      => 'BKS',
+            'BANDUNG'     => 'BDG',
+            'BANYUWANGI'  => 'BWI',
+            'PROBOLINGGO' => 'PBG',
+            'PASURUAN'    => 'PSR',
+            'KEDIRI'      => 'KDR',
+            'MADIUN'      => 'MDN',
+            'YOGYAKARTA'  => 'YOG',
+            'JOGJA'       => 'JOG',
+            'KLATEN'      => 'KLT',
+            'BOGOR'       => 'BGR',
+            'DEPOK'       => 'DPK',
+        ];
+
+        $kotaCode = null;
+        foreach ($candidates as $cand) {
+            $clean = strtoupper(trim((string)$cand));
+            $clean = preg_replace('/^(KOTA|KABUPATEN|KAB\.?)\s+/i', '', $clean);
+            $clean = trim($clean);
+
+            if (isset($cityMap[$clean])) {
+                $kotaCode = $cityMap[$clean];
+                break;
+            }
+
+            foreach ($cityMap as $cityName => $abbr) {
+                if (str_contains($clean, $cityName)) {
+                    $kotaCode = $abbr;
+                    break 2;
+                }
+            }
+
+            if (strlen($clean) >= 2 && strlen($clean) <= 4 && !in_array($clean, ['HLD', 'HO', 'PST'])) {
+                $kotaCode = $clean;
+                break;
+            }
+        }
+
+        // d. Fallback cerdas: Jika ada nama kota baru di luar kamus, ekstrak 3 huruf pertama / konsonan secara dinamis
+        if (!$kotaCode && !empty($candidates)) {
+            $firstCand = strtoupper(trim($candidates[0]));
+            $firstCand = preg_replace('/^(KOTA|KABUPATEN|KAB\.?)\s+/i', '', $firstCand);
+            $firstCand = preg_replace('/[^A-Z]/', '', $firstCand);
+            $kotaCode = substr($firstCand, 0, 3) ?: 'SBY';
+        }
+
+        return [
+            'company' => $compCode,
+            'kota'    => $kotaCode ?: 'SBY',
+        ];
+    }
+
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
         $dateFrom = $this->normalizeDate($arrayData['date_from'] ?? null) ?? Carbon::now()->format('Y-m-d');
 
-        $kary = !empty($arrayData['m_kary_id']) ? \App\Models\BasicModels\m_kary::find($arrayData['m_kary_id']) : null;
-        $comp_id = $kary?->m_comp_id ?? auth()->user()?->m_comp_id ?? null;
-        $branch_id = $kary?->m_branch_id ?? auth()->user()?->m_branch_id ?? null;
-
-        $compCode = 'TMG';
-        if ($comp_id) {
-            $comp = \DB::table('m_comp')->where('id', $comp_id)->first();
-            $compCode = $comp?->code ?? $comp?->singkatan ?? $comp?->name ?? 'TMG';
-        }
-
-        $branchCode = 'SBY';
-        if ($branch_id) {
-            $branch = \DB::table('m_branch')->where('id', $branch_id)->first();
-            $branchCode = $branch?->code ?? $branch?->singkatan ?? $branch?->name ?? 'SBY';
-        }
+        $resolved = $this->getCompanyAndKotaCode($arrayData['m_kary_id'] ?? null);
+        $compCode = $resolved['company'];
+        $kotaCode = $resolved['kota'];
 
         $replacements = [
             'TMG' => $compCode,
-            'SBY' => $branchCode,
+            'SBY' => $kotaCode,
             '{comp}' => $compCode,
             '{company}' => $compCode,
-            '{branch}' => $branchCode,
-            '{cabang}' => $branchCode,
+            '{kota}' => $kotaCode,
+            '{city}' => $kotaCode,
+            '{branch}' => $kotaCode,
+            '{cabang}' => $kotaCode,
         ];
 
         $nomor = $this->helper->generateNomor("PERDIN", true, null, $dateFrom, $replacements);
