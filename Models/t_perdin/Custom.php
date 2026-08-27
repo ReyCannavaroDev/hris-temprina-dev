@@ -84,10 +84,39 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
+        $dateFrom = $this->normalizeDate($arrayData['date_from'] ?? null) ?? Carbon::now()->format('Y-m-d');
+
+        $kary = !empty($arrayData['m_kary_id']) ? \App\Models\BasicModels\m_kary::find($arrayData['m_kary_id']) : null;
+        $comp_id = $kary?->m_comp_id ?? auth()->user()?->m_comp_id ?? null;
+        $branch_id = $kary?->m_branch_id ?? auth()->user()?->m_branch_id ?? null;
+
+        $compCode = 'TMG';
+        if ($comp_id) {
+            $comp = \DB::table('m_comp')->where('id', $comp_id)->first();
+            $compCode = $comp?->code ?? $comp?->singkatan ?? $comp?->name ?? 'TMG';
+        }
+
+        $branchCode = 'SBY';
+        if ($branch_id) {
+            $branch = \DB::table('m_branch')->where('id', $branch_id)->first();
+            $branchCode = $branch?->code ?? $branch?->singkatan ?? $branch?->name ?? 'SBY';
+        }
+
+        $replacements = [
+            'TMG' => $compCode,
+            'SBY' => $branchCode,
+            '{comp}' => $compCode,
+            '{company}' => $compCode,
+            '{branch}' => $branchCode,
+            '{cabang}' => $branchCode,
+        ];
+
+        $nomor = $this->helper->generateNomor("PERDIN", true, null, $dateFrom, $replacements);
+
         $newArrayData = array_merge($arrayData, [
-            "nomor" => $this->helper->generateNomor("PERDIN", true, null, $arrayData['date_from'] ?? null),
-            "tanggal_surat_tugas" => $arrayData['date_from'] ?? null,
-            "tanggal_rencana_biaya" => $arrayData['date_from'] ?? null,
+            "nomor" => $nomor,
+            "tanggal_surat_tugas" => $dateFrom,
+            "tanggal_rencana_biaya" => $dateFrom,
         ]);
 
         return [

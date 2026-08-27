@@ -29,7 +29,7 @@ class Helper
         $this->timestamp = \Carbon\Carbon::now();
     }
 
-    public function generateNomor($nama, $counter = true, $static = null, $date = null)
+    public function generateNomor($nama, $counter = true, $static = null, $date = null, $replacements = [])
     {
         // check header config
         $generate_num = generate_num::where("nama", $nama)
@@ -57,6 +57,26 @@ class Helper
                     ->get();
             }
 
+            // Normalisasi timestamp tanggal agar tidak gagal saat menerima format d/m/Y
+            $timestamp = time();
+            if ($date) {
+                if (is_numeric($date)) {
+                    $timestamp = (int) $date;
+                } else {
+                    $dateStr = str_replace('/', '-', trim((string) $date));
+                    $parsed = strtotime($dateStr);
+                    if ($parsed && $parsed > 0) {
+                        $timestamp = $parsed;
+                    } else {
+                        try {
+                            $timestamp = \Carbon\Carbon::parse($date)->timestamp;
+                        } catch (\Throwable $e) {
+                            $timestamp = time();
+                        }
+                    }
+                }
+            }
+
             foreach ($generate_num_det as $tnd) {
                 $trx_type = generate_num_type::find(
                     @$tnd["generate_num_type_id"]
@@ -70,7 +90,6 @@ class Helper
                         in_array($trx_type->ref_type, ["day", "month", "year"])
                     ) {
                         // type dating
-                        $timestamp = $date ? strtotime($date) : time();
                         $val = strtolower(trim((string) $trx_type->value));
                         
                         if ($val === 'hari_indo') {
@@ -125,6 +144,13 @@ class Helper
                             }
                         }
                     }
+                }
+            }
+
+            // Terapkan replacement dinamis (misal Company & Cabang) jika disediakan
+            if (!empty($replacements) && is_array($replacements)) {
+                foreach ($replacements as $search => $replace) {
+                    $temporaryCode = str_ireplace((string) $search, (string) $replace, $temporaryCode);
                 }
             }
 
