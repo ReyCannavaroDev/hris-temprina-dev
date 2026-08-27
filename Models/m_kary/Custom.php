@@ -232,10 +232,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
         }
         $object["nomor_ktp"] =
             \DB::table("m_kary_det_kartu")
-                ->where(function($q) use ($row) {
-                    $q->where("m_kary_id", $row["id"] ?? 0)
-                      ->orWhere("m_karyawan_id", $row["id"] ?? 0);
-                })
+                ->where("m_kary_id", $row["id"] ?? 0)
                 ->value("ktp_no") ?? null;
 
         return array_merge($row, $object);
