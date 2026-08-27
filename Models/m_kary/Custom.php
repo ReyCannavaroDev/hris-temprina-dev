@@ -63,6 +63,16 @@ class m_kary extends \App\Models\BasicModels\m_kary
         )->latestOfMany(); 
     }
 
+    public function m_kary_det_jabatan(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\CustomModels\m_kary_det_jabatan::class, 'm_karyawan_id', 'id');
+    }
+
+    public function m_kary_det_jobdesc(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\CustomModels\m_kary_det_jobdesc::class, 'm_karyawan_id', 'id');
+    }
+
     public function createBefore($model, $arrayData, $metaData, $id = null)
     {
         $kode = @$this->helper->generateNomor("KODE KARYAWAN");

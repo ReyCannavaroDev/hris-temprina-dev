@@ -40,4 +40,9 @@ class m_kary_det_jobdesc extends \App\Models\BasicModels\m_kary_det_jobdesc
             "data"   => $arrayData,
         ];
     }
+
+    public function m_kary(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\CustomModels\m_kary::class, 'm_karyawan_id', 'id');
+    }
 }
