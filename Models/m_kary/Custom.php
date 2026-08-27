@@ -169,40 +169,35 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
         if ($karyId) {
             // 1. Auto-heal foreign keys di database agar m_kary_id dan m_karyawan_id terisi
-            \DB::table('m_kary_det_jabatan')
-                ->where('m_karyawan_id', $karyId)
-                ->whereNull('m_kary_id')
-                ->update(['m_kary_id' => $karyId]);
+            try {
+                \DB::table('m_kary_det_jabatan')
+                    ->where('m_karyawan_id', $karyId)
+                    ->whereNull('m_kary_id')
+                    ->update(['m_kary_id' => $karyId]);
 
-            \DB::table('m_kary_det_jabatan')
-                ->where('m_kary_id', $karyId)
-                ->whereNull('m_karyawan_id')
-                ->update(['m_karyawan_id' => $karyId]);
+                \DB::table('m_kary_det_jabatan')
+                    ->where('m_kary_id', $karyId)
+                    ->whereNull('m_karyawan_id')
+                    ->update(['m_karyawan_id' => $karyId]);
+            } catch (\Throwable $e) {}
 
-            // 2. Jika m_kary_det_jabatan kosong di $row (karena eager loading awal mencari m_kary_id sebelum sync), ambil langsung
-            if (empty($row['m_kary_det_jabatan'])) {
-                $detJabatan = \DB::table('m_kary_det_jabatan as d')
-                    ->leftJoin('m_posisi as p', 'p.id', '=', 'd.m_posisi_id')
-                    ->leftJoin('m_level_posisi_d as lpd', 'lpd.m_posisi_id', '=', 'p.id')
-                    ->leftJoin('m_level_posisi as lp', 'lp.id', '=', 'lpd.m_level_posisi_id')
+            // 2. Selalu pastikan m_kary_det_jabatan terisi jika ada data di database
+            try {
+                $detJabatan = \DB::table('m_kary_det_jabatan')
                     ->where(function($q) use ($karyId) {
-                        $q->where('d.m_kary_id', $karyId)
-                          ->orWhere('d.m_karyawan_id', $karyId);
+                        $q->where('m_kary_id', $karyId)
+                          ->orWhere('m_karyawan_id', $karyId);
                     })
-                    ->select(
-                        'd.*',
-                        'p.name as posisi_name',
-                        'lp.level_name as level_name'
-                    )
                     ->get();
 
                 if ($detJabatan->isNotEmpty()) {
-                    $object['m_kary_det_jabatan'] = json_decode(json_encode($detJabatan), true);
+                    $row['m_kary_det_jabatan'] = json_decode(json_encode($detJabatan), true);
+                    $object['m_kary_det_jabatan'] = $row['m_kary_det_jabatan'];
                 }
-            }
+            } catch (\Throwable $e) {}
 
             // 3. Hal yang sama untuk jobdesc
-            if (empty($row['m_kary_det_jobdesc'])) {
+            try {
                 $detJobdesc = \DB::table('m_kary_det_jobdesc')
                     ->where(function($q) use ($karyId) {
                         $q->where('m_kary_id', $karyId)
@@ -211,9 +206,10 @@ class m_kary extends \App\Models\BasicModels\m_kary
                     ->get();
 
                 if ($detJobdesc->isNotEmpty()) {
-                    $object['m_kary_det_jobdesc'] = json_decode(json_encode($detJobdesc), true);
+                    $row['m_kary_det_jobdesc'] = json_decode(json_encode($detJobdesc), true);
+                    $object['m_kary_det_jobdesc'] = $row['m_kary_det_jobdesc'];
                 }
-            }
+            } catch (\Throwable $e) {}
         }
 
         if (app()->request->detail) {
