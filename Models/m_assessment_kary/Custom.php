@@ -43,14 +43,7 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
             }
         }
 
-        $details = [];
-        if (!empty($req->m_assessment_kary_d)) {
-            $details[] = 'm_assessment_kary_d';
-        }
-        if (!empty($req->m_assessment_kary_d_level)) {
-            $details[] = 'm_assessment_kary_d_level';
-        }
-        $this->details = $details;
+        $this->details = !empty($req->m_assessment_kary_d) ? ['m_assessment_kary_d'] : [];
 
         return [
             "model"  => $model,
@@ -69,21 +62,63 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
             }
         }
 
-        $details = [];
-        if (!empty($req->m_assessment_kary_d)) {
-            $details[] = 'm_assessment_kary_d';
-        }
-        if (empty($req->m_assessment_kary_d_level)) {
-            \App\Models\BasicModels\m_assessment_kary_d_level::where('m_assessment_kary_id', $id)->delete();
-        } else {
-            $details[] = 'm_assessment_kary_d_level';
-        }
-        $this->details = $details;
+        $this->details = !empty($req->m_assessment_kary_d) ? ['m_assessment_kary_d'] : [];
 
         return [
             "model"  => $model,
             "data"   => $arrayData,
         ];
+    }
+
+    public function createAfter($model, $arrayData, $metaData, $id=null)
+    {
+        $realId = is_object($model) ? $model->id : ($id ?? ($arrayData['id'] ?? null));
+        if ($realId) {
+            $this->syncLevelData($realId, $arrayData);
+        }
+        return true;
+    }
+
+    public function updateAfter($model, $arrayData, $metaData, $id=null)
+    {
+        $realId = is_object($model) ? $model->id : ($id ?? ($arrayData['id'] ?? null));
+        if ($realId) {
+            $this->syncLevelData($realId, $arrayData);
+        }
+        return true;
+    }
+
+    private function syncLevelData($assessmentId, $arrayData)
+    {
+        $req = app()->request;
+        $levelData = $req->input('m_assessment_kary_d_level', $req->m_assessment_kary_d_level ?? ($arrayData['m_assessment_kary_d_level'] ?? []));
+        $singleLevelId = $req->input('m_level_posisi_id', $arrayData['m_level_posisi_id'] ?? null);
+
+        if (empty($levelData) && !empty($singleLevelId)) {
+            $levelData = [['m_level_posisi_id' => $singleLevelId]];
+        }
+
+        \DB::table('m_assessment_kary_d_level')->where('m_assessment_kary_id', $assessmentId)->delete();
+
+        if (!empty($levelData) && is_array($levelData)) {
+            $insertRows = [];
+            foreach ($levelData as $item) {
+                $lvlId = is_array($item) ? ($item['m_level_posisi_id'] ?? $item['id'] ?? null) : $item;
+                $numLvl = (int)$lvlId;
+                if ($numLvl > 0) {
+                    $insertRows[] = [
+                        'm_assessment_kary_id' => $assessmentId,
+                        'm_level_posisi_id' => $numLvl,
+                        'creator_id' => auth()->user() ? auth()->user()->id : 1,
+                        'created_at' => \Carbon\Carbon::now(),
+                        'updated_at' => \Carbon\Carbon::now(),
+                    ];
+                }
+            }
+            if (!empty($insertRows)) {
+                \DB::table('m_assessment_kary_d_level')->insert($insertRows);
+            }
+        }
     }
 
     public function scopeForKaryawan($query)
@@ -192,7 +227,8 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
                 $divisi = \App\Models\BasicModels\m_divisi::find($divisiId);
                 if ($divisi) {
                     if ($divisi->name) {
-                        $divisiName = \App\Models\BasicModels\m_general::find($divisi->name)?->value ?? '';
+                        $genDiv = \App\Models\BasicModels\m_general::find($divisi->name);
+                        $divisiName = $genDiv ? ($genDiv->value ?? '') : '';
                     }
                     if (empty($divisiName)) {
                         $divisiName = $divisi->name_old ?? '';
@@ -206,7 +242,8 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
             $data['type'] = $typeId ? (int)$typeId : null;
             $typeName = '';
             if ($typeId) {
-                $typeName = \App\Models\BasicModels\m_general::find($typeId)?->value ?? '';
+                $genType = \App\Models\BasicModels\m_general::find($typeId);
+                $typeName = $genType ? ($genType->value ?? '') : '';
             }
             $data['type.value'] = $typeName ?: '-';
             $data['type_name'] = $typeName ?: '-';

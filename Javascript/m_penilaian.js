@@ -583,6 +583,16 @@ const landing = reactive({
   {
     headerName: 'LEVEL',
     field: 'level',
+    valueGetter: (params) => {
+      if (params.data?.level && params.data.level !== '-') return params.data.level
+      if (Array.isArray(params.data?.m_assessment_kary_d_level) && params.data.m_assessment_kary_d_level.length > 0) {
+        const names = params.data.m_assessment_kary_d_level
+          .map(l => l.level_name || l['m_level_posisi.level_name'])
+          .filter(Boolean)
+        if (names.length > 0) return names.join(', ')
+      }
+      return '-'
+    },
     filter: true,
     sortable: true,
     flex: 1,
