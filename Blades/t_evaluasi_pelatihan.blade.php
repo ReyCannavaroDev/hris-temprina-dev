@@ -1,54 +1,43 @@
 <!-- LANDING -->
 @if(!$req->has('id'))
 @verbatim
-<div class="bg-white p-2 rounded-md border-t-4 border-yellow-500 shadow-sm min-h-[550px]">
+<div class="bg-white p-1 rounded-md min-h-[520px] border-t-10 border-gray-500">
   
   <!-- TAB HEADER LANDING -->
-  <div class="flex flex-wrap justify-between items-center border-b border-gray-200 px-3 pb-3 pt-1 gap-2">
-    <!-- Tab Buttons -->
-    <div class="flex items-center gap-x-2">
-      <!-- Tab 0: Menunggu Evaluasi (Belum Diisi) -->
+  <div class="flex items-center justify-between border-b border-gray-200 px-4 text-sm">
+    <div class="flex items-center">
+      <!-- Tab 0: Belum Diisi -->
       <button 
-        @click="switchLandingTab(0)"
-        :class="activeTabLanding === 0 
-          ? 'bg-amber-500 text-white shadow font-semibold' 
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium'"
-        class="flex items-center gap-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200">
-        <Icon fa="clock" class="text-xs" />
-        <span>Menunggu Evaluasi (Belum Diisi)</span>
+        class="flex items-center justify-center border-b-2 p-3 duration-300 hover:text-yellow-500 cursor-pointer"
+        :class="{'border-yellow-500 text-yellow-500 font-bold': activeTabLanding === 0, 'border-transparent text-gray-500': activeTabLanding !== 0}"
+        @click="switchLandingTab(0)">
+        <span>Belum Diisi</span>
         <span 
           v-if="pendingCount > 0"
-          :class="activeTabLanding === 0 ? 'bg-white text-amber-600' : 'bg-amber-500 text-white'"
-          class="text-xs px-2 py-0.5 rounded-full font-bold shadow-xs">
+          class="ml-2 text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-bold">
           {{ pendingCount }}
         </span>
       </button>
 
-      <!-- Tab 1: Riwayat Evaluasi (Sudah Diisi) -->
+      <!-- Tab 1: Sudah Diisi -->
       <button 
-        @click="switchLandingTab(1)"
-        :class="activeTabLanding === 1 
-          ? 'bg-blue-600 text-white shadow font-semibold' 
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium'"
-        class="flex items-center gap-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200">
-        <Icon fa="check-circle" class="text-xs" />
-        <span>Riwayat Evaluasi (Sudah Diisi)</span>
+        class="flex items-center justify-center border-b-2 p-3 duration-300 hover:text-yellow-500 cursor-pointer"
+        :class="{'border-yellow-500 text-yellow-500 font-bold': activeTabLanding === 1, 'border-transparent text-gray-500': activeTabLanding !== 1}"
+        @click="switchLandingTab(1)">
+        <span>Sudah Diisi</span>
       </button>
     </div>
 
     <!-- Right Actions -->
-    <div>
-      <RouterLink v-if="data.can_create" :to="$route.path + '/create?' + Date.now()" 
-        class="border border-[#428BCA] font-semibold text-[#428BCA] bg-white hover:bg-[#428BCA] hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1.5 px-3 text-sm flex items-center gap-1.5 shadow-xs">
-        <Icon fa="plus" class="text-xs" />
-        <span>Isi Evaluasi Baru</span>
+    <div v-show="data.can_create">
+      <RouterLink :to="$route.path + '/create?' + Date.now()" 
+        class="border border-[#428BCA] font-semibold text-[#428BCA] bg-white hover:bg-[#428BCA] hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2 text-sm">
+        Tambah Baru
       </RouterLink>
     </div>
   </div>
 
-  <div class="mt-2">
-    <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions" class="" />
-  </div>
+  <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions" class="" />
 
   <div v-show="modalOpen" class="fixed inset-0 flex items-center justify-center z-50">
   <div class="modal-overlay fixed inset-0 bg-black opacity-50"></div>
