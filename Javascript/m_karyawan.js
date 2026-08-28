@@ -720,6 +720,111 @@ const hapusSubDetail = (detailIndex, subIndex) => {
 //   });
 // });
 
+const onSbuSelected = (index, v) => {
+  const item = inDetailArr.value[index];
+  if (!item) return;
+  if (v) {
+    item.m_comp_id = v;
+  } else {
+    item.m_comp_id = null;
+    item.m_subcomp_id = null;
+    item.m_company_id = null;
+    item.m_branch_id = null;
+    item.m_divisi_id = null;
+    item.m_posisi_id = null;
+  }
+};
+
+const onSbuFullSelected = (index, obj) => {
+  const item = inDetailArr.value[index];
+  if (!item) return;
+  if (obj) {
+    item.m_comp_id = obj.id;
+    item.m_subcomp_id = null;
+    item.m_company_id = null;
+    item.m_branch_id = null;
+    item.m_divisi_id = null;
+    item.m_posisi_id = null;
+  } else {
+    item.m_comp_id = null;
+    item.m_subcomp_id = null;
+    item.m_company_id = null;
+    item.m_branch_id = null;
+    item.m_divisi_id = null;
+    item.m_posisi_id = null;
+  }
+};
+
+const onSubSelected = async (index, v) => {
+  const item = inDetailArr.value[index];
+  if (!item) return;
+  if (v) {
+    item.m_subcomp_id = v;
+    if (!item.m_company_id) {
+      try {
+        const res = await fetch(`${store.server.url_backend}/operation/m_subcomp/${v}?join=true&transform=false`, {
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const subData = json.data ?? json;
+          const compId = subData.m_company_id ?? subData.company_id ?? subData.m_company?.id ?? subData['m_company.id'] ?? subData['m_company_id.id'] ?? null;
+          if (compId) {
+            item.m_company_id = compId;
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching subcomp detail:', e);
+      }
+    }
+  } else {
+    item.m_subcomp_id = null;
+    item.m_company_id = null;
+    item.m_branch_id = null;
+    item.m_divisi_id = null;
+    item.m_posisi_id = null;
+  }
+};
+
+const onSubFullSelected = async (index, obj) => {
+  const item = inDetailArr.value[index];
+  if (!item) return;
+  if (obj) {
+    item.m_subcomp_id = obj.id;
+    let compId = obj.m_company_id ?? obj.company_id ?? obj.m_company?.id ?? obj['m_company.id'] ?? obj['m_company_id.id'] ?? null;
+    if (!compId && obj.id) {
+      try {
+        const res = await fetch(`${store.server.url_backend}/operation/m_subcomp/${obj.id}?join=true&transform=false`, {
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const subData = json.data ?? json;
+          compId = subData.m_company_id ?? subData.company_id ?? subData.m_company?.id ?? subData['m_company.id'] ?? subData['m_company_id.id'] ?? null;
+        }
+      } catch (e) {
+        console.error('Error fetching subcomp detail:', e);
+      }
+    }
+    item.m_company_id = compId;
+    item.m_branch_id = null;
+    item.m_divisi_id = null;
+    item.m_posisi_id = null;
+  } else {
+    item.m_subcomp_id = null;
+    item.m_company_id = null;
+    item.m_branch_id = null;
+    item.m_divisi_id = null;
+    item.m_posisi_id = null;
+  }
+};
+
 // Menghubungkan perubahan posisi dengan pemanggilan detail_item
 const onPosisiSelected = (index, posisi) => {
   inDetailArr.value[index].m_posisi_id = posisi.id;
