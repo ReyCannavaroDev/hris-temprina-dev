@@ -24,7 +24,7 @@ class m_kary_det_jabatan extends \App\Models\BasicModels\m_kary_det_jabatan
         if (!$companyId && $subcompId) {
             try {
                 $subcomp = \DB::table('m_subcomp')->where('id', $subcompId)->first();
-                $companyId = $subcomp?->m_company_id ?? $subcomp?->company_id ?? null;
+                $companyId = $subcomp ? ($subcomp->m_company_id ?? $subcomp->company_id ?? null) : null;
             } catch (\Throwable $e) {}
         }
 
@@ -55,7 +55,7 @@ class m_kary_det_jabatan extends \App\Models\BasicModels\m_kary_det_jabatan
         if (!$companyId && $subcompId) {
             try {
                 $subcomp = \DB::table('m_subcomp')->where('id', $subcompId)->first();
-                $companyId = $subcomp?->m_company_id ?? $subcomp?->company_id ?? null;
+                $companyId = $subcomp ? ($subcomp->m_company_id ?? $subcomp->company_id ?? null) : null;
                 if ($companyId) {
                     $arrayData['m_company_id'] = $companyId;
                 }

@@ -76,6 +76,7 @@ const values = reactive({
   cuti_p24_terpakai: 0,
   sisa_cuti_reguler: 0,
   sisa_cuti_masa_kerja: 0,
+  atasan_id: null,
 })
 
 const valuesPendidikan = reactive({
@@ -294,6 +295,13 @@ onBeforeMount(async () => {
           }
         }
         initialValues = { ...initialValues, ...initialValues.info_cuti }
+
+        if (initialValues.atasan_id) {
+          values.atasan_id = initialValues.atasan_id
+        }
+        if (initialValues.m_divisi_id) {
+          fetchAtasanByDivisi(initialValues.m_divisi_id, initialValues.id)
+        }
 
       } catch (err) {
         isBadForm.value = true
@@ -841,6 +849,75 @@ watchEffect(() => {
     values.m_comp_id = primaryItem.m_comp_id;
     values.m_subcomp_id = primaryItem.m_subcomp_id;
     values.m_branch_id = primaryItem.m_branch_id;
+  }
+});
+
+// Auto-detect Atasan berdasarkan Divisi
+const listAtasan = ref([]);
+const loadingAtasan = ref(false);
+let lastFetchedDivisiId = null;
+
+const fetchAtasanByDivisi = async (divisiId, currentKaryId = null) => {
+  if (!divisiId) {
+    listAtasan.value = [];
+    return;
+  }
+
+  try {
+    loadingAtasan.value = true;
+    const params = new URLSearchParams({
+      where: `this.is_active = 'true' AND this.m_divisi_id = '${divisiId}'`,
+      join: true,
+      transform: false,
+      paginate: 100
+    });
+
+    const res = await fetch(`${store.server.url_backend}/operation/m_kary?${params}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      let data = json.data ?? [];
+      
+      const currentId = currentKaryId ?? route.params.id;
+      if (currentId && currentId !== 'create') {
+        data = data.filter(k => String(k.id) !== String(currentId));
+      }
+
+      listAtasan.value = data.map(item => ({
+        ...item,
+        nama_lengkap: item.nama_lengkap ?? `${item.nama_depan ?? ''} ${item.nama_belakang ?? ''}`.trim(),
+        posisi_name: item['m_posisi.name'] ?? item.posisi_name ?? ''
+      }));
+
+      if (listAtasan.value.length > 0) {
+        const exist = listAtasan.value.some(k => k.id === values.atasan_id);
+        if (!exist || !values.atasan_id) {
+          values.atasan_id = listAtasan.value[0].id;
+        }
+      } else {
+        values.atasan_id = null;
+      }
+    }
+  } catch (e) {
+    console.error('Error fetching atasan:', e);
+  } finally {
+    loadingAtasan.value = false;
+  }
+};
+
+watch(() => values.m_divisi_id, (newDivisiId) => {
+  if (newDivisiId && newDivisiId !== lastFetchedDivisiId) {
+    lastFetchedDivisiId = newDivisiId;
+    fetchAtasanByDivisi(newDivisiId);
+  } else if (!newDivisiId) {
+    lastFetchedDivisiId = null;
+    listAtasan.value = [];
+    values.atasan_id = null;
   }
 });
 

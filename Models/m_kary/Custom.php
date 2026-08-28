@@ -78,6 +78,21 @@ class m_kary extends \App\Models\BasicModels\m_kary
         $kode = @$this->helper->generateNomor("KODE KARYAWAN");
         $nip = @$this->helper->generateNomor("KODE NIP KARYAWAN");
         @$arrayData['kode'] = null;
+
+        if (empty($arrayData['atasan_id']) && !empty($arrayData['m_divisi_id'])) {
+            try {
+                $divisiId = $arrayData['m_divisi_id'];
+                $atasan = \DB::table('m_kary')
+                    ->where('m_divisi_id', $divisiId)
+                    ->where('is_active', true)
+                    ->orderBy('id', 'asc')
+                    ->first();
+                if ($atasan) {
+                    $arrayData['atasan_id'] = $atasan->id;
+                }
+            } catch (\Throwable $e) {}
+        }
+
         $newArrayData = array_merge($arrayData, [
           "nip" => $arrayData["nip"] ?? '0' . $nip,
           "kode" => $kode,
@@ -104,6 +119,24 @@ class m_kary extends \App\Models\BasicModels\m_kary
     public function updateBefore($model, $arrayData, $metaData, $id = null)
     {
         $arrayData['is_sync'] = false;
+
+        if (empty($arrayData['atasan_id']) && !empty($arrayData['m_divisi_id'])) {
+            try {
+                $divisiId = $arrayData['m_divisi_id'];
+                $karyId = $id ?? $arrayData['id'] ?? null;
+                $atasan = \DB::table('m_kary')
+                    ->where('m_divisi_id', $divisiId)
+                    ->where('is_active', true)
+                    ->when($karyId, function($q) use ($karyId) {
+                        $q->where('id', '!=', $karyId);
+                    })
+                    ->orderBy('id', 'asc')
+                    ->first();
+                if ($atasan) {
+                    $arrayData['atasan_id'] = $atasan->id;
+                }
+            } catch (\Throwable $e) {}
+        }
 
         return [
             "model" => $model,
@@ -206,7 +239,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                         if (empty($jab['m_company_id']) && !empty($jab['m_subcomp_id'])) {
                             try {
                                 $subcomp = \DB::table('m_subcomp')->where('id', $jab['m_subcomp_id'])->first();
-                                $jab['m_company_id'] = $subcomp?->m_company_id ?? $subcomp?->company_id ?? null;
+                                $jab['m_company_id'] = $subcomp ? ($subcomp->m_company_id ?? $subcomp->company_id ?? null) : null;
                             } catch (\Throwable $e) {}
                         }
                     }
