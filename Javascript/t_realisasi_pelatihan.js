@@ -669,7 +669,7 @@ const landing = reactive({
         }).then(async (result) => {
           if (result.isConfirmed) {
             try {
-              const dataURL = `${store.server.url_backend}/operation${endpointApi}/${row.id}`
+              const dataURL = `${store.server.url_backend}/operation/t_realisasi_pelatihan/${row.id}`
               isRequesting.value = true
               const res = await fetch(dataURL, {
                 method: 'DELETE',
@@ -740,7 +740,7 @@ const landing = reactive({
         try {
           isRequesting.value = true
 
-          const dataURL = `${store.server.url_backend}/operation${endpointApi}/posted`
+          const dataURL = `${store.server.url_backend}/operation/t_realisasi_pelatihan/posted`
           const res = await fetch(dataURL, {
             method: 'POST',
             headers: {
@@ -810,7 +810,7 @@ const landing = reactive({
         }).then(async (res) => {
           if (res.isConfirmed) {
             try {
-              const dataURL = `${store.server.url_backend}/operation${endpointApi}/approveHC`
+              const dataURL = `${store.server.url_backend}/operation/t_realisasi_pelatihan/approveHC`
               isRequesting.value = true
               const res = await fetch(dataURL, {
                 method: 'POST',

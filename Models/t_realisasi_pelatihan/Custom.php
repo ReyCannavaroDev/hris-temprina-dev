@@ -256,7 +256,9 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
                     $data->update([
                         "status" => $req->type
                     ]);
-                   
+                    if ($req->type == 'APPROVED') {
+                        $this->createEvaluasiPeserta($data);
+                    }
                 } else {
                     $data->update([
                         "status" => "IN APPROVAL",
@@ -396,6 +398,7 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
                 'status' => 'APPROVED'
             ]);
 
+            $this->createEvaluasiPeserta($data);
             $log = $this->logHc($data->id);
 
             \DB::commit();
@@ -464,14 +467,31 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
 
     public function scopeefektifitas($model)
     {
-        $m_kary_id = default_users::find(auth()->user()->id)?->m_kary_id;
+        $userId = auth()->user()?->id ?? auth()->id();
+        $m_kary_id = default_users::find($userId)?->m_kary_id;
         if (!$m_kary_id) {
             return $model->whereRaw('1 = 0');
         }
 
-        return $model->whereHas('t_realisasi_pelatihan_d_kary', function($q) use ($m_kary_id){
-            $q->join('m_kary', 'm_kary.id', '=', 't_realisasi_pelatihan_d_kary.m_kary_id')
-                ->where('m_kary.atasan_id', $m_kary_id);
+        $subordinateIds = \DB::select("
+            WITH RECURSIVE subordinates AS (
+                SELECT id FROM m_kary WHERE atasan_id = ?
+                UNION
+                SELECT k.id FROM m_kary k
+                INNER JOIN subordinates s ON k.atasan_id = s.id
+            )
+            SELECT id FROM subordinates
+        ", [$m_kary_id]);
+
+        $ids = array_column($subordinateIds, 'id');
+        if (empty($ids)) {
+            $ids = [-1];
+        }
+
+        return $model->whereIn('t_realisasi_pelatihan.id', function($query) use ($ids) {
+            $query->select('d.t_realisasi_pelatihan_id')
+                ->from('t_realisasi_pelatihan_d_kary as d')
+                ->whereIn('d.m_kary_id', $ids);
         });
     }
 }
