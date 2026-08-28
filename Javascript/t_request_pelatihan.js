@@ -1,6 +1,11 @@
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { ref, readonly, reactive, inject, onMounted, onBeforeMount, watchEffect, onActivated, computed } from 'vue'
 
+if (typeof window !== 'undefined' && window.location.pathname.startsWith('/t_request_pelatihan')) {
+  const newPath = window.location.pathname.replace('/t_request_pelatihan', '/t_req_pelatihan') + window.location.search + window.location.hash
+  window.location.replace(newPath)
+}
+
 const router = useRouter()
 const route = useRoute()
 const store = inject('store')

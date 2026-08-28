@@ -19,6 +19,17 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         if (app()->request->isMethod('GET')) {
             $this->details = [];
         }
+
+        try {
+            \DB::table('generate_approval')
+                ->where('trx_table', 't_request_pelatihan')
+                ->where('form_name', '!=', 't_req_pelatihan')
+                ->update(['form_name' => 't_req_pelatihan']);
+            \DB::table('generate_approval_log')
+                ->where('trx_table', 't_request_pelatihan')
+                ->where('form_name', '!=', 't_req_pelatihan')
+                ->update(['form_name' => 't_req_pelatihan']);
+        } catch (\Throwable $e) {}
     }
 
     public function setAttribute($key, $value)
