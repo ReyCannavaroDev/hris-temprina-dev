@@ -5,11 +5,11 @@
   
   <!-- TAB HEADER LANDING -->
   <div class="flex items-center justify-between border-b border-gray-200 px-4 text-sm">
-    <div class="flex items-center">
+    <div class="flex items-center gap-x-2">
       <!-- Tab 0: Belum Diisi -->
       <button 
-        class="flex items-center justify-center border-b-2 p-3 duration-300 hover:text-yellow-500 cursor-pointer"
-        :class="{'border-yellow-500 text-yellow-500 font-bold': activeTabLanding === 0, 'border-transparent text-gray-500': activeTabLanding !== 0}"
+        class="flex items-center justify-center border-b-2 p-3 duration-300 hover:text-[#428BCA] cursor-pointer font-medium"
+        :class="{'border-[#428BCA] text-[#428BCA] !font-bold': activeTabLanding === 0, 'border-transparent text-gray-500': activeTabLanding !== 0}"
         @click="switchLandingTab(0)">
         <span>Belum Diisi</span>
         <span 
@@ -21,18 +21,18 @@
 
       <!-- Tab 1: Sudah Diisi -->
       <button 
-        class="flex items-center justify-center border-b-2 p-3 duration-300 hover:text-yellow-500 cursor-pointer"
-        :class="{'border-yellow-500 text-yellow-500 font-bold': activeTabLanding === 1, 'border-transparent text-gray-500': activeTabLanding !== 1}"
+        class="flex items-center justify-center border-b-2 p-3 duration-300 hover:text-[#428BCA] cursor-pointer font-medium"
+        :class="{'border-[#428BCA] text-[#428BCA] !font-bold': activeTabLanding === 1, 'border-transparent text-gray-500': activeTabLanding !== 1}"
         @click="switchLandingTab(1)">
         <span>Sudah Diisi</span>
       </button>
     </div>
 
-    <!-- Right Actions -->
-    <div v-show="data.can_create">
+    <!-- Right Actions: Hanya untuk HC jika diperlukan -->
+    <div v-if="data.can_create && (store.user.data?.is_hc === true || store.user.data?.is_hc === 1)">
       <RouterLink :to="$route.path + '/create?' + Date.now()" 
         class="border border-[#428BCA] font-semibold text-[#428BCA] bg-white hover:bg-[#428BCA] hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2 text-sm">
-        Tambah Baru
+        Tambah Baru (HC)
       </RouterLink>
     </div>
   </div>
