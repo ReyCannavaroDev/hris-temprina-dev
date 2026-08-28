@@ -165,6 +165,15 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         ];
     }
 
+    public function deleteBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $app = \DB::table('generate_approval')->where('trx_table', $this->getTable())->where('trx_id', $id)->first();
+        if ($app) {
+            \DB::table('generate_approval_d')->where('generate_approval_id', $app->id)->delete();
+            \DB::table('generate_approval')->where('id', $app->id)->delete();
+        }
+    }
+
     public function custom_send_approval()
     {
         $target_id = req("target_id");
@@ -178,6 +187,20 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             );
         }
 
+        if ($user_target) {
+            try {
+                $fcm_tokens = \App\Models\BasicModels\default_users_fcm::where('default_users_id', $user_target)->pluck('token_fcm');
+                if (count($fcm_tokens) > 0) {
+                    $firebase = app(\App\Services\FirebaseMessagingService::class);
+                    foreach ($fcm_tokens as $token) {
+                        $firebase->sendToDevice($token, "Approval Pengajuan Pelatihan", "Ada pengajuan pelatihan yang butuh approval Anda.", ["title" => "Approval Pengajuan Pelatihan", "form_name" => "t_req_pelatihan", "trx_id" => (string) req("id")]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                \Log::warning("Gagal mengirim notifikasi FCM Pengajuan Pelatihan: " . $e->getMessage());
+            }
+        }
+
         if (app()->request->header("Source") != "mobile") {
             $data = $this->find(req("id"));
             if ($data) {
@@ -186,9 +209,22 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
                 ]);
             }
         }
+        
+        if ($app && isset($app->id)) {
+            $this->approval->progress(
+                $app->id,
+                "IN APPROVAL",
+                req('catatan') ?? '',
+                false,
+                false,
+                true, // send email
+                true, // is send wa
+                false
+            );
+        }
 
         return $this->helper->customResponse(
-            "Permintaan approval berhasil dibuat"
+            "Permintaan approval berhasil dibuat beserta notifikasi"
         );
     }
 
@@ -201,19 +237,23 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             "trx_id" => $trx->id,
             "trx_table" => $this->getTable(),
             "trx_name" => "Pengajuan Pelatihan",
-            "form_name" => "t_request_pelatihan",
+            "form_name" => "t_req_pelatihan",
             "trx_nomor" => $trx->kode,
             "trx_date" => Date("Y-m-d"),
             "trx_creator_id" => $trx->creator_id,
             "target_id" => $target_id,
         ];
 
-        $app = $this->helper->approvalCreateTicket($conf);
-        if ($app) {
-            return true;
-        } else {
-            return false;
+        $cek = \DB::table('generate_approval')->where('trx_table', $conf['trx_table'])->where('trx_id', $conf['trx_id'])->first();
+        if ($cek) {
+            return $cek;
         }
+
+        $app_success = $this->helper->approvalCreateTicket($conf);
+        if ($app_success) {
+            return \DB::table('generate_approval')->where('trx_table', $conf['trx_table'])->where('trx_id', $conf['trx_id'])->first();
+        }
+        return false;
     }
 
     public function custom_progress($req)
@@ -287,8 +327,18 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
 
     public function custom_app_detail($req)
     {
-        $id = $req->id ?? 1;
-        $data = $this->approval->detail($id);
+        $id = req("id") ?? 1;
+        try {
+            $data = $this->approval->detail($id);
+            if (empty($data->trx)) {
+                throw new \Exception("Transaksi tidak ditemukan");
+            }
+        } catch (\Exception $e) {
+            // Self-healing: Hapus notifikasi jika transaksi aslinya sudah terhapus
+            \DB::table('generate_approval_d')->where('generate_approval_id', $id)->delete();
+            \DB::table('generate_approval')->where('id', $id)->delete();
+            return $this->helper->customResponse("Data transaksi sudah dihapus oleh pembuatnya. Notifikasi usang ini telah dibersihkan otomatis. Silakan refresh (F5).", 400, null);
+        }
         return $this->helper->customResponse("OK", 200, $data);
     }
 

@@ -71,91 +71,15 @@ onBeforeMount(async () => {
           },
         })
         const resultJson = await apiApp.json()
-        console.log('test', resultJson.data)
-        const apiTrxParams = new URLSearchParams({ join: true, transform: true })
-        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${resultJson.data.approval.trx_id}?${apiTrxParams}`, {
-          headers: {
-            'Content-Type': 'Application/json',
-            Authorization: `${store.user.token_type} ${store.user.token}`
-          },
-        })
-        if (!apiTrx.ok || !apiApp.ok) throw new Error("Failed when trying to read data")
-        const resultTrxJson = await apiTrx.json()
-        values.interval = resultJson?.data.approval
-        values.approval = resultJson?.data.approval
-        values.trx = resultJson?.data.trx
-        values.datalog = resultJson?.data.approval_log
-        initialValues = resultTrxJson.data
-        detailArr.value = await Promise.all(
-          initialValues.t_request_pelatihan_d_kary.map(async (dt) => {
-            let cabang_kary = ''
-            let divisi_kary = ''
-            let posisi_kary = ''
-            const branchId = dt['m_kary.m_branch_id']
-            const divisiId = dt['m_kary.m_divisi_id']
-            const posisiId = dt['m_kary.m_posisi_id']
-
-            if (branchId) {
-              try {
-                const resBranch = await fetch(`${store.server.url_backend}/operation/m_branch/${branchId}`, {
-                  headers: {
-                    Authorization: `${store.user.token_type} ${store.user.token}`
-                  }
-                })
-                if (resBranch.ok) {
-                  const branchJson = await resBranch.json()
-                  cabang_kary = branchJson.data?.name || ''
-                }
-              } catch (err) {
-                console.warn('Gagal ambil nama branch:', err)
-              }
-            }
-
-            if (divisiId) {
-              try {
-                const resDivisi = await fetch(`${store.server.url_backend}/operation/m_divisi/${divisiId}`, {
-                  headers: {
-                    Authorization: `${store.user.token_type} ${store.user.token}`
-                  }
-                })
-                if (resDivisi.ok) {
-                  const divisiJson = await resDivisi.json()
-                  divisi_kary = divisiJson.data?.name || ''
-                }
-              } catch (err) {
-                console.warn('Gagal ambil nama divisi:', err)
-              }
-            }
-
-            if (posisiId) {
-              try {
-                const resDivisi = await fetch(`${store.server.url_backend}/operation/m_posisi/${posisiId}`, {
-                  headers: {
-                    Authorization: `${store.user.token_type} ${store.user.token}`
-                  }
-                })
-                if (resDivisi.ok) {
-                  const posisiJson = await resDivisi.json()
-                  posisi_kary = posisiJson.data?.name || ''
-                }
-              } catch (err) {
-                console.warn('Gagal ambil nama divisi:', err)
-              }
-            }
-
-            return {
-              ...dt,
-              nama_kary: dt['m_kary.nama_lengkap'] || dt['nama_lengkap'],
-              cabang_kary,
-              divisi_kary,
-              posisi_kary
-            }
-          })
-        )
-
-        // logic finish & Approved data
-        isApproved.value = resultTrxJson?.data?.cuti_status == 'APPROVED' ? true : false
-        isFinish.value = resultJson?.data?.approval?.tahap_saat_ini == resultJson?.data?.approval?.tahap_total ? true : false
+        if (!apiApp.ok) {
+            throw new Error(resultJson.message || "Failed when trying to read approval data");
+        }
+        
+        // Redirect immediately to the Verifikasi endpoint using the real trx_id
+        const trx_id = resultJson.data.approval.trx_id;
+        const tsId = `ts=` + (Date.parse(new Date()));
+        window.location.replace(`/t_req_pelatihan/${trx_id}?action=Verifikasi&${tsId}`);
+        return;
       } else {
         const editedId = route.params.id
         const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
@@ -465,7 +389,7 @@ async function actionProgress(type) {
     note: type === 'APPROVED' ? 'Disetujui' : text
   }
   try {
-    const dataURL = `${store.server.url_backend}/operation${endpointApi}/progress`
+    const dataURL = `${store.server.url_backend}/operation${endpointApi}/custom/custom_progress`
     isRequesting.value = true
     const res = await fetch(dataURL, {
       method: 'POST',
@@ -480,8 +404,7 @@ async function actionProgress(type) {
       const responseJson = await res.json().catch(() => ({}));
       throw (responseJson.message || responseJson.error || "Failed when trying to post data")
     }
-
-    router.replace('/' + modulPath + '?reload=' + (Date.parse(new Date())))
+    router.replace('/t_req_pelatihan?reload=' + (Date.parse(new Date())))
   } catch (err) {
     swal.fire({ icon: 'error', text: err })
   }

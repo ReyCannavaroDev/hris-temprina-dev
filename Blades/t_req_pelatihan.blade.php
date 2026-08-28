@@ -291,7 +291,7 @@
 
 
     <div>
-      <FieldSelect class="w-full mt-3" v-show="route.query.action?.toLowerCase() === 'verifikasi'"
+      <FieldSelect class="w-full mt-3" v-show="route.query.action?.toLowerCase() === 'verifikasi' || route.query.is_approval"
         :value="values.target_id" @input="v=>values.target_id=v" :errorText="formErrors.target_id?'failed':''"
         :hints="formErrors.target_id" valueField="id" displayField="nama_lengkap" :api="{
               url: `${store.server.url_backend}/operation/m_kary`,
@@ -463,7 +463,7 @@
       </table>
     </div>
 
-    <div class="flex flex-row justify-end space-x-[20px] mt-[5em]" v-show="route.query.action?.toLowerCase() === 'verifikasi'">
+    <div class="flex flex-row justify-end space-x-[20px] mt-[5em]" v-show="route.query.action?.toLowerCase() === 'verifikasi' || route.query.is_approval">
       <button @click="onBack" class="bg-gray-500 hover:bg-gray-600 text-white px-[36.5px] py-[12px] rounded-[6px] ">
             Kembali
       </button>

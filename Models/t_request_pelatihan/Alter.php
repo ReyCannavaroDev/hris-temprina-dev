@@ -20,5 +20,8 @@ class trequestpelatihan extends Migration
             // $table->bigInteger('m_branch_id')->comment('{"src":"m_branch.id"}')->nullable();
             // $table->bigInteger('m_divisi_id')->comment('{"src":"m_divisi.id"}')->nullable();
         });
+
+        // Ubah form_name notifikasi lama agar mengarah ke modul baru (t_req_pelatihan)
+        \DB::statement("UPDATE generate_approval SET form_name = 't_req_pelatihan' WHERE form_name = 't_request_pelatihan'");
     }
 }
