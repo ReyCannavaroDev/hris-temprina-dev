@@ -297,51 +297,27 @@
                               }" :check="false" />
               </div>
 
-              <!-- ATASAN (Auto-detect & Hierarchy Display) -->
-              <div v-show="!isProfile" class="flex flex-col">
+              <!-- ATASAN (Auto-detect Filtered Hierarchy) -->
+              <div v-show="!isProfile">
                 <div class="flex items-center justify-between">
                   <label>Atasan Langsung<label class="text-red-500 space-x-0 pl-0"></label></label>
                   <span v-if="loadingAtasan" class="text-xs text-blue-600 italic">Mencari atasan...</span>
-                  <span v-else-if="listAtasan.length > 0" class="text-xs text-green-700 font-semibold bg-green-50 px-2 py-0.5 rounded border border-green-200">
-                    {{ listAtasan.length }} Atasan Terdeteksi
-                  </span>
                 </div>
 
                 <FieldSelect 
-                  :bind="{ disabled: !actionText || listAtasan.length <= 1, clearable: true }" 
-                  class="w-full mt-1.5"
+                  :bind="{ disabled: !actionText || listAtasan.length <= 1, clearable: false }" 
+                  class="w-full mt-3"
                   :value="values.atasan_id" 
                   @input="v => values.atasan_id = v" 
                   :errorText="formErrors.atasan_id ? 'failed' : ''" 
                   :hints="formErrors.atasan_id"
                   label="" 
-                  :placeholder="listAtasan.length === 0 ? 'Pilih Divisi di Jabatan' : 'Pilih Atasan Langsung'" 
+                  :placeholder="listAtasan.length === 0 ? 'Pilih Divisi & Jabatan' : 'Pilih Atasan Langsung'" 
                   valueField="id" 
-                  displayField="nama_lengkap" 
+                  displayField="display_text" 
                   :options="listAtasan" 
                   :check="false" 
                 />
-
-                <!-- List Badges/Chips Menampilkan Semua Atasan yang Terdeteksi -->
-                <div v-if="listAtasan.length > 0" class="mt-2 flex flex-wrap gap-1.5">
-                  <div 
-                    v-for="atasan in listAtasan" 
-                    :key="atasan.id"
-                    @click="actionText ? values.atasan_id = atasan.id : null"
-                    :class="values.atasan_id === atasan.id 
-                      ? 'bg-blue-50 border-blue-400 text-blue-800 shadow-sm ring-1 ring-blue-300' 
-                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'"
-                    class="cursor-pointer transition-all duration-200 border rounded px-2 py-1 text-xs flex items-center gap-1.5"
-                    :title="`Klik untuk memilih ${atasan.nama_lengkap} sebagai atasan langsung`"
-                  >
-                    <Icon fa="user" class="text-[10px] text-gray-500" />
-                    <span class="font-semibold">{{ atasan.nama_lengkap }}</span>
-                    <span v-if="atasan.posisi_name" class="text-[10px] bg-white text-gray-600 px-1 py-0.5 rounded border border-gray-200">
-                      {{ atasan.posisi_name }}
-                    </span>
-                    <Icon v-if="values.atasan_id === atasan.id" fa="check" class="text-blue-600 text-[10px]" />
-                  </div>
-                </div>
               </div>
 
               <div>

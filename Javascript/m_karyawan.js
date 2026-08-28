@@ -300,7 +300,7 @@ onBeforeMount(async () => {
           values.atasan_id = initialValues.atasan_id
         }
         if (initialValues.m_divisi_id) {
-          fetchAtasanByDivisi(initialValues.m_divisi_id, initialValues.id)
+          fetchAtasanByDivisi(initialValues.m_divisi_id, initialValues.id, initialValues.m_posisi_id)
         }
 
       } catch (err) {
@@ -547,6 +547,26 @@ function onDetailAdd_Lokasi(rows) {
 }
 
 const posisiLevelMap = ref({})
+const posisiSequenceMap = ref({})
+
+const getPosisiRank = (posisiId, posisiName = '') => {
+  if (posisiId && posisiSequenceMap.value[posisiId] !== undefined) {
+    return posisiSequenceMap.value[posisiId];
+  }
+
+  const name = String(posisiName || posisiLevelMap.value[posisiId] || '').toLowerCase();
+  
+  if (/direktur|director|president/i.test(name)) return 1;
+  if (/general manager|gm\b|head of/i.test(name)) return 2;
+  if (/kadiv|kepala divisi|senior manager/i.test(name)) return 3;
+  if (/manager|kabag|kepala bagian/i.test(name)) return 4;
+  if (/supervisor|spv|asst\.? manager|assistant manager|section head|koordinator/i.test(name)) return 5;
+  if (/team lead|leader|senior/i.test(name)) return 6;
+  if (/staff|specialist|officer|analyst|programmer|developer|designer|admin/i.test(name)) return 7;
+  if (/operator|pelaksana|helper|teknisi|magang|intern|pkl|driver|security/i.test(name)) return 8;
+
+  return 7;
+};
 
 const loadPosisiLevel = async () => {
   try {
@@ -560,12 +580,16 @@ const loadPosisiLevel = async () => {
       const json = await res.json()
       const list = json.data || []
       const map = {}
+      const seqMap = {}
       list.forEach((p) => {
         if (p.id) {
-          map[p.id] = p.level_name || p['m_level_posisi.level_name'] || p['lp.level_name'] || '-'
+          map[p.id] = p.level_name || p['m_level_posisi.level_name'] || p['lp.level_name'] || p.name || '-'
+          const seq = p.level_sequence ?? p.sequence;
+          seqMap[p.id] = (seq !== null && seq !== undefined) ? Number(seq) : getPosisiRank(null, p.name || '');
         }
       })
       posisiLevelMap.value = map
+      posisiSequenceMap.value = seqMap
     }
   } catch (e) {
     console.error(e)
@@ -852,12 +876,11 @@ watchEffect(() => {
   }
 });
 
-// Auto-detect Atasan berdasarkan Divisi
+// Auto-detect Atasan berdasarkan Divisi & Posisi Hierarki
 const listAtasan = ref([]);
 const loadingAtasan = ref(false);
-let lastFetchedDivisiId = null;
 
-const fetchAtasanByDivisi = async (divisiId, currentKaryId = null) => {
+const fetchAtasanByDivisi = async (divisiId, currentKaryId = null, currentPosisiId = null) => {
   if (!divisiId) {
     listAtasan.value = [];
     return;
@@ -888,11 +911,44 @@ const fetchAtasanByDivisi = async (divisiId, currentKaryId = null) => {
         data = data.filter(k => String(k.id) !== String(currentId));
       }
 
-      listAtasan.value = data.map(item => ({
-        ...item,
-        nama_lengkap: item.nama_lengkap ?? `${item.nama_depan ?? ''} ${item.nama_belakang ?? ''}`.trim(),
-        posisi_name: item['m_posisi.name'] ?? item.posisi_name ?? ''
-      }));
+      const posisiTarget = currentPosisiId ?? values.m_posisi_id;
+      const myRank = getPosisiRank(posisiTarget);
+
+      // Filter: Hanya ambil karyawan dengan ranking jabatan LEBIH TINGGI (rank number lebih kecil)
+      // Mencegah sesama Staff/Pelaksana muncul sebagai atasan
+      const filtered = data.filter(item => {
+        const kPosisiId = item.m_posisi_id;
+        const kPosisiName = item['m_posisi.name'] ?? item.posisi_name ?? '';
+        const kRank = getPosisiRank(kPosisiId, kPosisiName);
+
+        // Jika karyawan saat ini adalah level Staff/Pelaksana/Non-Struktural (rank >= 6):
+        // Atasan HARUS level struktural (rank <= 5: Supervisor, Manager, Kadiv, GM, Direktur)
+        if (myRank >= 6) {
+          return kRank <= 5;
+        }
+
+        // Jika karyawan saat ini sudah level struktural (misal Supervisor rank 5):
+        // Atasan HARUS level yang lebih tinggi lagi (rank < 5: Manager ke atas)
+        return kRank < myRank && kRank <= 4;
+      });
+
+      // Urutkan dari hierarki tertinggi ke terendah (Direktur -> GM -> Kadiv -> Manager -> SPV)
+      filtered.sort((a, b) => {
+        const rankA = getPosisiRank(a.m_posisi_id, a['m_posisi.name']);
+        const rankB = getPosisiRank(b.m_posisi_id, b['m_posisi.name']);
+        return rankA - rankB;
+      });
+
+      listAtasan.value = filtered.map(item => {
+        const nama = item.nama_lengkap ?? `${item.nama_depan ?? ''} ${item.nama_belakang ?? ''}`.trim();
+        const posisi = item['m_posisi.name'] ?? item.posisi_name ?? '';
+        return {
+          ...item,
+          nama_lengkap: nama,
+          posisi_name: posisi,
+          display_text: posisi ? `${nama} (${posisi})` : nama
+        };
+      });
 
       if (listAtasan.value.length > 0) {
         const exist = listAtasan.value.some(k => k.id === values.atasan_id);
@@ -910,12 +966,10 @@ const fetchAtasanByDivisi = async (divisiId, currentKaryId = null) => {
   }
 };
 
-watch(() => values.m_divisi_id, (newDivisiId) => {
-  if (newDivisiId && newDivisiId !== lastFetchedDivisiId) {
-    lastFetchedDivisiId = newDivisiId;
-    fetchAtasanByDivisi(newDivisiId);
-  } else if (!newDivisiId) {
-    lastFetchedDivisiId = null;
+watch([() => values.m_divisi_id, () => values.m_posisi_id], ([newDivisiId, newPosisiId]) => {
+  if (newDivisiId) {
+    fetchAtasanByDivisi(newDivisiId, route.params.id, newPosisiId);
+  } else {
     listAtasan.value = [];
     values.atasan_id = null;
   }
