@@ -130,26 +130,6 @@
   }" />
 
     </div>
-    <!-- DIVISI  -->
-    <!-- <div>
-      <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_id }" class="w-full !mt-3"
-        :value="values.m_divisi_id" @input="v => {
-    values.m_divisi_id = v || null;
-  }" @update:valueFull="obj => {
-    values.m_divisi_id = obj ? obj.id : null;
-  }" :errorText="formErrors.m_divisi_id ? 'failed' : ''" :hints="formErrors.m_divisi_id" :check="false" label="Divisi "
-        placeholder="Pilih Divisi " valueField="id" displayField="name" :api="{
-    url: `${store.server.url_backend}/operation/m_divisi`,
-    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` },
-    params: {
-      simplest: true,
-      single: true,
-      where: `this.is_active='true' AND this.m_branch_id='${values.m_branch_id}'`,
-      transform: false
-    }
-  }" />
-
-    </div> -->
     <div>
       <FieldSelect
         class="w-full !mt-3"
@@ -173,29 +153,29 @@
       />
     </div>
 
-     <div>
-       <FieldSelect
-         :bind="{ disabled: !actionText, clearable: true }"
-         class="w-full mt-3"
-         :value="values.m_divisi_id"
-         @input="v => values.m_divisi_id = v ? parseInt(v) : null"
-         :errorText="formErrors.m_divisi_id ? 'failed' : ''"
-         label="Divisi"
-         placeholder="Pilih Divisi"
-         :hints="formErrors.m_divisi_id"
-         :api="{
-           url: `${store.server.url_backend}/operation/m_divisi`,
-           headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` },
-           params: {
-             scopes: 'Name',
-             where: `this.is_active = 'true'`
-           }
-         }"
-         valueField="id"
-         displayField="name_old"
-         :check="false"
-       />
-     </div>
+    <div>
+      <FieldSelect
+        :bind="{ disabled: !actionText || !values.m_branch_id, clearable: true }"
+        class="w-full !mt-3"
+        :value="values.m_divisi_id"
+        @input="v => values.m_divisi_id = v ? parseInt(v) : null"
+        :errorText="formErrors.m_divisi_id ? 'failed' : ''"
+        label="Divisi"
+        placeholder="Pilih Divisi"
+        :hints="formErrors.m_divisi_id"
+        :api="{
+          url: `${store.server.url_backend}/operation/m_divisi`,
+          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}` },
+          params: {
+            scopes: 'Name',
+            where: values.m_branch_id ? `this.is_active = 'true' AND this.m_branch_id = '${values.m_branch_id}'` : `this.is_active = 'true'`
+          }
+        }"
+        valueField="id"
+        displayField="value"
+        :check="false"
+      />
+    </div>
 
     <!-- TYPE NIlai -->
     <div>
