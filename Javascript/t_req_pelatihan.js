@@ -614,9 +614,13 @@ function filterShowData(statusLabel = null, noBtn = null) {
     filters.push(`this.status='${statusLabel?.toUpperCase()}'`)
   }
 
-  landing.api.params.where = filters.length ? filters.join(' AND ') : null
-  apiTable.value.reload()
+  filterWhere.value = filters.length ? filters.join(' AND ') : null
+  setTimeout(() => {
+    if (apiTable.value) apiTable.value.reload()
+  }, 50)
 }
+
+const filterWhere = ref(null)
 
 const data = reactive({
   can_read: false,
@@ -843,7 +847,8 @@ const landing = computed(() => {
       params: {
         join: true,
         transform: true,
-        scopes: 'respo'
+        scopes: 'respo',
+        where: filterWhere.value
       },
       onsuccess(r) {
         r.page = r.current_page
