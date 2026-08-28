@@ -95,8 +95,8 @@
       <Icon fa="arrow-left" class="cursor-pointer mr-2 font-bold hover:text-yellow-500" title="Kembali"
         @click="onBack" />
       <div>
-        <h1 class="text-20px font-bold">Form Evaluasi Karyawan</h1>
-        <p class="text-gray-100">Master Evaluasi Karyawan</p>
+        <h1 class="text-20px font-bold">Form Evaluasi Pelatihan</h1>
+        <p class="text-gray-100">Master Evaluasi Pelatihan</p>
       </div>
     </div>
   </div>

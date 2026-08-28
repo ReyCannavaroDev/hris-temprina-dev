@@ -5,7 +5,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pelatihan
-{    
+{
     private $helper;
     private $approval;
     public function __construct()
@@ -26,17 +26,17 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
     }
 
     public $details = ['t_efektifitas_pelatihan_detail'];
-    
-    public $fileColumns    = [ /*file_column*/ ];
+
+    public $fileColumns = [ /*file_column*/];
 
     //public $createAdditionalData = ["creator_id"=>"auth:id"];
     //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 
-    public function transformRowData( array $row )
+    public function transformRowData(array $row)
     {
         $data = [];
 
-        if(!empty($row['m_prog_pelatihan_id'])){
+        if (!empty($row['m_prog_pelatihan_id'])) {
             $program = m_prog_pelatihan::find($row['m_prog_pelatihan_id']);
             $data['m_prog_pelatihan'] = [
                 'id' => $program?->id,
@@ -46,7 +46,7 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
             $data['m_prog_pelatihan.tema_pelatihan'] = $program?->tema_pelatihan;
         }
 
-        if(!empty($row['trainer_id'])){
+        if (!empty($row['trainer_id'])) {
             $trainer = m_trainer::find($row['trainer_id']);
             $data['trainer'] = [
                 'id' => $trainer?->id,
@@ -55,7 +55,7 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
             $data['trainer.nama_trainer'] = $trainer?->nama_trainer;
         }
 
-        if(!empty($row['creator_id'])){
+        if (!empty($row['creator_id'])) {
             $user = default_users::find($row['creator_id']);
             $kary = $user?->m_kary_id ? m_kary::find($user->m_kary_id) : null;
             $data['m_kary'] = [
@@ -78,39 +78,59 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
 
         $data['t_efektifitas_pelatihan_detail'] = json_decode(json_encode($detail), true);
 
-        return array_merge( $row, $data );
+        return array_merge($row, $data);
     }
 
-    public function createBefore( $model, $arrayData, $metaData, $id=null )
+    public function createBefore($model, $arrayData, $metaData, $id = null)
     {
         $this->prepareDetailRequest();
 
-        $newArrayData  = array_merge( $arrayData,[
+        $newArrayData = array_merge($arrayData, [
             "kode" => $this->helper->generateNomor("KODE EFEKTIFITAS PELATIHAN"),
             "creator_id" => auth()->user()->id
-        ] );
+        ]);
         return [
-            "model"  => $model,
-            "data"   => $newArrayData,
+            "model" => $model,
+            "data" => $newArrayData,
         ];
     }
 
-    public function updateBefore($model, $arrayData, $metaData, $id=null)
+    public function updateBefore($model, $arrayData, $metaData, $id = null)
     {
         $this->prepareDetailRequest($id);
 
         return [
             "model" => $model,
-            "data"  => $arrayData,
+            "data" => $arrayData,
         ];
     }
 
-    private function prepareDetailRequest($id=null)
+    private function prepareDetailRequest($id = null)
     {
         $req = app()->request;
         $details = $req->t_efektifitas_pelatihan_detail ?? [];
         $realisasiId = $req->t_realisasi_pelatihan_id ?? null;
         $atasanId = default_users::find(auth()->user()->id)?->m_kary_id;
+
+        if (!$id) {
+            $isExist = \DB::table('t_efektifitas_pelatihan')
+                ->where('t_realisasi_pelatihan_id', $realisasiId)
+                ->where('creator_id', auth()->user()->id)
+                ->exists();
+
+            if ($isExist) {
+                response()->json([
+                    'timestamp' => \Carbon\Carbon::now()->format('d-m-Y H:i:s'),
+                    'code' => 400,
+                    'message' => 'Anda sudah mengisi data efektifitas untuk pelatihan ini, setiap atasan hanya bisa mengisi 1 kali untuk 1 pelatihan.',
+                    'data' => [
+                        'errors' => ['Anda sudah mengisi data efektifitas untuk pelatihan ini, setiap atasan hanya bisa mengisi 1 kali untuk 1 pelatihan.'],
+                        'errorText' => 'Anda sudah mengisi data efektifitas untuk pelatihan ini, setiap atasan hanya bisa mengisi 1 kali untuk 1 pelatihan.'
+                    ]
+                ], 400)->send();
+                exit;
+            }
+        }
 
         if (empty($details)) {
             if ($id) {
@@ -167,11 +187,11 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
         $req->merge(['t_efektifitas_pelatihan_detail' => $cleanDetails]);
     }
 
-    public function t_efektifitas_pelatihan_detail() :HasMany
+    public function t_efektifitas_pelatihan_detail(): HasMany
     {
         return $this->hasMany('App\Models\BasicModels\t_efektifitas_pelatihan_detail', 't_efektifitas_pelatihan_id', 'id');
     }
-    
+
 
     public function custom_send_approval()
     {
@@ -243,7 +263,7 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
                     $data->update([
                         "status" => $req->type
                     ]);
-                   
+
                 } else {
                     $data->update([
                         "status" => "IN APPROVAL",
@@ -263,14 +283,14 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
     public function custom_posted($req)
     {
         \DB::beginTransaction();
-        try{
+        try {
             $data = $this->find($req->id);
             $data->status = 'POSTED';
             $data->save();
 
-         \DB::commit();
-         return $this->helper->customResponse("Data berhasil diposting");
-        }catch (\Exception $e) {
+            \DB::commit();
+            return $this->helper->customResponse("Data berhasil diposting");
+        } catch (\Exception $e) {
             \DB::rollback();
             return $this->helper->responseCatch($e);
         }
@@ -321,7 +341,7 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
             \Log::error("Error Approve HC: " . $e->getMessage());
 
             return $this->helper->customResponse(
-                "Terjadi kesalahan sistem: " . $e->getMessage(), 
+                "Terjadi kesalahan sistem: " . $e->getMessage(),
                 500
             );
         }
@@ -330,25 +350,25 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
     public function logHc($trxId)
     {
         $prevLog = generate_approval_log::where('trx_id', $trxId)->where('action_type', 'HALF APPROVED');
-        if($check = $prevLog->exists()){
+        if ($check = $prevLog->exists()) {
             $prev = $prevLog->first();
             $log_insert = generate_approval_log::create([
-                'nomor'                     => $prev->nomor,
-                'generate_approval_id'      => $prev->id,
-                'generate_approval_det_id'  => null,
-                'trx_id'                    => $prev->trx_id,
-                'trx_table'                 => $prev->trx_table,
-                'trx_name'                  => $prev->trx_name,
-                'trx_nomor'                 => $prev->trx_nomor,
-                'trx_date'                  => $prev->trx_date,
-                'form_name'                 => $prev->form_name,
-                'trx_creator_id'            => $prev->trx_creator_id,
-                'action_type'               => 'APPROVED',
-                'action_user_id'            => auth()->user()->id,
-                'creator_id'                => auth()->user()->id,
-                'action_at'                 => Carbon::now(),
-                'action_note'               => 'APPROVED BY HC'
-            ]); 
+                'nomor' => $prev->nomor,
+                'generate_approval_id' => $prev->id,
+                'generate_approval_det_id' => null,
+                'trx_id' => $prev->trx_id,
+                'trx_table' => $prev->trx_table,
+                'trx_name' => $prev->trx_name,
+                'trx_nomor' => $prev->trx_nomor,
+                'trx_date' => $prev->trx_date,
+                'form_name' => $prev->form_name,
+                'trx_creator_id' => $prev->trx_creator_id,
+                'action_type' => 'APPROVED',
+                'action_user_id' => auth()->user()->id,
+                'creator_id' => auth()->user()->id,
+                'action_at' => Carbon::now(),
+                'action_note' => 'APPROVED BY HC'
+            ]);
         }
     }
 }
