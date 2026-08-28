@@ -201,7 +201,17 @@ class m_kary extends \App\Models\BasicModels\m_kary
                     ->get();
 
                 if ($detJabatan->isNotEmpty()) {
-                    $row['m_kary_det_jabatan'] = json_decode(json_encode($detJabatan), true);
+                    $jabatanList = json_decode(json_encode($detJabatan), true);
+                    foreach ($jabatanList as &$jab) {
+                        if (empty($jab['m_company_id']) && !empty($jab['m_subcomp_id'])) {
+                            try {
+                                $subcomp = \DB::table('m_subcomp')->where('id', $jab['m_subcomp_id'])->first();
+                                $jab['m_company_id'] = $subcomp?->m_company_id ?? $subcomp?->company_id ?? null;
+                            } catch (\Throwable $e) {}
+                        }
+                    }
+                    unset($jab);
+                    $row['m_kary_det_jabatan'] = $jabatanList;
                     $object['m_kary_det_jabatan'] = $row['m_kary_det_jabatan'];
                 }
             } catch (\Throwable $e) {}

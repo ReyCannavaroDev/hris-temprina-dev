@@ -1304,7 +1304,7 @@
                         }" @update:valueFull="obj => {
                             if (obj) {
                               item.m_subcomp_id = obj.id; 
-                              item.m_company_id = obj.m_company_id ?? obj.company_id ?? obj.m_comp_id ?? item.m_comp_id ?? null;
+                              item.m_company_id = obj.m_company_id ?? obj.company_id ?? obj.m_company?.id ?? obj['m_company.id'] ?? null;
                               item.m_branch_id = null; 
                               item.m_divisi_id = null; 
                               item.m_posisi_id = null; 

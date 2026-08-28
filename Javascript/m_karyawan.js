@@ -264,6 +264,7 @@ onBeforeMount(async () => {
           )
           return {
             ...jabatan,
+            m_company_id: jabatan.m_company_id ?? jabatan['m_company.id'] ?? jabatan['m_subcomp.m_company_id'] ?? null,
             level_name: jabatan.level_name ?? posisiLevelMap.value[jabatan.m_posisi_id] ?? jabatan['m_level_posisi.level_name'] ?? jabatan['lp.level_name'] ?? null,
             subDetails:
               subDetails.length > 0
@@ -566,6 +567,7 @@ const loadPosisiLevel = async () => {
 const inDetailArr = ref([]);
 
 watch(inDetailArr, (newVal) => {
+  values.m_company_id = newVal[0]?.m_company_id ?? null
   values.m_subcomp_id = newVal[0]?.m_subcomp_id ?? null
   values.m_branch_id = newVal[0]?.m_branch_id ?? null
   values.m_comp_id = newVal[0]?.m_comp_id ?? null
@@ -728,6 +730,7 @@ const onPosisiSelected = (index, posisi) => {
 watchEffect(() => {
   const primaryItem = inDetailArr.value.find(item => item.is_primary);
   if (primaryItem) {
+    values.m_company_id = primaryItem.m_company_id;
     values.m_posisi_id = primaryItem.m_posisi_id;
     values.m_divisi_id = primaryItem.m_divisi_id;
     values.m_comp_id = primaryItem.m_comp_id;
