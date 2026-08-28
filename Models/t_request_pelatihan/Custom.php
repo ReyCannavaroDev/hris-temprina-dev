@@ -19,17 +19,6 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         if (app()->request->isMethod('GET')) {
             $this->details = [];
         }
-
-        try {
-            \DB::table('generate_approval')
-                ->where('trx_table', 't_request_pelatihan')
-                ->where('form_name', '!=', 't_req_pelatihan')
-                ->update(['form_name' => 't_req_pelatihan']);
-            \DB::table('generate_approval_log')
-                ->where('trx_table', 't_request_pelatihan')
-                ->where('form_name', '!=', 't_req_pelatihan')
-                ->update(['form_name' => 't_req_pelatihan']);
-        } catch (\Throwable $e) {}
     }
 
     public function setAttribute($key, $value)
@@ -288,25 +277,27 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
 
     public function custom_progress($req)
     {
-        // Start a database transaction
-        \DB::beginTransaction();
-
         try {
             $getApp = \DB::table('generate_approval')
-                ->where('trx_table', 't_request_pelatihan')
-                ->where('trx_id', $req->id)
+                ->where('id', $req->id)
+                ->orWhere(function($q) use ($req) {
+                    $q->where('trx_table', 't_request_pelatihan')
+                      ->where('trx_id', $req->id);
+                })
                 ->orderBy('id', 'desc')
                 ->first();
 
-            $app_id = $getApp ? $getApp->id : $req->id;
-
-            // Force assign the current user to bypass Helper's checkUserCanApprove
-            if ($getApp) {
-                \DB::table('generate_approval_d')
-                    ->where('generate_approval_id', $app_id)
-                    ->where('is_done', false)
-                    ->update(['default_users_id' => auth()->user()->id]);
+            if (!$getApp) {
+                return $this->helper->customResponse("Data approval tidak ditemukan", 404);
             }
+
+            $app_id = $getApp->id;
+
+            // Force assign user yang sedang login agar lolos validasi approver
+            \DB::table('generate_approval_d')
+                ->where('generate_approval_id', $app_id)
+                ->where('is_done', false)
+                ->update(['default_users_id' => auth()->user()->id]);
 
             $conf = [
                 "app_id" => $app_id,
@@ -315,25 +306,24 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             ];
 
             $app = $this->helper->approvalProgress($conf, true);
-            if ($app->status) {
-                $data = $this->find($app->trx_id);
-                if ($app->finish) {
-                    $data->update([
-                        "status" => $req->type
-                    ]);
-                   
-                } else {
-                    $data->update([
-                        "status" => "IN APPROVAL",
-                    ]);
+            if ($app && $app->status) {
+                $trx_id = $app->trx_id ?: $getApp->trx_id;
+                $data = $this->find($trx_id);
+                if ($data) {
+                    if ($app->finish) {
+                        $data->update([
+                            "status" => $req->type
+                        ]);
+                    } else {
+                        $data->update([
+                            "status" => "IN APPROVAL",
+                        ]);
+                    }
                 }
             }
 
-            \DB::commit();
-
             return $this->helper->customResponse("Proses approval berhasil");
         } catch (\Exception $e) {
-            \DB::rollback();
             return $this->helper->responseCatch($e);
         }
     }

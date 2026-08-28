@@ -12,17 +12,6 @@ class generate_approval extends \App\Models\BasicModels\generate_approval
         parent::__construct();
         $this->helper = getCore('Helper');
         $this->approval = getCore('Approval');
-
-        try {
-            \DB::table('generate_approval')
-                ->where('trx_table', 't_request_pelatihan')
-                ->where('form_name', '!=', 't_req_pelatihan')
-                ->update(['form_name' => 't_req_pelatihan']);
-            \DB::table('generate_approval_log')
-                ->where('trx_table', 't_request_pelatihan')
-                ->where('form_name', '!=', 't_req_pelatihan')
-                ->update(['form_name' => 't_req_pelatihan']);
-        } catch (\Throwable $e) {}
     }
 
     public function transformRowData(array $row)
