@@ -325,9 +325,30 @@ async function posted() {
 }
 
 async function approval() {
+  const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1 || ['admin', 'developer', 'danvers'].includes(store.user.data?.username?.toLowerCase())
+
+  if (!isUserHC && !values.target_id) {
+    swal.fire({
+      icon: 'warning',
+      text: 'Pilih Target Approval (Atasan) terlebih dahulu!'
+    })
+    return
+  }
+
+  const confirmTitle = isUserHC ? 'Konfirmasi Approval HC' : 'Konfirmasi Approval'
+  const confirmText = isUserHC ? 'Pengajuan oleh akun HC akan langsung disetujui (Approved). Lanjutkan?' : 'Kirim permintaan approval ke atasan?'
+
+  const confirmRes = await swal.fire({
+    title: confirmTitle,
+    text: confirmText,
+    icon: 'question',
+    showCancelButton: true
+  })
+  if (!confirmRes.isConfirmed) return
+
   const payload = {
     id: parseInt(route.params.id),
-    target_id: values.target_id
+    target_id: values.target_id || null
   }
   try {
     const dataURL = `${store.server.url_backend}/operation${endpointApi}/send_approval`
@@ -349,6 +370,11 @@ async function approval() {
         throw ("Failed when trying to post data")
       }
     }
+    const resultJson = await res.json()
+    await swal.fire({
+      icon: 'success',
+      text: resultJson.message || (isUserHC ? 'Pengajuan oleh HC berhasil diajukan dan langsung disetujui' : 'Permintaan approval berhasil dibuat')
+    })
     router.replace('/' + modulPath + '?reload=' + (Date.parse(new Date())))
   } catch (err) {
     isBadForm.value = true

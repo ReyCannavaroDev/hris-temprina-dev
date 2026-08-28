@@ -176,6 +176,9 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
 
     public function custom_send_approval()
     {
+        $user = auth()->user();
+        $is_hc = $user && ($user->is_hc || in_array(strtolower($user->user_type ?? ''), ['admin']) || in_array(strtolower($user->username ?? ''), ['developer', 'danvers']));
+
         $target_id = req("target_id");
         $user_target = null;
         if ($target_id) {
@@ -183,7 +186,10 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             $user_target = $userObj ? $userObj->id : null;
         }
 
-        $app = $this->createAppTicket(req("id"), $user_target);
+        // Jika pengaju adalah HC, target approver otomatis adalah user HC itu sendiri
+        $target_user_final = $is_hc ? ($user ? $user->id : null) : $user_target;
+
+        $app = $this->createAppTicket(req("id"), $target_user_final);
         if (!$app) {
             return $this->helper->customResponse(
                 "Terjadi kesalahan, coba kembali nanti",
@@ -191,6 +197,53 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
             );
         }
 
+        if ($is_hc) {
+            // Auto-Approve langsung untuk pengaju role HC
+            $data = $this->find(req("id"));
+            if ($data) {
+                $data->update([
+                    "status" => "APPROVED",
+                ]);
+            }
+
+            if ($app && isset($app->id)) {
+                \DB::table('generate_approval')->where('id', $app->id)->update([
+                    'status' => 'APPROVED',
+                    'form_name' => 't_req_pelatihan'
+                ]);
+                \DB::table('generate_approval_d')->where('generate_approval_id', $app->id)->update([
+                    'is_done' => true,
+                    'action_type' => 'APPROVED',
+                    'action_at' => Carbon::now(),
+                    'action_note' => 'APPROVED AUTO BY HC',
+                    'action_user_id' => $user->id
+                ]);
+
+                generate_approval_log::create([
+                    'nomor' => $app->nomor ?? ('APP-' . date('ym') . '-' . sprintf('%08d', req("id"))),
+                    'generate_approval_id' => $app->id,
+                    'generate_approval_det_id' => null,
+                    'trx_id' => req("id"),
+                    'trx_table' => $this->getTable(),
+                    'trx_name' => 'Pengajuan Pelatihan',
+                    'trx_nomor' => $data ? $data->kode : '-',
+                    'trx_date' => date('Y-m-d'),
+                    'form_name' => 't_req_pelatihan',
+                    'trx_creator_id' => $data ? $data->creator_id : $user->id,
+                    'action_type' => 'APPROVED',
+                    'action_user_id' => $user->id,
+                    'creator_id' => $user->id,
+                    'action_at' => Carbon::now(),
+                    'action_note' => 'APPROVED AUTO BY HC'
+                ]);
+            }
+
+            return $this->helper->customResponse(
+                "Pengajuan pelatihan oleh HC berhasil diajukan dan langsung disetujui (Approved)"
+            );
+        }
+
+        // Alur untuk user non-HC: kirim push notifikasi ke target atasan
         if ($user_target) {
             try {
                 $fcm_tokens = \App\Models\BasicModels\default_users_fcm::where('default_users_id', $user_target)->pluck('token_fcm');
