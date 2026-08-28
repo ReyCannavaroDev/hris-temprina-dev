@@ -702,33 +702,16 @@ const landing = computed(() => {
         flex: 1,
         cellClass: ['border-r', '!border-gray-200', 'justify-center'],
         cellRenderer: ({ value }) => {
-          let label = value || '-'
-          let colorClass = 'text-gray-600 bg-gray-100 border-gray-300'
-
-          if (value === 'DRAFT') {
-            label = 'PERLU DIISI'
-            colorClass = 'text-amber-700 bg-amber-50 border-amber-300'
-          } else if (value === 'POSTED') {
-            label = 'SELESAI'
-            colorClass = 'text-emerald-700 bg-emerald-50 border-emerald-300'
-          } else if (value === 'IN APPROVAL') {
-            label = 'IN APPROVAL'
-            colorClass = 'text-blue-700 bg-blue-50 border-blue-300'
-          } else if (value === 'HALF APPROVED') {
-            label = 'HALF APPROVED'
-            colorClass = 'text-indigo-700 bg-indigo-50 border-indigo-300'
-          } else if (value === 'APPROVED') {
-            label = 'APPROVED'
-            colorClass = 'text-green-700 bg-green-50 border-green-300'
-          } else if (value === 'REVISED') {
-            label = 'REVISED'
-            colorClass = 'text-yellow-700 bg-yellow-50 border-yellow-300'
-          } else if (value === 'REJECTED') {
-            label = 'REJECTED'
-            colorClass = 'text-rose-700 bg-rose-50 border-rose-300'
-          }
-
-          return `<span class="${colorClass} border rounded-md text-[11px] font-semibold px-2.5 py-0.5 inline-block capitalize">${label}</span>`
+          let color = 'gray'
+          if (value == 'POSTED' || value == 'APPROVED')
+            color = 'green'
+          else if (value == 'IN APPROVAL' || value == 'HALF APPROVED')
+            color = 'blue'
+          else if (value == 'REVISED')
+            color = 'yellow'
+          else if (value == 'REJECTED')
+            color = 'red'
+          return `<span class="text-${color}-500 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">${value}</span>`
         }
       }
     ]
