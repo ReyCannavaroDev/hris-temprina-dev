@@ -84,12 +84,38 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
             $status = $arrayData['status'];
         }
 
+        $userId = auth()->user()->id;
+        $user = default_users::find($userId);
+        $karyId = $arrayData['m_kary_id'] ?? ($user ? $user->m_kary_id : null);
+
+        // Validasi: hanya peserta terdaftar yang dapat mengisi evaluasi pelatihan terkait
+        if (!empty($arrayData['t_realisasi_pelatihan_id']) && $karyId) {
+            $isPeserta = \DB::table('t_realisasi_pelatihan_d_kary')
+                ->where('t_realisasi_pelatihan_id', $arrayData['t_realisasi_pelatihan_id'])
+                ->where('m_kary_id', $karyId)
+                ->exists();
+
+            if (!$isPeserta) {
+                response()->json([
+                    'timestamp' => \Carbon\Carbon::now()->format('d-m-Y H:i:s'),
+                    'code' => 400,
+                    'message' => 'Anda bukan peserta dari pelatihan ini. Evaluasi hanya dapat diisi oleh peserta pelatihan terkait.',
+                    'data' => [
+                        'errors' => ['Anda bukan peserta dari pelatihan ini. Evaluasi hanya dapat diisi oleh peserta pelatihan terkait.'],
+                        'errorText' => 'Anda bukan peserta dari pelatihan ini. Evaluasi hanya dapat diisi oleh peserta pelatihan terkait.'
+                    ]
+                ], 400)->send();
+                exit;
+            }
+        }
+
         $this->prepareDetailRequest();
 
         $newArrayData  = array_merge( $arrayData,[
             "kode" => $this->helper->generateNomor("KODE EVALUASI PELATIHAN"),
+            "m_kary_id" => $karyId,
             "status" => $status,
-            "creator_id" => auth()->user()->id
+            "creator_id" => $userId
         ] );
         return [
             "model"  => $model,
@@ -99,12 +125,97 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
 
     public function updateBefore($model, $arrayData, $metaData, $id=null)
     {
+        $userId = auth()->user()->id;
+        $user = default_users::find($userId);
+        $karyId = $arrayData['m_kary_id'] ?? ($user ? $user->m_kary_id : null);
+
+        if (!empty($arrayData['t_realisasi_pelatihan_id']) && $karyId) {
+            $isPeserta = \DB::table('t_realisasi_pelatihan_d_kary')
+                ->where('t_realisasi_pelatihan_id', $arrayData['t_realisasi_pelatihan_id'])
+                ->where('m_kary_id', $karyId)
+                ->exists();
+
+            if (!$isPeserta) {
+                response()->json([
+                    'timestamp' => \Carbon\Carbon::now()->format('d-m-Y H:i:s'),
+                    'code' => 400,
+                    'message' => 'Anda bukan peserta dari pelatihan ini. Evaluasi hanya dapat diisi oleh peserta pelatihan terkait.',
+                    'data' => [
+                        'errors' => ['Anda bukan peserta dari pelatihan ini. Evaluasi hanya dapat diisi oleh peserta pelatihan terkait.'],
+                        'errorText' => 'Anda bukan peserta dari pelatihan ini. Evaluasi hanya dapat diisi oleh peserta pelatihan terkait.'
+                    ]
+                ], 400)->send();
+                exit;
+            }
+        }
+
         $this->prepareDetailRequest($id);
 
         return [
             "model" => $model,
             "data"  => $arrayData,
         ];
+    }
+
+    public function scopelanding($model)
+    {
+        $userId = auth()->user()->id;
+        $user = default_users::find($userId);
+        $karyId = $user ? $user->m_kary_id : null;
+
+        $isHcOrAdmin = false;
+        try {
+            $roles = \DB::table('default_role_users')
+                ->join('default_roles', 'default_roles.id', '=', 'default_role_users.role_id')
+                ->where('default_role_users.user_id', $userId)
+                ->pluck('default_roles.name')
+                ->toArray();
+            $isHcOrAdmin = in_array('HC', $roles) || in_array('SUPERADMIN', $roles) || in_array('ADMIN', $roles);
+        } catch (\Throwable $e) {}
+
+        if (!$isHcOrAdmin) {
+            return $model->where(function($q) use ($karyId, $userId) {
+                if ($karyId) {
+                    $q->where('t_evaluasi_pelatihan.m_kary_id', $karyId);
+                } else {
+                    $q->where('t_evaluasi_pelatihan.creator_id', $userId);
+                }
+            });
+        }
+
+        return $model;
+    }
+
+    public function custom_count_pending($req)
+    {
+        $userId = auth()->user()->id;
+        $user = default_users::find($userId);
+        $karyId = $user ? $user->m_kary_id : null;
+
+        $query = \DB::table('t_evaluasi_pelatihan')->where('status', 'DRAFT');
+
+        $isHcOrAdmin = false;
+        try {
+            $roles = \DB::table('default_role_users')
+                ->join('default_roles', 'default_roles.id', '=', 'default_role_users.role_id')
+                ->where('default_role_users.user_id', $userId)
+                ->pluck('default_roles.name')
+                ->toArray();
+            $isHcOrAdmin = in_array('HC', $roles) || in_array('SUPERADMIN', $roles) || in_array('ADMIN', $roles);
+        } catch (\Throwable $e) {}
+
+        if (!$isHcOrAdmin) {
+            $query->where(function($q) use ($karyId, $userId) {
+                if ($karyId) {
+                    $q->where('m_kary_id', $karyId);
+                } else {
+                    $q->where('creator_id', $userId);
+                }
+            });
+        }
+
+        $count = $query->count();
+        return $this->helper->customResponse("OK", 200, ['pending_count' => $count]);
     }
 
     private function prepareDetailRequest($id=null)

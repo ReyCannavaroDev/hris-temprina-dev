@@ -43,7 +43,10 @@ let initialValues = {}
 // ========================== HOOK ==========================
 onBeforeMount(() => {
   document.title = 'Transaksi Evaluasi Pelatihan'
-  if (!isRead) loadTipePenilaian()
+  if (!isRead) {
+    loadTipePenilaian()
+    loadPendingCount()
+  }
   if (isRead) loadData()
 })
 
@@ -470,6 +473,41 @@ onBeforeMount(async () => {
   isAccessReady.value = true
 })
 
+const activeTabLanding = ref(0)
+const pendingCount = ref(0)
+
+const loadPendingCount = async () => {
+  try {
+    const res = await fetch(`${store.server.url_backend}/operation/${endpointApi}/count_pending`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    })
+    if (res.ok) {
+      const json = await res.json()
+      pendingCount.value = json.data?.pending_count ?? 0
+    }
+  } catch (e) {
+    console.error('Error loadPendingCount:', e)
+  }
+}
+
+function switchLandingTab(tabIndex) {
+  activeTabLanding.value = tabIndex
+  if (landing.value?.api?.params) {
+    if (tabIndex === 0) {
+      landing.value.api.params.where = `this.status='DRAFT'`
+    } else {
+      landing.value.api.params.where = `this.status!='DRAFT'`
+    }
+  }
+  if (apiTable.value) {
+    apiTable.value.reload()
+  }
+  loadPendingCount()
+}
+
 function filterShowData(statusLabel = null, noBtn = null) {
   const statusMap = {
     1: 'DRAFT',
@@ -501,14 +539,21 @@ const landing = computed(() => {
   if (!isAccessReady.value) return null
   return {
     actions: [
+      {
+        icon: 'pencil-alt',
+        title: 'Isi Evaluasi',
+        class: 'bg-amber-500 hover:bg-amber-600 text-white font-medium',
+        show: row => row.status === 'DRAFT' && data.can_update,
+        click: row => router.push(`${route.path}/${row.id}?action=Edit`)
+      },
       { icon: 'trash', class: 'bg-red-600 text-light-100', title: 'Hapus', show: row => ['DRAFT', 'REVISED'].includes(row.status) && data.can_delete, click: deleteData },
-      { icon: 'eye', title: 'Read', class: 'bg-green-600 text-light-100', show: row => data.can_read, click: row => router.push(`${route.path}/${row.id}`) },
+      { icon: 'eye', title: 'Lihat Evaluasi', class: 'bg-blue-600 text-light-100', show: row => data.can_read, click: row => router.push(`${route.path}/${row.id}`) },
       { icon: 'edit', title: 'Edit', class: 'bg-blue-600 text-light-100', show: row => ['DRAFT', 'REVISED'].includes(row.status) && data.can_update, click: row => router.push(`${route.path}/${row.id}?action=Edit`) },
       { icon: 'copy', title: 'Copy', class: 'bg-gray-600 text-light-100', show: row => data.can_create && row.status === 'DRAFT', click: row => router.push(`${route.path}/${row.id}?action=Copy`) },
       {
         icon: 'paper-plane',
         title: 'Post Data',
-        class: 'bg-gray-600 text-light-100',
+        class: 'bg-green-600 text-light-100',
         show: row => row.status && row.status.toUpperCase() === 'DRAFT' && data.can_update,
         async click(row) {
           const result = await swal.fire({
@@ -632,7 +677,14 @@ const landing = computed(() => {
         'Content-Type': 'application/json',
         Authorization: `${store.user.token_type} ${store.user.token}`
       },
-      params: { simplest: true, paginate: 25, transform: true, join: true, searchfield: 'm_trainer.nama_trainer, m_prog_pelatihan.tema_pelatihan' },
+      params: { 
+        simplest: true, 
+        paginate: 25, 
+        transform: true, 
+        join: true, 
+        where: "this.status='DRAFT'",
+        searchfield: 'm_trainer.nama_trainer, m_prog_pelatihan.tema_pelatihan' 
+      },
       onsuccess: r => ({ ...r, page: r.current_page, hasNext: r.has_next })
     },
     columns: [

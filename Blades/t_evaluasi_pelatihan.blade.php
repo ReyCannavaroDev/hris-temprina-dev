@@ -1,33 +1,54 @@
 <!-- LANDING -->
 @if(!$req->has('id'))
 @verbatim
-<div class="bg-white p-1 rounded-md border-t-10 border-gray-500">
-  <div class="flex justify-between items-center px-2.5 py-1">
-    <div class="flex items-center gap-x-4">
-      <p>Filter Status :</p>
-      <div class="flex gap-x-2">
-        <button @click="filterShowData('DRAFT',1)" :class="activeBtn === 1?'bg-gray-600 text-white hover:bg-gray-400':'border border-gray-600 text-gray-600 bg-white  hover:bg-gray-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">DRAFT</button>
-        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
-        <button @click="filterShowData('POSTED',2)" :class="activeBtn === 2?'bg-amber-600 text-white hover:bg-amber-400':'border border-amber-600 text-amber-600 bg-white  hover:bg-amber-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">POSTED</button>
-      </div>
+<div class="bg-white p-2 rounded-md border-t-4 border-yellow-500 shadow-sm min-h-[550px]">
+  
+  <!-- TAB HEADER LANDING -->
+  <div class="flex flex-wrap justify-between items-center border-b border-gray-200 px-3 pb-3 pt-1 gap-2">
+    <!-- Tab Buttons -->
+    <div class="flex items-center gap-x-2">
+      <!-- Tab 0: Menunggu Evaluasi (Belum Diisi) -->
+      <button 
+        @click="switchLandingTab(0)"
+        :class="activeTabLanding === 0 
+          ? 'bg-amber-500 text-white shadow font-semibold' 
+          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium'"
+        class="flex items-center gap-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200">
+        <Icon fa="clock" class="text-xs" />
+        <span>Menunggu Evaluasi (Belum Diisi)</span>
+        <span 
+          v-if="pendingCount > 0"
+          :class="activeTabLanding === 0 ? 'bg-white text-amber-600' : 'bg-amber-500 text-white'"
+          class="text-xs px-2 py-0.5 rounded-full font-bold shadow-xs">
+          {{ pendingCount }}
+        </span>
+      </button>
+
+      <!-- Tab 1: Riwayat Evaluasi (Sudah Diisi) -->
+      <button 
+        @click="switchLandingTab(1)"
+        :class="activeTabLanding === 1 
+          ? 'bg-blue-600 text-white shadow font-semibold' 
+          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium'"
+        class="flex items-center gap-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200">
+        <Icon fa="check-circle" class="text-xs" />
+        <span>Riwayat Evaluasi (Sudah Diisi)</span>
+      </button>
     </div>
 
-
+    <!-- Right Actions -->
     <div>
-      <RouterLink v-if="data.can_create" :to="$route.path + '/create?' + Date.now()" class="border border-[#428BCA] font-semibold text-[#428BCA] bg-white hover:bg-[#428BCA] hover:text-white 
-        duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">
-        Tambah Baru
+      <RouterLink v-if="data.can_create" :to="$route.path + '/create?' + Date.now()" 
+        class="border border-[#428BCA] font-semibold text-[#428BCA] bg-white hover:bg-[#428BCA] hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1.5 px-3 text-sm flex items-center gap-1.5 shadow-xs">
+        <Icon fa="plus" class="text-xs" />
+        <span>Isi Evaluasi Baru</span>
       </RouterLink>
     </div>
   </div>
 
-
-  <hr>
-  <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions"
-    class="">
-    <!-- <template #header>
-    </template> -->
-  </TableApi>
+  <div class="mt-2">
+    <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions" class="" />
+  </div>
 
   <div v-show="modalOpen" class="fixed inset-0 flex items-center justify-center z-50">
   <div class="modal-overlay fixed inset-0 bg-black opacity-50"></div>
@@ -122,6 +143,7 @@
                 Authorization: `${store.user.token_type} ${store.user.token}`
               },
               params: {
+                scopes: 'owndata',
                 transform: true,
                 join: true
               }
