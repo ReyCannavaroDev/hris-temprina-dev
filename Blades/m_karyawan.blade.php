@@ -1237,7 +1237,7 @@
                         <td class="p-3 text-center border font-bold">{{ i + 1 }}</td>
                         <!-- COMPANY -->
                         <td class="p-3 text-center border">
-                          <FieldSelect :bind="{ disabled: true }" class="w-full !mt-0"
+                          <FieldSelect :key="`comp_${i}_${item.m_company_id}`" :bind="{ disabled: true, clearable: false }" class="w-full !mt-0"
                             :value="item.m_company_id"
                             :errorText="formErrors.m_company_id?'failed':''" :hints="formErrors.m_company_id"
                             valueField="id" displayField="name" :api="{
@@ -1276,6 +1276,9 @@
                                     item.m_comp_id = null;
                                     item.m_subcomp_id = null;
                                     item.m_company_id = null;
+                                    item.m_branch_id = null;
+                                    item.m_divisi_id = null;
+                                    item.m_posisi_id = null; 
                                   }
                                 }" :errorText="formErrors.m_comp_id?'failed':''" :hints="formErrors.m_comp_id"
                             valueField="id" displayField="name" :api="{
@@ -1291,20 +1294,54 @@
                         <!-- SUB -->
                         <td class="p-3 text-center border">
                           <FieldSelect :bind="{ disabled: !actionText || !item.m_comp_id,  clearable:true }"
-                            class="w-full !mt-0" :value="item.m_subcomp_id" @input="v=>{
+                            class="w-full !mt-0" :value="item.m_subcomp_id" @input="async v=>{
                           if(v){
-                            item.m_subcomp_id=v
+                            item.m_subcomp_id=v;
+                            if(!item.m_company_id){
+                              try {
+                                const res = await fetch(`${store.server.url_backend}/operation/m_subcomp/${v}?join=true&transform=false`, {
+                                  headers: {
+                                    'Content-Type': 'Application/json',
+                                    Authorization: `${store.user.token_type} ${store.user.token}`
+                                  }
+                                });
+                                if (res.ok) {
+                                  const json = await res.json();
+                                  const subData = json.data ?? json;
+                                  const compId = subData.m_company_id ?? subData.company_id ?? subData.m_company?.id ?? subData['m_company.id'] ?? subData['m_company_id.id'] ?? null;
+                                  if (compId) {
+                                    item.m_company_id = compId;
+                                  }
+                                }
+                              } catch (e) {}
+                            }
                           }else{
-                            item.m_subcomp_id=null
-                            item.m_company_id=null
-                            item.m_branch_id=null
+                            item.m_subcomp_id=null;
+                            item.m_company_id=null;
+                            item.m_branch_id=null;
                             item.m_divisi_id = null;
                             item.m_posisi_id = null; 
                           }
-                        }" @update:valueFull="obj => {
+                        }" @update:valueFull="async obj => {
                             if (obj) {
                               item.m_subcomp_id = obj.id; 
-                              item.m_company_id = obj.m_company_id ?? obj.company_id ?? obj.m_company?.id ?? obj['m_company.id'] ?? null;
+                              let compId = obj.m_company_id ?? obj.company_id ?? obj.m_company?.id ?? obj['m_company.id'] ?? obj['m_company_id.id'] ?? null;
+                              if (!compId && obj.id) {
+                                try {
+                                  const res = await fetch(`${store.server.url_backend}/operation/m_subcomp/${obj.id}?join=true&transform=false`, {
+                                    headers: {
+                                      'Content-Type': 'Application/json',
+                                      Authorization: `${store.user.token_type} ${store.user.token}`
+                                    }
+                                  });
+                                  if (res.ok) {
+                                    const json = await res.json();
+                                    const subData = json.data ?? json;
+                                    compId = subData.m_company_id ?? subData.company_id ?? subData.m_company?.id ?? subData['m_company.id'] ?? subData['m_company_id.id'] ?? null;
+                                  }
+                                } catch (e) {}
+                              }
+                              item.m_company_id = compId;
                               item.m_branch_id = null; 
                               item.m_divisi_id = null; 
                               item.m_posisi_id = null; 
@@ -1321,7 +1358,7 @@
                             headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                             params: {
                               transform:false,
-                              join:false,
+                              join:true,
                               where: `this.is_active='true' AND this.m_comp_id='${item.m_comp_id}'`
                             }
                       }" placeholder="" label="" fa-icon="sort-desc" :check="false" />
