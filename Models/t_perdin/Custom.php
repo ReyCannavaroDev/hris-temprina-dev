@@ -326,15 +326,17 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
             $q->where('id', $user_id);
         })->first()?->id;
 
+        $query = $model->whereHas('t_rencana_perdin', function($q){
+            $q->whereRaw("upper(status) NOT IN ('DRAFT','REJECTED')");
+        })->whereDoesntHave('t_penyelesaian_perdin', function($q){
+            $q->whereRaw("upper(status) != 'REJECTED'");
+        });
+
         if ($user->is_hc || strtolower($user->user_type ?? '') === 'admin') {
-            return $model->whereHas('t_rencana_perdin', function($q){
-                $q->whereRaw("upper(status) = 'APPROVED'");
-            });
+            return $query;
         }
 
-        return $model->whereHas('t_rencana_perdin', function($q){
-            $q->whereRaw("upper(status) = 'APPROVED'");
-        })->where('m_kary_id', $m_kary_id);
+        return $query->where('m_kary_id', $m_kary_id);
     }
 
     public function scopelanding($model)

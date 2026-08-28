@@ -169,15 +169,15 @@ const hitungTotalPerdin = computed(() => {
   });
 
   values.total = jmlh;
+  values.total_biaya = jmlh;
+  values.sisa_biaya = (Number(values.nominal) || 0) - jmlh;
   return jmlh
 });
 
 const hitungSisaBiaya = computed(() => {
   const nominal = Number(values.nominal) || 0
-
-  console.log(nominal)
-  const sisa = Number(values.total_biaya) || 0
-  return nominal - sisa
+  const total = Number(values.total_biaya) || 0
+  return nominal - total
 })
 
 
@@ -637,7 +637,8 @@ function closeModal(i) {
 }
 
 async function loadLog(id) {
-  const url = `${store.server.url_backend}/operation/t_rencana_perdin/app_log?id=${initialValues.id}`
+  const targetId = id || initialValues.id || values.id
+  const url = `${store.server.url_backend}/operation${endpointApi}/app_log?id=${targetId}`
   const res = await fetch(url, {
     headers: {
       'Content-Type': 'Application/json',
@@ -648,7 +649,6 @@ async function loadLog(id) {
   const result = await res.json()
   dataLog.items = result
 }
-
 
 //  @else----------------------- LANDING
 
@@ -658,31 +658,6 @@ function openCreatePopUp(id) {
 
 function closeCreatePopUp(i) {
   modalOpenCreate.value = false
-}
-
-function openModal(id) {
-  dataLog.items = []
-  modalOpen.value = true
-  loadLog(id)
-  console.log(modalOpen.value)
-}
-
-function closeModal(i) {
-  dataLog.items = []
-  modalOpen.value = false
-}
-
-async function loadLog(id) {
-  const url = `${store.server.url_backend}/operation/t_rencana_perdin/app_log?id=${id}`
-  const res = await fetch(url, {
-    headers: {
-      'Content-Type': 'Application/json',
-      Authorization: `${store.user.token_type} ${store.user.token}`
-    },
-  })
-  if (!res.ok) throw new Error("Failed when trying to read data")
-  const result = await res.json()
-  dataLog.items = result
 }
 
 const optGroup = []

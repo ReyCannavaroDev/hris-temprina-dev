@@ -36,16 +36,36 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
     {
         $nomor = t_perdin::find($arrayData['t_perdin_id'])?->nomor ?? '';
         $newArrayData  = array_merge( $arrayData,[
-            // "nomor" => $this->helper->generateNomor("KODE RINCIAN PERDIN"),
             "nomor" => $nomor,
         ] );
 
         $req = app()->request;
         $details = [];
         if (!empty($req->t_penyelesaian_perdin_det) && is_array($req->t_penyelesaian_perdin_det)) {
+            $cleanDetails = [];
+            foreach ($req->t_penyelesaian_perdin_det as $row) {
+                $cleanRow = $row;
+                unset($cleanRow['id']);
+                unset($cleanRow['created_at']);
+                unset($cleanRow['updated_at']);
+                $cleanRow['jumlah'] = (int)($cleanRow['jumlah'] ?? 1);
+                $cleanRow['nominal'] = (float)($cleanRow['nominal'] ?? 0);
+                $cleanRow['total'] = (float)($cleanRow['total'] ?? ($cleanRow['nominal'] * $cleanRow['jumlah']));
+                $cleanDetails[] = $cleanRow;
+            }
+            $req->merge(['t_penyelesaian_perdin_det' => $cleanDetails]);
             $details[] = 't_penyelesaian_perdin_det';
         }
         if (!empty($req->t_penyelesaian_perdin_d_laporan) && is_array($req->t_penyelesaian_perdin_d_laporan)) {
+            $cleanLap = [];
+            foreach ($req->t_penyelesaian_perdin_d_laporan as $row) {
+                $cleanRow = $row;
+                unset($cleanRow['id']);
+                unset($cleanRow['created_at']);
+                unset($cleanRow['updated_at']);
+                $cleanLap[] = $cleanRow;
+            }
+            $req->merge(['t_penyelesaian_perdin_d_laporan' => $cleanLap]);
             $details[] = 't_penyelesaian_perdin_d_laporan';
         }
         $this->details = $details;
@@ -53,7 +73,6 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
         return [
             "model"  => $model,
             "data"   => $newArrayData,
-            // "errors" => ['error1']
         ];
     }
 
@@ -62,12 +81,31 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
         $req = app()->request;
         $details = [];
         if (!empty($req->t_penyelesaian_perdin_det) && is_array($req->t_penyelesaian_perdin_det)) {
+            $cleanDetails = [];
+            foreach ($req->t_penyelesaian_perdin_det as $row) {
+                $cleanRow = $row;
+                unset($cleanRow['created_at']);
+                unset($cleanRow['updated_at']);
+                $cleanRow['jumlah'] = (int)($cleanRow['jumlah'] ?? 1);
+                $cleanRow['nominal'] = (float)($cleanRow['nominal'] ?? 0);
+                $cleanRow['total'] = (float)($cleanRow['total'] ?? ($cleanRow['nominal'] * $cleanRow['jumlah']));
+                $cleanDetails[] = $cleanRow;
+            }
+            $req->merge(['t_penyelesaian_perdin_det' => $cleanDetails]);
             $details[] = 't_penyelesaian_perdin_det';
         } else {
             \DB::table('t_penyelesaian_perdin_det')->where('t_penyelesaian_perdin_id', $id)->delete();
         }
 
         if (!empty($req->t_penyelesaian_perdin_d_laporan) && is_array($req->t_penyelesaian_perdin_d_laporan)) {
+            $cleanLap = [];
+            foreach ($req->t_penyelesaian_perdin_d_laporan as $row) {
+                $cleanRow = $row;
+                unset($cleanRow['created_at']);
+                unset($cleanRow['updated_at']);
+                $cleanLap[] = $cleanRow;
+            }
+            $req->merge(['t_penyelesaian_perdin_d_laporan' => $cleanLap]);
             $details[] = 't_penyelesaian_perdin_d_laporan';
         } else {
             \DB::table('t_penyelesaian_perdin_d_laporan')->where('t_penyelesaian_perdin_id', $id)->delete();
@@ -176,7 +214,14 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
     public function custom_send_approval()
     {
         $target_id = req("target_id");
-        $user_target = $target_id ? default_users::where('m_kary_id', $target_id)->first()?->id : null;
+        $user_target = $target_id ? \App\Models\BasicModels\default_users::where('m_kary_id', $target_id)->first()?->id : null;
+
+        if (!$user_target) {
+            $trx = \DB::table("t_penyelesaian_perdin")->find(req("id"));
+            $m_kary_id = $trx->m_kary_id ?? $trx->creator_id ?? 0;
+            $atasan_id = \App\Models\BasicModels\m_kary::where('id', $m_kary_id)->first()?->atasan_id ?? 0;
+            $user_target = \App\Models\BasicModels\default_users::where('m_kary_id', $atasan_id)->pluck('id')->first();
+        }
 
         $app = $this->createAppTicket(req("id"), $user_target);
         if (!$app) {
@@ -184,6 +229,20 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
                 "Terjadi kesalahan, coba kembali nanti",
                 400
             );
+        }
+
+        if ($user_target) {
+            try {
+                $fcm_tokens = \App\Models\BasicModels\default_users_fcm::where('default_users_id', $user_target)->pluck('token_fcm');
+                if (count($fcm_tokens) > 0) {
+                    $firebase = app(\App\Services\FirebaseMessagingService::class);
+                    foreach ($fcm_tokens as $token) {
+                        $firebase->sendToDevice($token, "Approval Penyelesaian Perdin", "Ada pengajuan penyelesaian perdin yang butuh approval Anda.", ["title" => "Approval Penyelesaian Perdin"]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Ignore FCM notification error
+            }
         }
 
         if (app()->request->header("Source") != "mobile") {
@@ -204,6 +263,13 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
     {
         $tempId = $id;
         $trx = \DB::table("t_penyelesaian_perdin")->find($tempId);
+        $trxDate = Date("Y-m-d");
+        if ($trx?->t_perdin_id) {
+            $perdin = t_perdin::find($trx->t_perdin_id);
+            if ($perdin?->date_from) {
+                $trxDate = Carbon::parse($perdin->date_from)->format('Y-m-d');
+            }
+        }
         $conf = [
             "app_name" => "APPROVAL PENYELESAIAN PERDIN",
             "trx_id" => $trx->id,
@@ -211,7 +277,7 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
             "trx_name" => "Pengajuan Penyelesaian Perdin",
             "form_name" => "t_penyelesaian_perdin",
             "trx_nomor" => $trx->nomor,
-            "trx_date" => Date("Y-m-d"),
+            "trx_date" => $trxDate,
             "trx_creator_id" => auth()->user()->id,
             "target_id" => $target_id,
         ];
@@ -226,12 +292,15 @@ class t_penyelesaian_perdin extends \App\Models\BasicModels\t_penyelesaian_perdi
 
     public function scopekary($model)
     {
-        $authId = auth()->user()->id;
-        $m_kary = m_kary::whereHas('default_users', function($q)use ($authId){
-            $q->where('id', $authId);
-        })->first();
+        $user = auth()->user();
+        $user_id = $user->id ?? 0;
+        $m_kary_id = $user->m_kary_id ?? \App\Models\BasicModels\m_kary::whereHas('default_users', function($q) use ($user_id){
+            $q->where('id', $user_id);
+        })->first()?->id;
 
-        $model->where('t_penyelesaian_perdin.m_kary_id', $m_kary->id);
+        if ($m_kary_id) {
+            $model->where('t_penyelesaian_perdin.m_kary_id', $m_kary_id);
+        }
     }
 
     public function custom_progress($req)
