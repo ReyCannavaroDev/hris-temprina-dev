@@ -22,6 +22,7 @@ class trequestpelatihan extends Migration
         });
 
         // Ubah form_name notifikasi lama agar mengarah ke modul baru (t_req_pelatihan)
-        \DB::statement("UPDATE generate_approval SET form_name = 't_req_pelatihan' WHERE form_name = 't_request_pelatihan'");
+        \DB::statement("UPDATE generate_approval SET form_name = 't_req_pelatihan' WHERE form_name = 't_request_pelatihan' OR trx_table = 't_request_pelatihan'");
+        \DB::statement("UPDATE generate_approval_log SET form_name = 't_req_pelatihan' WHERE form_name = 't_request_pelatihan' OR trx_table = 't_request_pelatihan'");
     }
 }

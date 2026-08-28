@@ -177,7 +177,11 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
     public function custom_send_approval()
     {
         $target_id = req("target_id");
-        $user_target = $target_id ? default_users::where('m_kary_id', $target_id)->first()?->id : null;
+        $user_target = null;
+        if ($target_id) {
+            $userObj = default_users::where('m_kary_id', $target_id)->first();
+            $user_target = $userObj ? $userObj->id : null;
+        }
 
         $app = $this->createAppTicket(req("id"), $user_target);
         if (!$app) {
@@ -193,7 +197,11 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
                 if (count($fcm_tokens) > 0) {
                     $firebase = app(\App\Services\FirebaseMessagingService::class);
                     foreach ($fcm_tokens as $token) {
-                        $firebase->sendToDevice($token, "Approval Pengajuan Pelatihan", "Ada pengajuan pelatihan yang butuh approval Anda.", ["title" => "Approval Pengajuan Pelatihan", "form_name" => "t_req_pelatihan", "trx_id" => (string) req("id")]);
+                        $firebase->sendToDevice($token, "Approval Pengajuan Pelatihan", "Ada pengajuan pelatihan yang butuh approval Anda.", [
+                            "title" => "Approval Pengajuan Pelatihan", 
+                            "form_name" => "t_req_pelatihan", 
+                            "trx_id" => (string) req("id")
+                        ]);
                     }
                 }
             } catch (\Throwable $e) {
@@ -209,19 +217,6 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
                 ]);
             }
         }
-        
-        if ($app && isset($app->id)) {
-            $this->approval->progress(
-                $app->id,
-                "IN APPROVAL",
-                req('catatan') ?? '',
-                false,
-                false,
-                true, // send email
-                true, // is send wa
-                false
-            );
-        }
 
         return $this->helper->customResponse(
             "Permintaan approval berhasil dibuat beserta notifikasi"
@@ -232,6 +227,10 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
     {
         $tempId = $id;
         $trx = \DB::table('t_request_pelatihan')->find($tempId);
+        if (!$trx) {
+            return false;
+        }
+
         $conf = [
             "app_name" => "APPROVAL PENGAJUAN PELATIHAN",
             "trx_id" => $trx->id,
@@ -246,12 +245,32 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
 
         $cek = \DB::table('generate_approval')->where('trx_table', $conf['trx_table'])->where('trx_id', $conf['trx_id'])->first();
         if ($cek) {
-            return $cek;
+            \DB::table('generate_approval')->where('id', $cek->id)->update([
+                'form_name' => 't_req_pelatihan',
+                'status' => 'PROGRESS'
+            ]);
+            if ($target_id) {
+                \DB::table('generate_approval_d')
+                    ->where('generate_approval_id', $cek->id)
+                    ->where('is_done', false)
+                    ->update(['default_users_id' => $target_id]);
+            }
+            return \DB::table('generate_approval')->where('id', $cek->id)->first();
         }
 
         $app_success = $this->helper->approvalCreateTicket($conf);
         if ($app_success) {
-            return \DB::table('generate_approval')->where('trx_table', $conf['trx_table'])->where('trx_id', $conf['trx_id'])->first();
+            $created = \DB::table('generate_approval')->where('trx_table', $conf['trx_table'])->where('trx_id', $conf['trx_id'])->first();
+            if ($created) {
+                \DB::table('generate_approval')->where('id', $created->id)->update(['form_name' => 't_req_pelatihan']);
+                if ($target_id) {
+                    \DB::table('generate_approval_d')
+                        ->where('generate_approval_id', $created->id)
+                        ->where('is_done', false)
+                        ->update(['default_users_id' => $target_id]);
+                }
+            }
+            return $created;
         }
         return false;
     }

@@ -389,7 +389,7 @@ async function actionProgress(type) {
     note: type === 'APPROVED' ? 'Disetujui' : text
   }
   try {
-    const dataURL = `${store.server.url_backend}/operation${endpointApi}/custom/custom_progress`
+    const dataURL = `${store.server.url_backend}/operation${endpointApi}/progress`
     isRequesting.value = true
     const res = await fetch(dataURL, {
       method: 'POST',
