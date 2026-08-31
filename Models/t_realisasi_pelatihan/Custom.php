@@ -357,10 +357,25 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
         $program = $data->m_prog_pelatihan_id ? m_prog_pelatihan::find($data->m_prog_pelatihan_id) : null;
 
         foreach ($peserta as $m_kary_id) {
-            $creatorId = default_users::where('m_kary_id', $m_kary_id)->orderBy('id', 'asc')->pluck('id')->first() ?? auth()->user()->id;
-            $evaluasi = t_evaluasi_pelatihan::where('t_realisasi_pelatihan_id', $data->id)
+            $userObj = default_users::where('m_kary_id', $m_kary_id)->orderBy('id', 'asc')->first();
+            $creatorId = $userObj ? $userObj->id : auth()->user()->id;
+
+            $evaluasiList = t_evaluasi_pelatihan::where('t_realisasi_pelatihan_id', $data->id)
                 ->where('m_kary_id', $m_kary_id)
-                ->first();
+                ->orderBy('id', 'asc')
+                ->get();
+
+            if ($evaluasiList->count() > 1) {
+                $keepId = $evaluasiList->first()->id;
+                t_evaluasi_pelatihan::where('t_realisasi_pelatihan_id', $data->id)
+                    ->where('m_kary_id', $m_kary_id)
+                    ->where('id', '!=', $keepId)
+                    ->where('status', 'DRAFT')
+                    ->delete();
+                $evaluasi = $evaluasiList->first();
+            } else {
+                $evaluasi = $evaluasiList->first();
+            }
 
             if (!$evaluasi) {
                 $evaluasi = t_evaluasi_pelatihan::create([
@@ -377,10 +392,84 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
                 $evaluasi->update([
                     "trainer_id" => $evaluasi->trainer_id ?? $data->trainer_id,
                     "m_prog_pelatihan_id" => $evaluasi->m_prog_pelatihan_id ?? $data->m_prog_pelatihan_id,
+                    "creator_id" => $creatorId
                 ]);
             }
 
+            // Buat / update tiket notifikasi di generate_approval & generate_approval_det
+            $this->createNotificationTicketForPeserta($evaluasi, $creatorId, $program);
+
             $this->sendEvaluasiNotification($m_kary_id, $evaluasi, $program);
+        }
+    }
+
+    private function createNotificationTicketForPeserta($evaluasi, $creatorId, $program=null)
+    {
+        if (!$evaluasi || empty($evaluasi->id) || !$creatorId) {
+            return;
+        }
+
+        try {
+            $existingApp = \DB::table('generate_approval')
+                ->where('trx_table', 't_evaluasi_pelatihan')
+                ->where('trx_id', $evaluasi->id)
+                ->first();
+
+            $tema = $program?->tema_pelatihan ?? (isset($evaluasi->m_prog_pelatihan_id) ? m_prog_pelatihan::find($evaluasi->m_prog_pelatihan_id)?->tema_pelatihan : '');
+            $trxName = 'Evaluasi Pelatihan' . ($tema ? ' - ' . $tema : '');
+
+            if (!$existingApp) {
+                $gAppId = \DB::table('generate_approval')->insertGetId([
+                    'nomor' => 'NOTIF-' . date('ym') . '-' . sprintf('%08d', $evaluasi->id),
+                    'trx_id' => $evaluasi->id,
+                    'trx_table' => 't_evaluasi_pelatihan',
+                    'trx_name' => $trxName,
+                    'form_name' => 't_evaluasi_pelatihan',
+                    'trx_nomor' => $evaluasi->kode,
+                    'trx_date' => $evaluasi->tanggal ?? date('Y-m-d'),
+                    'trx_creator_id' => $creatorId,
+                    'creator_id' => $creatorId,
+                    'status' => 'PROGRESS',
+                    'last_action_id' => $creatorId,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now()
+                ]);
+
+                $detId = \DB::table('generate_approval_det')->insertGetId([
+                    'generate_approval_id' => $gAppId,
+                    'level' => 1,
+                    'urutan_level' => 1,
+                    'type' => 'MENYETUJUI',
+                    'default_users_id' => $creatorId,
+                    'is_done' => false,
+                    'assigned_at' => Carbon::now(),
+                    'creator_id' => $creatorId,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now()
+                ]);
+
+                \DB::table('generate_approval')->where('id', $gAppId)->update([
+                    'next_approve_det_id' => $detId,
+                    'last_editor_id' => $detId
+                ]);
+            } else {
+                \DB::table('generate_approval')->where('id', $existingApp->id)->update([
+                    'status' => 'PROGRESS',
+                    'trx_name' => $trxName,
+                    'trx_nomor' => $evaluasi->kode,
+                    'updated_at' => Carbon::now()
+                ]);
+
+                \DB::table('generate_approval_det')
+                    ->where('generate_approval_id', $existingApp->id)
+                    ->where('is_done', false)
+                    ->update([
+                        'default_users_id' => $creatorId,
+                        'updated_at' => Carbon::now()
+                    ]);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning("Gagal membuat tiket notifikasi evaluasi peserta: " . $e->getMessage());
         }
     }
 

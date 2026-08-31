@@ -163,27 +163,27 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         $user = default_users::find($userId);
         $karyId = $user ? $user->m_kary_id : null;
 
-        $isHcOrAdmin = false;
-        try {
-            $roles = \DB::table('default_role_users')
-                ->join('default_roles', 'default_roles.id', '=', 'default_role_users.role_id')
-                ->where('default_role_users.user_id', $userId)
-                ->pluck('default_roles.name')
-                ->toArray();
-            $isHcOrAdmin = in_array('HC', $roles) || in_array('SUPERADMIN', $roles) || in_array('ADMIN', $roles);
-        } catch (\Throwable $e) {}
-
-        if (!$isHcOrAdmin) {
-            return $model->where(function($q) use ($karyId, $userId) {
-                if ($karyId) {
-                    $q->where('t_evaluasi_pelatihan.m_kary_id', $karyId);
-                } else {
-                    $q->where('t_evaluasi_pelatihan.creator_id', $userId);
-                }
-            });
+        $isHc = false;
+        $respoActive = getCore('Respo')->checkRespoActive();
+        if (!empty($respoActive) && is_object($respoActive)) {
+            $respoName = strtoupper($respoActive->name ?? '');
+            if (str_contains($respoName, 'HC') || str_contains($respoName, 'HUMAN CAPITAL') || str_contains($respoName, 'HRD') || str_contains($respoName, 'ADMIN')) {
+                $isHc = true;
+            }
+        } elseif ($user && ($user->is_hc ?? false)) {
+            $isHc = true;
         }
 
-        return $model;
+        // Karyawan biasa (non-HC) HANYA melihat data evaluasi miliknya sendiri
+        if (!$isHc) {
+            if ($karyId) {
+                $model = $model->where('t_evaluasi_pelatihan.m_kary_id', $karyId);
+            } else {
+                $model = $model->where('t_evaluasi_pelatihan.creator_id', $userId);
+            }
+        }
+
+        return $model->distinct();
     }
 
     public function custom_count_pending($req)
@@ -194,27 +194,26 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
 
         $query = \DB::table('t_evaluasi_pelatihan')->where('status', 'DRAFT');
 
-        $isHcOrAdmin = false;
-        try {
-            $roles = \DB::table('default_role_users')
-                ->join('default_roles', 'default_roles.id', '=', 'default_role_users.role_id')
-                ->where('default_role_users.user_id', $userId)
-                ->pluck('default_roles.name')
-                ->toArray();
-            $isHcOrAdmin = in_array('HC', $roles) || in_array('SUPERADMIN', $roles) || in_array('ADMIN', $roles);
-        } catch (\Throwable $e) {}
-
-        if (!$isHcOrAdmin) {
-            $query->where(function($q) use ($karyId, $userId) {
-                if ($karyId) {
-                    $q->where('m_kary_id', $karyId);
-                } else {
-                    $q->where('creator_id', $userId);
-                }
-            });
+        $isHc = false;
+        $respoActive = getCore('Respo')->checkRespoActive();
+        if (!empty($respoActive) && is_object($respoActive)) {
+            $respoName = strtoupper($respoActive->name ?? '');
+            if (str_contains($respoName, 'HC') || str_contains($respoName, 'HUMAN CAPITAL') || str_contains($respoName, 'HRD') || str_contains($respoName, 'ADMIN')) {
+                $isHc = true;
+            }
+        } elseif ($user && ($user->is_hc ?? false)) {
+            $isHc = true;
         }
 
-        $count = $query->count();
+        if (!$isHc) {
+            if ($karyId) {
+                $query->where('m_kary_id', $karyId);
+            } else {
+                $query->where('creator_id', $userId);
+            }
+        }
+
+        $count = $query->distinct()->count();
         return $this->helper->customResponse("OK", 200, ['pending_count' => $count]);
     }
 

@@ -696,7 +696,8 @@ const landing = computed(() => {
     },
     columns: [
       { headerName: 'No', valueGetter: p => p.node.rowIndex + 1, width: 60, cellClass: ['justify-center', 'bg-gray-50', 'border-r', '!border-gray-200'] },
-      { headerName: 'Tema Pelatihan', field: 'm_prog_pelatihan.tema_pelatihan', flex: 1, filter: true, sortable: true, cellClass: ['border-r', '!border-gray-200', 'justify-start'] },
+      { headerName: 'Tema Pelatihan', field: 'm_prog_pelatihan.tema_pelatihan', flex: 1.2, filter: true, sortable: true, cellClass: ['border-r', '!border-gray-200', 'justify-start'] },
+      { headerName: 'Peserta', field: 'm_kary.nama_lengkap', flex: 1.2, filter: true, sortable: true, cellClass: ['border-r', '!border-gray-200', 'justify-start'] },
       { headerName: 'Nama Trainer', field: 'trainer.nama_trainer', flex: 1, filter: true, sortable: true, cellClass: ['border-r', '!border-gray-200', 'justify-start'] },
       { headerName: 'Tanggal', field: 'tanggal', flex: 1, filter: true, sortable: true, cellClass: ['border-r', '!border-gray-200', 'justify-start'] },
       {
