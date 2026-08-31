@@ -113,9 +113,41 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
         ];
     }
 
+    public function createAfter($model, $arrayData, $metaData, $id=null)
+    {
+        $status = $arrayData['status'] ?? ($model->status ?? 'ACTIVE');
+        if (strtoupper($status) === 'ACTIVE') {
+            $realisasi = $model instanceof self ? $model : $this->find($id ?? ($model->id ?? null));
+            if ($realisasi) {
+                $this->createEvaluasiPeserta($realisasi);
+            }
+        }
+
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
+        ];
+    }
+
     public function updateBefore($model, $arrayData, $metaData, $id=null)
     {
         $this->prepareDetailRequest($id);
+
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
+        ];
+    }
+
+    public function updateAfter($model, $arrayData, $metaData, $id=null)
+    {
+        $status = $arrayData['status'] ?? ($model->status ?? 'ACTIVE');
+        if (strtoupper($status) === 'ACTIVE') {
+            $realisasi = $model instanceof self ? $model : $this->find($id ?? ($model->id ?? null));
+            if ($realisasi) {
+                $this->createEvaluasiPeserta($realisasi);
+            }
+        }
 
         return [
             "model" => $model,
@@ -293,13 +325,30 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
         }
     }
 
-    private function createEvaluasiPeserta($data)
+    public function createEvaluasiPeserta($data)
     {
+        if (!$data || empty($data->id)) {
+            return;
+        }
+
         $peserta = t_realisasi_pelatihan_d_kary::where('t_realisasi_pelatihan_id', $data->id)
             ->whereNotNull('m_kary_id')
             ->pluck('m_kary_id')
             ->unique()
             ->values();
+
+        // Fallback jika pemanggilan terjadi saat detail di database belum selesai ter-commit
+        if (!count($peserta) && !empty(app()->request->t_realisasi_pelatihan_d_kary)) {
+            $rawPeserta = app()->request->t_realisasi_pelatihan_d_kary;
+            $karyIds = [];
+            foreach ($rawPeserta as $p) {
+                $kId = is_array($p) ? ($p['m_kary_id'] ?? null) : ($p->m_kary_id ?? null);
+                if ($kId) {
+                    $karyIds[] = $kId;
+                }
+            }
+            $peserta = collect($karyIds)->unique()->values();
+        }
 
         if (!count($peserta)) {
             return;
@@ -335,7 +384,7 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
         }
     }
 
-    private function sendEvaluasiNotification($m_kary_id, $evaluasi, $program=null)
+    public function sendEvaluasiNotification($m_kary_id, $evaluasi, $program=null)
     {
         $userIds = default_users::where('m_kary_id', $m_kary_id)->pluck('id');
         if (!count($userIds)) {
@@ -348,19 +397,24 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
         }
 
         $title = "Evaluasi Pelatihan";
-        $body = "Silakan isi evaluasi pelatihan" . ($program?->tema_pelatihan ? " " . $program->tema_pelatihan : "") . ".";
-        $firebase = app(\App\Services\FirebaseMessagingService::class);
+        $tema = $program?->tema_pelatihan ?? (isset($evaluasi->m_prog_pelatihan_id) ? m_prog_pelatihan::find($evaluasi->m_prog_pelatihan_id)?->tema_pelatihan : '');
+        $body = "Silakan isi evaluasi pelatihan" . ($tema ? " " . $tema : "") . ".";
 
-        foreach ($tokens as $token) {
-            try {
-                $firebase->sendToDevice($token, $title, $body, [
-                    "title" => $title,
-                    "form_name" => "t_evaluasi_pelatihan",
-                    "trx_id" => (string) $evaluasi->id,
-                ]);
-            } catch (\Exception $e) {
-                \Log::warning("Gagal mengirim notifikasi evaluasi pelatihan: " . $e->getMessage());
+        try {
+            $firebase = app(\App\Services\FirebaseMessagingService::class);
+            foreach ($tokens as $token) {
+                try {
+                    $firebase->sendToDevice($token, $title, $body, [
+                        "title" => $title,
+                        "form_name" => "t_evaluasi_pelatihan",
+                        "trx_id" => (string) $evaluasi->id,
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::warning("Gagal mengirim notifikasi evaluasi pelatihan: " . $e->getMessage());
+                }
             }
+        } catch (\Throwable $e) {
+            \Log::warning("FirebaseMessagingService tidak tersedia atau error: " . $e->getMessage());
         }
     }
 
