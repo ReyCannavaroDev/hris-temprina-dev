@@ -246,11 +246,14 @@ async function loadData() {
       values.trx = resultJson.data.trx
       values.datalog = resultJson.data.approval_log
       initialValues = resultTrxJson.data
-
       detailArr.value = buildDetailArr(initialValues.t_evaluasi_pelatihan_detail)
-      selectedSeq.value = detailArr.value.map(group =>
-        group.komponen.map(komp => komp.nilai ?? null)
-      )
+      if (!detailArr.value || !detailArr.value.length) {
+        await loadTipePenilaian()
+      } else {
+        selectedSeq.value = detailArr.value.map(group =>
+          group.komponen.map(komp => komp.nilai ?? null)
+        )
+      }
 
       for (const key in initialValues) values[key] = initialValues[key]
     } else {
@@ -265,9 +268,13 @@ async function loadData() {
       initialValues = result.data
 
       detailArr.value = buildDetailArr(initialValues.t_evaluasi_pelatihan_detail)
-      selectedSeq.value = detailArr.value.map(group =>
-        group.komponen.map(komp => komp.nilai ?? null)
-      )
+      if (!detailArr.value || !detailArr.value.length) {
+        await loadTipePenilaian()
+      } else {
+        selectedSeq.value = detailArr.value.map(group =>
+          group.komponen.map(komp => komp.nilai ?? null)
+        )
+      }
 
       for (const key in initialValues) values[key] = initialValues[key]
 
@@ -548,7 +555,7 @@ const landing = computed(() => {
       },
       { icon: 'trash', class: 'bg-red-600 text-light-100', title: 'Hapus', show: row => ['DRAFT', 'REVISED'].includes(row.status) && data.can_delete, click: deleteData },
       { icon: 'eye', title: 'Lihat Evaluasi', class: 'bg-blue-600 text-light-100', show: row => data.can_read, click: row => router.push(`${route.path}/${row.id}`) },
-      { icon: 'edit', title: 'Edit', class: 'bg-blue-600 text-light-100', show: row => ['DRAFT', 'REVISED'].includes(row.status) && data.can_update, click: row => router.push(`${route.path}/${row.id}?action=Edit`) },
+      { icon: 'edit', title: 'Edit', class: 'bg-blue-600 text-light-100', show: row => row.status === 'REVISED' && data.can_update, click: row => router.push(`${route.path}/${row.id}?action=Edit`) },
       { icon: 'copy', title: 'Copy', class: 'bg-gray-600 text-light-100', show: row => data.can_create && row.status === 'DRAFT', click: row => router.push(`${route.path}/${row.id}?action=Copy`) },
       {
         icon: 'paper-plane',
