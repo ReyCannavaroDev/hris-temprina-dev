@@ -177,13 +177,45 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
     public function custom_send_approval()
     {
         $user = auth()->user();
-        $is_hc = $user && ($user->is_hc || in_array(strtolower($user->user_type ?? ''), ['admin']) || in_array(strtolower($user->username ?? ''), ['developer', 'danvers']));
+        $is_hc = false;
+
+        // Periksa apakah responsibility yang sedang aktif adalah HC (Human Capital)
+        $respoActive = getCore('Respo')->checkRespoActive();
+        if (!empty($respoActive) && is_object($respoActive)) {
+            $respoName = strtoupper($respoActive->name ?? '');
+            if (str_contains($respoName, 'HC') || str_contains($respoName, 'HUMAN CAPITAL') || str_contains($respoName, 'HRD') || str_contains($respoName, 'HR')) {
+                $is_hc = true;
+            } else {
+                $hasHcRole = \DB::table('m_respo_d')
+                    ->join('m_role', 'm_role.id', '=', 'm_respo_d.m_role_id')
+                    ->where('m_respo_d.m_respo_id', $respoActive->id ?? 0)
+                    ->where(function($q) {
+                        $q->whereRaw("upper(m_role.name) LIKE '%HC%'")
+                          ->orWhereRaw("upper(m_role.name) LIKE '%HUMAN CAPITAL%'")
+                          ->orWhereRaw("upper(m_role.name) LIKE '%HRD%'");
+                    })
+                    ->exists();
+                if ($hasHcRole) {
+                    $is_hc = true;
+                }
+            }
+        } elseif ($user && ($user->is_hc ?? false)) {
+            $is_hc = true;
+        }
 
         $target_id = req("target_id");
         $user_target = null;
         if ($target_id) {
             $userObj = default_users::where('m_kary_id', $target_id)->first();
             $user_target = $userObj ? $userObj->id : null;
+        }
+
+        // Jika pengaju BUKAN HC tetapi tidak memilih target approver
+        if (!$is_hc && !$user_target) {
+            return $this->helper->customResponse(
+                "Pilih Target Approval (Atasan) terlebih dahulu",
+                400
+            );
         }
 
         // Jika pengaju adalah HC, target approver otomatis adalah user HC itu sendiri
@@ -198,7 +230,7 @@ class t_request_pelatihan extends \App\Models\BasicModels\t_request_pelatihan
         }
 
         if ($is_hc) {
-            // Auto-Approve langsung untuk pengaju role HC
+            // Auto-Approve langsung HANYA untuk pengaju dengan responsibility HC
             $data = $this->find(req("id"));
             if ($data) {
                 $data->update([

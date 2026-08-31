@@ -21,6 +21,20 @@ let modalOpen = ref(false)
 let isFinish = ref(false)
 let isApproved = ref(false)
 
+const isUserHC = computed(() => {
+  const respoData = localStorage.getItem('respo')
+  if (respoData) {
+    try {
+      const respo = JSON.parse(respoData)
+      const respoName = (respo.name || respo.nama || '').toUpperCase()
+      if (respoName.includes('HC') || respoName.includes('HUMAN CAPITAL') || respoName.includes('HRD')) {
+        return true
+      }
+      return false
+    } catch (e) {}
+  }
+  return store.user.data?.is_hc === true || store.user.data?.is_hc === 1
+})
 
 // ------------------------------ PERSIAPAN
 const endpointApi = '/t_request_pelatihan'
@@ -325,9 +339,7 @@ async function posted() {
 }
 
 async function approval() {
-  const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1 || ['admin', 'developer', 'danvers'].includes(store.user.data?.username?.toLowerCase())
-
-  if (!isUserHC && !values.target_id) {
+  if (!isUserHC.value && !values.target_id) {
     swal.fire({
       icon: 'warning',
       text: 'Pilih Target Approval (Atasan) terlebih dahulu!'
@@ -335,8 +347,8 @@ async function approval() {
     return
   }
 
-  const confirmTitle = isUserHC ? 'Konfirmasi Approval HC' : 'Konfirmasi Approval'
-  const confirmText = isUserHC ? 'Pengajuan oleh akun HC akan langsung disetujui (Approved). Lanjutkan?' : 'Kirim permintaan approval ke atasan?'
+  const confirmTitle = isUserHC.value ? 'Konfirmasi Approval HC' : 'Konfirmasi Approval'
+  const confirmText = isUserHC.value ? 'Pengajuan oleh akun HC akan langsung disetujui (Approved). Lanjutkan?' : 'Kirim permintaan approval ke atasan?'
 
   const confirmRes = await swal.fire({
     title: confirmTitle,
@@ -373,7 +385,7 @@ async function approval() {
     const resultJson = await res.json()
     await swal.fire({
       icon: 'success',
-      text: resultJson.message || (isUserHC ? 'Pengajuan oleh HC berhasil diajukan dan langsung disetujui' : 'Permintaan approval berhasil dibuat')
+      text: resultJson.message || (isUserHC.value ? 'Pengajuan oleh HC berhasil diajukan dan langsung disetujui' : 'Permintaan approval berhasil dibuat')
     })
     router.replace('/' + modulPath + '?reload=' + (Date.parse(new Date())))
   } catch (err) {

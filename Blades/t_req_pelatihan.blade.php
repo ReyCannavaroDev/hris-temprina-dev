@@ -291,7 +291,7 @@
 
 
     <div>
-      <FieldSelect class="w-full mt-3" v-show="(route.query.action?.toLowerCase() === 'verifikasi' || route.query.is_approval) && !(store.user.data?.is_hc === true || store.user.data?.is_hc === 1 || ['admin', 'developer', 'danvers'].includes(store.user.data?.username?.toLowerCase()))"
+      <FieldSelect class="w-full mt-3" v-show="(route.query.action?.toLowerCase() === 'verifikasi' || route.query.is_approval) && !isUserHC"
         :value="values.target_id" @input="v=>values.target_id=v" :errorText="formErrors.target_id?'failed':''"
         :hints="formErrors.target_id" valueField="id" displayField="nama_lengkap" :api="{
               url: `${store.server.url_backend}/operation/m_kary`,
