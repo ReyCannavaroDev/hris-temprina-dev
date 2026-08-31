@@ -1,135 +1,99 @@
-# JOBLIST & ANALISA MODUL: PERJALANAN DINAS (HRIS TEMPRINA)
-Diperbarui: 2026-08-26
+# 🎓 JOBLIST & ANALISA MODUL: PELATIHAN KARYAWAN (HRIS TEMPRINA)
+Diperbarui: 2026-08-31
 
 ---
 
-## 📌 1. Ringkasan Eksekutif Modul Perjalanan Dinas
-Modul **Perjalanan Dinas** di HRIS Temprina dirancang untuk mengelola seluruh siklus perjalanan dinas karyawan secara *end-to-end*, mulai dari permohonan surat tugas, penyusunan rencana anggaran biaya (estimasi kasbon), pelaksanaan persetujuan bertingkat (*multi-tier approval*), hingga pelaporan realisasi pengeluaran dan penyelesaian selisih kasbon (*reimbursement* / pengembalian).
+## 📌 6. Ringkasan Eksekutif Modul Pelatihan
+Modul **Pelatihan Karyawan** di HRIS Temprina mengelola siklus pelatihan secara terintegrasi:
+1. **Pengajuan Pelatihan (`t_request_pelatihan` / `t_req_pelatihan`)**: Pengajuan kebutuhan pelatihan oleh divisi atau HC, dilengkapi alur approval berjenjang ke atasan pemohon.
+2. **Realisasi Pelatihan (`t_realisasi_pelatihan`)**: Pencatatan pelaksanaan aktual pelatihan, trainer, sarana, dan daftar peserta karyawan (`t_realisasi_pelatihan_d_kary`) dengan status `ACTIVE` / `INACTIVE`.
+3. **Evaluasi Pelatihan (`t_evaluasi_pelatihan`)**: Penilaian pelatihan oleh peserta yang otomatis digenerate draft-nya saat realisasi berstatus `ACTIVE` beserta push notifikasi ke HP/device peserta.
+4. **Efektifitas Pelatihan (`t_efektifitas_pelatihan`)**: Evaluasi pasca pelatihan oleh atasan peserta untuk mengukur dampak pelatihan terhadap kinerja.
 
 ---
 
-## 🔄 2. Alur Bisnis (Business Flow) End-to-End
+## 🔄 7. Alur Bisnis Pelatihan & Evaluasi Peserta
 
 ```mermaid
 graph TD
-    A[Master Data: m_tarif_perdin, m_spd, m_jarak_kota] --> B[1. Pengajuan Surat Tugas: t_perdin]
-    B -->|Submit & Approval Atasan| C{Status t_perdin}
-    C -->|Approved| D[2. Rencana Anggaran Biaya: t_rencana_perdin]
-    D -->|Tarik Tarif Otomatis dari m_tarif_perdin| E[Detail Estimasi Biaya: t_rencana_perdin_det]
-    E -->|Approval Atasan, HC, Finance| F[Pencairan Kasbon / KBS: t_kbs]
-    F -->|Pelaksanaan Perjalanan Dinas| G[3. Penyelesaian & Realisasi: t_penyelesaian_perdin]
-    G -->|Input Realisasi Biaya: t_penyelesaian_perdin_det| H[Hitung Selisih Kasbon: sisa_biaya]
-    G -->|Input Laporan Hasil: t_penyelesaian_perdin_d_laporan| H
-    H -->|Approval & Verifikasi Final| I[Posting Selesai / Reimbursement / Pengembalian Sisa]
-    I --> J[4. Monitoring & Pelaporan: l_perjalanan_dinas & web_report_spd]
+    A[1. Pengajuan Pelatihan: t_req_pelatihan] -->|Submit & Pilih Target Atasan| B{Responsibility Pemohon}
+    B -->|Bukan HC: Staf/Manager Divisi| C[Kirim Tiket Approval ke Target Atasan: Status IN APPROVAL]
+    B -->|HC: Tanggung Jawab HC| D[Auto-Approve: Status APPROVED]
+    C -->|Approved by Atasan & HC| E[2. Pelaksanaan Realisasi Pelatihan: t_realisasi_pelatihan]
+    D --> E
+    E -->|Simpan Data Baru / Status ACTIVE| F[Trigger createEvaluasiPeserta]
+    F -->|Generate Draft t_evaluasi_pelatihan per Peserta| G[Tab Belum Diisi: Status DRAFT & Counter Pending]
+    F -->|Kirim Push Notification FCM| H[Notifikasi ke HP Peserta]
+    G -->|Peserta Mengisi Nilai Komponen & Post| I[3. Evaluasi Pelatihan Selesai: Tab Sudah Diisi]
+    I --> J[4. Evaluasi Efektifitas oleh Atasan: t_efektifitas_pelatihan]
 ```
-
-### Tahapan Alur Kerja:
-
-### A. Tahap 1: Pengajuan Surat Tugas (`t_perdin`)
-1. Karyawan / Admin mengajukan permohonan dinas baru melalui form `t_perdin`.
-2. Input data utama: Karyawan (`m_kary_id`), Posisi/Jabatan (`m_posisi_id`), Atasan Penyetuju (`m_atasan_id`), Tanggal Berangkat (`date_from`) s/d Tanggal Kembali (`date_to`), Tujuan (Provinsi, Kota, Kecamatan, Alamat), dan Tugas/Keperluan dinas.
-3. Sistem secara otomatis men-generate nomor surat tugas (format: `PERDIN/...`).
-4. Status awal adalah `DRAFT` dan masuk ke alur persetujuan atasan (`SUBMITTED` -> `APPROVED`).
-
-### B. Tahap 2: Rencana Anggaran Biaya & Kasbon (`t_rencana_perdin`)
-1. Setelah `t_perdin` disetujui, karyawan membuat Rencana Biaya Perdin (`t_rencana_perdin`).
-2. Karyawan memilih nomor referensi `t_perdin_id`.
-3. Komponen estimasi biaya di `t_rencana_perdin_det` ditarik secara otomatis dari master tarif (`m_tarif_perdin` berdasarkan level jabatan karyawan) seperti: uang saku/harian, penginapan/hotel, transportasi, dan makan.
-4. Total biaya estimasi diajukan ke HC & Finance untuk persetujuan.
-5. Setelah disetujui (`APPROVED`), data kasbon diteruskan ke kasir/finance untuk pencairan uang muka/kasbon (`t_kbs`).
-
-### C. Tahap 3: Pelaksanaan & Penyelesaian Perjalanan Dinas (`t_penyelesaian_perdin`)
-1. Setelah dinas selesai, karyawan wajib membuat Laporan Pertanggungjawaban (LPJ) melalui form `t_penyelesaian_perdin`.
-2. Sistem otomatis menarik data kasbon yang sudah cair (`nominal_kbs`, `no_kbs`).
-3. Karyawan menginputkan:
-   - **Realisasi Biaya Riil** (`t_penyelesaian_perdin_det`): Nominal aktual yang dikeluarkan disertai bukti nota/struk (tiket, bensin, hotel, dll.).
-   - **Laporan Kegiatan** (`t_penyelesaian_perdin_d_laporan`): Ringkasan hasil dinas dan foto/lampiran dokumentasi.
-4. Sistem menghitung selisih (`sisa_biaya = nominal_kbs - total_biaya`):
-   - **Lebih Kasbon (`sisa_biaya > 0`)**: Karyawan mengembalikan sisa uang kasbon ke kasir.
-   - **Kurang Kasbon / Reimbursement (`sisa_biaya < 0`)**: Perusahaan mengganti kekurangan biaya dinas kepada karyawan.
-5. Approval LPJ: Diverifikasi oleh Atasan, HC, dan Finance hingga status `POSTED`.
-
-### D. Tahap 4: Pelaporan & Monitoring
-- `l_perjalanan_dinas`: Rekapitulasi transaksi dinas, perbandingan rencana anggaran vs realisasi riil.
-- `web_report_spd`: Template cetak dokumen fisik surat perintah perjalanan dinas resmi.
 
 ---
 
-## 🗄️ 3. Pemetaan File & Model Terkait
+## 🗄️ 8. Pemetaan File & Model Terkait Modul Pelatihan
 
 | No | Layer / Entitas | File Model (Migration/Basic/Custom) | File Blade & Javascript | Deskripsi Fungsi |
 |---|---|---|---|---|
-| 1 | **Master Tarif Perdin** | `Models/m_tarif_perdin/*`<br>`Models/m_tarif_perdin_det/*` | `Blades/m_tarif_perdin.blade.php`<br>`Javascript/m_tarif_perdin.js` | Master plafon biaya perdin per level posisi |
-| 2 | **Master SPD Aturan** | `Models/m_spd/*`<br>`Models/m_spd_det_biaya/*`<br>`Models/m_spd_det_transport/*` | `Blades/m_spd.blade.php`<br>`Javascript/m_spd.js` | Master template & parameter SPD per cabang/divisi |
-| 3 | **Surat Tugas Perdin** | `Models/t_perdin/*` | `Blades/t_perdin.blade.php`<br>`Javascript/t_perdin.js` | Transaksi pengajuan surat tugas dinas |
-| 4 | **Rencana Biaya (RPD)** | `Models/t_rencana_perdin/*`<br>`Models/t_rencana_perdin_det/*` | `Blades/t_rencana_perdin.blade.php`<br>`Javascript/t_rencana_perdin.js` | Estimasi biaya & pengajuan kasbon perdin |
-| 5 | **Penyelesaian (PPD)** | `Models/t_penyelesaian_perdin/*`<br>`Models/t_penyelesaian_perdin_det/*`<br>`Models/t_penyelesaian_perdin_d_laporan/*` | `Blades/t_penyelesaian_perdin.blade.php`<br>`Javascript/t_penyelesaian_perdin.js` | LPJ realisasi pengeluaran & selisih kasbon |
-| 6 | **Penyelesaian Karyawan** | - | `Blades/t_penyelesaian_perdin_karyawan.blade.php`<br>`Javascript/t_penyelesaian_perdin_karyawan.js` | View khusus sisi karyawan untuk input LPJ mandiri |
-| 7 | **Laporan & Cetak** | - | `Blades/l_perjalanan_dinas.blade.php`<br>`Blades/web_report_spd.blade.php` | Rekapitulasi laporan monitoring & cetak PDF/Web |
+| 1 | **Master Program Pelatihan** | `Models/m_prog_pelatihan/*`<br>`Models/m_prog_pelatihan_d_divisi/*`<br>`Models/m_prog_pelatihan_d_level/*` | `Blades/m_prog_pelatihan.blade.php`<br>`Javascript/m_prog_pelatihan.js` | Master tema & kurikulum pelatihan |
+| 2 | **Master Trainer** | `Models/m_trainer/*` | `Blades/m_trainer.blade.php`<br>`Javascript/m_trainer.js` | Master pengajar/instruktur |
+| 3 | **Pengajuan Pelatihan** | `Models/t_request_pelatihan/*`<br>`Models/t_request_pelatihan_d_kary/*` | `Blades/t_req_pelatihan.blade.php`<br>`Javascript/t_req_pelatihan.js` | Transaksi pengajuan kebutuhan pelatihan |
+| 4 | **Realisasi Pelatihan** | `Models/t_realisasi_pelatihan/*`<br>`Models/t_realisasi_pelatihan_d_kary/*` | `Blades/t_realisasi_pelatihan.blade.php`<br>`Javascript/t_realisasi_pelatihan.js` | Realisasi jadwal, trainer, & peserta aktif |
+| 5 | **Evaluasi Pelatihan** | `Models/t_evaluasi_pelatihan/*`<br>`Models/t_evaluasi_pelatihan_detail/*` | `Blades/t_evaluasi_pelatihan.blade.php`<br>`Javascript/t_evaluasi_pelatihan.js` | Penilaian pelatihan oleh masing-masing peserta |
+| 6 | **Efektifitas Pelatihan** | `Models/t_efektifitas_pelatihan/*`<br>`Models/t_efektifitas_pelatihan_detail/*` | `Blades/t_efektifitas_pelatihan.blade.php`<br>`Javascript/t_efektifitas_pelatihan.js` | Evaluasi dampak pelatihan oleh atasan |
 
 ---
 
-## 🔍 4. Analisa Temuan Masalah & Potensi Bug pada Modul Perdin
+## 🔍 9. Analisa Temuan Masalah & Bug Feedback Klien
 
-Berdasarkan penelusuran menyeluruh pada seluruh kode modul:
+### 1. Bug Auto-Approve HC Keliru pada Pengajuan Pelatihan (`t_request_pelatihan` / `t_req_pelatihan`)
+- **Penyebab**: 
+  - Di `Models/t_request_pelatihan/Custom.php` baris 180, penentuan `$is_hc` mencakup `user_type == 'admin'`, atau username `developer` / `danvers`, serta membaca atribut global tanpa memvalidasi **responsibility yang sedang aktif**.
+  - Jika seorang staf atau akun testing mengajukan pelatihan dan memilih target approval manager divisinya, sistem malah mengeksekusi blok auto-approve HC (`APPROVED AUTO BY HC`), memotong flow approval normal.
+  - Di `Blades/t_req_pelatihan.blade.php` dan `Javascript/t_req_pelatihan.js` juga terdapat hardcode `isUserHC` serupa.
+- **Solusi**:
+  - Validasi responsibility aktif pemohon melalui `getCore('Respo')->checkRespoActive()` dan periksa apakah responsibility yang aktif benar-benar memiliki tanggung jawab HC.
+  - Jika responsibility pemohon bukan HC, wajib menjalankan alur approval berjenjang normal: membuat tiket approval ke target atasan (`target_id` / manager divisi), mengubah status menjadi `IN APPROVAL`, dan mengirim push notifikasi FCM ke target atasan.
 
-1. **Bug Pemilihan Perdin Kosong di Penyelesaian (`t_penyelesaian_perdin`)**:
-   - **Penyebab**: Filter `scopeusedPerdin` di `t_perdin/Custom.php` melakukan filter `where('m_kary_id', $m_kary_id)`. Jika user bertipe `admin`, `$m_kary_id` bernilai `null` sehingga query mengembalikan **0 baris**.
-   - Selain itu, filter status `whereHas('t_rencana_perdin', fn($q) => $q->where('status', 'APPROVED'))` bersifat *case-sensitive* di PostgreSQL sehingga rentan *mismatch*.
-   - Parameter `searchfield` di `Blades/t_penyelesaian_perdin.blade.php` memiliki kolom `date_to` tanpa prefix `this.`.
+### 2. Trigger Pembuatan Draft Evaluasi & Notifikasi saat Realisasi Pelatihan Dibuat / Status `ACTIVE`
+- **Penyebab**:
+  - Modul `t_realisasi_pelatihan` tidak menggunakan siklus DRAFT/POST, melainkan `ACTIVE` / `INACTIVE`.
+  - Saat ini, method `createEvaluasiPeserta($data)` hanya dipanggil pada `custom_posted`, `custom_progress`, dan `custom_approveHC`. Saat data baru disimpan atau diupdate menjadi `ACTIVE` via `createAfter` / `updateAfter`, pembuatan draft evaluasi **belum terpanggil**.
+- **Solusi**:
+  - Tambahkan hook di `createAfter` dan `updateAfter` pada `Models/t_realisasi_pelatihan/Custom.php` untuk memanggil `createEvaluasiPeserta($model)` apabila status data bernilai `ACTIVE`.
+  - Pastikan setiap peserta di `t_realisasi_pelatihan_d_kary` dibuatkan header `t_evaluasi_pelatihan` dengan status `DRAFT` dan menerima push notification FCM.
 
-2. **Bug Data Detail (Biaya & Laporan) Tidak Muncul / Hilang saat Read & Update**:
-   - **Penyebab**: Di `Models/t_penyelesaian_perdin/Custom.php` belum ada method `transformRowData()` dan `updateBefore()`.
-   - Di `Javascript/t_penyelesaian_perdin.js` baris 292–297, kode langsung melakukan `initialValues.t_penyelesaian_perdin_det.map(...)` tanpa fallback array kosong `|| []`, memicu *crash TypeError* (`Cannot read properties of undefined`) yang mematikan form.
-   - Masih ada sisa validasi inventory `item.qty === null` (baris 430) pada form perdin.
-
-3. **Bug Auto-Generate Tarif Rencana Perdin (`t_rencana_perdin`)**:
-   - **Penyebab**: Method `custom_generateTarif` di `Models/t_rencana_perdin/Custom.php` mencari kolom `kota_id, provinsi_id, posisi_id` pada `m_tarif_perdin`, padahal kolom skema database adalah `m_level_posisi_id`.
-
-4. **Konsep & Standarisasi Alur Approval (`Approval Workflow`)**:
-   - Ticket approval pada `t_rencana_perdin` (`APPROVAL RINCIAN PERDIN`) dan `t_penyelesaian_perdin` (`APPROVAL PENYELESAIAN PERDIN`) perlu standarisasi penanganan target approval ke atasan pemohon.
-   - Proteksi notifikasi Firebase agar tidak melempar error saat token FCM target kosong.
-   - Penyeragaman status approval menjadi `IN APPROVAL`, `APPROVED`, `REJECTED`, `REVISED`, dan `POSTED`.
+### 3. Fallback Pemuatan Komponen Pertanyaan Evaluasi di Frontend (`t_evaluasi_pelatihan.js`)
+- **Penyebab**:
+  - Ketika peserta membuka draft evaluasi via tombol pensil "Isi Evaluasi" (`t_evaluasi_pelatihan/{id}?action=Edit`), route berstatus `isRead = true`.
+  - Pada `isRead = true`, kode hanya membaca detail dari database. Karena draft auto-generated baru berisi header, `t_evaluasi_pelatihan_detail` masih bernilai kosong (`[]`), dan `loadTipePenilaian()` tidak terpanggil sehingga pertanyaan penilaian tidak tampil.
+- **Solusi**:
+  - Tambahkan fallback di `loadData()` pada `Javascript/t_evaluasi_pelatihan.js`: jika `initialValues.t_evaluasi_pelatihan_detail` kosong, panggil `loadTipePenilaian()` dari `m_general` agar daftar pertanyaan evaluasi langsung ter-render.
 
 ---
 
-## 📋 5. Actionable Roadmap & Task Checklist
+## 📋 10. Actionable Roadmap & Task Checklist Pelatihan
 
-### 🚀 TAHAP 1: Perbaikan Pemilihan Perdin di Form Penyelesaian (Fokus Feedback Klien)
-- [x] **[Models/t_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_perdin/Custom.php)**:
-  - Perbaiki `scopeusedPerdin`: Izinkan Admin / HC melihat semua perdin berstatus rencana `APPROVED`.
-  - Normalisasi filter status case-insensitive: `upper(status) = 'APPROVED'`.
-  - Gunakan `$user->m_kary_id` dengan fallback query `m_kary`.
-- [x] **[Blades/t_penyelesaian_perdin.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_penyelesaian_perdin.blade.php)** & **[Blades/t_penyelesaian_perdin_karyawan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_penyelesaian_perdin_karyawan.blade.php)**:
-  - Perbaiki `searchfield` pada `FieldPopup` (tambahkan prefix `this.date_to`).
-  - Pastikan event `@update:valueFull` memetakan seluruh data perdin ke form values secara presisi.
+### 🚀 TAHAP 6: Perbaikan Otorisasi & Alur Approval Pengajuan Pelatihan
+- [ ] **[Models/t_request_pelatihan/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_request_pelatihan/Custom.php)**:
+  - Validasi responsibility aktif pemohon (`checkRespoActive()` & respo role HC).
+  - Hapus hardcode auto-approve untuk akun admin/developer non-HC.
+  - Pastikan pengajuan dari akun non-HC membuat tiket approval ke `target_id` atasan dan mengupdate status ke `IN APPROVAL`.
+- [ ] **[Blades/t_req_pelatihan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_req_pelatihan.blade.php)** & **[Javascript/t_req_pelatihan.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_req_pelatihan.js)**:
+  - Bersihkan hardcode `isUserHC` agar FieldSelect target approver tetap tampil bagi user non-HC.
 
-### 📦 TAHAP 2: Perbaikan Data Detail Biaya & Laporan Kegiatan
-- [x] **[Models/t_penyelesaian_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_penyelesaian_perdin/Custom.php)**:
-  - Tambahkan method `transformRowData()` untuk mengambil `t_penyelesaian_perdin_det` dan `t_penyelesaian_perdin_d_laporan`.
-  - Tambahkan method `updateBefore()` untuk menginisialisasi `$this->details = ["t_penyelesaian_perdin_det", "t_penyelesaian_perdin_d_laporan"]`.
-- [x] **[Javascript/t_penyelesaian_perdin.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_penyelesaian_perdin.js)**:
-  - Beri proteksi fallback array kosong `(initialValues.t_penyelesaian_perdin_det || []).map(...)` saat read mode.
-  - Hapus duplikasi looping `forEach` detail yang redundan.
-  - Bersihkan sisa validasi inventory `qty/qty_2` pada `onSave()`.
+### 📦 TAHAP 7: Trigger Evaluasi & Notifikasi saat Realisasi Pelatihan Berstatus `ACTIVE`
+- [ ] **[Models/t_realisasi_pelatihan/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_realisasi_pelatihan/Custom.php)**:
+  - Tambahkan hook `createAfter()` dan `updateAfter()` yang memicu `createEvaluasiPeserta()` saat status adalah `ACTIVE`.
+  - Pastikan `createEvaluasiPeserta()` membuat draft `t_evaluasi_pelatihan` (status `DRAFT`) untuk seluruh peserta di `t_realisasi_pelatihan_d_kary`.
+  - Pastikan pengiriman push notifikasi FCM (`sendEvaluasiNotification`) terkirim ke masing-masing akun peserta.
 
-### 💵 TAHAP 3: Perbaikan Penarikan Tarif Rencana Perdin
-- [x] **[Models/t_rencana_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_rencana_perdin/Custom.php)**:
-  - Perbaiki `custom_generateTarif` & `public_generateTarif` agar membaca `m_level_posisi_id` dari posisi karyawan pemohon.
-- [x] **[Javascript/t_rencana_perdin.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_rencana_perdin.js)**:
-  - Sesuaikan payload request generate tarif agar mengirimkan `m_posisi_id` / `m_level_posisi_id`.
+### 📝 TAHAP 8: Sinkronisasi Form & Landing Page Evaluasi Pelatihan
+- [ ] **[Javascript/t_evaluasi_pelatihan.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_evaluasi_pelatihan.js)**:
+  - Tambahkan fallback pemanggilan `loadTipePenilaian()` di `loadData()` jika detail draft masih kosong.
+  - Pastikan counter `pendingCount` pada tab "Belum Diisi" merefleksikan jumlah evaluasi berstatus `DRAFT` peserta.
 
-### 🛡️ TAHAP 4: Standarisasi Konsep Approval & Notifikasi
-- [x] **[Models/t_penyelesaian_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_penyelesaian_perdin/Custom.php)**:
-  - Sinkronisasi `createAppTicket`, `custom_progress`, dan `custom_approveHC`.
-  - Proteksi exception saat generate KBR jika koneksi ERP tidak aktif.
-- [x] **[Models/t_rencana_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_rencana_perdin/Custom.php)**:
-  - Sinkronisasi ticket approval dan notifikasi FCM.
-  - Fallback auto note `Approved` saat approve data.
-
-### ✅ TAHAP 5: Pengujian & Validasi End-to-End
-- [x] Verifikasi pemilihan nomor perdin di form Penyelesaian Perjalanan Dinas.
-- [x] Verifikasi simpan, read, dan edit detail biaya serta laporan kegiatan.
-- [x] Verifikasi kalkulasi selisih kasbon (`nominal_kbs - total_biaya`).
-- [x] Verifikasi alur approval dari status `DRAFT` -> `IN APPROVAL` -> `APPROVED` -> `POSTED`.
+### ✅ TAHAP 9: Pengujian & Validasi End-to-End Pelatihan
+- [ ] Uji pengajuan pelatihan oleh akun staf ke Manager Divisi: verifikasi status menjadi `IN APPROVAL` dan tiket approval terbentuk.
+- [ ] Uji pengajuan pelatihan oleh akun dengan responsibility HC: verifikasi auto-approve hanya terjadi untuk HC.
+- [ ] Uji pembuatan Realisasi Pelatihan berstatus `ACTIVE`: verifikasi draft evaluasi terbentuk untuk semua peserta di `t_realisasi_pelatihan_d_kary` dan notifikasi terkirim.
+- [ ] Uji pengisian evaluasi oleh peserta pelatihan dari tab "Belum Diisi" hingga tersimpan dan berpindah ke tab "Sudah Diisi".
