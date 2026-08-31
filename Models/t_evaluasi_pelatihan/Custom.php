@@ -157,6 +157,22 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         ];
     }
 
+    public function deleteBefore($model, $id=null)
+    {
+        $evalId = $id ?? ($model->id ?? null);
+        if ($evalId) {
+            $app = generate_approval::where('trx_table', 't_evaluasi_pelatihan')->where('trx_id', $evalId)->first();
+            if ($app) {
+                generate_approval_d::where('generate_approval_id', $app->id)->delete();
+                $app->delete();
+            }
+        }
+        return [
+            "model" => $model,
+            "id" => $id
+        ];
+    }
+
     public function scopelanding($model)
     {
         $userId = auth()->user()->id;

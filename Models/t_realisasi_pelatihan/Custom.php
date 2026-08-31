@@ -367,11 +367,19 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
 
             if ($evaluasiList->count() > 1) {
                 $keepId = $evaluasiList->first()->id;
-                t_evaluasi_pelatihan::where('t_realisasi_pelatihan_id', $data->id)
+                $dupEvaluasi = t_evaluasi_pelatihan::where('t_realisasi_pelatihan_id', $data->id)
                     ->where('m_kary_id', $m_kary_id)
                     ->where('id', '!=', $keepId)
                     ->where('status', 'DRAFT')
-                    ->delete();
+                    ->get();
+                foreach ($dupEvaluasi as $dup) {
+                    $app = generate_approval::where('trx_table', 't_evaluasi_pelatihan')->where('trx_id', $dup->id)->first();
+                    if ($app) {
+                        generate_approval_d::where('generate_approval_id', $app->id)->delete();
+                        $app->delete();
+                    }
+                    $dup->delete();
+                }
                 $evaluasi = $evaluasiList->first();
             } else {
                 $evaluasi = $evaluasiList->first();
