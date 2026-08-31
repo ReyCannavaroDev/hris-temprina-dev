@@ -391,6 +391,14 @@ class Approval
             ->leftJoin('default_users', 'default_users.id', 'generate_approval.creator_id')
             ->whereRaw("
                 generate_approval.status = 'PROGRESS' 
+                and (
+                    generate_approval.trx_table != 't_evaluasi_pelatihan'
+                    or exists (
+                        select 1 from t_evaluasi_pelatihan ep 
+                        where ep.id = generate_approval.trx_id 
+                        and ep.status in ('DRAFT', 'REVISED')
+                    )
+                )
                 and generate_approval.id 
                     in(select generate_approval_id from generate_approval_d d 
                     join default_users s on s.id = d.default_users_id
