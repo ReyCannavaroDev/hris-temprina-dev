@@ -285,6 +285,46 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         return $this->helper->customResponse("OK", 200, $data);
     }
 
+    public function custom_posted($req)
+    {
+        \DB::beginTransaction();
+        try {
+            $data = $this->find($req->id);
+            if (!$data) {
+                return $this->helper->customResponse("Data tidak ditemukan", 404);
+            }
+            $data->update([
+                'status' => 'POSTED'
+            ]);
+
+            // Selesaikan tiket notifikasi pengisian evaluasi di generate_approval
+            $app = \DB::table('generate_approval')
+                ->where('trx_table', 't_evaluasi_pelatihan')
+                ->where('trx_id', $req->id)
+                ->first();
+
+            if ($app) {
+                \DB::table('generate_approval')->where('id', $app->id)->update([
+                    'status' => 'APPROVED',
+                    'updated_at' => Carbon::now()
+                ]);
+                \DB::table('generate_approval_d')->where('generate_approval_id', $app->id)->update([
+                    'is_done' => true,
+                    'action_type' => 'APPROVED',
+                    'action_at' => Carbon::now(),
+                    'action_user_id' => auth()->user()->id ?? $data->creator_id,
+                    'updated_at' => Carbon::now()
+                ]);
+            }
+
+            \DB::commit();
+            return $this->helper->customResponse("Data evaluasi berhasil diposting");
+        } catch (\Exception $e) {
+            \DB::rollback();
+            return $this->helper->responseCatch($e);
+        }
+    }
+
     public function custom_send_approval()
     {
         $target_id = req("target_id");
@@ -389,24 +429,6 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         ];
         $data = $this->helper->approvalLog($conf);
         return response($data);
-    }
-
-    public function custom_posted($req)
-    {
-
-        \DB::beginTransaction();
-        try{
-
-            $data = $this->find($req->id);
-            $data->status = 'POSTED';
-            $data->save();
-
-         \DB::commit();
-         return $this->helper->customResponse("Data berhasil diajukan");
-        }catch (\Exception $e) {
-            \DB::rollback();
-            return $this->helper->responseCatch($e);
-        }
     }
 
     public function custom_approveHC()

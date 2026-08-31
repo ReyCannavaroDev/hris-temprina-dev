@@ -208,6 +208,16 @@ class generate_approval extends \App\Models\BasicModels\generate_approval
                                         ->where('t_rpd_det.t_rpd_id', $data->approval->trx_id)
                                         ->get() ?? [];
             }
+            elseif($data->approval->trx_table === 't_evaluasi_pelatihan')
+            {
+                $eval = t_evaluasi_pelatihan::find($data->approval->trx_id);
+                $prog = $eval && $eval->m_prog_pelatihan_id ? m_prog_pelatihan::find($eval->m_prog_pelatihan_id) : null;
+                $mappedTrx->nomor = $eval ? $eval->kode : ($data->trx->kode ?? '-');
+                $mappedTrx->tanggal = $eval ? $eval->tanggal : date('Y-m-d');
+                $mappedTrx->tema_pelatihan = $prog ? $prog->tema_pelatihan : '-';
+                $mappedTrx->keterangan = 'Pengisian Evaluasi Pelatihan';
+                $mappedTrx->status = $eval ? $eval->status : 'DRAFT';
+            }
             else{
                 $mappedTrx->nomor = $data->trx->nomor;
                 $mappedTrx->tanggal = $data->trx->tanggal;
