@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Models\CustomModels;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class generate_approval extends \App\Models\BasicModels\generate_approval
 {    
@@ -89,12 +91,32 @@ class generate_approval extends \App\Models\BasicModels\generate_approval
     {
         $outstanding = $this->approval->outstanding();
         if ($outstanding && method_exists($outstanding, 'getCollection')) {
-            $outstanding->getCollection()->transform(function ($item) {
+            $filtered = $outstanding->getCollection()->filter(function ($item) {
+                if (($item->trx_table ?? '') === 't_evaluasi_pelatihan') {
+                    $exists = \DB::table('t_evaluasi_pelatihan')
+                        ->where('id', $item->trx_id)
+                        ->whereIn('status', ['DRAFT', 'REVISED'])
+                        ->exists();
+                    if (!$exists) {
+                        try {
+                            \DB::table('generate_approval_d')->where('generate_approval_id', $item->id)->delete();
+                            \DB::table('generate_approval')->where('id', $item->id)->delete();
+                        } catch (\Throwable $e) {}
+                        return false;
+                    }
+                }
+                return true;
+            })->transform(function ($item) {
                 if (($item->form_name ?? '') === 't_request_pelatihan' || ($item->trx_table ?? '') === 't_request_pelatihan') {
                     $item->form_name = 't_req_pelatihan';
                 }
+                if (!empty($item->trx_date)) {
+                    $item->tanggal_terbuat = Carbon::parse($item->trx_date)->format('d-m-Y');
+                }
                 return $item;
-            });
+            })->values();
+
+            $outstanding->setCollection($filtered);
         }
         return response($outstanding);
     }

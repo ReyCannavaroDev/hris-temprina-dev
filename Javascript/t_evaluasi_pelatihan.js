@@ -231,15 +231,16 @@ async function loadData() {
         },
       })
       const resultJson = await apiApp.json()
-      console.log(resultJson.data)
-      const apiTrx = await fetch(`${store.server.url_backend}/operation/${endpointApi}/${resultJson.data.approval.trx_id}?transform=true&join=true`, {
+      if (!apiApp.ok || !resultJson.data?.approval) throw new Error('Tiket notifikasi tidak ditemukan atau telah dihapus')
+      const trxId = resultJson.data.approval.trx_id
+      const apiTrx = await fetch(`${store.server.url_backend}/operation/${endpointApi}/${trxId}?transform=true&join=true`, {
         headers: {
           'Content-Type': 'Application/json',
           Authorization: `${store.user.token_type} ${store.user.token}`
         },
       })
 
-      if (!apiTrx.ok || !apiApp.ok) throw new Error('Failed when trying to read data')
+      if (!apiTrx.ok) throw new Error('Data evaluasi pelatihan tidak ditemukan atau telah dihapus')
       const resultTrxJson = await apiTrx.json()
       values.interval = resultJson.data.approval
       values.approval = resultJson.data.approval
