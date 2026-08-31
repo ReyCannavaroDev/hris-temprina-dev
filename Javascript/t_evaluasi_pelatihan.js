@@ -500,13 +500,39 @@ const loadPendingCount = async () => {
   }
 }
 
+const isUserHC = computed(() => {
+  const respoStr = localStorage.getItem('respo')
+  if (respoStr) {
+    try {
+      const respo = JSON.parse(respoStr)
+      const respoName = (respo?.name || '').toUpperCase()
+      if (respoName.includes('HC') || respoName.includes('HUMAN CAPITAL') || respoName.includes('HRD') || respoName.includes('ADMIN')) {
+        return true
+      }
+    } catch (e) {}
+  }
+  return store.user.data?.is_hc === true || store.user.data?.is_hc === 1
+})
+
+function getBaseWhere(statusFilter = "this.status='DRAFT'") {
+  const filters = []
+  if (statusFilter) {
+    filters.push(statusFilter)
+  }
+  const currentKaryId = store.user.data?.m_kary_id
+  if (!isUserHC.value && currentKaryId) {
+    filters.push(`this.m_kary_id=${currentKaryId}`)
+  }
+  return filters.length ? filters.join(' AND ') : null
+}
+
 function switchLandingTab(tabIndex) {
   activeTabLanding.value = tabIndex
   if (landing.value?.api?.params) {
     if (tabIndex === 0) {
-      landing.value.api.params.where = `this.status='DRAFT'`
+      landing.value.api.params.where = getBaseWhere("this.status='DRAFT'")
     } else {
-      landing.value.api.params.where = `this.status!='DRAFT'`
+      landing.value.api.params.where = getBaseWhere("this.status!='DRAFT'")
     }
   }
   if (apiTable.value) {
@@ -535,6 +561,10 @@ function filterShowData(statusLabel = null, noBtn = null) {
 
   if (statusLabel) {
     filters.push(`this.status='${statusLabel?.toUpperCase()}'`)
+  }
+  const currentKaryId = store.user.data?.m_kary_id
+  if (!isUserHC.value && currentKaryId) {
+    filters.push(`this.m_kary_id=${currentKaryId}`)
   }
 
   landing.value.api.params.where = filters.length ? filters.join(' AND ') : null
@@ -612,9 +642,8 @@ const landing = computed(() => {
         class: 'bg-rose-700 rounded-lg text-white',
         show: row => {
           const status = row.status?.toUpperCase()
-          const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1
           const isStatusValid = status === 'HALF APPROVED'
-          return isUserHC && isStatusValid && data.can_update
+          return isUserHC.value && isStatusValid && data.can_update
         },
         async click(row) {
           swal.fire({
@@ -689,8 +718,8 @@ const landing = computed(() => {
         paginate: 25, 
         transform: true, 
         join: true, 
-        where: "this.status='DRAFT'",
-        searchfield: 'm_trainer.nama_trainer, m_prog_pelatihan.tema_pelatihan' 
+        where: getBaseWhere("this.status='DRAFT'"),
+        searchfield: 'm_trainer.nama_trainer, m_prog_pelatihan.tema_pelatihan, m_kary.nama_lengkap' 
       },
       onsuccess: r => ({ ...r, page: r.current_page, hasNext: r.has_next })
     },
