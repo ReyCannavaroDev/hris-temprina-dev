@@ -157,7 +157,7 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         ];
     }
 
-    public function deleteBefore($model, $id=null)
+    public function deleteBefore($model, $arrayData, $metaData, $id = null)
     {
         $evalId = $id ?? ($model->id ?? null);
         if ($evalId) {
@@ -169,7 +169,7 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         }
         return [
             "model" => $model,
-            "id" => $id
+            "data" => $arrayData
         ];
     }
 
