@@ -187,26 +187,6 @@
               }
           }" fa-icon="caret-down" label="Trainer" placeholder="Pilih Trainer" :check="false" />
     </div>
-
-    <div v-show="route.query.is_approval">
-      <FieldX :bind="{ readonly: false }" class="text-[11px] font-medium text-gray-700 mb-4" type="textarea"
-        :value="values.catatan" :errorText="formErrors.catatan?'failed':''" @input="v=>values.catatan=v"
-        :hints="formErrors.catatan" :check="false" label="Catatan Approval" placeholder="Tuliskan catatan Approval" />
-    </div>
-
-    <div>
-      <FieldSelect v-show="route.query.action?.toLowerCase() === 'verifikasi'" :value="values.target_id"
-        @input="v=>values.target_id=v" :errorText="formErrors.target_id?'failed':''" :hints="formErrors.target_id"
-        valueField="id" displayField="nama_lengkap" :api="{
-              url: `${store.server.url_backend}/operation/m_kary`,
-              headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-              params: {
-                selectfield: 'this.id,this.nama_lengkap',
-                scopes: 'higherlevel'
-              }
-          }" placeholder="Pilih Target Approval" label="Target Approval" fa-icon="" :check="false" />
-
-    </div>
   </div>
 
   <div class="p-6">
@@ -316,20 +296,8 @@
   <div class="flex flex-row items-center justify-end space-x-2 p-2">
     <i class="text-gray-500 text-[12px]">Tekan CTRL + S untuk shortcut Save Data</i>
     <button
-        v-show="route.query.is_approval" class="mx-1 bg-green-500 text-white hover:bg-green-600 rounded-lg py-[10px] px-[28px] " @click="onProcess('approve')">
-        Approve
-      </button>
-    <button
-        v-show="route.query.is_approval" class="mx-1 bg-rose-500 text-white hover:bg-rose-600 rounded-lg py-[10px] px-[28px] " @click="onProcess('reject')">
-        Reject
-      </button>
-    <button
-        v-show="route.query.is_approval" class="mx-1 bg-amber-500 text-white hover:bg-amber-600 rounded-lg py-[10px] px-[28px] " @click="onProcess('revise')">
-        Revise
-      </button>
-    <button
         class="bg-red-600 text-white font-semibold hover:bg-red-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
-        v-show="actionText"
+        v-show="actionText || !values.status || values.status === 'DRAFT' || values.status === 'REVISED' || route.query.is_approval"
         @click="onReset(true)"
       >
         <icon fa="times" />
@@ -337,19 +305,11 @@
       </button>
     <button
         class="bg-green-600 text-white font-semibold hover:bg-green-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
-        v-show="actionText && route.query.action?.toLowerCase() !== 'verifikasi' && (['Tambah','Create','Copy'].includes(actionText) ? data.can_create : data.can_update)"
+        v-show="actionText || !values.status || values.status === 'DRAFT' || values.status === 'REVISED' || route.query.is_approval"
         @click="onSave"
       >
         <icon fa="save" />
         Simpan
-      </button>
-    <button
-        class="bg-green-600 text-white font-semibold hover:bg-green-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
-        v-show="route.query.action?.toLowerCase() === 'verifikasi'"
-        @click="onApproval"
-      >
-        <icon fa="location-arrow" />
-        Send Approval
       </button>
   </div>
 </div>

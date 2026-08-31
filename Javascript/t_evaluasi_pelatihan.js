@@ -8,7 +8,7 @@ const swal = inject('swal')
 
 // ========================== STATE DASAR ==========================
 const isRead = route.params.id && route.params.id !== 'create'
-const actionText = ref(route.params.id === 'create' ? 'Tambah' : route.query.action)
+const actionText = ref(route.params.id === 'create' ? 'Tambah' : (route.query.action || (route.params.id ? 'Edit' : null)))
 const modulPath = route.params.modul
 const apiTable = ref(null)
 const formErrors = ref({})
@@ -333,7 +333,29 @@ async function loadTipePenilaian() {
   }
 }
 
-// ========================== SAVE ==========================
+// ========================== RESET & SAVE ==========================
+function onReset() {
+  swal.fire({
+    icon: 'warning',
+    text: 'Reset data form ini?',
+    showDenyButton: true
+  }).then((res) => {
+    if (res.isConfirmed) {
+      for (const key in initialValues) {
+        values[key] = initialValues[key]
+      }
+      detailArr.value = buildDetailArr(initialValues.t_evaluasi_pelatihan_detail)
+      if (detailArr.value && detailArr.value.length) {
+        selectedSeq.value = detailArr.value.map(group =>
+          group.komponen.map(komp => komp.nilai ?? null)
+        )
+      } else {
+        selectedSeq.value = detailArr.value.map(item => item.komponen.map(() => null))
+      }
+    }
+  })
+}
+
 async function onSave() {
   try {
     isRequesting.value = true
@@ -358,7 +380,7 @@ async function onSave() {
 
     const payload = {
       ...values,
-      status: 'DRAFT',
+      status: 'POSTED',
       t_evaluasi_pelatihan_detail: detailPayload
     }
 

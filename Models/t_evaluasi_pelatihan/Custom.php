@@ -157,6 +157,32 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         ];
     }
 
+    public function updateAfter($model, $arrayData, $metaData, $id=null)
+    {
+        $status = $arrayData['status'] ?? ($model->status ?? null);
+        if ($status === 'POSTED') {
+            $evalId = $id ?? ($model->id ?? null);
+            if ($evalId) {
+                $app = generate_approval::where('trx_table', 't_evaluasi_pelatihan')->where('trx_id', $evalId)->first();
+                if ($app) {
+                    generate_approval::where('id', $app->id)->update([
+                        'status' => 'APPROVED',
+                        'updated_at' => Carbon::now()
+                    ]);
+                    generate_approval_d::where('generate_approval_id', $app->id)->update([
+                        'is_done' => true,
+                        'updated_at' => Carbon::now()
+                    ]);
+                }
+            }
+        }
+
+        return [
+            "model" => $model,
+            "data" => $arrayData,
+        ];
+    }
+
     public function deleteBefore($model, $arrayData, $metaData, $id = null)
     {
         $evalId = $id ?? ($model->id ?? null);
