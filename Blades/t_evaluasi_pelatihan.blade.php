@@ -29,7 +29,7 @@
     </div>
 
     <!-- Right Actions: Hanya untuk HC jika diperlukan -->
-    <div v-if="data.can_create && (store.user.data?.is_hc === true || store.user.data?.is_hc === 1)">
+    <div v-if="data.can_create && isUserHC">
       <RouterLink :to="$route.path + '/create?' + Date.now()" 
         class="border border-[#428BCA] font-semibold text-[#428BCA] bg-white hover:bg-[#428BCA] hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2 text-sm">
         Tambah Baru (HC)

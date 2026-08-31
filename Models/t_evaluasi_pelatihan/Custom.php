@@ -167,11 +167,9 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         $respoActive = getCore('Respo')->checkRespoActive();
         if (!empty($respoActive) && is_object($respoActive)) {
             $respoName = strtoupper($respoActive->name ?? '');
-            if (str_contains($respoName, 'HC') || str_contains($respoName, 'HUMAN CAPITAL') || str_contains($respoName, 'HRD') || str_contains($respoName, 'ADMIN')) {
+            if (str_contains($respoName, 'HC') || str_contains($respoName, 'HUMAN CAPITAL') || str_contains($respoName, 'HRD')) {
                 $isHc = true;
             }
-        } elseif ($user && ($user->is_hc ?? false)) {
-            $isHc = true;
         }
 
         // Karyawan biasa (non-HC) HANYA melihat data evaluasi miliknya sendiri
@@ -198,11 +196,9 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
         $respoActive = getCore('Respo')->checkRespoActive();
         if (!empty($respoActive) && is_object($respoActive)) {
             $respoName = strtoupper($respoActive->name ?? '');
-            if (str_contains($respoName, 'HC') || str_contains($respoName, 'HUMAN CAPITAL') || str_contains($respoName, 'HRD') || str_contains($respoName, 'ADMIN')) {
+            if (str_contains($respoName, 'HC') || str_contains($respoName, 'HUMAN CAPITAL') || str_contains($respoName, 'HRD')) {
                 $isHc = true;
             }
-        } elseif ($user && ($user->is_hc ?? false)) {
-            $isHc = true;
         }
 
         if (!$isHc) {

@@ -506,12 +506,10 @@ const isUserHC = computed(() => {
     try {
       const respo = JSON.parse(respoStr)
       const respoName = (respo?.name || '').toUpperCase()
-      if (respoName.includes('HC') || respoName.includes('HUMAN CAPITAL') || respoName.includes('HRD') || respoName.includes('ADMIN')) {
-        return true
-      }
+      return respoName.includes('HC') || respoName.includes('HUMAN CAPITAL') || respoName.includes('HRD')
     } catch (e) {}
   }
-  return store.user.data?.is_hc === true || store.user.data?.is_hc === 1
+  return false
 })
 
 function getBaseWhere(statusFilter = "this.status='DRAFT'") {
