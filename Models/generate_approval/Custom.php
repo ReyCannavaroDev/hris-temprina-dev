@@ -91,17 +91,22 @@ class generate_approval extends \App\Models\BasicModels\generate_approval
     {
         $outstanding = $this->approval->outstanding();
         if ($outstanding && method_exists($outstanding, 'getCollection')) {
-            $filtered = $outstanding->getCollection()->filter(function ($item) {
+            $user_id = auth()->user()->id;
+            $user = \DB::table('default_users')->where('id', $user_id)->first();
+            $myKaryId = $user ? $user->m_kary_id : null;
+
+            $filtered = $outstanding->getCollection()->filter(function ($item) use ($myKaryId) {
                 if (($item->trx_table ?? '') === 't_evaluasi_pelatihan') {
-                    $exists = \DB::table('t_evaluasi_pelatihan')
-                        ->where('id', $item->trx_id)
-                        ->whereIn('status', ['DRAFT', 'REVISED'])
-                        ->exists();
-                    if (!$exists) {
+                    $eval = \DB::table('t_evaluasi_pelatihan')->where('id', $item->trx_id)->first();
+                    // Jika data evaluasi tidak ada, atau status bukan DRAFT/REVISED, atau bukan milik karyawan ini:
+                    if (!$eval || !in_array($eval->status, ['DRAFT', 'REVISED'])) {
                         try {
                             \DB::table('generate_approval_d')->where('generate_approval_id', $item->id)->delete();
                             \DB::table('generate_approval')->where('id', $item->id)->delete();
                         } catch (\Throwable $e) {}
+                        return false;
+                    }
+                    if ($myKaryId && $eval->m_kary_id != $myKaryId) {
                         return false;
                     }
                 }

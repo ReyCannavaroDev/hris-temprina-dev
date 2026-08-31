@@ -397,12 +397,16 @@ class Approval
                         select 1 from t_evaluasi_pelatihan ep 
                         where ep.id = generate_approval.trx_id 
                         and ep.status in ('DRAFT', 'REVISED')
+                        and (
+                            ep.m_kary_id = (select du.m_kary_id from default_users du where du.id = ?)
+                            or (select du2.m_kary_id from default_users du2 where du2.id = ?) is null
+                        )
                     )
                 )
                 and generate_approval.id 
                     in(select generate_approval_id from generate_approval_d d 
                     join default_users s on s.id = d.default_users_id
-                    where d.id = generate_approval.next_approve_det_id and s.id = ?)", [$user_id])
+                    where d.id = generate_approval.next_approve_det_id and s.id = ?)", [$user_id, $user_id, $user_id])
             ->orderBy('generate_approval.id', 'desc')
             ->search(['trx_name', 'nomor', 'trx_date', 'trx_nomor', 'default_users.name'])
             ->paginate(app()->request->paginate ?? 50);
