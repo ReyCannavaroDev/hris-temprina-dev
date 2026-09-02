@@ -2185,77 +2185,75 @@ class m_kary extends \App\Models\BasicModels\m_kary
     public function scopeStructure($model)
     {
         $sbu = filter_var(@request("comp_id"), FILTER_VALIDATE_INT);
-        $startLevelFilter = is_numeric(request("start_level")) ? (int) request("start_level") : 0;
-        $endLevelFilter = is_numeric(request("end_level")) ? (int) request("end_level") : 99; 
+        $startLevelReq = request("start_level");
+        $endLevelReq = request("end_level");
 
-        if ($sbu) {
-            $model = $model->whereHas("m_kary_det_jabatan", function ($query) use ($sbu) {
-                $query->where("m_comp_id", $sbu);
-            });
-        }
+        $startLevelFilter = is_numeric($startLevelReq) ? (int) $startLevelReq : 1;
+        $endLevelFilter = is_numeric($endLevelReq) ? (int) $endLevelReq : 6; 
+
+        $minLevel = min($startLevelFilter, $endLevelFilter);
+        $maxLevel = max($startLevelFilter, $endLevelFilter);
 
         $mkdj = "m_kary_det_jabatan";
 
-        // 1. Filter Karyawan berdasarkan range sequence level
-        $model = $model->whereHas($mkdj, function ($query) use ($mkdj, $startLevelFilter, $endLevelFilter) {
-            $query->where("{$mkdj}.is_primary", true)
-                ->join("m_level_posisi_d as mlpd_filter", "mlpd_filter.m_posisi_id", "=", "{$mkdj}.m_posisi_id")
-                ->join("m_level_posisi as mlp_filter", "mlp_filter.id", "=", "mlpd_filter.m_level_posisi_id")
-                ->whereBetween("mlp_filter.sequence", [$startLevelFilter, $endLevelFilter]);
-        });
+        if ($sbu) {
+            $model = $model->whereHas($mkdj, function ($query) use ($mkdj, $sbu) {
+                $query->where("{$mkdj}.m_comp_id", $sbu);
+            });
+        }
+
+        // 1. Filter Karyawan berdasarkan range sequence level jabatan
+        if ($minLevel > 0 || $maxLevel < 99) {
+            $model = $model->whereHas($mkdj, function ($query) use ($mkdj, $minLevel, $maxLevel) {
+                $query->where(function ($q) use ($mkdj) {
+                    $q->where("{$mkdj}.is_primary", true)
+                      ->orWhereNull("{$mkdj}.is_primary");
+                })
+                ->leftJoin("m_level_posisi_d as mlpd_filter", "mlpd_filter.m_posisi_id", "=", "{$mkdj}.m_posisi_id")
+                ->leftJoin("m_level_posisi as mlp_filter", "mlp_filter.id", "=", "mlpd_filter.m_level_posisi_id")
+                ->where(function ($q) use ($minLevel, $maxLevel) {
+                    $q->whereBetween("mlp_filter.sequence", [$minLevel, $maxLevel])
+                      ->orWhereNull("mlp_filter.sequence");
+                });
+            });
+        }
 
         return $model
             ->where("m_kary.is_active", true)
             ->with([
                 $mkdj => function ($query) use ($mkdj) {
-                    $query->where("{$mkdj}.is_primary", true)
-                        ->leftJoin("m_divisi as md", "md.id", "{$mkdj}.m_divisi_id")
-                        ->leftJoin("m_comp as mc", "mc.id", "{$mkdj}.m_comp_id")
-                        ->leftJoin("m_subcomp as msc", "msc.id", "{$mkdj}.m_subcomp_id")
-                        ->leftJoin("m_branch as mb", "mb.id", "{$mkdj}.m_branch_id")
-                        ->leftJoin("m_posisi as mp", "mp.id", "{$mkdj}.m_posisi_id")
-                        // Join ke mapping level posisi user ini
-                        ->leftJoin("m_level_posisi_d as mlpd", "mlpd.m_posisi_id", "=", "mp.id")
-                        ->leftJoin("m_level_posisi as mlp", "mlp.id", "=", "mlpd.m_level_posisi_id")
-                        
-                        // Logic Peer (Same Level): Mencari karyawan lain yang m_level_posisi_id-nya sama
-                        ->leftJoin("m_level_posisi_d as mlpd_peer", "mlpd_peer.m_level_posisi_id", "=", "mlpd.m_level_posisi_id")
-                        ->leftJoin("m_kary_det_jabatan as okdj", function ($join) use ($mkdj) {
-                            $join->on("okdj.m_posisi_id", "=", "mlpd_peer.m_posisi_id")
-                                ->on("okdj.m_karyawan_id", "<>", "{$mkdj}.m_karyawan_id")
-                                ->where("okdj.is_primary", true);
-                        })
-                        ->leftJoin("m_kary as other_kary", "other_kary.id", "=", "okdj.m_karyawan_id")
-                        ->leftJoin("m_posisi as other_pos", "other_pos.id", "=", "okdj.m_posisi_id")
-                        ->orderBy("mlp.sequence", "asc")
-                        ->selectRaw("
-                            {$mkdj}.m_karyawan_id, 
-                            {$mkdj}.m_comp_id, 
-                            {$mkdj}.m_subcomp_id, 
-                            {$mkdj}.m_branch_id, 
-                            {$mkdj}.m_divisi_id, 
-                            md.name as nama_divisi, 
-                            mc.name as nama_sbu, 
-                            msc.name as nama_sub, 
-                            mb.name as nama_branch, 
-                            mp.name as jabatan, 
-                            md.parent_id, 
-                            mlp.sequence as level, 
-                            mlp.level_name, 
-                            -- Mengelompokkan rekan sejawat ke dalam JSON
-                            CASE 
-                                WHEN other_kary.id IS NOT NULL 
-                                THEN json_build_object(
-                                    'id', other_kary.id, 
-                                    'jabatan', other_pos.name, 
-                                    'nama_karyawan', other_kary.nama_lengkap
-                                ) 
-                                ELSE null
-                            END AS same_level_with
-                        ");
+                    $query->where(function ($q) use ($mkdj) {
+                        $q->where("{$mkdj}.is_primary", true)
+                          ->orWhereNull("{$mkdj}.is_primary");
+                    })
+                    ->leftJoin("m_divisi as md", "md.id", "{$mkdj}.m_divisi_id")
+                    ->leftJoin("m_comp as mc", "mc.id", "{$mkdj}.m_comp_id")
+                    ->leftJoin("m_subcomp as msc", "msc.id", "{$mkdj}.m_subcomp_id")
+                    ->leftJoin("m_branch as mb", "mb.id", "{$mkdj}.m_branch_id")
+                    ->leftJoin("m_posisi as mp", "mp.id", "{$mkdj}.m_posisi_id")
+                    ->leftJoin("m_level_posisi_d as mlpd", "mlpd.m_posisi_id", "=", "mp.id")
+                    ->leftJoin("m_level_posisi as mlp", "mlp.id", "=", "mlpd.m_level_posisi_id")
+                    ->orderBy("mlp.sequence", "desc")
+                    ->selectRaw("
+                        {$mkdj}.id as det_id,
+                        {$mkdj}.m_karyawan_id, 
+                        {$mkdj}.m_kary_id, 
+                        {$mkdj}.m_comp_id, 
+                        {$mkdj}.m_subcomp_id, 
+                        {$mkdj}.m_branch_id, 
+                        {$mkdj}.m_divisi_id, 
+                        md.name as nama_divisi, 
+                        mc.name as nama_sbu, 
+                        msc.name as nama_sub, 
+                        mb.name as nama_branch, 
+                        mp.name as jabatan, 
+                        md.parent_id, 
+                        COALESCE(mlp.sequence, 1) as level, 
+                        mlp.level_name
+                    ");
                 },
             ])
-            ->select("m_kary.id", "m_kary.nama_lengkap");
+            ->select("m_kary.id", "m_kary.nama_lengkap", "m_kary.atasan_id");
     }
 
     public function custom_structure($req)
