@@ -297,27 +297,31 @@
                               }" :check="false" />
               </div>
 
-              <!-- ATASAN (Auto-detect Filtered Hierarchy) -->
-              <div v-show="!isProfile">
-                <div class="flex items-center justify-between">
-                  <label>Atasan Langsung<label class="text-red-500 space-x-0 pl-0"></label></label>
-                  <span v-if="loadingAtasan" class="text-xs text-blue-600 italic">Mencari atasan...</span>
+              <!-- ATASAN STRUKTURAL (Hierarki Levelling) -->
+              <div class="col-span-full border border-gray-200 rounded-md p-3 bg-gray-50 mt-3" v-show="!isProfile">
+                <div class="flex items-center justify-between mb-2">
+                  <label class="text-sm font-semibold text-gray-700">Urutan Atasan Struktural (Berdasarkan Divisi & Level Jabatan)</label>
+                  <span v-if="loadingAtasan" class="text-xs text-blue-600 italic">Memuat struktur atasan...</span>
                 </div>
 
-                <FieldSelect 
-                  :bind="{ disabled: !actionText || listAtasan.length <= 1, clearable: false }" 
-                  class="w-full mt-3"
-                  :value="values.atasan_id" 
-                  @input="v => values.atasan_id = v" 
-                  :errorText="formErrors.atasan_id ? 'failed' : ''" 
-                  :hints="formErrors.atasan_id"
-                  label="" 
-                  :placeholder="listAtasan.length === 0 ? 'Pilih Divisi & Jabatan' : 'Pilih Atasan Langsung'" 
-                  valueField="id" 
-                  displayField="display_text" 
-                  :options="listAtasan" 
-                  :check="false" 
-                />
+                <div v-if="hierarchicalAtasan.length > 0" class="space-y-1.5">
+                  <div 
+                    v-for="(lvl, idx) in hierarchicalAtasan" 
+                    :key="lvl.rank" 
+                    class="flex flex-col sm:flex-row sm:items-center justify-between p-2 bg-white border border-gray-200 rounded-md text-xs text-gray-700"
+                  >
+                    <div class="font-semibold text-gray-800 w-full sm:w-1/3">
+                      {{ lvl.level_name }}
+                    </div>
+                    <div class="text-gray-600 w-full sm:w-2/3 mt-1 sm:mt-0">
+                      {{ lvl.pejabat.join('; ') }}
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else-if="!loadingAtasan" class="text-xs text-gray-500 italic py-1">
+                  {{ values.m_divisi_id ? 'Tidak ada pejabat struktural di atas level jabatan ini pada divisi terkait' : 'Pilih Divisi dan Posisi pada tab Jabatan untuk melihat struktur atasan' }}
+                </div>
               </div>
 
               <div>

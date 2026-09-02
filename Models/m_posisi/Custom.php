@@ -91,7 +91,7 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
             ->leftJoin("m_general as m_gen","m_gen.id","=","m_posisi.m_divisi_id")
             ->leftjoin('m_level_posisi_d as lpd', 'lpd.m_posisi_id', 'm_posisi.id')
             ->leftjoin('m_level_posisi as lp', 'lpd.m_level_posisi_id', 'lp.id')
-            ->select('m_posisi.*', 'lp.level_name', 'm_gen.value');
+            ->select('m_posisi.*', 'lp.level_name', 'lp.sequence', 'm_gen.value');
     }
 
     public function custom_join_child()
