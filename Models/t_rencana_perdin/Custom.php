@@ -62,6 +62,16 @@ class t_rencana_perdin extends \App\Models\BasicModels\t_rencana_perdin
 
     public function updateBefore($model, $arrayData, $metaData, $id = null)
     {
+        $existing = $id ? \DB::table('t_rencana_perdin')->where('id', $id)->first() : null;
+        $tPerdinId = $arrayData['t_perdin_id'] ?? $existing?->t_perdin_id ?? null;
+
+        if ($tPerdinId) {
+            $perdin = t_perdin::find($tPerdinId);
+            if ($perdin && !empty($perdin->nomor)) {
+                $arrayData['nomor'] = $perdin->nomor;
+            }
+        }
+
         $req = app()->request;
         $details = [];
         if (!empty($req->t_rencana_perdin_det) && is_array($req->t_rencana_perdin_det)) {

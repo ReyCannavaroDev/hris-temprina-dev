@@ -298,6 +298,68 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
         ];
     }
 
+    public function updateBefore( $model, $arrayData, $metaData, $id=null )
+    {
+        $existing = $id ? \DB::table('t_perdin')->where('id', $id)->first() : null;
+
+        $dateFrom = $this->normalizeDate($arrayData['date_from'] ?? null) 
+            ?? $this->normalizeDate($existing?->date_from ?? null) 
+            ?? Carbon::now()->format('Y-m-d');
+
+        $karyId = $arrayData['m_kary_id'] ?? $existing?->m_kary_id ?? null;
+
+        $resolved = $this->getCompanyAndKotaCode($karyId);
+        $compCode = $resolved['company'];
+        $kotaCode = $resolved['kota'];
+
+        $replacements = [
+            'TMG' => $compCode,
+            'SBY' => $kotaCode,
+            '{comp}' => $compCode,
+            '{company}' => $compCode,
+            '{kota}' => $kotaCode,
+            '{city}' => $kotaCode,
+            '{branch}' => $kotaCode,
+            '{cabang}' => $kotaCode,
+        ];
+
+        // Generate nomor yang merefleksikan tanggal dan company/kota baru
+        $nomor = $this->helper->generateNomor("PERDIN", false, null, $dateFrom, $replacements);
+
+        $newArrayData = array_merge($arrayData, [
+            "nomor" => $nomor,
+            "tanggal_surat_tugas" => $dateFrom,
+            "tanggal_rencana_biaya" => $dateFrom,
+        ]);
+
+        return [
+            "model"  => $model,
+            "data"   => $newArrayData,
+        ];
+    }
+
+    public function updateAfter( $model, $arrayData, $metaData, $id=null )
+    {
+        $targetId = $id ?? $model->id ?? null;
+        if ($targetId) {
+            $current = \DB::table('t_perdin')->where('id', $targetId)->first();
+            if ($current && !empty($current->nomor)) {
+                \DB::table('t_rencana_perdin')
+                    ->where('t_perdin_id', $targetId)
+                    ->update(['nomor' => $current->nomor]);
+
+                \DB::table('t_penyelesaian_perdin')
+                    ->where('t_perdin_id', $targetId)
+                    ->update(['nomor' => $current->nomor]);
+            }
+        }
+
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
+        ];
+    }
+
     public function scopelistPerdin($model)
     {
         $user = auth()->user();

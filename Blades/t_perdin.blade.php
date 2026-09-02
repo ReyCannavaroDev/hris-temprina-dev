@@ -102,7 +102,11 @@
 
     <div>
       <FieldX class="w-full !mt-3" :bind="{ readonly: !actionText }" type="date" :value="values.date_from"
-        :errorText="formErrors.date_from?'failed':''" @input="v=>values.date_from=v" :hints="formErrors.date_from"
+        :errorText="formErrors.date_from?'failed':''" @input="v=>{
+          values.date_from = v;
+          values.tanggal_surat_tugas = v;
+          values.tanggal_rencana_biaya = v;
+        }" :hints="formErrors.date_from"
         placeholder="Masukkan Tanggal Surat Tugas" label="Tanggal Surat Tugas" fa-icon="" :check="false" />
     </div>
 
