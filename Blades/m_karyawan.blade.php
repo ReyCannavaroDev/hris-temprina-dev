@@ -297,14 +297,15 @@
                               }" :check="false" />
               </div>
 
-              <!-- ATASAN STRUKTURAL (Hierarki Levelling) -->
+              <!-- STRUKTUR JABATAN & ATASAN (Hierarki Levelling) -->
               <div class="col-span-full border border-gray-200 rounded-md p-3 bg-gray-50 mt-3" v-show="!isProfile">
                 <div class="flex items-center justify-between mb-2">
-                  <label class="text-sm font-semibold text-gray-700">Urutan Atasan Struktural (Berdasarkan Divisi & Level Jabatan)</label>
+                  <label class="text-sm font-semibold text-gray-700">Struktur Hierarki & Urutan Atasan (Berdasarkan Divisi & Level Jabatan)</label>
                   <span v-if="loadingAtasan" class="text-xs text-blue-600 italic">Memuat struktur atasan...</span>
                 </div>
 
-                <div v-if="hierarchicalAtasan.length > 0" class="space-y-1.5">
+                <!-- DAFTAR ATASAN (Urutan Naik) -->
+                <div v-if="hierarchicalAtasan.length > 0" class="space-y-1.5 mb-1.5">
                   <div 
                     v-for="(lvl, idx) in hierarchicalAtasan" 
                     :key="lvl.rank" 
@@ -319,8 +320,18 @@
                   </div>
                 </div>
 
+                <!-- POSISI KARYAWAN SAAT INI (Di-highlight) -->
+                <div v-if="currentEmployeeLevel" class="flex flex-col sm:flex-row sm:items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-md text-xs text-blue-900 font-medium">
+                  <div class="font-bold w-full sm:w-1/3">
+                    {{ currentEmployeeLevel.level_name }}
+                  </div>
+                  <div class="w-full sm:w-2/3 mt-1 sm:mt-0">
+                    Posisi Karyawan Ini {{ currentEmployeeLevel.posisi_name ? `(${currentEmployeeLevel.posisi_name})` : '' }}
+                  </div>
+                </div>
+
                 <div v-else-if="!loadingAtasan" class="text-xs text-gray-500 italic py-1">
-                  {{ values.m_divisi_id ? 'Tidak ada pejabat struktural di atas level jabatan ini pada divisi terkait' : 'Pilih Divisi dan Posisi pada tab Jabatan untuk melihat struktur atasan' }}
+                  Pilih Divisi dan Jabatan pada tab Jabatan untuk melihat struktur hierarki
                 </div>
               </div>
 

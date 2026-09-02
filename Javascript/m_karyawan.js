@@ -551,21 +551,19 @@ const posisiSequenceMap = ref({})
 
 const getPosisiRank = (posisiId, posisiName = '') => {
   if (posisiId && posisiSequenceMap.value[posisiId] !== undefined) {
-    return posisiSequenceMap.value[posisiId];
+    return Number(posisiSequenceMap.value[posisiId]);
   }
 
   const name = String(posisiName || posisiLevelMap.value[posisiId] || '').toLowerCase();
   
-  if (/direktur|director|president/i.test(name)) return 1;
-  if (/general manager|gm\b|head of/i.test(name)) return 2;
-  if (/kadiv|kepala divisi|senior manager/i.test(name)) return 3;
-  if (/manager|kabag|kepala bagian/i.test(name)) return 4;
-  if (/supervisor|spv|asst\.? manager|assistant manager|section head|koordinator/i.test(name)) return 5;
-  if (/team lead|leader|senior/i.test(name)) return 6;
-  if (/staff|specialist|officer|analyst|programmer|developer|designer|admin/i.test(name)) return 7;
-  if (/operator|pelaksana|helper|teknisi|magang|intern|pkl|driver|security/i.test(name)) return 8;
+  if (/direktur|director|president/i.test(name)) return 6;
+  if (/general manager|gm\b|wadir/i.test(name)) return 5;
+  if (/manager|asmen|operational manager|\bom\b/i.test(name)) return 4;
+  if (/kadiv|wakadiv|kepala divisi/i.test(name)) return 3;
+  if (/karu|wakaru|kepala regu|supervisor|spv|koordinator/i.test(name)) return 2;
+  if (/staff|specialist|officer|analyst|programmer|developer|designer|admin|operator|pelaksana|helper|teknisi/i.test(name)) return 1;
 
-  return 7;
+  return 1;
 };
 
 const loadPosisiLevel = async () => {
@@ -584,7 +582,7 @@ const loadPosisiLevel = async () => {
       list.forEach((p) => {
         if (p.id) {
           map[p.id] = p.level_name || p['m_level_posisi.level_name'] || p['lp.level_name'] || p.name || '-'
-          const seq = p.level_sequence ?? p.sequence;
+          const seq = p.sequence ?? p.level_sequence ?? p['lp.sequence'];
           seqMap[p.id] = (seq !== null && seq !== undefined) ? Number(seq) : getPosisiRank(null, p.name || '');
         }
       })
@@ -882,17 +880,33 @@ const hierarchicalAtasan = ref([]);
 const loadingAtasan = ref(false);
 
 const getLevelLabel = (rank) => {
-  switch (rank) {
-    case 1: return 'Level 1 - Direksi';
-    case 2: return 'Level 2 - General Manager';
-    case 3: return 'Level 3 - Kepala Divisi';
-    case 4: return 'Level 4 - Manager';
-    case 5: return 'Level 5 - Supervisor';
-    case 6: return 'Level 6 - Team Leader / Senior';
-    case 7: return 'Level 7 - Staff';
+  switch (Number(rank)) {
+    case 6: return 'Level 6 - Direktur Holding';
+    case 5: return 'Level 5 - GM/Wadir Holding';
+    case 4: return 'Level 4 - Asmen/Manager/OM';
+    case 3: return 'Level 3 - Kadiv/Wakadiv';
+    case 2: return 'Level 2 - Karu/Wakaru';
+    case 1: return 'Level 1 - Staff';
     default: return `Level ${rank}`;
   }
 };
+
+const currentEmployeeLevel = computed(() => {
+  const targetPosId = values.m_posisi_id || (inDetailArr.value?.[0]?.m_posisi_id);
+  if (!targetPosId) return null;
+  const rank = getPosisiRank(targetPosId);
+  const rawLevel = posisiLevelMap.value[targetPosId];
+  const levelName = rawLevel && rawLevel !== '-' ? rawLevel : getLevelLabel(rank);
+  
+  const primaryJabatan = inDetailArr.value?.find(i => i.is_primary) || inDetailArr.value?.[0];
+  const posisiName = primaryJabatan?.['m_posisi.name'] ?? primaryJabatan?.posisi_name ?? '';
+
+  return {
+    rank: rank,
+    level_name: levelName.startsWith('Level') ? levelName : `Level ${rank} - ${levelName}`,
+    posisi_name: posisiName
+  };
+});
 
 const fetchAtasanByDivisi = async (divisiId, currentKaryId = null, currentPosisiId = null) => {
   if (!divisiId) {
@@ -929,22 +943,14 @@ const fetchAtasanByDivisi = async (divisiId, currentKaryId = null, currentPosisi
       const posisiTarget = currentPosisiId ?? values.m_posisi_id;
       const myRank = getPosisiRank(posisiTarget);
 
-      // Filter: Hanya ambil karyawan dengan ranking jabatan LEBIH TINGGI (rank number lebih kecil)
-      // Mencegah sesama Staff/Pelaksana muncul sebagai atasan
+      // Filter: Hanya ambil karyawan dengan ranking jabatan LEBIH TINGGI (rank number lebih besar)
       const filtered = data.filter(item => {
         const kPosisiId = item.m_posisi_id;
         const kPosisiName = item['m_posisi.name'] ?? item.posisi_name ?? '';
         const kRank = getPosisiRank(kPosisiId, kPosisiName);
 
-        // Jika karyawan saat ini adalah level Staff/Pelaksana/Non-Struktural (rank >= 6):
-        // Atasan HARUS level struktural (rank <= 5: Supervisor, Manager, Kadiv, GM, Direktur)
-        if (myRank >= 6) {
-          return kRank <= 5;
-        }
-
-        // Jika karyawan saat ini sudah level struktural (misal Supervisor rank 5):
-        // Atasan HARUS level yang lebih tinggi lagi (rank < 5: Manager ke atas)
-        return kRank < myRank && kRank <= 4;
+        // Atasan memiliki rank LEBIH TINGGI (kRank > myRank)
+        return kRank > myRank;
       });
 
       // Group per Level / Rank
@@ -968,7 +974,7 @@ const fetchAtasanByDivisi = async (divisiId, currentKaryId = null, currentPosisi
         groups[kRank].pejabat.push(displayItem);
       });
 
-      // Urutkan dari level terdekat di atasnya (misal level 5 Supervisor -> level 4 Manager -> level 3 Kadiv -> level 1 Direksi)
+      // Urutkan dari level puncak ke level terdekat (misal Level 6 Direktur -> Level 2 Karu)
       const sortedRanks = Object.keys(groups).map(Number).sort((a, b) => b - a);
       hierarchicalAtasan.value = sortedRanks.map(r => groups[r]);
 
@@ -984,7 +990,7 @@ const fetchAtasanByDivisi = async (divisiId, currentKaryId = null, currentPosisi
       });
 
       if (hierarchicalAtasan.value.length > 0) {
-        const closestRank = hierarchicalAtasan.value[0].rank;
+        const closestRank = Math.min(...Object.keys(groups).map(Number));
         const closestCandidates = filtered.filter(item => getPosisiRank(item.m_posisi_id, item['m_posisi.name']) === closestRank);
         if (closestCandidates.length > 0) {
           const exist = closestCandidates.some(k => k.id === values.atasan_id);
