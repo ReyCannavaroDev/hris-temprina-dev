@@ -129,6 +129,13 @@
         },
         {
           flex: 1,
+          field: 'm_prog_pelatihan.tema_pelatihan',
+          headerName:  'Nama Program Pelatihan',
+          sortable: false, resizable: true, filter: 'ColFilter',
+          cellClass: ['border-r', '!border-gray-200', 'justify-center']
+        },
+        {
+          flex: 1,
           field: 'desc',
           headerName:  'Deskripsi',
           sortable: false, resizable: true, filter: 'ColFilter',
