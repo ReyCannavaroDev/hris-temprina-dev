@@ -43,7 +43,7 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
             }
         }
 
-        $this->details = !empty($req->m_assessment_kary_d) ? ['m_assessment_kary_d'] : [];
+        $this->details = [];
 
         return [
             "model"  => $model,
@@ -62,7 +62,7 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
             }
         }
 
-        $this->details = !empty($req->m_assessment_kary_d) ? ['m_assessment_kary_d'] : [];
+        $this->details = [];
 
         return [
             "model"  => $model,
@@ -75,6 +75,7 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
         $realId = is_object($model) ? $model->id : ($id ?? ($arrayData['id'] ?? null));
         if ($realId) {
             $this->syncLevelData($realId, $arrayData);
+            $this->syncDetailData($realId, $arrayData);
         }
         return true;
     }
@@ -84,8 +85,128 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
         $realId = is_object($model) ? $model->id : ($id ?? ($arrayData['id'] ?? null));
         if ($realId) {
             $this->syncLevelData($realId, $arrayData);
+            $this->syncDetailData($realId, $arrayData);
         }
         return true;
+    }
+
+    public function deleteBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $delId = is_object($model) ? $model->id : ($id ?? null);
+        if ($delId) {
+            \DB::table('m_assessment_kary_d_level')->where('m_assessment_kary_id', $delId)->delete();
+            $detailIds = \DB::table('m_assessment_kary_d')->where('m_assessment_kary_id', $delId)->pluck('id')->toArray();
+            if (!empty($detailIds)) {
+                \DB::table('m_assessment_kary_sub_d')->whereIn('m_assessment_kary_d_id', $detailIds)->delete();
+                \DB::table('m_assessment_kary_d')->whereIn('id', $detailIds)->delete();
+            }
+        }
+        return true;
+    }
+
+    private function syncDetailData($assessmentId, $arrayData)
+    {
+        $req = app()->request;
+        $details = $req->input('m_assessment_kary_d', $req->m_assessment_kary_d ?? ($arrayData['m_assessment_kary_d'] ?? []));
+
+        if (!is_array($details)) {
+            $details = [];
+        }
+
+        $existingDetailIds = \DB::table('m_assessment_kary_d')
+            ->where('m_assessment_kary_id', $assessmentId)
+            ->pluck('id')
+            ->toArray();
+
+        $processedDetailIds = [];
+
+        foreach ($details as $item) {
+            $item = is_array($item) ? $item : (array)$item;
+            $nama = $item['nama_assessment'] ?? null;
+            $kategori = $item['kategori'] ?? null;
+            $bobot = $item['bobot'] ?? 0;
+
+            if (empty($nama) && empty($kategori)) {
+                continue;
+            }
+
+            $detailId = !empty($item['id']) && in_array($item['id'], $existingDetailIds) ? (int)$item['id'] : null;
+
+            $detailData = [
+                'm_assessment_kary_id' => $assessmentId,
+                'nama_assessment' => $nama,
+                'kategori' => $kategori ? (int)$kategori : null,
+                'bobot' => (int)$bobot,
+                'last_editor_id' => auth()->user() ? auth()->user()->id : 1,
+                'updated_at' => \Carbon\Carbon::now(),
+            ];
+
+            if ($detailId) {
+                \DB::table('m_assessment_kary_d')->where('id', $detailId)->update($detailData);
+            } else {
+                $detailData['creator_id'] = auth()->user() ? auth()->user()->id : 1;
+                $detailData['created_at'] = \Carbon\Carbon::now();
+                $detailId = \DB::table('m_assessment_kary_d')->insertGetId($detailData);
+            }
+
+            $processedDetailIds[] = $detailId;
+
+            // Simpan / Sinkronkan Sub-Detail (m_assessment_kary_sub_d)
+            $subDetails = $item['m_assessment_kary_sub_d'] ?? [];
+            if (!is_array($subDetails)) {
+                $subDetails = [];
+            }
+
+            $existingSubIds = \DB::table('m_assessment_kary_sub_d')
+                ->where('m_assessment_kary_d_id', $detailId)
+                ->pluck('id')
+                ->toArray();
+
+            $processedSubIds = [];
+
+            foreach ($subDetails as $subItem) {
+                $subItem = is_array($subItem) ? $subItem : (array)$subItem;
+                $keterangan = $subItem['keterangan'] ?? null;
+                $nilai = $subItem['nilai'] ?? 0;
+
+                if (empty($keterangan) && $nilai === null) {
+                    continue;
+                }
+
+                $subId = !empty($subItem['id']) && in_array($subItem['id'], $existingSubIds) ? (int)$subItem['id'] : null;
+
+                $subData = [
+                    'm_assessment_kary_d_id' => $detailId,
+                    'keterangan' => $keterangan ?: '',
+                    'nilai' => (int)$nilai,
+                    'last_editor_id' => auth()->user() ? auth()->user()->id : 1,
+                    'updated_at' => \Carbon\Carbon::now(),
+                ];
+
+                if ($subId) {
+                    \DB::table('m_assessment_kary_sub_d')->where('id', $subId)->update($subData);
+                } else {
+                    $subData['creator_id'] = auth()->user() ? auth()->user()->id : 1;
+                    $subData['created_at'] = \Carbon\Carbon::now();
+                    $subId = \DB::table('m_assessment_kary_sub_d')->insertGetId($subData);
+                }
+
+                $processedSubIds[] = $subId;
+            }
+
+            // Hapus sub-detail yang sudah tidak ada
+            $deleteSubIds = array_diff($existingSubIds, $processedSubIds);
+            if (!empty($deleteSubIds)) {
+                \DB::table('m_assessment_kary_sub_d')->whereIn('id', $deleteSubIds)->delete();
+            }
+        }
+
+        // Hapus detail dan sub-detail yang sudah tidak ada
+        $deleteDetailIds = array_diff($existingDetailIds, $processedDetailIds);
+        if (!empty($deleteDetailIds)) {
+            \DB::table('m_assessment_kary_sub_d')->whereIn('m_assessment_kary_d_id', $deleteDetailIds)->delete();
+            \DB::table('m_assessment_kary_d')->whereIn('id', $deleteDetailIds)->delete();
+        }
     }
 
     private function syncLevelData($assessmentId, $arrayData)
@@ -174,25 +295,24 @@ class m_assessment_kary extends \App\Models\BasicModels\m_assessment_kary
                 $data['level'] = $levelNames ?: '-';
                 $data['m_assessment_kary_d_level'] = json_decode(json_encode($levelRecords), true) ?? [];
 
-                // 2. Ambil Detail & Sub-Detail jika belum ada di $row
-                if (!isset($row['m_assessment_kary_d']) || empty($row['m_assessment_kary_d'])) {
-                    $details = \DB::table('m_assessment_kary_d')
-                        ->where('m_assessment_kary_id', $assessmentId)
+                // 2. Ambil Detail & Sub-Detail selalu lengkap dari database
+                $details = \DB::table('m_assessment_kary_d')
+                    ->where('m_assessment_kary_id', $assessmentId)
+                    ->orderBy('id', 'asc')
+                    ->get();
+
+                $detailList = [];
+                foreach ($details as $det) {
+                    $subDetails = \DB::table('m_assessment_kary_sub_d')
+                        ->where('m_assessment_kary_d_id', $det->id)
+                        ->orderBy('nilai', 'asc')
                         ->get();
 
-                    $detailList = [];
-                    foreach ($details as $det) {
-                        $subDetails = \DB::table('m_assessment_kary_sub_d')
-                            ->where('m_assessment_kary_d_id', $det->id)
-                            ->orderBy('nilai', 'asc')
-                            ->get();
-
-                        $detArr = (array) $det;
-                        $detArr['m_assessment_kary_sub_d'] = json_decode(json_encode($subDetails), true) ?? [];
-                        $detailList[] = $detArr;
-                    }
-                    $data['m_assessment_kary_d'] = $detailList;
+                    $detArr = (array) $det;
+                    $detArr['m_assessment_kary_sub_d'] = json_decode(json_encode($subDetails), true) ?? [];
+                    $detailList[] = $detArr;
                 }
+                $data['m_assessment_kary_d'] = $detailList;
 
                 // 3. Grouping logic untuk kebutuhan frontend
                 if (app()->request->group) {

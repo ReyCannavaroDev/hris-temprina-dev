@@ -113,7 +113,7 @@ const onReset = async (alert = false) => {
 
 
 onBeforeMount(async () => {
-  if (isRead && currentMenu?.can_read) {
+  if (isRead) {
     try {
       const editedId = route.params.id
       const dataURL = `${store.server.url_backend}/operation/${endpointApi}/${editedId}`
@@ -135,7 +135,7 @@ onBeforeMount(async () => {
       if (!res.ok) throw new Error("Failed when trying to read data")
 
       const resultJson = await res.json()
-      initialValues = resultJson.data
+      initialValues = resultJson.data || {}
 
       // Ambil m_level_posisi_id (single level) jika ada data tersimpan di m_assessment_kary_d_level
       if (Array.isArray(initialValues.m_assessment_kary_d_level) && initialValues.m_assessment_kary_d_level.length > 0) {
@@ -150,25 +150,67 @@ onBeforeMount(async () => {
         values.m_level_posisi_id = null
       }
 
-      if (Array.isArray(initialValues.m_assessment_kary_d)) {
+      if (Array.isArray(initialValues.m_assessment_kary_d) && initialValues.m_assessment_kary_d.length > 0) {
         detailArr.value = initialValues.m_assessment_kary_d.map(item => {
-          const sub = Array.isArray(item.m_assessment_kary_sub_d)
+          const sub = Array.isArray(item.m_assessment_kary_sub_d) && item.m_assessment_kary_sub_d.length > 0
             ? [...item.m_assessment_kary_sub_d]
               .filter(Boolean)
               .sort((a, b) => (b.nilai ?? 0) - (a.nilai ?? 0))
             : [
               {
-                m_assessment_kary_d_id: 0,
+                m_assessment_kary_d_id: item.id || 0,
                 keterangan: '',
                 nilai: 0,
               }
             ]
 
           return {
-            ...item,
+            id: item.id,
+            m_assessment_kary_id: item.m_assessment_kary_id || 0,
+            nama_assessment: item.nama_assessment || '',
+            kategori: item.kategori ? parseInt(item.kategori) : null,
+            bobot: item.bobot !== undefined && item.bobot !== null ? parseInt(item.bobot) : 0,
             m_assessment_kary_sub_d: sub
           }
         })
+      } else {
+        detailArr.value = [
+          {
+            m_assessment_kary_id: 0,
+            nama_assessment: '',
+            kategori: null,
+            bobot: 0,
+            m_assessment_kary_sub_d: [
+              {
+                m_assessment_kary_d_id: 0,
+                keterangan: '',
+                nilai: 0,
+              }
+            ]
+          }
+        ]
+      }
+
+      if (initialValues && typeof initialValues === 'object') {
+        for (const key in initialValues) {
+          values[key] = initialValues[key]
+        }
+        const getCleanId = (raw) => {
+          if (!raw) return null
+          if (typeof raw === 'object' && raw !== null) {
+            const id = raw.id || raw.m_divisi_id || raw.m_comp_id || raw.m_subcomp_id || raw.m_branch_id || raw.m_level_posisi_id || raw.value
+            const num = parseInt(id)
+            return !isNaN(num) && num > 0 ? num : null
+          }
+          const num = parseInt(raw)
+          return !isNaN(num) && num > 0 ? num : null
+        }
+
+        values.m_comp_id = getCleanId(initialValues.m_comp_id ?? initialValues['this.m_comp_id'] ?? initialValues['m_comp.id'])
+        values.m_subcomp_id = getCleanId(initialValues.m_subcomp_id ?? initialValues['this.m_subcomp_id'] ?? initialValues['m_subcomp.id'])
+        values.m_branch_id = getCleanId(initialValues.m_branch_id ?? initialValues['this.m_branch_id'] ?? initialValues['m_branch.id'])
+        values.m_divisi_id = getCleanId(initialValues.m_divisi_id ?? initialValues['this.m_divisi_id'] ?? initialValues['m_divisi.id'] ?? initialValues.m_divisi)
+        values.type = getCleanId(initialValues.type ?? initialValues['this.type'] ?? initialValues['type.id'] ?? initialValues.type_id)
       }
 
     } catch (err) {
@@ -187,42 +229,8 @@ onBeforeMount(async () => {
     }
   } else {
     if (detailArr.value.length === 0) {
-      detailArr.value.push({
-        m_assessment_kary_id: 0,
-        nama_assessment: '',
-        kategori: null,
-        bobot: 0,
-        m_assessment_kary_sub_d: [
-          {
-            m_assessment_kary_d_id: 0,
-            keterangan: '',
-            nilai: 0,
-          }
-        ]
-      })
+      defaultValues()
     }
-  }
-
-  if (initialValues && typeof initialValues === 'object') {
-    for (const key in initialValues) {
-      values[key] = initialValues[key]
-    }
-    const getCleanId = (raw) => {
-      if (!raw) return null
-      if (typeof raw === 'object' && raw !== null) {
-        const id = raw.id || raw.m_divisi_id || raw.m_comp_id || raw.m_subcomp_id || raw.m_branch_id || raw.m_level_posisi_id || raw.value
-        const num = parseInt(id)
-        return !isNaN(num) && num > 0 ? num : null
-      }
-      const num = parseInt(raw)
-      return !isNaN(num) && num > 0 ? num : null
-    }
-
-    values.m_comp_id = getCleanId(initialValues.m_comp_id ?? initialValues['this.m_comp_id'] ?? initialValues['m_comp.id'])
-    values.m_subcomp_id = getCleanId(initialValues.m_subcomp_id ?? initialValues['this.m_subcomp_id'] ?? initialValues['m_subcomp.id'])
-    values.m_branch_id = getCleanId(initialValues.m_branch_id ?? initialValues['this.m_branch_id'] ?? initialValues['m_branch.id'])
-    values.m_divisi_id = getCleanId(initialValues.m_divisi_id ?? initialValues['this.m_divisi_id'] ?? initialValues['m_divisi.id'] ?? initialValues.m_divisi)
-    values.type = getCleanId(initialValues.type ?? initialValues['this.type'] ?? initialValues['type.id'] ?? initialValues.type_id)
   }
 })
 
