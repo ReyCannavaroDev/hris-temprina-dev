@@ -242,6 +242,33 @@ class m_kary extends \App\Models\BasicModels\m_kary
                                 $jab['m_company_id'] = $subcomp ? ($subcomp->m_company_id ?? $subcomp->company_id ?? null) : null;
                             } catch (\Throwable $e) {}
                         }
+
+                        if (!empty($jab['m_posisi_id'])) {
+                            try {
+                                $pos = \DB::table('m_posisi')->where('id', $jab['m_posisi_id'])->first();
+                                $jab['jabatan'] = $pos->name ?? $pos->posisi_name ?? null;
+
+                                $lvl = \DB::table('m_level_posisi_d as lpd')
+                                    ->join('m_level_posisi as lp', 'lp.id', '=', 'lpd.m_level_posisi_id')
+                                    ->where('lpd.m_posisi_id', $jab['m_posisi_id'])
+                                    ->select('lp.sequence', 'lp.level_name')
+                                    ->first();
+                                if ($lvl) {
+                                    $jab['level'] = $lvl->sequence ?? 1;
+                                    $jab['level_name'] = $lvl->level_name ?? null;
+                                } else {
+                                    $jab['level'] = 1;
+                                }
+                            } catch (\Throwable $e) {}
+                        }
+
+                        if (!empty($jab['m_divisi_id'])) {
+                            try {
+                                $div = \DB::table('m_divisi')->where('id', $jab['m_divisi_id'])->first();
+                                $jab['nama_divisi'] = $div->name ?? null;
+                                $jab['parent_id'] = $div->parent_id ?? null;
+                            } catch (\Throwable $e) {}
+                        }
                     }
                     unset($jab);
                     $row['m_kary_det_jabatan'] = $jabatanList;

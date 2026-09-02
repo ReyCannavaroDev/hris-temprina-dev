@@ -108,25 +108,74 @@ const getData = async () => {
       return;
     }
 
-    // Mapping nodes karyawan
-    const newNodes = dataList.map(item => {
-      const det = (Array.isArray(item.m_kary_det_jabatan) ? item.m_kary_det_jabatan[0] : item.m_kary_det_jabatan) ?? {};
+    const levelColors = {
+      100: '#1e293b',
+      6: '#1e40af',  // Direktur (Biru Tua)
+      5: '#2563eb',  // GM (Biru)
+      4: '#0d9488',  // Manager (Teal)
+      3: '#16a34a',  // Kadiv (Hijau)
+      2: '#d97706',  // Karu (Amber)
+      1: '#64748b',  // Staff (Slate)
+    };
+
+    // 1. Buat node data karyawan
+    const karyDataList = dataList.map(item => {
+      const detList = Array.isArray(item.m_kary_det_jabatan) ? item.m_kary_det_jabatan : (item.m_kary_det_jabatan ? [item.m_kary_det_jabatan] : []);
+      const det = detList.find(j => j.is_primary) || detList[0] || {};
       const lvl = Number(det.level ?? 1);
+      const jab = (det.jabatan || 'STAFF').trim();
+      const div = (det.nama_divisi || '').trim();
+      const name = (item.nama_lengkap || '').trim();
+
+      let labelText = jab.toUpperCase();
+      if (div) labelText += `\n[${div}]`;
+      if (name) labelText += `\n${name}`;
+
       return {
-        data: {
-          id: `kary-${item.id}`,
-          raw_id: item.id,
-          name: item.nama_lengkap || '',
-          jabatan: det.jabatan || 'STAFF',
-          level: lvl,
-          divisi_id: det.m_divisi_id || 0,
-          divisi_name: det.nama_divisi || '',
-          atasan_id: item.atasan_id ? Number(item.atasan_id) : null
-        }
+        id: `kary-${item.id}`,
+        raw_id: item.id,
+        name: name,
+        jabatan: jab,
+        level: lvl,
+        divisi_id: det.m_divisi_id || 0,
+        divisi_name: div,
+        atasan_id: item.atasan_id ? Number(item.atasan_id) : null,
+        label: labelText,
+        bgColor: levelColors[lvl] || '#64748b',
+        parentId: null
       };
     });
 
-    const maxLevelInData = Math.max(...newNodes.map(n => n.data.level), 1);
+    const nodeMap = new Map();
+    karyDataList.forEach(k => nodeMap.set(k.id, k));
+
+    // Kelompokkan per Divisi
+    const divisiGroups = {};
+    karyDataList.forEach(k => {
+      const divKey = k.divisi_id || 'unassigned';
+      if (!divisiGroups[divKey]) divisiGroups[divKey] = [];
+      divisiGroups[divKey].push(k);
+    });
+
+    // 2. Tentukan parentId untuk setiap karyawan
+    karyDataList.forEach(node => {
+      if (node.atasan_id && nodeMap.has(`kary-${node.atasan_id}`)) {
+        node.parentId = `kary-${node.atasan_id}`;
+      } else {
+        const sameDivisi = divisiGroups[node.divisi_id || 'unassigned'] || [];
+        const superiorsInDiv = sameDivisi.filter(p => p.level > node.level && p.id !== node.id);
+
+        if (superiorsInDiv.length > 0) {
+          const minSupLevel = Math.min(...superiorsInDiv.map(s => s.level));
+          const closestSuperiors = superiorsInDiv.filter(s => s.level === minSupLevel);
+          node.parentId = closestSuperiors[0].id;
+        } else {
+          node.parentId = 'root-0';
+        }
+      }
+    });
+
+    const maxLevelInData = Math.max(...karyDataList.map(n => n.level), 1);
 
     // Root Node Pucuk Pimpinan
     const rootNode = {
@@ -138,17 +187,26 @@ const getData = async () => {
         jabatan: 'TOP MANAGEMENT',
         divisi_id: null,
         divisi_name: '',
-        atasan_id: null
+        atasan_id: null,
+        label: 'DIREKSI / HOLDING\n[TOP MANAGEMENT]',
+        bgColor: '#1e293b',
+        parentId: null
       }
     };
 
-    nodes = [rootNode, ...newNodes];
+    nodes = [
+      rootNode,
+      ...karyDataList.map(k => ({ data: k }))
+    ];
 
     await getTree();
   } catch (error) {
     console.error("Error fetching data:", error);
     if (cyContainer.value) {
-      cyContainer.value.innerHTML = '<div class="flex items-center justify-center h-full text-red-500 text-sm font-medium">Terjadi kesalahan saat memuat data struktur jabatan.</div>';
+      cyContainer.value.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-red-500 text-sm font-medium gap-2">
+        <span>Terjadi kesalahan saat memuat data struktur jabatan.</span>
+        <span class="text-xs text-gray-500">${error.message || error}</span>
+      </div>`;
     }
   } finally {
     isRequesting.value = false;
@@ -159,95 +217,77 @@ const getTree = async () => {
   if (!cyContainer.value || nodes.length === 0) return;
   cyContainer.value.innerHTML = '';
 
-  const edges = [];
-  const nodeMap = new Map();
-  nodes.forEach(n => nodeMap.set(n.data.id, n.data));
-
-  const karyNodes = nodes.filter(n => n.data.id !== 'root-0');
-
-  // Kelompokkan karyawan per Divisi
-  const divisiGroups = {};
-  karyNodes.forEach(n => {
-    const divKey = n.data.divisi_id || 'unassigned';
-    if (!divisiGroups[divKey]) divisiGroups[divKey] = [];
-    divisiGroups[divKey].push(n.data);
-  });
-
-  karyNodes.forEach(node => {
-    let parentId = null;
-
-    // 1. Cek Atasan Langsung eksplisit (atasan_id)
-    if (node.atasan_id && nodeMap.has(`kary-${node.atasan_id}`)) {
-      parentId = `kary-${node.atasan_id}`;
-    } else {
-      // 2. Cari pejabat di divisi yang sama dengan level lebih tinggi
-      const sameDivisi = divisiGroups[node.divisi_id || 'unassigned'] || [];
-      const superiorsInDiv = sameDivisi.filter(p => p.level > node.level && p.id !== node.id);
-
-      if (superiorsInDiv.length > 0) {
-        const minSupLevel = Math.min(...superiorsInDiv.map(s => s.level));
-        const closestSuperiors = superiorsInDiv.filter(s => s.level === minSupLevel);
-        parentId = closestSuperiors[0].id;
-      } else {
-        // 3. Jika pejabat tertinggi di divisinya, hubungkan ke Root
-        parentId = 'root-0';
+  const edges = nodes
+    .filter(node => node.data && node.data.parentId && node.data.parentId !== node.data.id)
+    .map(node => ({
+      data: {
+        id: `edge-${node.data.parentId}-${node.data.id}`,
+        source: node.data.parentId,
+        target: node.data.id
       }
-    }
-
-    if (parentId && parentId !== node.id) {
-      edges.push({
-        data: {
-          id: `edge-${parentId}-${node.id}`,
-          source: parentId,
-          target: node.id
-        }
-      });
-    }
-  });
+    }));
 
   const elements = [...nodes, ...edges];
 
-  const levelColors = {
-    100: '#1e293b',
-    6: '#1e40af',  // Direktur (Biru Tua)
-    5: '#2563eb',  // GM (Biru)
-    4: '#0d9488',  // Manager (Teal)
-    3: '#16a34a',  // Kadiv (Hijau)
-    2: '#d97706',  // Karu (Amber)
-    1: '#64748b',  // Staff (Abu-abu Slate)
+  // Cek dan daftarkan layout ELK jika tersedia
+  let layoutOption = {
+    name: 'breadthfirst',
+    directed: true,
+    spacingFactor: 1.3,
+    padding: 50,
+    animate: true,
+    animationDuration: 500
   };
 
-  const cy = cytoscape({
+  try {
+    if (typeof cytoscapeElk !== 'undefined' && typeof cytoscape !== 'undefined') {
+      cytoscape.use(cytoscapeElk);
+      layoutOption = {
+        name: 'elk',
+        elk: {
+          algorithm: 'mrtree',
+          direction: 'DOWN',
+          nodeSpacing: 40,
+          levelSpacing: 80,
+          edgeSpacingFactor: 0.6,
+          separateConnectedComponents: true,
+          edgeRouting: 'ORTHOGONAL',
+          hierarchyHandling: 'INCLUDE_CHILDREN',
+          considerNodeLabels: true
+        },
+        fit: true,
+        padding: 50,
+        animate: true,
+        animationDuration: 500
+      };
+    }
+  } catch (e) {
+    console.warn("ELK layout not available, using breadthfirst fallback:", e);
+  }
+
+  const cyInstance = (window.cytoscape || cytoscape);
+  const cy = cyInstance({
     container: cyContainer.value,
     elements: elements,
     style: [
       {
         selector: 'node',
         style: {
-          'shape': 'round-rectangle',
-          'background-color': function (ele) {
-            const lvl = ele.data('level') || 1;
-            return levelColors[lvl] || '#475569';
-          },
-          'border-color': '#ffffff',
-          'border-width': 1.5,
-          'label': function (ele) {
-            const data = ele.data();
-            const jab = data.jabatan ? data.jabatan.toUpperCase() : '';
-            const div = data.divisi_name ? `[${data.divisi_name}]` : '';
-            const name = data.name || '';
-            return div ? `${jab} ${div}\n${name}` : `${jab}\n${name}`;
-          },
+          'shape': 'roundrectangle',
+          'background-color': 'data(bgColor)',
+          'border-color': '#334155',
+          'border-width': 2,
+          'label': 'data(label)',
           'text-wrap': 'wrap',
           'text-valign': 'center',
           'text-halign': 'center',
           'color': '#ffffff',
-          'font-size': '10px',
+          'font-size': '11px',
           'font-family': 'Inter, sans-serif',
           'font-weight': '600',
-          'padding': '8px',
+          'padding': '10px',
           'width': '160px',
-          'height': '65px',
+          'height': '70px',
           'text-max-width': '150px'
         }
       },
@@ -272,21 +312,14 @@ const getTree = async () => {
         }
       }
     ],
-    layout: {
-      name: 'breadthfirst',
-      directed: true,
-      spacingFactor: 1.4,
-      padding: 40,
-      animate: true,
-      animationDuration: 500
-    },
+    layout: layoutOption,
     zoomingEnabled: true,
     minZoom: 0.1,
     maxZoom: 3,
     wheelSensitivity: 0.2
   });
 
-  cy.fit(null, 40);
+  cy.fit(null, 50);
   cy.center();
 };
 
