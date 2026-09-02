@@ -118,14 +118,25 @@ const getData = async () => {
       1: '#64748b',  // Staff (Slate)
     };
 
+    const getString = (val, defaultVal = '') => {
+      if (val === null || val === undefined) return defaultVal;
+      if (typeof val === 'string') return val.trim();
+      if (typeof val === 'number') return String(val);
+      if (typeof val === 'object') {
+        const str = val.name || val.value || val.posisi_name || val.divisi_name || defaultVal;
+        return typeof str === 'string' ? str.trim() : (str ? String(str).trim() : defaultVal);
+      }
+      return String(val).trim();
+    };
+
     // 1. Buat node data karyawan
     const karyDataList = dataList.map(item => {
       const detList = Array.isArray(item.m_kary_det_jabatan) ? item.m_kary_det_jabatan : (item.m_kary_det_jabatan ? [item.m_kary_det_jabatan] : []);
       const det = detList.find(j => j.is_primary) || detList[0] || {};
       const lvl = Number(det.level ?? 1);
-      const jab = (det.jabatan || 'STAFF').trim();
-      const div = (det.nama_divisi || '').trim();
-      const name = (item.nama_lengkap || '').trim();
+      const jab = getString(det.jabatan, 'STAFF');
+      const div = getString(det.nama_divisi, '');
+      const name = getString(item.nama_lengkap, '');
 
       let labelText = jab.toUpperCase();
       if (div) labelText += `\n[${div}]`;
