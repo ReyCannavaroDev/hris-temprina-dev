@@ -177,8 +177,9 @@ function onProcess(typePar) {
 }
 
 async function onApproval() {
+  const targetTrxId = values.id || initialValues.id || (route.query.is_approval ? values.trx?.id : parseInt(route.params.id))
   const payload = {
-    id: parseInt(route.params.id),
+    id: targetTrxId,
     target_id: values.target_id
   }
   try {
@@ -361,7 +362,8 @@ async function onSave() {
   try {
     isRequesting.value = true
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
-    const url = `${store.server.url_backend}/operation/${endpointApi}${isCreating ? '' : '/' + route.params.id}`
+    const targetId = values.id || initialValues.id || (route.query.is_approval ? values.trx?.id : route.params.id)
+    const url = `${store.server.url_backend}/operation/${endpointApi}${isCreating ? '' : '/' + targetId}`
 
     const detailPayload = detailArr.value.flatMap(group =>
       group.komponen.map(komp => ({
@@ -397,7 +399,19 @@ async function onSave() {
     const json = await res.json()
     if (!res.ok) throw new Error(json.message || 'Gagal simpan data')
 
-    router.replace(`/${modulPath}?reload=${Date.now()}`)
+    if (route.query.is_approval) {
+      swal.fire({
+        icon: 'success',
+        text: 'Evaluasi pelatihan berhasil disimpan dan diposting'
+      })
+      router.replace('/notifikasi?reload=' + Date.now())
+    } else {
+      swal.fire({
+        icon: 'success',
+        text: 'Evaluasi pelatihan berhasil disimpan dan diposting'
+      })
+      router.replace(`/${modulPath}?reload=${Date.now()}`)
+    }
   } catch (err) {
     swal.fire({ icon: 'warning', text: err.message || err })
   } finally {

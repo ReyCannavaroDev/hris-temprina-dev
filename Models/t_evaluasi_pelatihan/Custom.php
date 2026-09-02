@@ -171,6 +171,9 @@ class t_evaluasi_pelatihan extends \App\Models\BasicModels\t_evaluasi_pelatihan
                     ]);
                     generate_approval_d::where('generate_approval_id', $app->id)->update([
                         'is_done' => true,
+                        'action_type' => 'APPROVED',
+                        'action_at' => Carbon::now(),
+                        'action_user_id' => auth()->user()->id ?? ($model->creator_id ?? null),
                         'updated_at' => Carbon::now()
                     ]);
                 }
