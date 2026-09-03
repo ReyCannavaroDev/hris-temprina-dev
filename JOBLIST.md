@@ -179,9 +179,9 @@ Berdasarkan hasil meeting bersama klien tanggal 03 September 2026, terdapat 5 mo
 ## 📋 14. Actionable Roadmap & Task Checklist (03-09-2026)
 
 ### 🚗 TAHAP 10: Reset Nomor Surat Harian pada `t_perdin`
-- [ ] **[Models/t_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_perdin/Custom.php)** & **[Cores/Helper.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Cores/Helper.php)**:
-  - [ ] Implementasikan reset sequence counter harian berbasis tanggal `date_from` surat tugas.
-  - [ ] Uji pembuatan data perdin di hari yang sama vs berganti hari untuk memastikan nomor surat me-reset dengan benar.
+- [x] **[Models/t_perdin/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_perdin/Custom.php)** & **[Cores/Helper.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Cores/Helper.php)**:
+  - [x] Implementasikan reset sequence counter harian berbasis tanggal `date_from` surat tugas.
+  - [x] Uji pembuatan data perdin di hari yang sama vs berganti hari untuk memastikan nomor surat me-reset dengan benar.
 
 ### 👥 TAHAP 11: Otomatisasi Filter Bawahan pada `t_penilaian_kary`
 - [ ] **[Javascript/t_penilaian_kary.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_penilaian_kary.js)** & **[Blades/t_penilaian_kary.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_penilaian_kary.blade.php)**:

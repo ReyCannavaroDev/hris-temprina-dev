@@ -283,7 +283,7 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
             '{cabang}' => $kotaCode,
         ];
 
-        $nomor = $this->helper->generateNomor("PERDIN", true, null, $dateFrom, $replacements);
+        $nomor = $this->helper->generateNomor("PERDIN", true, null, $dateFrom, $replacements, 'daily');
 
         $newArrayData = array_merge($arrayData, [
             "nomor" => $nomor,
@@ -323,8 +323,14 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
             '{cabang}' => $kotaCode,
         ];
 
-        // Generate nomor yang merefleksikan tanggal dan company/kota baru
-        $nomor = $this->helper->generateNomor("PERDIN", false, null, $dateFrom, $replacements);
+        // Jika nomor sudah terbit dan tanggal surat tugas tidak diubah, pertahankan nomor yang sudah ada
+        $existingDate = $this->normalizeDate($existing?->date_from ?? null);
+        if ($existing && !empty($existing->nomor) && ($existingDate === $dateFrom || empty($arrayData['date_from']))) {
+            $nomor = $existing->nomor;
+        } else {
+            // Generate nomor yang merefleksikan tanggal dan company/kota baru dengan reset harian
+            $nomor = $this->helper->generateNomor("PERDIN", false, null, $dateFrom, $replacements, 'daily');
+        }
 
         $newArrayData = array_merge($arrayData, [
             "nomor" => $nomor,

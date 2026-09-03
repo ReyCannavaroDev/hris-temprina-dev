@@ -29,7 +29,7 @@ class Helper
         $this->timestamp = \Carbon\Carbon::now();
     }
 
-    public function generateNomor($nama, $counter = true, $static = null, $date = null, $replacements = [])
+    public function generateNomor($nama, $counter = true, $static = null, $date = null, $replacements = [], $resetPeriod = null)
     {
         // check header config
         $generate_num = generate_num::where("nama", $nama)
@@ -77,6 +77,18 @@ class Helper
                 }
             }
 
+            // Deteksi apakah format penomoran menggunakan reset harian (daily reset)
+            $namaClean = strtoupper(trim((string) $nama));
+            $generateNumNamaClean = strtoupper(trim((string) @$generate_num->nama));
+            $isDaily = (
+                $resetPeriod === 'daily' || 
+                $resetPeriod === 'day' || 
+                $namaClean === 'PERDIN' || 
+                $namaClean === 'RENCANA PERJALANAN DINAS' ||
+                $generateNumNamaClean === 'PERDIN'
+            );
+            $dateKey = date('Y-m-d', $timestamp);
+
             foreach ($generate_num_det as $tnd) {
                 $trx_type = generate_num_type::find(
                     @$tnd["generate_num_type_id"]
@@ -104,8 +116,8 @@ class Helper
                         }
                     } elseif ($trx_type->ref_type === "seq") {
                         // type seq
-                        $table = "generate_num";
-                        $length = (int) $trx_type->value ?? 6;
+                        $table = $isDaily ? ("generate_num_daily_" . $dateKey) : "generate_num";
+                        $length = (int) ($trx_type->value ?? 6);
                         $lastDataQuery = generate_num_log::where(
                             "nama",
                             @$generate_num->nama
@@ -115,6 +127,26 @@ class Helper
 
                         $latest = $lastDataQuery->pluck("seq")->first();
 
+                        // Fallback sync untuk PERDIN: pastikan tidak menduplikasi record yang sudah ada di t_perdin pada tanggal tersebut
+                        if ($isDaily && ($namaClean === 'PERDIN' || $generateNumNamaClean === 'PERDIN')) {
+                            try {
+                                if (class_exists('Illuminate\Support\Facades\Schema') && \Illuminate\Support\Facades\Schema::hasTable('t_perdin')) {
+                                    $existingCount = \DB::table('t_perdin')
+                                        ->where(function($q) use ($dateKey) {
+                                            $q->whereDate('date_from', $dateKey)
+                                              ->orWhere('tanggal_surat_tugas', $dateKey);
+                                        })
+                                        ->whereNotNull('nomor')
+                                        ->where('nomor', '!=', '')
+                                        ->count();
+
+                                    if ($existingCount > (int) $latest) {
+                                        $latest = (int) $existingCount;
+                                    }
+                                }
+                            } catch (\Throwable $ex) {}
+                        }
+
                         if (!$latest) {
                             $latest = "";
 
@@ -123,7 +155,7 @@ class Helper
                             }
                         }
 
-                        $latest = sprintf("%0" . $length . "d", $latest + 1);
+                        $latest = sprintf("%0" . $length . "d", ((int) $latest) + 1);
                         $temporaryCode .= $latest;
 
                         if ($counter && !$static) {
@@ -132,14 +164,14 @@ class Helper
                                     ->where("nama", $generate_num->nama)
                                     ->update([
                                         "value" => $temporaryCode,
-                                        "seq" => $latest,
+                                        "seq" => (int) $latest,
                                     ]);
                             } else {
                                 generate_num_log::create([
                                     "table" => $table,
                                     "nama" => $generate_num->nama,
                                     "value" => $temporaryCode,
-                                    "seq" => $latest,
+                                    "seq" => (int) $latest,
                                 ]);
                             }
                         }
