@@ -97,8 +97,8 @@
       <Icon fa="arrow-left" class="cursor-pointer mr-2 font-bold hover:text-yellow-500" title="Kembali"
         @click="onBack" />
       <div>
-        <h1 class="text-20px font-bold">Form Request Pelatihan</h1>
-        <p class="text-gray-100">Request Pelatihan</p>
+        <h1 class="text-20px font-bold">Form Pengajuan Pelatihan</h1>
+        <p class="text-gray-100">Pengajuan Pelatihan</p>
       </div>
     </div>
   </div>

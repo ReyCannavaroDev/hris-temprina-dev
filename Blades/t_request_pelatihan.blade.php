@@ -90,13 +90,13 @@
 <!-- CONTENT -->
 @verbatim
 <div class="flex flex-col border rounded-md shadow-md md:w-full w-full p-0 bg-white border-none">
-  <div class="bg-gray-500 text-white rounded-t-md py-2 px-4">
+  <div class="bg-gray-500 text-white rounded-t-md py-2 px-4"> 
     <div class="flex items-center">
       <Icon fa="arrow-left" class="cursor-pointer mr-2 font-bold hover:text-yellow-500" title="Kembali"
         @click="onBack" />
       <div>
-        <h1 class="text-20px font-bold">Form Request Pelatihan</h1>
-        <p class="text-gray-100">Request Pelatihan</p>
+        <h1 class="text-20px font-bold">Form Pengajuan Pelatihan</h1>
+        <p class="text-gray-100">Pengajuan Pelatihan</p>
       </div>
     </div>
   </div>

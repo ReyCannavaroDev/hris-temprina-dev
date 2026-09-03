@@ -30,7 +30,7 @@ let dataLog = reactive({ items: [] })
 // ------------------------------ PERSIAPAN
 const endpointApi = '/t_request_pelatihan'
 onBeforeMount(() => {
-  document.title = 'Request Pelatihan'
+  document.title = 'Pengajuan Pelatihan'
 })
 
 //  @if( $id )------------------- VALUES FORM ! PENTING JANGAN DIHAPUS
@@ -38,7 +38,7 @@ let initialValues = {}
 const changedValues = []
 
 onBeforeMount(async () => {
-  document.title = is_approval ? 'Approval Cuti' : 'Transaksi Cuti'
+  document.title = is_approval ? 'Approval Pengajuan Pelatihan' : 'Form Pengajuan Pelatihan'
   // console.log('cek hc', store.user.data.is_hc)
 
   const respoData = localStorage.getItem('respo')
