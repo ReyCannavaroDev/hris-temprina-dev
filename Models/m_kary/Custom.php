@@ -60,7 +60,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             "App\Models\BasicModels\m_standart_gaji",
             "m_kary_id",
             "id"
-        )->latestOfMany(); 
+        )->latestOfMany();
     }
 
     public function m_kary_det_jabatan(): \Illuminate\Database\Eloquent\Relations\HasMany
@@ -90,13 +90,14 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 if ($atasan) {
                     $arrayData['atasan_id'] = $atasan->id;
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
 
         $newArrayData = array_merge($arrayData, [
-          "nip" => $arrayData["nip"] ?? '0' . $nip,
-          "kode" => $kode,
-          "no_registrasi" => $arrayData["no_registrasi"] ?? substr($kode, -10),
+            "nip" => $arrayData["nip"] ?? '0' . $nip,
+            "kode" => $kode,
+            "no_registrasi" => $arrayData["no_registrasi"] ?? substr($kode, -10),
         ]);
         return [
             "model" => $model,
@@ -112,7 +113,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
         return [
             "model" => $model,
-            "data"  => $arrayData,
+            "data" => $arrayData,
         ];
     }
 
@@ -127,7 +128,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 $atasan = \DB::table('m_kary')
                     ->where('m_divisi_id', $divisiId)
                     ->where('is_active', true)
-                    ->when($karyId, function($q) use ($karyId) {
+                    ->when($karyId, function ($q) use ($karyId) {
                         $q->where('id', '!=', $karyId);
                     })
                     ->orderBy('id', 'asc')
@@ -135,12 +136,13 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 if ($atasan) {
                     $arrayData['atasan_id'] = $atasan->id;
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
 
         return [
             "model" => $model,
-            "data"  => $arrayData,
+            "data" => $arrayData,
         ];
     }
 
@@ -171,7 +173,8 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
     private function syncKaryawanJabatan($karyId)
     {
-        if (!$karyId) return;
+        if (!$karyId)
+            return;
 
         // 1. Sinkronkan foreign key m_kary_id dan m_karyawan_id di detail jabatan
         \DB::table('m_kary_det_jabatan')
@@ -186,7 +189,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
         // 2. Sinkronkan ke tabel induk m_kary (posisi, comp, subcomp, branch, divisi)
         $primaryJabatan = \DB::table('m_kary_det_jabatan')
-            ->where(function($q) use ($karyId) {
+            ->where(function ($q) use ($karyId) {
                 $q->where('m_kary_id', $karyId)->orWhere('m_karyawan_id', $karyId);
             })
             ->where('is_active', true)
@@ -196,11 +199,11 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
         if ($primaryJabatan && !empty($primaryJabatan->m_posisi_id)) {
             \DB::table('m_kary')->where('id', $karyId)->update([
-                'm_posisi_id'  => $primaryJabatan->m_posisi_id,
-                'm_comp_id'    => $primaryJabatan->m_comp_id ?? \DB::raw('m_comp_id'),
+                'm_posisi_id' => $primaryJabatan->m_posisi_id,
+                'm_comp_id' => $primaryJabatan->m_comp_id ?? \DB::raw('m_comp_id'),
                 'm_subcomp_id' => $primaryJabatan->m_subcomp_id ?? \DB::raw('m_subcomp_id'),
-                'm_branch_id'  => $primaryJabatan->m_branch_id ?? \DB::raw('m_branch_id'),
-                'm_divisi_id'  => $primaryJabatan->m_divisi_id ?? \DB::raw('m_divisi_id'),
+                'm_branch_id' => $primaryJabatan->m_branch_id ?? \DB::raw('m_branch_id'),
+                'm_divisi_id' => $primaryJabatan->m_divisi_id ?? \DB::raw('m_divisi_id'),
             ]);
         }
     }
@@ -222,14 +225,15 @@ class m_kary extends \App\Models\BasicModels\m_kary
                     ->where('m_kary_id', $karyId)
                     ->whereNull('m_karyawan_id')
                     ->update(['m_karyawan_id' => $karyId]);
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
 
             // 2. Selalu pastikan m_kary_det_jabatan terisi jika ada data di database
             try {
                 $detJabatan = \DB::table('m_kary_det_jabatan')
-                    ->where(function($q) use ($karyId) {
+                    ->where(function ($q) use ($karyId) {
                         $q->where('m_kary_id', $karyId)
-                          ->orWhere('m_karyawan_id', $karyId);
+                            ->orWhere('m_karyawan_id', $karyId);
                     })
                     ->get();
 
@@ -240,7 +244,8 @@ class m_kary extends \App\Models\BasicModels\m_kary
                             try {
                                 $subcomp = \DB::table('m_subcomp')->where('id', $jab['m_subcomp_id'])->first();
                                 $jab['m_company_id'] = $subcomp ? ($subcomp->m_company_id ?? $subcomp->company_id ?? null) : null;
-                            } catch (\Throwable $e) {}
+                            } catch (\Throwable $e) {
+                            }
                         }
 
                         if (!empty($jab['m_posisi_id'])) {
@@ -259,7 +264,8 @@ class m_kary extends \App\Models\BasicModels\m_kary
                                 } else {
                                     $jab['level'] = 1;
                                 }
-                            } catch (\Throwable $e) {}
+                            } catch (\Throwable $e) {
+                            }
                         }
 
                         if (!empty($jab['m_divisi_id'])) {
@@ -267,21 +273,23 @@ class m_kary extends \App\Models\BasicModels\m_kary
                                 $div = \DB::table('m_divisi')->where('id', $jab['m_divisi_id'])->first();
                                 $jab['nama_divisi'] = $div->name ?? null;
                                 $jab['parent_id'] = $div->parent_id ?? null;
-                            } catch (\Throwable $e) {}
+                            } catch (\Throwable $e) {
+                            }
                         }
                     }
                     unset($jab);
                     $row['m_kary_det_jabatan'] = $jabatanList;
                     $object['m_kary_det_jabatan'] = $row['m_kary_det_jabatan'];
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
 
             // 3. Hal yang sama untuk jobdesc
             try {
                 $detJobdesc = \DB::table('m_kary_det_jobdesc')
-                    ->where(function($q) use ($karyId) {
+                    ->where(function ($q) use ($karyId) {
                         $q->where('m_kary_id', $karyId)
-                          ->orWhere('m_karyawan_id', $karyId);
+                            ->orWhere('m_karyawan_id', $karyId);
                     })
                     ->get();
 
@@ -289,7 +297,8 @@ class m_kary extends \App\Models\BasicModels\m_kary
                     $row['m_kary_det_jobdesc'] = json_decode(json_encode($detJobdesc), true);
                     $object['m_kary_det_jobdesc'] = $row['m_kary_det_jobdesc'];
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
 
         if (app()->request->detail) {
@@ -317,8 +326,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
     public function custom_infoCuti()
     {
         $kary_id = app()->request->m_kary_id;
-        if(!$kary_id)
-        {
+        if (!$kary_id) {
             return $this->helper->customResponse(
                 "Data karyawan tidak ditemukan",
                 404
@@ -464,11 +472,11 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
                 $employee->cuti_sisa_reguler =
                     $yearsOfWork >= 1
-                        ? $baseLeaveDays +
-                            $additionalLeaveDays[
-                                ($yearsOfWork - 1) % count($additionalLeaveDays)
-                            ]
-                        : -4;
+                    ? $baseLeaveDays +
+                    $additionalLeaveDays[
+                        ($yearsOfWork - 1) % count($additionalLeaveDays)
+                    ]
+                    : -4;
 
                 $employee->cuti_sisa_panjang = 16;
                 $employee->exp_date_cuti = Carbon::now()
@@ -2046,13 +2054,13 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ->whereRaw("lower(m_general.code) = 'office'");
     }
 
-     public function scopelanding($model)
+    public function scopelanding($model)
     {
         return $model
             ->leftJoin("m_branch", "m_branch.id", "m_kary.m_branch_id")
             ->leftJoin("m_posisi", 'm_posisi.id', 'm_kary.m_posisi_id')
-            ->select("m_kary.*", "m_branch.name as m_branch.name", "m_branch.id as m_branch.id","m_posisi.name as m_posisi.name", "m_posisi.id as m_posisi.id");
-            //->whereRaw("lower(m_general.code) = 'office'");
+            ->select("m_kary.*", "m_branch.name as m_branch.name", "m_branch.id as m_branch.id", "m_posisi.name as m_posisi.name", "m_posisi.id as m_posisi.id");
+        //->whereRaw("lower(m_general.code) = 'office'");
     }
 
     public function scopeKaryawanShift($model)
@@ -2088,20 +2096,14 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ? (int) request("end_level")
             : 1;
         if ($sbu) {
-            $model = $model->whereHas("m_kary_det_jabatan", function (
-                $query
-            ) use ($sbu) {
+            $model = $model->whereHas("m_kary_det_jabatan", function ($query) use ($sbu) {
                 $query->where("m_comp_id", $sbu);
             });
         }
         $mkdj = "m_kary_det_jabatan";
 
         if (!is_null($startLevelFilter) && !is_null($endLevelFilter)) {
-            $model = $model->whereHas($mkdj, function ($query) use (
-                $mkdj,
-                $startLevelFilter,
-                $endLevelFilter
-            ) {
+            $model = $model->whereHas($mkdj, function ($query) use ($mkdj, $startLevelFilter, $endLevelFilter) {
                 $query
                     ->where("is_primary", true)
                     ->leftJoin("m_divisi as md", "md.id", "{$mkdj}.m_divisi_id")
@@ -2131,11 +2133,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
         return $model
             ->where("m_kary.is_active", true)
             ->with([
-                $mkdj => function ($query) use (
-                    $mkdj,
-                    $startLevelFilter,
-                    $endLevelFilter
-                ) {
+                $mkdj => function ($query) use ($mkdj, $startLevelFilter, $endLevelFilter) {
                     $query
                         ->where("{$mkdj}.is_primary", true)
                         ->leftjoin(
@@ -2159,9 +2157,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                             "mp.id",
                             "{$mkdj}.m_posisi_id"
                         )
-                        ->leftJoin("m_kary as other_kary", function (
-                            $join
-                        ) use ($mkdj) {
+                        ->leftJoin("m_kary as other_kary", function ($join) use ($mkdj) {
                             $join
                                 ->on(
                                     "other_kary.m_divisi_id",
@@ -2174,9 +2170,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                                     "{$mkdj}.m_karyawan_id"
                                 );
                         })
-                        ->leftJoin("m_kary_det_jabatan as okdj", function (
-                            $join
-                        ) {
+                        ->leftJoin("m_kary_det_jabatan as okdj", function ($join) {
                             $join
                                 ->on("okdj.m_karyawan_id", "=", "other_kary.id")
                                 ->where("okdj.is_primary", true);
@@ -2216,7 +2210,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
         $endLevelReq = request("end_level");
 
         $startLevelFilter = is_numeric($startLevelReq) ? (int) $startLevelReq : 1;
-        $endLevelFilter = is_numeric($endLevelReq) ? (int) $endLevelReq : 6; 
+        $endLevelFilter = is_numeric($endLevelReq) ? (int) $endLevelReq : 6;
 
         $minLevel = min($startLevelFilter, $endLevelFilter);
         $maxLevel = max($startLevelFilter, $endLevelFilter);
@@ -2234,14 +2228,14 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $model = $model->whereHas($mkdj, function ($query) use ($mkdj, $minLevel, $maxLevel) {
                 $query->where(function ($q) use ($mkdj) {
                     $q->where("{$mkdj}.is_primary", true)
-                      ->orWhereNull("{$mkdj}.is_primary");
+                        ->orWhereNull("{$mkdj}.is_primary");
                 })
-                ->leftJoin("m_level_posisi_d as mlpd_filter", "mlpd_filter.m_posisi_id", "=", "{$mkdj}.m_posisi_id")
-                ->leftJoin("m_level_posisi as mlp_filter", "mlp_filter.id", "=", "mlpd_filter.m_level_posisi_id")
-                ->where(function ($q) use ($minLevel, $maxLevel) {
-                    $q->whereBetween("mlp_filter.sequence", [$minLevel, $maxLevel])
-                      ->orWhereNull("mlp_filter.sequence");
-                });
+                    ->leftJoin("m_level_posisi_d as mlpd_filter", "mlpd_filter.m_posisi_id", "=", "{$mkdj}.m_posisi_id")
+                    ->leftJoin("m_level_posisi as mlp_filter", "mlp_filter.id", "=", "mlpd_filter.m_level_posisi_id")
+                    ->where(function ($q) use ($minLevel, $maxLevel) {
+                        $q->whereBetween("mlp_filter.sequence", [$minLevel, $maxLevel])
+                            ->orWhereNull("mlp_filter.sequence");
+                    });
             });
         }
 
@@ -2251,17 +2245,17 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 $mkdj => function ($query) use ($mkdj) {
                     $query->where(function ($q) use ($mkdj) {
                         $q->where("{$mkdj}.is_primary", true)
-                          ->orWhereNull("{$mkdj}.is_primary");
+                            ->orWhereNull("{$mkdj}.is_primary");
                     })
-                    ->leftJoin("m_divisi as md", "md.id", "{$mkdj}.m_divisi_id")
-                    ->leftJoin("m_comp as mc", "mc.id", "{$mkdj}.m_comp_id")
-                    ->leftJoin("m_subcomp as msc", "msc.id", "{$mkdj}.m_subcomp_id")
-                    ->leftJoin("m_branch as mb", "mb.id", "{$mkdj}.m_branch_id")
-                    ->leftJoin("m_posisi as mp", "mp.id", "{$mkdj}.m_posisi_id")
-                    ->leftJoin("m_level_posisi_d as mlpd", "mlpd.m_posisi_id", "=", "mp.id")
-                    ->leftJoin("m_level_posisi as mlp", "mlp.id", "=", "mlpd.m_level_posisi_id")
-                    ->orderBy("mlp.sequence", "desc")
-                    ->selectRaw("
+                        ->leftJoin("m_divisi as md", "md.id", "{$mkdj}.m_divisi_id")
+                        ->leftJoin("m_comp as mc", "mc.id", "{$mkdj}.m_comp_id")
+                        ->leftJoin("m_subcomp as msc", "msc.id", "{$mkdj}.m_subcomp_id")
+                        ->leftJoin("m_branch as mb", "mb.id", "{$mkdj}.m_branch_id")
+                        ->leftJoin("m_posisi as mp", "mp.id", "{$mkdj}.m_posisi_id")
+                        ->leftJoin("m_level_posisi_d as mlpd", "mlpd.m_posisi_id", "=", "mp.id")
+                        ->leftJoin("m_level_posisi as mlp", "mlp.id", "=", "mlpd.m_level_posisi_id")
+                        ->orderBy("mlp.sequence", "desc")
+                        ->selectRaw("
                         {$mkdj}.id as det_id,
                         {$mkdj}.m_karyawan_id, 
                         {$mkdj}.m_kary_id, 
@@ -2287,27 +2281,29 @@ class m_kary extends \App\Models\BasicModels\m_kary
     {
         $comp_id = $req->comp_id ?? 9;
         $startLevelFilter = is_numeric(request("start_level")) ? (int) request("start_level") : 0;
-        $endLevelFilter = is_numeric(request("end_level")) ? (int) request("end_level") : 99; 
+        $endLevelFilter = is_numeric(request("end_level")) ? (int) request("end_level") : 99;
 
         $structure = m_subcomp::with([
-            'm_branch' => function($q) {
-                $q->select('id', 'm_subcomp_id', 'name'); 
-                $q->with(['m_divisi' => function($q2) {
-                    // Ambil yang paling atas dulu (Parent)
-                    $q2->whereNull('parent_id') 
-                        ->select('id', 'm_branch_id', 'name', 'parent_id')
-                        ->with([
-                            'general_name:id,value', 
-                            // Ambil anaknya, dan ambil bapak dari anaknya (untuk label name)
-                            'child_divisi' => function($q3) {
-                                $q3->with(['name:id,value']);
-                            }
-                        ]);
-                }]);
+            'm_branch' => function ($q) {
+                $q->select('id', 'm_subcomp_id', 'name');
+                $q->with([
+                    'm_divisi' => function ($q2) {
+                        // Ambil yang paling atas dulu (Parent)
+                        $q2->whereNull('parent_id')
+                            ->select('id', 'm_branch_id', 'name', 'parent_id')
+                            ->with([
+                                'general_name:id,value',
+                                // Ambil anaknya, dan ambil bapak dari anaknya (untuk label name)
+                                'child_divisi' => function ($q3) {
+                            $q3->with(['name:id,value']);
+                        }
+                            ]);
+                    }
+                ]);
             }
         ])
-        ->where('m_comp_id', $comp_id)
-        ->get(['id', 'm_comp_id', 'name']);
+            ->where('m_comp_id', $comp_id)
+            ->get(['id', 'm_comp_id', 'name']);
 
         $structure->each(function ($subcomp) {
             $subcomp->m_branch?->each(function ($branch) {
@@ -2324,9 +2320,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
     {
         $sbu = filter_var(@request("comp_id"), FILTER_VALIDATE_INT);
         if ($sbu) {
-            $model = $model->whereHas("m_kary_det_jabatan", function (
-                $query
-            ) use ($sbu) {
+            $model = $model->whereHas("m_kary_det_jabatan", function ($query) use ($sbu) {
                 $query->where("m_comp_id", $sbu);
             });
         }
@@ -2411,8 +2405,8 @@ class m_kary extends \App\Models\BasicModels\m_kary
             "group",
             "STATUS KARYAWAN"
         )
-        ->where("value", "HARIAN")
-        ->pluck("id");
+            ->where("value", "HARIAN")
+            ->pluck("id");
 
         return $model->whereIn("m_kary.status_kary_id", $status_os);
     }
@@ -2448,7 +2442,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 }
                 if (is_array($m_subcomp_id)) {
                     $q->whereIn("m_kary.m_subcomp_id", $m_subcomp_id);
-                } else if(is_string($m_subcomp_id) && str_contains($m_subcomp_id, ',')) {
+                } else if (is_string($m_subcomp_id) && str_contains($m_subcomp_id, ',')) {
                     $q->whereIn("m_kary.m_subcomp_id", explode(',', $m_subcomp_id));
                 } else {
                     $q->where("m_kary.m_subcomp_id", $m_subcomp_id);
@@ -2460,7 +2454,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 }
                 if (is_array($m_branch_id)) {
                     $q->whereIn("m_kary.m_branch_id", $m_branch_id);
-                } else if(is_string($m_branch_id) && str_contains($m_branch_id, ',')) {
+                } else if (is_string($m_branch_id) && str_contains($m_branch_id, ',')) {
                     $q->whereIn("m_kary.m_branch_id", explode(',', $m_branch_id));
                 } else {
                     $q->where("m_kary.m_branch_id", $m_branch_id);
@@ -2494,15 +2488,15 @@ class m_kary extends \App\Models\BasicModels\m_kary
             })
             ->whereRaw('d.id = (SELECT MAX(id) FROM t_jadwal_kerja_d_n WHERE m_kary_id = d.m_kary_id AND start_date = d.start_date AND status = \'AKTIF\')')
             ->join('t_jadwal_kerja_n as n', 'n.id', '=', 'd.t_jadwal_kerja_n_id')
-            
+
 
             ->select(
-                'm_kary.*', 
-                'm_comp.name as m_comp.name', 
-                'm_branch.name as m_branch.name', 
-                'm_general.value as m_general.value', 
+                'm_kary.*',
+                'm_comp.name as m_comp.name',
+                'm_branch.name as m_branch.name',
+                'm_general.value as m_general.value',
                 'm_posisi.name as m_posisi.name',
-                'n.keterangan as t_jadwal_kerja_n.keterangan', 
+                'n.keterangan as t_jadwal_kerja_n.keterangan',
                 'n.id as t_jadwal_kerja_n.id'
             );
     }
@@ -2526,12 +2520,12 @@ class m_kary extends \App\Models\BasicModels\m_kary
                     ->on('d.start_date', '=', 'latest_j.latest_date');
             })
             ->whereRaw('d.id = (SELECT MAX(id) FROM t_jadwal_kerja_d_n WHERE m_kary_id = d.m_kary_id AND start_date = d.start_date AND status = \'AKTIF\')')
-            
+
             ->join('t_jadwal_kerja_n as n', 'n.id', '=', 'd.t_jadwal_kerja_n_id')
-            
+
             ->select(
-                'm_kary.*', 
-                'n.keterangan as t_jadwal_kerja_n.keterangan', 
+                'm_kary.*',
+                'n.keterangan as t_jadwal_kerja_n.keterangan',
                 'n.id as t_jadwal_kerja_n.id'
             );
     }
@@ -2542,9 +2536,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $q->where("id", auth()->user()->id);
         })->first();
 
-        $level = m_level_posisi::whereHas("m_level_posisi_d", function (
-            $q
-        ) use ($m_kary) {
+        $level = m_level_posisi::whereHas("m_level_posisi_d", function ($q) use ($m_kary) {
             $q->where("m_posisi_id", $m_kary->m_posisi_id);
         })->first();
 
@@ -2577,9 +2569,8 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $q->where("id", auth()->id());
         })->first();
 
-        if(app()->request?->t_m_kary_id && is_numeric(app()->request->t_m_kary_id))
-        {
-           $m_kary = m_kary::find(app()->request->t_m_kary_id);
+        if (app()->request?->t_m_kary_id && is_numeric(app()->request->t_m_kary_id)) {
+            $m_kary = m_kary::find(app()->request->t_m_kary_id);
         }
 
         if (!$m_kary) {
@@ -2613,29 +2604,29 @@ class m_kary extends \App\Models\BasicModels\m_kary
         return $query
             ->where("m_kary.id", "!=", $m_kary->id)
             ->when(!empty($divisiIds), function ($q) use ($divisiIds) {
-                $q->where(function($subQ) use ($divisiIds) {
+                $q->where(function ($subQ) use ($divisiIds) {
                     $subQ->whereIn("m_kary.m_divisi_id", $divisiIds)
-                         ->orWhereNull("m_kary.m_divisi_id");
+                        ->orWhereNull("m_kary.m_divisi_id");
                 });
             })
             ->when($level && $level->sequence < $maxLevel, function ($q) use ($level) {
                 $q->where(function ($subQ) use ($level) {
                     $subQ->whereExists(function ($query) use ($level) {
                         $query->select(\DB::raw(1))
-                              ->from('m_level_posisi_d as ld')
-                              ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
-                              ->whereColumn('ld.m_posisi_id', 'm_kary.m_posisi_id')
-                              ->where('l.sequence', '>', $level->sequence);
+                            ->from('m_level_posisi_d as ld')
+                            ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                            ->whereColumn('ld.m_posisi_id', 'm_kary.m_posisi_id')
+                            ->where('l.sequence', '>', $level->sequence);
                     })->orWhereExists(function ($query) use ($level) {
                         $query->select(\DB::raw(1))
-                              ->from('m_kary_det_jabatan as mkdj')
-                              ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'mkdj.m_posisi_id')
-                              ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
-                              ->where(function($joinKary) {
-                                  $joinKary->whereColumn('mkdj.m_karyawan_id', 'm_kary.id')
-                                           ->orWhereColumn('mkdj.m_kary_id', 'm_kary.id');
-                              })
-                              ->where('l.sequence', '>', $level->sequence);
+                            ->from('m_kary_det_jabatan as mkdj')
+                            ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'mkdj.m_posisi_id')
+                            ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                            ->where(function ($joinKary) {
+                                $joinKary->whereColumn('mkdj.m_karyawan_id', 'm_kary.id')
+                                    ->orWhereColumn('mkdj.m_kary_id', 'm_kary.id');
+                            })
+                            ->where('l.sequence', '>', $level->sequence);
                     });
                 });
             });
@@ -2651,9 +2642,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             return $query->whereRaw("1 = 0");
         }
 
-        $level = m_level_posisi::whereHas("m_level_posisi_d", function (
-            $q
-        ) use ($m_kary) {
+        $level = m_level_posisi::whereHas("m_level_posisi_d", function ($q) use ($m_kary) {
             $q->where("m_posisi_id", $m_kary->m_posisi_id);
         })->first();
 
@@ -2693,9 +2682,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 ->value("parent_id");
         }
 
-        $level = m_level_posisi::whereHas("m_level_posisi_d", function (
-            $q
-        ) use ($m_kary) {
+        $level = m_level_posisi::whereHas("m_level_posisi_d", function ($q) use ($m_kary) {
             $q->where("m_posisi_id", $m_kary->m_posisi_id);
         })->first();
 
@@ -2757,11 +2744,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
         // dd($req->kode_sub);
         // dd(m_kary::get());
 
-        $m_kary = m_kary::where(function ($query) use (
-            $subcomp_id,
-            $branch_id,
-            $subcode
-        ) {
+        $m_kary = m_kary::where(function ($query) use ($subcomp_id, $branch_id, $subcode) {
             $query
                 ->when(
                     $subcomp_id,
@@ -2857,11 +2840,11 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
     public function custom_syncKary()
     {
-        $kary_raw = $kary = m_kary::where(function($query) {
+        $kary_raw = $kary = m_kary::where(function ($query) {
             $query->where('is_sync', false)
                 ->orWhereNull('is_sync');
         });
-        
+
         $updated_ids = $kary_raw->pluck('id')->toArray();
         $kary = $kary_raw->get()->map(function ($item) {
             return [
@@ -2915,9 +2898,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ];
         });
 
-        $company_outsourcing = m_company_outsourcing::all()->map(function (
-            $item
-        ) {
+        $company_outsourcing = m_company_outsourcing::all()->map(function ($item) {
             return [
                 "id" => $item->id ?? null,
                 "code" => $item->code ?? null,
@@ -2975,15 +2956,15 @@ class m_kary extends \App\Models\BasicModels\m_kary
         $response = Http::withHeaders([
             "Authorization" => "Bearer " . $token,
         ])->post(env("ERP_URL") . "/operation/hris_m_kary/syncKary", [
-            "data" => $kary,
-            "comp" => $comp,
-            "subcomp" => $subcomp,
-            "branch" => $branch,
-            "company_outsourcing" => $company_outsourcing,
-            "divisi" => $divisi,
-            "posisi" => $posisi,
-            "default_users" => $default_users,
-        ]);
+                    "data" => $kary,
+                    "comp" => $comp,
+                    "subcomp" => $subcomp,
+                    "branch" => $branch,
+                    "company_outsourcing" => $company_outsourcing,
+                    "divisi" => $divisi,
+                    "posisi" => $posisi,
+                    "default_users" => $default_users,
+                ]);
 
         if ($response->successful()) {
             default_users::whereIn(
@@ -3013,7 +2994,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
     public function scopeEfektifitas($model)
     {
         $req = app()->request;
-        
+
         if (empty($req->t_realisasi_pelatihan_id) || $req->t_realisasi_pelatihan_id === 'null') {
             return $model->whereRaw('1 = 0');
         }
@@ -3023,6 +3004,13 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 $query->select("d.m_kary_id")
                     ->from("t_realisasi_pelatihan_d_kary as d")
                     ->where("d.t_realisasi_pelatihan_id", $req->t_realisasi_pelatihan_id);
+            })
+            ->whereNotIn("m_kary.id", function ($query) use ($req) {
+                $query->select("ed.m_kary_id")
+                    ->from("t_efektifitas_pelatihan_detail as ed")
+                    ->join("t_efektifitas_pelatihan as e", "e.id", "=", "ed.t_efektifitas_pelatihan_id")
+                    ->where("e.t_realisasi_pelatihan_id", $req->t_realisasi_pelatihan_id)
+                    ->where("e.status", "!=", "REJECTED");
             });
     }
 
@@ -3348,7 +3336,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $status_os = m_general::where(
                 "group",
                 "STATUS KARYAWAN OUTSOURCE"
-            )->pluck("id");        
+            )->pluck("id");
             $m_branch_id = $req->m_branch_id ?? null;
             $m_divisi_id = $req->m_divisi_id ?? null;
             // $subcode = $req->kode_sub ?? null;
@@ -3364,19 +3352,13 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 "m_posisi",
                 "m_dept",
             ])->whereNotIn("m_kary.status_kary_id", $status_os)
-                ->where(function ($query) use (
-                    $m_comp_id,
-                    $m_subcomp_id,
-                    $m_branch_id,
-                    $m_divisi_id,
-                    $m_kary_id
-                ) {
+                ->where(function ($query) use ($m_comp_id, $m_subcomp_id, $m_branch_id, $m_divisi_id, $m_kary_id) {
                     $query
                         ->when(
                             $m_comp_id,
                             fn($q) => $q->where("m_comp_id", $m_comp_id)
                         )
-                        ->when($m_subcomp_id, function($q) use ($m_subcomp_id) {
+                        ->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
                             if (is_string($m_subcomp_id) && str_starts_with($m_subcomp_id, '[') && str_ends_with($m_subcomp_id, ']')) {
                                 $m_subcomp_id = json_decode($m_subcomp_id, true);
                             }
@@ -3388,7 +3370,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                                 $q->where("m_subcomp_id", $m_subcomp_id);
                             }
                         })
-                        ->when($m_branch_id, function($q) use ($m_branch_id) {
+                        ->when($m_branch_id, function ($q) use ($m_branch_id) {
                             if (is_string($m_branch_id) && str_starts_with($m_branch_id, '[') && str_ends_with($m_branch_id, ']')) {
                                 $m_branch_id = json_decode($m_branch_id, true);
                             }
@@ -3474,7 +3456,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                             )?->value ?? "",
                         "JENIS KELAMIN" => match (
                         m_general::find($kary->jk_id)?->value
-                        ) {
+                    ) {
                             "Laki-Laki" => "L",
                             "Perempuan" => "P",
                             default => "",
@@ -3486,8 +3468,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             // dd($data->toArray());
 
             // Buat export dinamis langsung tanpa class
-            $export = new class ($data) implements FromCollection, WithHeadings
-            {
+            $export = new class ($data) implements FromCollection, WithHeadings {
                 protected $data;
                 public function __construct($data)
                 {
@@ -3500,23 +3481,23 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 public function headings(): array
                 {
                     return [
-                        "NIP",
-                        "NAMA PEGAWAI",
-                        "NO REGISTRASI",
-                        "JABATAN",
-                        "LEVEL",
-                        "DEPARTEMEN",
-                        "COST CENTER",
-                        "STATUS KARYAWAN",
-                        "AWAL MASUK",
-                        "AWAL PERIODE",
-                        "AKHIR /SD",
-                        "TAHUN PENGANGKATAN",
-                        "AWAL DIANGKAT",
-                        "STATUS TANGGUNGAN",
-                        "PENDIDIKAN",
-                        "JENIS KELAMIN",
-                        "TGL LAHIR",
+                    "NIP",
+                    "NAMA PEGAWAI",
+                    "NO REGISTRASI",
+                    "JABATAN",
+                    "LEVEL",
+                    "DEPARTEMEN",
+                    "COST CENTER",
+                    "STATUS KARYAWAN",
+                    "AWAL MASUK",
+                    "AWAL PERIODE",
+                    "AKHIR /SD",
+                    "TAHUN PENGANGKATAN",
+                    "AWAL DIANGKAT",
+                    "STATUS TANGGUNGAN",
+                    "PENDIDIKAN",
+                    "JENIS KELAMIN",
+                    "TGL LAHIR",
                     ];
                 }
             };
@@ -3538,23 +3519,23 @@ class m_kary extends \App\Models\BasicModels\m_kary
         $data = $this->findOrFail(auth()->user()->m_kary_id);
         $now = Carbon::now();
 
-        if($data->can_outscope === true){
+        if ($data->can_outscope === true) {
             return response()->json([
                 "can_outscope" => true
             ]);
-        }else{
-            $perdin = t_rencana_perdin::whereHas('t_perdin', function($q) use ($now){
+        } else {
+            $perdin = t_rencana_perdin::whereHas('t_perdin', function ($q) use ($now) {
                 $q->whereDate('date_from', '<=', $now)
-            ->whereDate('date_to', '>=', $now);
+                    ->whereDate('date_to', '>=', $now);
             })
-            ->where('m_kary_id', $data->id)
-            ->where('status', 'APPROVED')
-            ->exists();
+                ->where('m_kary_id', $data->id)
+                ->where('status', 'APPROVED')
+                ->exists();
 
-            if($perdin){
+            if ($perdin) {
                 return response()->json([
                     "can_outscope" => $perdin ?? false
-                ]); 
+                ]);
             }
 
             $cuti = t_cuti::where('m_kary_id', $data->id)
@@ -3598,7 +3579,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 "plafond" => $plafond['plafond'],
                 "sisa_plafond" => $plafond['sisa_plafond']
             ]);
-        } 
+        }
     }
 
     private function calculatePlafond($m_standart_gaji)
@@ -3618,15 +3599,15 @@ class m_kary extends \App\Models\BasicModels\m_kary
         // dd($used);
 
         // dd($gaji);
-        $plafond = (float)($gaji?->gaji_pokok ?? 0) + 
-            (float)($gaji?->tunjangan_produktifitas ?? 0) + 
-            (float)($gaji?->tunjangan_posisi ?? 0) + 
-            (float)($gaji?->tunjangan_transport ?? 0) + 
-            (float)($gaji?->tunjangan_fungsional ?? 0);
+        $plafond = (float) ($gaji?->gaji_pokok ?? 0) +
+            (float) ($gaji?->tunjangan_produktifitas ?? 0) +
+            (float) ($gaji?->tunjangan_posisi ?? 0) +
+            (float) ($gaji?->tunjangan_transport ?? 0) +
+            (float) ($gaji?->tunjangan_fungsional ?? 0);
         //dd($plafond);
 
 
-        $sisa = $plafond - (float)$used;
+        $sisa = $plafond - (float) $used;
         // dd($sisa);
         $data = [
             "plafond" => $plafond,
@@ -3671,7 +3652,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ->where('dk.m_kary_id', $m_kary_id)
             ->where(function ($q) {
                 $q->where('dk.include_askes', true)
-                  ->orWhereNull('dk.include_askes');
+                    ->orWhereNull('dk.include_askes');
             })
             ->union($karyawan)
             ->get();
@@ -3714,7 +3695,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ->where('dk.m_kary_id', $m_kary_id)
             ->where(function ($q) {
                 $q->where('dk.include_askes', true)
-                  ->orWhereNull('dk.include_askes');
+                    ->orWhereNull('dk.include_askes');
             })
             ->union($karyawan)
             ->get();
@@ -3729,7 +3710,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $kary = m_kary::findOrFail($requestId);
             $tahun = \Carbon\Carbon::now()->year;
             $ranap = \App\Models\BasicModels\t_plafond_ranap::where('m_kary_id', $kary->id)->where('tahun', $tahun)->first();
-            $plafond = (float)($ranap?->plafond ?? 0);
+            $plafond = (float) ($ranap?->plafond ?? 0);
             $used = DB::table('t_klaim_ranap')->where('m_kary_id', $kary->id)->whereYear('periode_akhir', $tahun)->where('status', 'POSTED')->sum('total_nominal') ?? 0;
             $sisa = $plafond - $used;
 
@@ -3738,6 +3719,6 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 "plafond" => $plafond,
                 "sisa_plafond" => $sisa
             ]);
-        } 
+        }
     }
 }

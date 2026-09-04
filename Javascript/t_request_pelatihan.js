@@ -186,9 +186,9 @@ onBeforeMount(async () => {
         })
         const resultJson = await apiApp.json()
         if (!apiApp.ok) {
-            throw new Error(resultJson.message || "Failed when trying to read approval data");
+          throw new Error(resultJson.message || "Failed when trying to read approval data");
         }
-        
+
         // Redirect immediately to the Verifikasi endpoint using the real trx_id
         const trx_id = resultJson.data.approval.trx_id;
         const tsId = `ts=` + (Date.parse(new Date()));
@@ -703,7 +703,7 @@ const landing = computed(() => {
         click(row) {
           router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
         }
-      },      {
+      }, {
         icon: 'location-arrow',
         title: "Approve HC",
         class: 'bg-rose-700 rounded-lg text-white',

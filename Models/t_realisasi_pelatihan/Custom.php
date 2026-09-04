@@ -643,6 +643,10 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
             $query->select('d.t_realisasi_pelatihan_id')
                 ->from('t_realisasi_pelatihan_d_kary as d')
                 ->whereIn('d.m_kary_id', $ids);
+        })->whereNotIn('t_realisasi_pelatihan.id', function($query) {
+            $query->select('e.t_realisasi_pelatihan_id')
+                ->from('t_efektifitas_pelatihan as e')
+                ->where('e.status', '!=', 'REJECTED');
         });
     }
 }   

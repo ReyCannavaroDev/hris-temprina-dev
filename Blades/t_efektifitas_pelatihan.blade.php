@@ -174,6 +174,7 @@
         },
         params: {
           where: `this.status in ('POSTED', 'ACTIVE', 'APPROVED')`,
+          scopes: 'efektifitas',
           transform: true,
           join: true
         }

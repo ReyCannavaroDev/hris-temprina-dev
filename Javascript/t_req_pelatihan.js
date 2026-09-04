@@ -31,7 +31,7 @@ const isUserHC = computed(() => {
         return true
       }
       return false
-    } catch (e) {}
+    } catch (e) { }
   }
   return store.user.data?.is_hc === true || store.user.data?.is_hc === 1
 })
@@ -86,9 +86,9 @@ onBeforeMount(async () => {
         })
         const resultJson = await apiApp.json()
         if (!apiApp.ok) {
-            throw new Error(resultJson.message || "Failed when trying to read approval data");
+          throw new Error(resultJson.message || "Failed when trying to read approval data");
         }
-        
+
         // Redirect immediately to the Verifikasi endpoint using the real trx_id
         const trx_id = resultJson.data.approval.trx_id;
         const tsId = `ts=` + (Date.parse(new Date()));
@@ -113,7 +113,7 @@ onBeforeMount(async () => {
 
         if (initialValues['status']) {
           values.status_name = initialValues['status']
-          
+
           if (initialValues['status'].toUpperCase() === 'REVISED') {
             try {
               const urlLog = `${store.server.url_backend}/operation${endpointApi}/app_log?id=${editedId}`
