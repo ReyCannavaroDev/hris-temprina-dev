@@ -89,6 +89,44 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
 
         $data['t_realisasi_pelatihan_d_kary'] = json_decode(json_encode($detail_karyawan), true);
 
+        // Generate list of subordinates that still need evaluation for this training
+        $userId = auth()->user()?->id ?? auth()->id();
+        $myKaryId = $userId ? default_users::find($userId)?->m_kary_id : null;
+        if ($myKaryId) {
+            $subordinates = \DB::select("
+                WITH RECURSIVE subordinates AS (
+                    SELECT id FROM m_kary WHERE atasan_id = ?
+                    UNION
+                    SELECT k.id FROM m_kary k
+                    INNER JOIN subordinates s ON k.atasan_id = s.id
+                )
+                SELECT id FROM subordinates
+            ", [$myKaryId]);
+            $subIds = array_column($subordinates, 'id');
+
+            if (!empty($subIds)) {
+                $unevaluatedNames = \DB::table('t_realisasi_pelatihan_d_kary as d')
+                    ->join('m_kary as k', 'k.id', '=', 'd.m_kary_id')
+                    ->where('d.t_realisasi_pelatihan_id', $row['id'])
+                    ->whereIn('d.m_kary_id', $subIds)
+                    ->whereNotIn('d.m_kary_id', function($q) use ($row) {
+                        $q->select('ed.m_kary_id')
+                            ->from('t_efektifitas_pelatihan_detail as ed')
+                            ->join('t_efektifitas_pelatihan as e', 'e.id', '=', 'ed.t_efektifitas_pelatihan_id')
+                            ->where('e.t_realisasi_pelatihan_id', $row['id'])
+                            ->where('e.status', '!=', 'REJECTED');
+                    })
+                    ->pluck('k.nama_lengkap')
+                    ->toArray();
+
+                $data['peserta_efektifitas'] = !empty($unevaluatedNames) ? implode(', ', $unevaluatedNames) : '-';
+            } else {
+                $data['peserta_efektifitas'] = '-';
+            }
+        } else {
+            $data['peserta_efektifitas'] = '-';
+        }
+
         return array_merge( $row, $data );
     }
 
@@ -584,7 +622,7 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
                 'form_name'                 => $prev->form_name,
                 'trx_creator_id'            => $prev->trx_creator_id,
                 'action_type'               => 'APPROVED',
-                'action_user_id'            => auth()->user()->id,
+                    "action_user_id"            => auth()->user()->id,
                 'creator_id'                => auth()->user()->id,
                 'action_at'                 => Carbon::now(),
                 'action_note'               => 'APPROVED BY HC'
@@ -636,17 +674,20 @@ class t_realisasi_pelatihan extends \App\Models\BasicModels\t_realisasi_pelatiha
 
         $ids = array_column($subordinateIds, 'id');
         if (empty($ids)) {
-            $ids = [-1];
+            return $model->whereRaw('1 = 0');
         }
 
         return $model->whereIn('t_realisasi_pelatihan.id', function($query) use ($ids) {
             $query->select('d.t_realisasi_pelatihan_id')
                 ->from('t_realisasi_pelatihan_d_kary as d')
-                ->whereIn('d.m_kary_id', $ids);
-        })->whereNotIn('t_realisasi_pelatihan.id', function($query) {
-            $query->select('e.t_realisasi_pelatihan_id')
-                ->from('t_efektifitas_pelatihan as e')
-                ->where('e.status', '!=', 'REJECTED');
+                ->whereIn('d.m_kary_id', $ids)
+                ->whereNotIn('d.m_kary_id', function($sub) {
+                    $sub->select('ed.m_kary_id')
+                        ->from('t_efektifitas_pelatihan_detail as ed')
+                        ->join('t_efektifitas_pelatihan as e', 'e.id', '=', 'ed.t_efektifitas_pelatihan_id')
+                        ->whereColumn('e.t_realisasi_pelatihan_id', 'd.t_realisasi_pelatihan_id')
+                        ->where('e.status', '!=', 'REJECTED');
+                });
         });
     }
-}   
+}

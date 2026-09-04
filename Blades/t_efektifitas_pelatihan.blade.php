@@ -193,11 +193,18 @@
         cellClass: ['border-r', '!border-gray-200', 'justify-start']
         },
         {
-        flex: 1,
+        flex: 1.5,
         field: 'm_prog_pelatihan.tema_pelatihan',
         headerName: 'Tema',
         sortable: false, resizable: true, filter: false,
         cellClass: ['border-r', '!border-gray-200', 'justify-start']
+        },
+        {
+        flex: 2,
+        field: 'peserta_efektifitas',
+        headerName: 'Karyawan yang Perlu Dinilai',
+        sortable: false, resizable: true, filter: false,
+        cellClass: ['border-r', '!border-gray-200', 'justify-start font-medium text-blue-700']
         },
         {
         flex: 1,

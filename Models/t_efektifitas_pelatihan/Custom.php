@@ -112,24 +112,8 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
         $realisasiId = $req->t_realisasi_pelatihan_id ?? null;
         $atasanId = default_users::find(auth()->user()->id)?->m_kary_id;
 
-        if (!$id) {
-            $isExist = \DB::table('t_efektifitas_pelatihan')
-                ->where('t_realisasi_pelatihan_id', $realisasiId)
-                ->where('creator_id', auth()->user()->id)
-                ->exists();
-
-            if ($isExist) {
-                response()->json([
-                    'timestamp' => \Carbon\Carbon::now()->format('d-m-Y H:i:s'),
-                    'code' => 400,
-                    'message' => 'Anda sudah mengisi data efektifitas untuk pelatihan ini, setiap atasan hanya bisa mengisi 1 kali untuk 1 pelatihan.',
-                    'data' => [
-                        'errors' => ['Anda sudah mengisi data efektifitas untuk pelatihan ini, setiap atasan hanya bisa mengisi 1 kali untuk 1 pelatihan.'],
-                        'errorText' => 'Anda sudah mengisi data efektifitas untuk pelatihan ini, setiap atasan hanya bisa mengisi 1 kali untuk 1 pelatihan.'
-                    ]
-                ], 400)->send();
-                exit;
-            }
+        if (!$realisasiId) {
+            trigger_error("Realisasi pelatihan wajib dipilih");
         }
 
         if (empty($details)) {
@@ -140,19 +124,73 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
             trigger_error("Detail efektifitas pelatihan belum terisi");
         }
 
-        if (!$realisasiId) {
-            trigger_error("Realisasi pelatihan wajib dipilih");
+        // Subordinates check (direct and recursive)
+        $allowedKaryIds = [];
+        if ($atasanId) {
+            $subordinates = \DB::select("
+                WITH RECURSIVE subordinates AS (
+                    SELECT id FROM m_kary WHERE atasan_id = ?
+                    UNION
+                    SELECT k.id FROM m_kary k
+                    INNER JOIN subordinates s ON k.atasan_id = s.id
+                )
+                SELECT id FROM subordinates
+            ", [$atasanId]);
+            $subIds = array_column($subordinates, 'id');
+
+            $allowedKaryIds = !empty($subIds) ? \DB::table('t_realisasi_pelatihan_d_kary as d')
+                ->where('d.t_realisasi_pelatihan_id', $realisasiId)
+                ->whereIn('d.m_kary_id', $subIds)
+                ->pluck('d.m_kary_id')
+                ->toArray() : [];
         }
 
-        $allowedKaryIds = $atasanId ? \DB::table('t_realisasi_pelatihan_d_kary as d')
-            ->join('m_kary', 'm_kary.id', '=', 'd.m_kary_id')
-            ->where('d.t_realisasi_pelatihan_id', $realisasiId)
-            ->where('m_kary.atasan_id', $atasanId)
-            ->pluck('m_kary.id')
-            ->toArray() : [];
-
         if (empty($allowedKaryIds)) {
-            trigger_error("Tidak ada peserta pelatihan yang dapat dinilai oleh akun ini");
+            response()->json([
+                'timestamp' => \Carbon\Carbon::now()->format('d-m-Y H:i:s'),
+                'code' => 400,
+                'message' => 'Tidak ada peserta pelatihan yang dapat dinilai oleh akun ini.',
+                'data' => [
+                    'errors' => ['Tidak ada peserta pelatihan yang dapat dinilai oleh akun ini.'],
+                    'errorText' => 'Tidak ada peserta pelatihan yang dapat dinilai oleh akun ini.'
+                ]
+            ], 400)->send();
+            exit;
+        }
+
+        // Check if any submitted employee has already been evaluated for this training
+        $submittedKaryIds = array_unique(array_filter(array_map(function ($det) {
+            $det = is_array($det) ? $det : (array) $det;
+            return $det['m_kary_id'] ?? null;
+        }, $details)));
+
+        if (!empty($submittedKaryIds)) {
+            $alreadyEvaluated = \DB::table('t_efektifitas_pelatihan_detail as ed')
+                ->join('t_efektifitas_pelatihan as e', 'e.id', '=', 'ed.t_efektifitas_pelatihan_id')
+                ->where('e.t_realisasi_pelatihan_id', $realisasiId)
+                ->where('e.status', '!=', 'REJECTED')
+                ->when($id, function ($q) use ($id) {
+                    $q->where('e.id', '!=', $id);
+                })
+                ->whereIn('ed.m_kary_id', $submittedKaryIds)
+                ->pluck('ed.m_kary_id')
+                ->unique()
+                ->toArray();
+
+            if (!empty($alreadyEvaluated)) {
+                $karyNames = \DB::table('m_kary')->whereIn('id', $alreadyEvaluated)->pluck('nama_lengkap')->toArray();
+                $namesStr = implode(', ', $karyNames);
+                response()->json([
+                    'timestamp' => \Carbon\Carbon::now()->format('d-m-Y H:i:s'),
+                    'code' => 400,
+                    'message' => "Karyawan ($namesStr) sudah pernah dinilai untuk pelatihan ini.",
+                    'data' => [
+                        'errors' => ["Karyawan ($namesStr) sudah pernah dinilai untuk pelatihan ini."],
+                        'errorText' => "Karyawan ($namesStr) sudah pernah dinilai untuk pelatihan ini."
+                    ]
+                ], 400)->send();
+                exit;
+            }
         }
 
         $cleanDetails = [];

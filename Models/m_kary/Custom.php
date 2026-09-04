@@ -2999,18 +2999,23 @@ class m_kary extends \App\Models\BasicModels\m_kary
             return $model->whereRaw('1 = 0');
         }
 
+        $exceptId = $req->except_t_efektifitas_pelatihan_id ?? $req->t_efektifitas_pelatihan_id ?? null;
+
         return $model
             ->whereIn("m_kary.id", function ($query) use ($req) {
                 $query->select("d.m_kary_id")
                     ->from("t_realisasi_pelatihan_d_kary as d")
                     ->where("d.t_realisasi_pelatihan_id", $req->t_realisasi_pelatihan_id);
             })
-            ->whereNotIn("m_kary.id", function ($query) use ($req) {
+            ->whereNotIn("m_kary.id", function ($query) use ($req, $exceptId) {
                 $query->select("ed.m_kary_id")
                     ->from("t_efektifitas_pelatihan_detail as ed")
                     ->join("t_efektifitas_pelatihan as e", "e.id", "=", "ed.t_efektifitas_pelatihan_id")
                     ->where("e.t_realisasi_pelatihan_id", $req->t_realisasi_pelatihan_id)
-                    ->where("e.status", "!=", "REJECTED");
+                    ->where("e.status", "!=", "REJECTED")
+                    ->when($exceptId, function ($q) use ($exceptId) {
+                        $q->where("e.id", "!=", $exceptId);
+                    });
             });
     }
 
