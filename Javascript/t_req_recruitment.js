@@ -258,17 +258,17 @@ async function onProcess(type) {
 
 //  @else----------------------- LANDING
 const activeBtn = ref()
+const statusFilter = ref(null)
+
 let data = reactive({
   respo_id: null,
   subcomp_id: null,
   branch_id: null,
-  can_read: false,
-  can_create: false,
-  can_delete: false,
-  can_update: false
+  can_read: true,
+  can_create: true,
+  can_delete: true,
+  can_update: true
 })
-
-const isAccessReady = ref(false)
 
 onBeforeMount(async () => {
   const rs = localStorage.getItem('respo')
@@ -279,300 +279,281 @@ onBeforeMount(async () => {
     data.branch_id = r.m_branch_id
   }
 
-  if (!data.respo_id) {
-    isAccessReady.value = true
-    return
-  }
-
-  const params = new URLSearchParams({
-    path: route.path,
-    respo_id: data.respo_id
-  })
-
-  const endpoint = `${store.server.url_backend}/operation/m_general/access?${params.toString()}`
-
-  try {
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
+  if (data.respo_id) {
+    const params = new URLSearchParams({
+      path: route.path,
+      respo_id: data.respo_id
     })
-    const result = await response.json()
-    data.can_read = result.can_read
-    data.can_create = result.can_create
-    data.can_delete = result.can_delete
-    data.can_update = result.can_update
-  } catch (e) {
-    console.error(e)
-  } finally {
-    isAccessReady.value = true
+    const endpoint = `${store.server.url_backend}/operation/m_general/access?${params.toString()}`
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
+      })
+      const result = await response.json()
+      if (result.can_read !== undefined) data.can_read = result.can_read
+      if (result.can_create !== undefined) data.can_create = result.can_create
+      if (result.can_delete !== undefined) data.can_delete = result.can_delete
+      if (result.can_update !== undefined) data.can_update = result.can_update
+    } catch (e) {
+      console.error(e)
+    }
   }
 })
 
 function filterShowData(statusLabel = null, noBtn = null) {
-  const statusMap = {
-    1: 'DRAFT',
-    2: 'IN APPROVAL',
-    3: 'APPROVED',
-    4: 'REJECTED',
-  }
-
-  if (noBtn !== null) {
-    if (activeBtn.value === noBtn) {
-      activeBtn.value = null
-      statusLabel = null
-    } else {
-      activeBtn.value = noBtn
-      statusLabel = statusMap[noBtn] || statusLabel
-    }
-  } else if (statusLabel) {
-    const entry = Object.entries(statusMap).find(([k, v]) => v.toUpperCase() === statusLabel.toUpperCase())
-    activeBtn.value = entry ? Number(entry[0]) : null
+  if (activeBtn.value === noBtn) {
+    activeBtn.value = null
+    statusFilter.value = null
   } else {
-    statusLabel = statusMap[activeBtn.value] || null
+    activeBtn.value = noBtn
+    statusFilter.value = statusLabel ? `this.status='${statusLabel}'` : null
   }
-
-  const filters = []
-  if (statusLabel) {
-    filters.push(`this.status='${statusLabel?.toUpperCase()}'`)
-  }
-
-  landing.value.api.params.where = filters.length ? filters.join(' AND ') : null
   apiTable.value?.reload()
 }
 
 function onStatusChange(e) {
   const val = e.target.value
-  if (val !== "") {
+  const statusMap = {
+    '1': 'DRAFT',
+    '2': 'IN APPROVAL',
+    '3': 'APPROVED',
+    '4': 'REJECTED'
+  }
+  if (val && statusMap[val]) {
     activeBtn.value = Number(val)
-    filterShowData(null, Number(val))
+    statusFilter.value = `this.status='${statusMap[val]}'`
   } else {
     activeBtn.value = null
-    filterShowData(null, null)
+    statusFilter.value = null
   }
+  apiTable.value?.reload()
 }
 
-const landing = computed(() => {
-  if (!isAccessReady.value) return null
-  return {
-    actions: [
-      {
-        icon: 'trash',
-        class: 'bg-red-600 text-light-100',
-        title: "Hapus",
-        show: () => data.can_delete,
-        click(row) {
-          swal.fire({
-            icon: 'warning',
-            text: 'Hapus Data Terpilih?',
-            confirmButtonText: 'Ya, Hapus',
-            showDenyButton: true,
-            denyButtonText: 'Batal'
-          }).then(async (result) => {
-            if (result.isConfirmed) {
-              try {
-                const dataURL = `${store.server.url_backend}/operation${endpointApi}/${row.id}`
-                isRequesting.value = true
-                const res = await fetch(dataURL, {
-                  method: 'DELETE',
-                  headers: {
-                    'Content-Type': 'Application/json',
-                    Authorization: `${store.user.token_type} ${store.user.token}`
-                  }
-                })
-                if (!res.ok) {
-                  const resultJson = await res.json()
-                  throw new Error(resultJson.message || "Gagal menghapus data")
+const landing = reactive({
+  actions: [
+    {
+      icon: 'trash',
+      class: 'bg-red-600 text-light-100',
+      title: "Hapus",
+      show: () => data.can_delete,
+      click(row) {
+        swal.fire({
+          icon: 'warning',
+          text: 'Hapus Data Terpilih?',
+          confirmButtonText: 'Ya, Hapus',
+          showDenyButton: true,
+          denyButtonText: 'Batal'
+        }).then(async (result) => {
+          if (result.isConfirmed) {
+            try {
+              const dataURL = `${store.server.url_backend}/operation${endpointApi}/${row.id}`
+              isRequesting.value = true
+              const res = await fetch(dataURL, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'Application/json',
+                  Authorization: `${store.user.token_type} ${store.user.token}`
                 }
-                apiTable.value?.reload()
-                swal.fire({
-                  icon: 'success',
-                  text: 'Data berhasil dihapus!',
-                  timer: 1500,
-                  showConfirmButton: false
-                })
-              } catch (err) {
-                isBadForm.value = true
-                swal.fire({
-                  icon: 'error',
-                  text: err.message || err
-                })
-              } finally {
-                isRequesting.value = false
+              })
+              if (!res.ok) {
+                const resultJson = await res.json()
+                throw new Error(resultJson.message || "Gagal menghapus data")
               }
+              apiTable.value?.reload()
+              swal.fire({
+                icon: 'success',
+                text: 'Data berhasil dihapus!',
+                timer: 1500,
+                showConfirmButton: false
+              })
+            } catch (err) {
+              isBadForm.value = true
+              swal.fire({
+                icon: 'error',
+                text: err.message || err
+              })
+            } finally {
+              isRequesting.value = false
             }
-          })
-        }
-      },
-      {
-        icon: 'eye',
-        title: "Detail",
-        class: 'bg-green-600 text-light-100',
-        show: () => data.can_read,
-        click(row) {
-          router.push(`${route.path}/${row.id}?` + tsId)
-        }
-      },
-      {
-        icon: 'edit',
-        title: "Edit",
-        class: 'bg-blue-600 text-light-100',
-        show: (row) => data.can_update && ['DRAFT', 'REVISED'].includes(row.status?.toUpperCase()),
-        click(row) {
-          router.push(`${route.path}/${row.id}?action=Edit&` + tsId)
-        }
-      },
-      {
-        icon: 'location-arrow',
-        title: "Send Approval",
-        class: 'bg-rose-700 text-white',
-        show: (row) => data.can_update && ['DRAFT', 'REVISED'].includes(row.status?.toUpperCase()),
-        click(row) {
-          router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
-        }
-      },
-      {
-        icon: 'history',
-        title: "Riwayat Approval",
-        class: 'bg-purple-600 text-white',
-        show: (row) => row.status?.toUpperCase() !== 'DRAFT',
-        async click(row) {
-          try {
-            const dataURL = `${store.server.url_backend}/operation${endpointApi}/log?id=${row.id}`
-            const res = await fetch(dataURL, {
-              headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
-            })
-            if (res.ok) {
-              const resJson = await res.json()
-              dataLog.items = resJson.data || resJson || []
-              modalLogOpen.value = true
-            }
-          } catch (e) {
-            console.error(e)
           }
-        }
-      }
-    ],
-    api: {
-      url: data.can_read ? `${store.server.url_backend}/operation${endpointApi}` : '',
-      headers: {
-        'Content-Type': 'Application/json',
-        authorization: `${store.user.token_type} ${store.user.token}`
-      },
-      params: {
-        simplest: true,
-        join: true,
-        transform: true,
-      },
-      onsuccess(response) {
-        response.page = response.current_page
-        response.hasNext = response.has_next
-        return response
+        })
       }
     },
-    columns: [
-      {
-        headerName: 'No',
-        valueGetter: (params) => params.node.rowIndex + 1,
-        width: 60,
-        sortable: true,
-        resizable: true,
-        filter: true,
-        cellClass: ['justify-center', 'bg-gray-50', 'border-r', '!border-gray-200']
-      },
-      {
-        headerName: "Nomor",
-        field: 'nomor',
-        filter: 'ColFilter',
-        sortable: true,
-        flex: 1,
-        resizable: true,
-        cellClass: ['border-r', '!border-gray-200', 'justify-start']
-      },
-      {
-        headerName: "Tanggal",
-        field: 'tanggal',
-        filter: 'ColFilter',
-        sortable: true,
-        width: 120,
-        resizable: true,
-        cellClass: ['border-r', '!border-gray-200', 'justify-center']
-      },
-      {
-        headerName: "Pemohon",
-        field: 'm_kary.nama_lengkap',
-        valueGetter: (params) => params.data?.m_kary?.nama_lengkap || params.data?.['m_kary.nama_lengkap'] || '-',
-        filter: 'ColFilter',
-        sortable: true,
-        flex: 1,
-        resizable: true,
-        cellClass: ['border-r', '!border-gray-200', 'justify-start']
-      },
-      {
-        headerName: "Divisi",
-        field: 'm_divisi.name',
-        valueGetter: (params) => params.data?.m_divisi?.name || params.data?.['m_divisi.name'] || '-',
-        filter: 'ColFilter',
-        sortable: true,
-        flex: 1,
-        resizable: true,
-        cellClass: ['border-r', '!border-gray-200', 'justify-start']
-      },
-      {
-        headerName: "Posisi yang Diminta",
-        field: 'm_posisi.name',
-        valueGetter: (params) => params.data?.m_posisi?.name || params.data?.['m_posisi.name'] || '-',
-        filter: 'ColFilter',
-        sortable: true,
-        flex: 1,
-        resizable: true,
-        cellClass: ['border-r', '!border-gray-200', 'justify-start']
-      },
-      {
-        headerName: "Kebutuhan",
-        field: 'jumlah_kebutuhan',
-        valueGetter: (params) => (params.data?.jumlah_kebutuhan || 1) + ' Orang',
-        filter: 'ColFilter',
-        sortable: true,
-        width: 120,
-        resizable: true,
-        cellClass: ['border-r', '!border-gray-200', 'justify-center']
-      },
-      {
-        headerName: "Tgl Dibutuhkan",
-        field: 'tgl_dibutuhkan',
-        filter: 'ColFilter',
-        sortable: true,
-        width: 140,
-        resizable: true,
-        cellClass: ['border-r', '!border-gray-200', 'justify-center']
-      },
-      {
-        headerName: "Status",
-        field: "status",
-        sortable: true,
-        filter: "ColFilter",
-        resizable: true,
-        width: 140,
-        cellClass: ['border-r', '!border-gray-200', 'justify-center'],
-        cellRenderer: (params) => {
-          const status = (params.value || '').toUpperCase()
-          const colorMap = {
-            'DRAFT': 'text-gray-700 bg-gray-100',
-            'IN APPROVAL': 'text-amber-700 bg-amber-100',
-            'APPROVED': 'text-green-700 bg-green-100',
-            'REJECTED': 'text-red-700 bg-red-100',
-            'REVISED': 'text-blue-700 bg-blue-100'
+    {
+      icon: 'eye',
+      title: "Detail",
+      class: 'bg-green-600 text-light-100',
+      show: () => data.can_read,
+      click(row) {
+        router.push(`${route.path}/${row.id}?` + tsId)
+      }
+    },
+    {
+      icon: 'edit',
+      title: "Edit",
+      class: 'bg-blue-600 text-light-100',
+      show: (row) => data.can_update && ['DRAFT', 'REVISED'].includes(row.status?.toUpperCase()),
+      click(row) {
+        router.push(`${route.path}/${row.id}?action=Edit&` + tsId)
+      }
+    },
+    {
+      icon: 'location-arrow',
+      title: "Send Approval",
+      class: 'bg-rose-700 text-white',
+      show: (row) => data.can_update && ['DRAFT', 'REVISED'].includes(row.status?.toUpperCase()),
+      click(row) {
+        router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
+      }
+    },
+    {
+      icon: 'history',
+      title: "Riwayat Approval",
+      class: 'bg-purple-600 text-white',
+      show: (row) => row.status?.toUpperCase() !== 'DRAFT',
+      async click(row) {
+        try {
+          const dataURL = `${store.server.url_backend}/operation${endpointApi}/log?id=${row.id}`
+          const res = await fetch(dataURL, {
+            headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
+          })
+          if (res.ok) {
+            const resJson = await res.json()
+            dataLog.items = resJson.data || resJson || []
+            modalLogOpen.value = true
           }
-          const colorClass = colorMap[status] || 'text-gray-700 bg-gray-100'
-          return `
-            <span class="px-2 py-1 rounded-md text-xs font-semibold ${colorClass}">
-              ${params.value || 'DRAFT'}
-            </span>
-          `
+        } catch (e) {
+          console.error(e)
         }
       }
-    ]
-  }
+    }
+  ],
+  api: {
+    url: `${store.server.url_backend}/operation${endpointApi}`,
+    headers: {
+      'Content-Type': 'Application/json',
+      authorization: `${store.user.token_type} ${store.user.token}`
+    },
+    params: computed(() => ({
+      paginate: 25,
+      m_subcomp_id: data.subcomp_id,
+      m_branch_id: data.branch_id,
+      join: true,
+      transform: true,
+      scopes: 'respo',
+      ...(statusFilter.value ? { where: statusFilter.value } : {})
+    })),
+    onsuccess(response) {
+      response.page = response.current_page
+      response.hasNext = response.has_next
+      return response
+    }
+  },
+  columns: [
+    {
+      headerName: 'No',
+      valueGetter: (params) => params.node.rowIndex + 1,
+      width: 60,
+      sortable: true,
+      resizable: true,
+      filter: true,
+      cellClass: ['justify-center', 'bg-gray-50', 'border-r', '!border-gray-200']
+    },
+    {
+      headerName: "Nomor",
+      field: 'nomor',
+      filter: 'ColFilter',
+      sortable: true,
+      flex: 1,
+      resizable: true,
+      cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    },
+    {
+      headerName: "Tanggal",
+      field: 'tanggal',
+      filter: 'ColFilter',
+      sortable: true,
+      width: 120,
+      resizable: true,
+      cellClass: ['border-r', '!border-gray-200', 'justify-center']
+    },
+    {
+      headerName: "Pemohon",
+      field: 'm_kary.nama_lengkap',
+      valueGetter: (params) => params.data?.m_kary?.nama_lengkap || params.data?.['m_kary.nama_lengkap'] || '-',
+      filter: 'ColFilter',
+      sortable: true,
+      flex: 1,
+      resizable: true,
+      cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    },
+    {
+      headerName: "Divisi",
+      field: 'm_divisi.name',
+      valueGetter: (params) => params.data?.m_divisi?.name || params.data?.['m_divisi.name'] || '-',
+      filter: 'ColFilter',
+      sortable: true,
+      flex: 1,
+      resizable: true,
+      cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    },
+    {
+      headerName: "Posisi yang Diminta",
+      field: 'm_posisi.name',
+      valueGetter: (params) => params.data?.m_posisi?.name || params.data?.['m_posisi.name'] || '-',
+      filter: 'ColFilter',
+      sortable: true,
+      flex: 1,
+      resizable: true,
+      cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    },
+    {
+      headerName: "Kebutuhan",
+      field: 'jumlah_kebutuhan',
+      valueGetter: (params) => (params.data?.jumlah_kebutuhan || 1) + ' Orang',
+      filter: 'ColFilter',
+      sortable: true,
+      width: 120,
+      resizable: true,
+      cellClass: ['border-r', '!border-gray-200', 'justify-center']
+    },
+    {
+      headerName: "Tgl Dibutuhkan",
+      field: 'tgl_dibutuhkan',
+      filter: 'ColFilter',
+      sortable: true,
+      width: 140,
+      resizable: true,
+      cellClass: ['border-r', '!border-gray-200', 'justify-center']
+    },
+    {
+      headerName: "Status",
+      field: "status",
+      sortable: true,
+      filter: "ColFilter",
+      resizable: true,
+      width: 140,
+      cellClass: ['border-r', '!border-gray-200', 'justify-center'],
+      cellRenderer: (params) => {
+        const status = (params.value || '').toUpperCase()
+        const colorMap = {
+          'DRAFT': 'text-gray-700 bg-gray-100',
+          'IN APPROVAL': 'text-amber-700 bg-amber-100',
+          'APPROVED': 'text-green-700 bg-green-100',
+          'REJECTED': 'text-red-700 bg-red-100',
+          'REVISED': 'text-blue-700 bg-blue-100'
+        }
+        const colorClass = colorMap[status] || 'text-gray-700 bg-gray-100'
+        return `
+          <span class="px-2 py-1 rounded-md text-xs font-semibold ${colorClass}">
+            ${params.value || 'DRAFT'}
+          </span>
+        `
+      }
+    }
+  ]
 })
 
 onActivated(() => {

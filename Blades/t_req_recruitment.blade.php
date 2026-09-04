@@ -1,6 +1,7 @@
 <!-- LANDING -->
 @if(!$req->has('id'))
-<div class="bg-white p-1 rounded-md border-t-10 border-gray-500">
+@verbatim
+<div class="bg-white p-1 rounded-md min-h-[520px] border-t-10 border-gray-500">
   <div class="flex justify-between items-center px-2.5 py-1">
     <div class="flex flex-col md:flex-row md:items-center gap-y-2 md:gap-y-0 gap-x-4">
       <p class="font-semibold">Filter Status:</p>
@@ -60,7 +61,7 @@
     </div>
 
     <div>
-      <RouterLink v-if="data?.can_create" :to="$route.path+'/create?'+(Date.parse(new Date()))"
+      <RouterLink :to="$route.path+'/create?'+(Date.parse(new Date()))"
         class="border border-blue-600 text-blue-600 bg-white hover:bg-blue-600 hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">
         Create New
       </RouterLink>
@@ -87,6 +88,7 @@
     </div>
   </ModalX>
 </div>
+@endverbatim
 @else
 
 <!-- CONTENT -->
