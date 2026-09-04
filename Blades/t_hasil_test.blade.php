@@ -8,85 +8,55 @@
       <!-- Dropdown Mobile -->
       <div class="block md:hidden">
         <select
-      @change="onStatusChange"
-      class="border rounded-md text-sm py-1 px-2.5 w-full"
-    >
-      <option value="">Pilih Status</option>
-      <option value="0">Seleksi</option>
-      <option value="1">Psikotest</option>
-      <option value="2">Wawancara User</option>
-      <option value="3">Wawancara Direksi</option>
-      <option value="4">Negosiasi</option>
-      <option value="5">Offering/Tidak</option>
-      <option value="6">Hired</option>
-    </select>
+          @change="onStatusChange"
+          class="border rounded-md text-sm py-1 px-2.5 w-full"
+        >
+          <option value="">Pilih Status</option>
+          <option value="1">Pending</option>
+          <option value="2">Proses</option>
+          <option value="3">Diterima</option>
+          <option value="4">Tidak Diterima</option>
+        </select>
       </div>
 
       <!-- Button Desktop -->
       <div class="hidden md:flex flex-wrap gap-2">
 
         <button
-      @click="filterShowData('Seleksi',1)"
-      :class="activeBtn === 1 
-        ? 'bg-gray-700 text-white' 
-        : 'border border-gray-700 text-gray-700 bg-white hover:bg-gray-700 hover:text-white'"
-      class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-      Seleksi
-    </button>
+          @click="filterShowData('Pending',1)"
+          :class="activeBtn === 1 
+            ? 'bg-gray-700 text-white' 
+            : 'border border-gray-700 text-gray-700 bg-white hover:bg-gray-700 hover:text-white'"
+          class="rounded-md text-sm py-1 px-3 transition-all duration-300">
+          Pending
+        </button>
 
         <button
-      @click="filterShowData('Psikotest',2)"
-      :class="activeBtn === 2 
-        ? 'bg-blue-600 text-white' 
-        : 'border border-blue-600 text-blue-600 bg-white hover:bg-blue-600 hover:text-white'"
-      class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-      Psikotest
-    </button>
+          @click="filterShowData('Proses',2)"
+          :class="activeBtn === 2 
+            ? 'bg-blue-600 text-white' 
+            : 'border border-blue-600 text-blue-600 bg-white hover:bg-blue-600 hover:text-white'"
+          class="rounded-md text-sm py-1 px-3 transition-all duration-300">
+          Proses
+        </button>
 
         <button
-      @click="filterShowData('Wawancara User',3)"
-      :class="activeBtn === 3 
-        ? 'bg-amber-600 text-white' 
-        : 'border border-amber-600 text-amber-600 bg-white hover:bg-amber-600 hover:text-white'"
-      class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-      Wawancara User
-    </button>
+          @click="filterShowData('Diterima',3)"
+          :class="activeBtn === 3 
+            ? 'bg-green-600 text-white' 
+            : 'border border-green-600 text-green-600 bg-white hover:bg-green-600 hover:text-white'"
+          class="rounded-md text-sm py-1 px-3 transition-all duration-300">
+          Diterima
+        </button>
 
         <button
-      @click="filterShowData('Wawancara Direksi',4)"
-      :class="activeBtn === 4 
-        ? 'bg-purple-600 text-white' 
-        : 'border border-purple-600 text-purple-600 bg-white hover:bg-purple-600 hover:text-white'"
-      class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-      Wawancara Direksi
-    </button>
-
-        <button
-      @click="filterShowData('Negosiasi',5)"
-      :class="activeBtn === 5 
-        ? 'bg-orange-600 text-white' 
-        : 'border border-orange-600 text-orange-600 bg-white hover:bg-orange-600 hover:text-white'"
-      class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-      Negosiasi
-    </button>
-
-        <button
-      @click="filterShowData('Offering/Tidak',6)"
-      :class="activeBtn === 6 
-        ? 'bg-green-600 text-white' 
-        : 'border border-green-600 text-green-600 bg-white hover:bg-green-600 hover:text-white'"
-      class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-      Offering/Tidak
-    </button>
-
-      <button
-      @click="filterShowData('HIRED',7)"
-      :class="activeBtn === 7 
-        ? 'bg-green-600 text-white' 
-        : 'border border-green-600 text-green-600 bg-white hover:bg-green-600 hover:text-white'"
-      class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-      Hired
-    </button>
+          @click="filterShowData('Tidak Diterima',4)"
+          :class="activeBtn === 4 
+            ? 'bg-red-600 text-white' 
+            : 'border border-red-600 text-red-600 bg-white hover:bg-red-600 hover:text-white'"
+          class="rounded-md text-sm py-1 px-3 transition-all duration-300">
+          Tidak Diterima
+        </button>
 
       </div>
     </div>
@@ -163,6 +133,21 @@
     </div>
 
     <div>
+      <FieldSelect :bind="{ disabled: !actionText, clearable:false }" :value="values.tahapan_id" class="w-full !mt-3"
+        @input="v=>values.tahapan_id=v" :errorText="formErrors.tahapan_id?'failed':''"
+        :hints="formErrors.tahapan_id" valueField="id" displayField="value" :api="{
+            url: `${store.server.url_backend}/operation/m_general`,
+            headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+            params: {
+              where: `this.group = 'TAHAPAN-PENERIMAAN-KARYAWAN'`,
+              simplest: true,
+              transform: false,
+              join: false
+            }
+        }" placeholder="Pilih Tahapan" label="Tahapan" fa-icon="" :check="false" />
+    </div>
+
+    <div>
       <FieldX :bind="{ readonly: !actionText }" :value="values.deskripsi" :errorText="formErrors.deskripsi?'failed':''"
         @input="v=>values.deskripsi=v" :hints="formErrors.deskripsi" :check="false" class="w-full !mt-3" label="Catatan"
         placeholder="Tulis Catatan" />
@@ -171,16 +156,12 @@
     <div>
       <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.status"
         @input="v=>values.status=v" :errorText="formErrors.status?'failed':''" :hints="formErrors.status"
-        valueField="value" displayField="value" :api="{
-            url: `${store.server.url_backend}/operation/m_general`,
-            headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-            params: {
-              where:`this.group = 'STATUS SELEKSI'`,
-              simplest:true,
-              transform:false,
-              join:false
-            }
-        }" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
+        valueField="value" displayField="value" :options="[
+          { value: 'PENDING' },
+          { value: 'PROSES' },
+          { value: 'DITERIMA' },
+          { value: 'TIDAK DITERIMA' }
+        ]" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
     </div>
 
 
@@ -250,9 +231,29 @@
               </td>
 
               <td class="p-2 border border-[#CACACA]">
-                <FieldX :bind="{ readonly: !actionText }" :value="item.nama_tes"
-                  :errorText="formErrors.nama_tes?'failed':''" @input="v=>item.nama_tes=v" :hints="formErrors.nama_tes"
-                  placeholder="Masukkan Nama Test" label="" fa-icon="" :check="false" />
+                <FieldSelect
+                  :bind="{ disabled: !actionText, clearable: false }"
+                  :value="item.nama_tes"
+                  @input="v=>item.nama_tes=v"
+                  :errorText="formErrors.nama_tes?'failed':''"
+                  :hints="formErrors.nama_tes"
+                  valueField="value"
+                  displayField="value"
+                  :api="{
+                      url: `${store.server.url_backend}/operation/m_general`,
+                      headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+                      params: {
+                        where: `this.group = 'NAMA-TEST-PELAMAR'`,
+                        simplest: true,
+                        transform: false,
+                        join: false
+                      }
+                  }"
+                  placeholder="Pilih Nama Test"
+                  label=""
+                  fa-icon=""
+                  :check="false"
+                />
               </td>
 
               <td class="p-2 border border-[#CACACA]">

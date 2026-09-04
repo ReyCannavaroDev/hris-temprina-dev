@@ -17,6 +17,7 @@ workspace ini bukan aplikasi laravel lengkap dan tidak ditujukan untuk dijalanka
 5. sebelum mengubah query atau join, periksa tipe kolom dan relasi pada migration, alter, basic, serta custom.
 6. jangan menaruh credential, token, `.env`, data pribadi karyawan, atau akses database ke workspace.
 7. setiap perbaikan harus mencantumkan file yang diubah, penyebab, perubahan kode, dampak, dan langkah pengujian.
+8. file `Basic.php` (`Models/<nama_model>/Basic.php`) digenerate otomatis oleh generator dan tidak dapat diedit/disimpan langsung. Jangan mengedit file `Basic.php`. Semua kustomisasi logic, relasi `$joins`, maupun override properti harus ditempatkan di `Custom.php`, dan perubahan skema database melalui `Alter.php`/`Migration.php`.
 
 ## konteks awal
 salah satu masalah yang sedang ditelusuri adalah error postgresql

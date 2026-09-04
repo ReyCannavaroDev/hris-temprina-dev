@@ -206,8 +206,8 @@ Berdasarkan hasil meeting bersama klien tanggal 03 September 2026, terdapat 5 mo
   - [x] Perbaiki sinkronisasi parameter landing, auto-assign respo create, status default DRAFT, dan watcher reload agar data baru langsung tampil setelah dibuat.
 - [ ] **[Blades/t_pengajuan_pekerjaan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_pengajuan_pekerjaan.blade.php)**:
   - [ ] Sinkronkan alur pengajuan permintaan karyawan dan integrasikan pilihan referensi pengajuan ke `t_loker`.
-- [ ] **[Blades/t_hasil_test.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_hasil_test.blade.php)** & **[Javascript/t_hasil_test.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_hasil_test.js)**:
-  - [ ] Konfigurasi kolom tahapan 1-7 dan status proses/diterima/tidak diterima.
-  - [ ] Ubah input nama tes menjadi dropdown pilihan (Psikotes, Tes Tulis, Wawancara).
+- [x] **[Blades/t_hasil_test.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_hasil_test.blade.php)** & **[Javascript/t_hasil_test.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_hasil_test.js)**:
+  - [x] Konfigurasi kolom tahapan (m_general group TAHAPAN-PENERIMAAN-KARYAWAN) dan status pending/proses/diterima/tidak diterima.
+  - [x] Ubah input nama tes detail menjadi dropdown pilihan (m_general group NAMA-TEST-PELAMAR).
 - [ ] **[Blades/web_report_hasil_tes.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/web_report_hasil_tes.blade.php)**:
   - [ ] Susun template printout lembar hasil tes lamaran kerja.

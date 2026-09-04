@@ -1,6 +1,5 @@
-//   javascriptimport { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
-import { ref, readonly, reactive, inject, onMounted, computed, onBeforeMount, watchEffect, onActivated } from 'vue'
+import { ref, readonly, reactive, inject, onMounted, computed, onBeforeMount, watchEffect, onActivated, watch } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -29,6 +28,7 @@ const changedValues = []
 
 const values = reactive({
   is_active: true,
+  status: 'PENDING',
   //direktorat: store.user.data?.direktorat,
 })
 
@@ -177,8 +177,10 @@ const filterButton = ref(null);
 
 function filterShowData(statusLabel = null, noBtn = null) {
   const statusMap = {
-    1: 'Seleksi',
-    2: 'Psikotest',
+    1: 'PENDING',
+    2: 'PROSES',
+    3: 'DITERIMA',
+    4: 'TIDAK DITERIMA',
   }
 
   if (noBtn !== null) {
@@ -187,7 +189,11 @@ function filterShowData(statusLabel = null, noBtn = null) {
       statusLabel = null
     } else {
       activeBtn.value = noBtn
+      statusLabel = statusMap[noBtn] || statusLabel
     }
+  } else if (statusLabel) {
+    const entry = Object.entries(statusMap).find(([k, v]) => v.toUpperCase() === statusLabel.toUpperCase())
+    activeBtn.value = entry ? Number(entry[0]) : null
   } else {
     statusLabel = statusMap[activeBtn.value] || null
   }
@@ -197,7 +203,6 @@ function filterShowData(statusLabel = null, noBtn = null) {
     filters.push(`this.status='${statusLabel?.toUpperCase()}'`)
   }
 
-
   landing.value.api.params.where = filters.length ? filters.join(' AND ') : null
   apiTable.value.reload()
 }
@@ -206,12 +211,12 @@ function onStatusChange(e) {
   const val = e.target.value
 
   if (val !== "") {
-    activeBtn.value = Number(val) + 1
+    activeBtn.value = Number(val)
+    filterShowData(null, Number(val))
   } else {
     activeBtn.value = null
+    filterShowData(null, null)
   }
-
-  filterShowData(val)
 }
 
 let data = reactive({
@@ -342,7 +347,7 @@ const landing = computed(() => {
         icon: 'location-arrow',
         class: 'bg-rose-700 rounded-lg text-white',
         title: "Register Karyawan",
-        show: (row) => row.status?.toUpperCase() === 'OFFERING / TIDAK',
+        show: (row) => ['DITERIMA', 'HIRED', 'OFFERING / TIDAK'].includes(row.status?.toUpperCase()),
         // show: () => store.user.data.username==='developer',
         click(row) {
           swal.fire({
@@ -438,6 +443,17 @@ const landing = computed(() => {
       cellClass: ['border-r', '!border-gray-200', 'justify-start']
     },
     {
+      headerName: "Tahapan",
+      field: 'tahapan.value',
+      valueGetter: (params) => params.data?.tahapan?.value || params.data?.['tahapan.value'] || params.data?.['m_general.value'] || params.data?.tahapan || '-',
+      filter: true,
+      sortable: true,
+      filter: 'ColFilter',
+      resizable: true,
+      flex: 1,
+      cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    },
+    {
       headerName: "Status",
       field: "status",
       sortable: true,
@@ -446,22 +462,20 @@ const landing = computed(() => {
       flex: 1,
       cellClass: ['border-r', '!border-gray-200', 'justify-start'],
       cellRenderer: (params) => {
-        const status = params.value
+        const status = (params.value || '').toUpperCase()
 
         const colorMap = {
-          'Seleksi': 'text-gray-700',
-          'Psikotest': 'text-blue-600',
-          'Wawancara User': 'text-amber-600',
-          'Wawancara Direksi': 'text-purple-600',
-          'Negosiasi': 'text-orange-600',
-          'Offering/Tidak': 'text-green-600'
+          'PENDING': 'text-gray-700 bg-gray-100',
+          'PROSES': 'text-blue-700 bg-blue-100',
+          'DITERIMA': 'text-green-700 bg-green-100',
+          'TIDAK DITERIMA': 'text-red-700 bg-red-100'
         }
 
-        const colorClass = colorMap[status] || 'text-green-600'
+        const colorClass = colorMap[status] || 'text-gray-700 bg-gray-100'
 
         return `
       <span class="px-2 py-1 rounded-md text-xs font-semibold ${colorClass}">
-        ${status}
+        ${params.value || '-'}
       </span>
     `
       }
@@ -478,6 +492,15 @@ onActivated(() => {
     }
   }
 })
+
+watch(
+  () => route.query.reload,
+  () => {
+    if (apiTable.value) {
+      apiTable.value.reload()
+    }
+  }
+)
 
 //  @endif -------------------------------------------------END
 watchEffect(() => store.commit('set', ['isRequesting', isRequesting.value]))

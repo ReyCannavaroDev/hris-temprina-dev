@@ -15,13 +15,22 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
     
     public $fileColumns    = [ /*file_column*/ ];
 
+    public $joins = [
+        "t_pelamar.id=t_hasil_tes.t_pelamar_id",
+        "t_loker.id=t_hasil_tes.t_loker_id",
+        "m_general.id=t_hasil_tes.tahapan_id",
+        "default_users.id=t_hasil_tes.creator_id",
+        "default_users.id=t_hasil_tes.last_editor_id"
+    ];
+
     public $createAdditionalData = ["creator_id"=>"auth:id"];
     public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
         $newArrayData  = array_merge( $arrayData,[
-            'nomor' => $this->helper->generateNomor('KODE HASIL TES PELAMAR')
+            'nomor'  => $this->helper->generateNomor('KODE HASIL TES PELAMAR'),
+            'status' => $arrayData['status'] ?? 'PENDING'
         ]);
        
         return [
@@ -200,5 +209,18 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         }
     }
 
-    
+    public function custom_addTahapanColumn()
+    {
+        try {
+            \DB::statement("ALTER TABLE t_hasil_tes ADD COLUMN IF NOT EXISTS tahapan_id BIGINT NULL");
+            return response()->json(['success' => true, 'message' => 'Kolom tahapan_id berhasil ditambahkan ke tabel t_hasil_tes!']);
+        } catch (\Throwable $e) {
+            try {
+                \DB::statement("ALTER TABLE t_hasil_tes ADD tahapan_id BIGINT NULL");
+                return response()->json(['success' => true, 'message' => 'Kolom tahapan_id berhasil ditambahkan ke tabel t_hasil_tes!']);
+            } catch (\Throwable $err) {
+                return response()->json(['error' => $err->getMessage()], 500);
+            }
+        }
+    }
 }
