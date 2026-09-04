@@ -44,29 +44,36 @@ const handleKeyDown = (event) => {
 
 let initialValues = {}
 
+const userLocal = JSON.parse(localStorage.getItem('user') || '{}')
+const loggedInAtasanId = computed(() => store.user?.data?.m_kary_id || userLocal?.data?.m_kary_id || userLocal?.m_kary_id || null)
+
 const values = reactive({
   m_kary_id: kary,
-  atasan_id: store.user?.data?.m_kary_id || null
+  atasan_id: store.user?.data?.m_kary_id || userLocal?.data?.m_kary_id || userLocal?.m_kary_id || null
 })
 
-const apiKary = computed(() => ({
-  url: `${store.server.url_backend}/operation/m_kary`,
-  headers: {
-    'Content-Type': 'Application/json',
-    Authorization: `${store.user.token_type} ${store.user.token}`
-  },
-  params: {
-    simplest: false,
-    transform: false,
-    join: true,
-    searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name,m_divisi.name_old'
-  },
-  onsuccess(response) {
-    response.page = response.current_page
-    response.hasNext = response.has_next
-    return response
+const apiKary = computed(() => {
+  const atasanId = loggedInAtasanId.value || 0
+  return {
+    url: `${store.server.url_backend}/operation/m_kary`,
+    headers: {
+      'Content-Type': 'Application/json',
+      Authorization: `${store.user.token_type} ${store.user.token}`
+    },
+    params: {
+      simplest: false,
+      transform: false,
+      join: true,
+      where: `this.is_active = true and this.atasan_id = '${atasanId}'`,
+      searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name,m_divisi.name_old'
+    },
+    onsuccess(response) {
+      response.page = response.current_page
+      response.hasNext = response.has_next
+      return response
+    }
   }
-}))
+})
 
 const yearOptions = ref([])
 const selectedSeq = ref({})
@@ -74,7 +81,7 @@ const detailArr = ref([])
 
 function defaultValues() {
   values.m_kary_id = kary || null
-  values.atasan_id = store.user?.data?.m_kary_id || null
+  values.atasan_id = loggedInAtasanId.value || null
   values.tanggal = null
   values.m_assessment_kary_id = null
   values.tipe_penilaian_id = null
@@ -833,8 +840,18 @@ async function onSave() {
       if (!values.m_subcomp_id && respo.m_subcomp_id) values.m_subcomp_id = respo.m_subcomp_id;
       if (!values.m_branch_id && respo.m_branch_id) values.m_branch_id = respo.m_branch_id;
     }
-    if (!values.atasan_id && store.user?.data?.m_kary_id) {
-      values.atasan_id = store.user.data.m_kary_id;
+
+    if (!loggedInAtasanId.value && !values.atasan_id) {
+      swal.fire({
+        icon: 'warning',
+        title: 'Akses Ditolak',
+        text: 'Hanya atasan yang dapat melakukan penilaian karyawan.'
+      });
+      return;
+    }
+
+    if (loggedInAtasanId.value) {
+      values.atasan_id = loggedInAtasanId.value;
     }
 
     hitungNilaiAkhirLangsung();

@@ -79,9 +79,9 @@
         :errorText="formErrors.m_kary_id?'failed':''" 
         :hints="formErrors.m_kary_id" 
         valueField="id" displayField="nama_lengkap"
-        label="Karyawan" placeholder="Pilih Karyawan" 
+        label="Karyawan" placeholder="Pilih Karyawan (Bawahan)" 
         :api="apiKary"
-        placeholder="" fa-icon="" :check="false" 
+        fa-icon="" :check="false" 
         :columns="[{
           headerName: 'No',
           valueGetter:(p)=>p.node.rowIndex + 1,
@@ -158,7 +158,7 @@
     <div>
       <FieldSelect class="w-full col-span-9 !mt-3" :bind="{ disabled:true, clearable:true }" :value="values.atasan_id"
         @input="v=>values.atasan_id=v" :errorText="formErrors.atasan_id?'failed':''" :hints="formErrors.atasan_id"
-        valueField="id" displayField="nama_depan" :api="{
+        valueField="id" displayField="nama_lengkap" :api="{
               url: `${store.server.url_backend}/operation/m_kary`,
               headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
               params: {
