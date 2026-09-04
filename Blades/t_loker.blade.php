@@ -18,7 +18,7 @@
     </div>
   </div>
   <hr>
-  <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions"
+  <TableApi v-if="landing" ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions"
     class="max-h-[450px]">
     <!-- <template #header>
     </template> -->

@@ -15,6 +15,20 @@ class t_loker extends \App\Models\BasicModels\t_loker
     
     public $fileColumns    = [ /*file_column*/ ];
 
+    public $joins = [
+        "m_comp.id=t_loker.m_comp_id",
+        "m_subcomp.id=t_loker.m_subcomp_id",
+        "m_branch.id=t_loker.m_branch_id",
+        "m_divisi.id=t_loker.m_divisi_id",
+        "m_posisi.id=t_loker.m_posisi_id",
+        "m_general.id=t_loker.jenis_loker_id",
+        "m_general.id=t_loker.prioritas_id",
+        "m_general.id=t_loker.jk_id",
+        "m_general.id=t_loker.status_kary_id",
+        "default_users.id=t_loker.creator_id",
+        "default_users.id=t_loker.last_editor_id"
+    ];
+
     public $createAdditionalData = ["creator_id"=>"auth:id"];
     public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 

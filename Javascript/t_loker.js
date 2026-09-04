@@ -1,6 +1,6 @@
 //   javascript
 import { useRouter, useRoute, RouterLink } from 'vue-router'
-import { ref, readonly, reactive, inject, onMounted, onBeforeMount, watchEffect, onActivated, computed } from 'vue'
+import { ref, readonly, reactive, inject, onMounted, onBeforeMount, watch, watchEffect, onActivated, computed } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -36,12 +36,27 @@ let initialValues = {}
 const changedValues = []
 
 const values = reactive({
+  status: 'DRAFT',
+  deskripsi: "",
   t_loker_d_kualifikasi: [
     { value: '' }
   ],
 })
 
 onBeforeMount(async () => {
+  const respoData = localStorage.getItem('respo')
+  if (respoData) {
+    try {
+      const respoValues = JSON.parse(respoData)
+      if (!isRead) {
+        values.m_comp_id = respoValues.m_comp_id || null
+        values.m_subcomp_id = respoValues.m_subcomp_id || null
+        values.m_branch_id = respoValues.m_branch_id || null
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
   // if (!isRead || !currentMenu?.can_read) return;
 
   isRequesting.value = true;
@@ -385,6 +400,8 @@ onBeforeMount(async () => {
     if (respo) {
       const v = JSON.parse(respo)
       data.respo_id = v.id
+      data.subcomp_id = v.m_subcomp_id
+      data.branch_id = v.m_branch_id
     }
 
     if (!data.respo_id) return
@@ -789,6 +806,17 @@ onActivated(() => {
   }
 })
 
+onMounted(() => {
+  if (apiTable.value && route.query.reload) {
+    apiTable.value.reload()
+  }
+})
+
+watch(() => route.query.reload, (newVal) => {
+  if (newVal && apiTable.value) {
+    apiTable.value.reload()
+  }
+})
 
 //  @endif -------------------------------------------------END
 watchEffect(() => store.commit('set', ['isRequesting', isRequesting.value]))
