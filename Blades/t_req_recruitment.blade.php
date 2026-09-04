@@ -174,7 +174,10 @@
         <!-- BRANCH -->
         <div>
           <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="w-full !mt-1" :value="values.m_branch_id"
-            @input="v=>values.m_branch_id=v" :errorText="formErrors.m_branch_id?'failed':''"
+            @input="v=>{
+              values.m_branch_id = v;
+              values.m_divisi_id = null;
+            }" :errorText="formErrors.m_branch_id?'failed':''"
             :hints="formErrors.m_branch_id" valueField="id" displayField="name" :api="{
                 url: `${store.server.url_backend}/operation/m_branch`,
                 headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
@@ -188,7 +191,7 @@
 
         <!-- DIVISI -->
         <div>
-          <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="w-full !mt-1" :value="values.m_divisi_id"
+          <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_id, clearable:true }" class="w-full !mt-1" :value="values.m_divisi_id"
             @input="v=>values.m_divisi_id=v" :errorText="formErrors.m_divisi_id?'failed':''"
             :hints="formErrors.m_divisi_id" valueField="id" displayField="name.value" :api="{
                 url: `${store.server.url_backend}/operation/m_divisi`,
@@ -196,24 +199,10 @@
                 params: {
                   scopes:'Name',
                   simplest:true,
-                  where: `this.is_active = 'true'`
+                  groupBy: 'name.value',
+                  where: `this.is_active = 'true'` + (values.m_branch_id ? ` AND this.m_branch_id = '${values.m_branch_id}'` : '')
                 }
             }" placeholder="Pilih Divisi" label="Divisi" fa-icon="sort-desc" :check="false" />
-        </div>
-
-        <!-- DEPARTEMEN -->
-        <div>
-          <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="w-full !mt-1" :value="values.m_dept_id"
-            @input="v=>values.m_dept_id=v" :errorText="formErrors.m_dept_id?'failed':''"
-            :hints="formErrors.m_dept_id" valueField="id" displayField="name.value" :api="{
-                url: `${store.server.url_backend}/operation/m_dept`,
-                headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-                params: {
-                  scopes:'Name',
-                  simplest:true,
-                  where: `this.is_active = 'true'`
-                }
-            }" placeholder="Pilih Departemen" label="Departemen" fa-icon="sort-desc" :check="false" />
         </div>
 
         <!-- POSISI -->
