@@ -11,7 +11,21 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
     {
         parent::__construct();
         $this->helper = getCore('Helper');
+
+        $this->heirs = array_values(array_unique(array_merge($this->heirs, [
+            "t_hasil_tes_det",
+        ])));
+        $this->detailsChild = array_values(array_unique(array_merge($this->detailsChild, [
+            "t_hasil_tes_det",
+        ])));
+
+        if (app()->request->isMethod('GET')) {
+            $this->details = [];
+            $this->detailsChild = [];
+        }
     }
+
+    public $details = ['t_hasil_tes_det'];
     
     public $fileColumns    = [ /*file_column*/ ];
 
@@ -26,17 +40,95 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
     public $createAdditionalData = ["creator_id"=>"auth:id"];
     public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 
-    public function createBefore( $model, $arrayData, $metaData, $id=null )
+    public function transformRowData(array $row)
     {
-        $newArrayData  = array_merge( $arrayData,[
+        $data = [];
+        $details = \DB::table('t_hasil_tes_det')
+            ->where('t_hasil_tes_id', $row['id'])
+            ->orderBy('id', 'asc')
+            ->get();
+        $data['t_hasil_tes_det'] = json_decode(json_encode($details), true);
+
+        return array_merge($row, $data);
+    }
+
+    public function t_hasil_tes_det(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany('App\Models\BasicModels\t_hasil_tes_det', 't_hasil_tes_id', 'id');
+    }
+
+    private function prepareDetailRequest($id = null)
+    {
+        $req = app()->request;
+        $details = $req->t_hasil_tes_det ?? [];
+
+        if (empty($details)) {
+            if ($id) {
+                \App\Models\BasicModels\t_hasil_tes_det::where('t_hasil_tes_id', $id)->delete();
+            }
+            $this->details = [];
+            return;
+        }
+
+        $cleanDetails = [];
+        foreach ($details as $det) {
+            $det = is_array($det) ? $det : (array) $det;
+            $cleanRow = [
+                'tanggal'   => !empty($det['tanggal']) ? $det['tanggal'] : date('Y-m-d'),
+                'nama_tes'  => $det['nama_tes'] ?? null,
+                'nilai_tes' => isset($det['nilai_tes']) && $det['nilai_tes'] !== '' ? $det['nilai_tes'] : null,
+                'dokumen'   => $det['dokumen'] ?? null,
+            ];
+
+            if ($id && !empty($det['id'])) {
+                $isExisting = \App\Models\BasicModels\t_hasil_tes_det::where('id', $det['id'])
+                    ->where('t_hasil_tes_id', $id)
+                    ->exists();
+                if ($isExisting) {
+                    $cleanRow['id'] = $det['id'];
+                }
+            }
+
+            $cleanDetails[] = $cleanRow;
+        }
+
+        if ($id) {
+            $keepIds = array_values(array_filter(array_map(function ($row) {
+                return $row['id'] ?? null;
+            }, $cleanDetails)));
+
+            $deleteQuery = \App\Models\BasicModels\t_hasil_tes_det::where('t_hasil_tes_id', $id);
+            if (!empty($keepIds)) {
+                $deleteQuery->whereNotIn('id', $keepIds);
+            }
+            $deleteQuery->delete();
+        }
+
+        $req->merge(['t_hasil_tes_det' => $cleanDetails]);
+    }
+
+    public function createBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $this->prepareDetailRequest();
+
+        $newArrayData = array_merge($arrayData, [
             'nomor'  => $this->helper->generateNomor('KODE HASIL TES PELAMAR'),
             'status' => $arrayData['status'] ?? 'PENDING'
         ]);
-       
+
         return [
-            "model"  => $model,
-            "data"   => $newArrayData,
-            // "errors" => ['error1']
+            "model" => $model,
+            "data"  => $newArrayData,
+        ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $this->prepareDetailRequest($id);
+
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
         ];
     }
 

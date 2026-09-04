@@ -43,7 +43,7 @@ onBeforeMount(async () => {
       const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
       isRequesting.value = true
 
-      const params = { join: false, transform: false }
+      const params = { join: true, transform: true }
       const fixedParams = new URLSearchParams(params)
       const res = await fetch(dataURL + '?' + fixedParams, {
         headers: {
@@ -54,9 +54,10 @@ onBeforeMount(async () => {
       if (!res.ok) throw new Error("Failed when trying to read data")
       const resultJson = await res.json()
       initialValues = resultJson.data
-      initialValues.t_hasil_tes_det?.forEach((items) => {
-        detailArr.value = [items, ...detailArr.value]
-      })
+      detailArr.value = (initialValues.t_hasil_tes_det || []).map((items) => ({
+        ...items,
+        __id: ++_id,
+      }))
     } catch (err) {
       isBadForm.value = true
       swal.fire({
@@ -80,7 +81,11 @@ let _id = 0
 const detailArr = ref([])
 const addDetail = () => {
   const tempItem = {
-    t_hasil_tes_id: ++_id,
+    __id: ++_id,
+    tanggal: new Date().toISOString().slice(0, 10),
+    nama_tes: null,
+    nilai_tes: null,
+    dokumen: null,
   }
   detailArr.value = [...detailArr.value, tempItem]
 }
@@ -129,6 +134,10 @@ function onReset() {
       for (const key in initialValues) {
         values[key] = initialValues[key]
       }
+      detailArr.value = (initialValues.t_hasil_tes_det || []).map((items) => ({
+        ...items,
+        __id: ++_id,
+      }))
     }
   })
 }
