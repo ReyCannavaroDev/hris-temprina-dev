@@ -19,17 +19,9 @@ const modalLogOpen = ref(false)
 const dataLog = reactive({ items: [] })
 const tsId = `ts=` + (Date.parse(new Date()))
 
-// ------------------------------ POPUP KARYAWAN & JENIS PERMINTAAN
+// ------------------------------ DAFTAR KARYAWAN DIGANTIKAN (MULTI / BULK SELECT)
 const jenisPermintaanList = ref([])
-const selectedKaryawanName = ref('')
-const modalKaryawanOpen = ref(false)
-const karyawanList = ref([])
-const karyawanSearch = ref('')
-const karyawanPage = ref(1)
-const karyawanPerPage = ref(10)
-const karyawanTotal = ref(0)
-const karyawanLastPage = ref(1)
-const isLoadingKaryawan = ref(false)
+const detailKaryawanDigantikan = ref([])
 
 const isReplacement = computed(() => {
   if (!values.jenis_permintaan_id) return false
@@ -56,109 +48,44 @@ async function loadJenisPermintaan() {
   }
 }
 
-async function loadSelectedKaryawanName(id) {
-  if (!id) {
-    selectedKaryawanName.value = ''
-    return
-  }
-  try {
-    const res = await fetch(`${store.server.url_backend}/operation/m_kary/${id}?simplest=true&transform=false&join=false`, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `${store.user.token_type} ${store.user.token}`
-      }
-    })
-    if (res.ok) {
-      const json = await res.json()
-      const k = json.data
-      if (k) {
-        selectedKaryawanName.value = (k.kode ? `${k.kode} - ` : '') + (k.nama_lengkap || k.nama_depan || '')
-      }
+const onKaryawanAdd = (rows) => {
+  if (!rows || !rows.length) return
+  rows.forEach(row => {
+    if (!detailKaryawanDigantikan.value.some(k => k.id === row.id)) {
+      detailKaryawanDigantikan.value.push({
+        id: row.id,
+        kode: row.kode || '-',
+        nama_lengkap: row.nama_lengkap || row.nama_depan || '-'
+      })
     }
-  } catch (e) {
-    console.error(e)
+  })
+  updateKaryawanDigantikanValues()
+}
+
+const removeKaryawanDigantikan = (index) => {
+  detailKaryawanDigantikan.value.splice(index, 1)
+  updateKaryawanDigantikanValues()
+}
+
+function updateKaryawanDigantikanValues() {
+  if (detailKaryawanDigantikan.value.length === 0) {
+    values.karyawan_digantikan_id = null
+  } else {
+    values.karyawan_digantikan_id = detailKaryawanDigantikan.value[0].id
   }
-}
-
-function openKaryawanModal() {
-  if (!actionText.value) return
-  if (!values.m_divisi_id) {
-    swal.fire({
-      icon: 'warning',
-      text: 'Silakan pilih Divisi terlebih dahulu untuk menampilkan daftar karyawan.',
-      confirmButtonText: 'OK'
-    })
-    return
-  }
-  karyawanSearch.value = ''
-  karyawanPage.value = 1
-  modalKaryawanOpen.value = true
-  fetchKaryawanList(1)
-}
-
-function clearKaryawanDigantikan() {
-  values.karyawan_digantikan_id = null
-  selectedKaryawanName.value = ''
-}
-
-async function fetchKaryawanList(page = 1) {
-  try {
-    isLoadingKaryawan.value = true
-    karyawanPage.value = page
-
-    let whereQuery = `this.is_active = 'true'`
-    if (values.m_divisi_id) {
-      whereQuery += ` AND this.m_divisi_id = '${values.m_divisi_id}'`
-    }
-
-    const queryParams = new URLSearchParams({
-      simplest: 'true',
-      transform: 'false',
-      join: 'false',
-      page: String(page),
-      per_page: String(karyawanPerPage.value),
-      where: whereQuery
-    })
-
-    if (karyawanSearch.value && karyawanSearch.value.trim() !== '') {
-      queryParams.append('searchfield', 'this.kode,this.nama_lengkap')
-      queryParams.append('search', karyawanSearch.value.trim())
-    }
-
-    const res = await fetch(`${store.server.url_backend}/operation/m_kary?${queryParams.toString()}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `${store.user.token_type} ${store.user.token}`
-      }
-    })
-
-    if (!res.ok) throw new Error('Gagal memuat data karyawan')
-
-    const result = await res.json()
-    karyawanList.value = result.data || []
-    karyawanTotal.value = (result.total !== null && result.total !== undefined) ? result.total : (result.data?.length || 0)
-    karyawanLastPage.value = result.last_page || Math.ceil((karyawanTotal.value || 1) / karyawanPerPage.value) || 1
-  } catch (err) {
-    console.error(err)
-    swal.fire({
-      icon: 'error',
-      text: err.message || 'Gagal memuat data karyawan'
-    })
-  } finally {
-    isLoadingKaryawan.value = false
-  }
-}
-
-function selectKaryawan(kary) {
-  values.karyawan_digantikan_id = kary.id
-  selectedKaryawanName.value = (kary.kode ? `${kary.kode} - ` : '') + (kary.nama_lengkap || kary.nama_depan || '')
-  modalKaryawanOpen.value = false
 }
 
 watch(() => values.jenis_permintaan_id, (newVal) => {
   if (!isReplacement.value) {
     values.karyawan_digantikan_id = null
-    selectedKaryawanName.value = ''
+    detailKaryawanDigantikan.value = []
+  }
+})
+
+watch(() => values.m_divisi_id, (newVal, oldVal) => {
+  if (oldVal !== undefined && newVal !== oldVal) {
+    values.karyawan_digantikan_id = null
+    detailKaryawanDigantikan.value = []
   }
 })
 
@@ -234,7 +161,27 @@ onBeforeMount(async () => {
       }
 
       if (values.karyawan_digantikan_id) {
-        await loadSelectedKaryawanName(values.karyawan_digantikan_id)
+        try {
+          const resKary = await fetch(`${store.server.url_backend}/operation/m_kary/${values.karyawan_digantikan_id}?simplest=true&transform=false&join=false`, {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `${store.user.token_type} ${store.user.token}`
+            }
+          })
+          if (resKary.ok) {
+            const jsonKary = await resKary.json()
+            const k = jsonKary.data
+            if (k && !detailKaryawanDigantikan.value.some(item => item.id === k.id)) {
+              detailKaryawanDigantikan.value.push({
+                id: k.id,
+                kode: k.kode || '-',
+                nama_lengkap: k.nama_lengkap || k.nama_depan || '-'
+              })
+            }
+          }
+        } catch (e) {
+          console.error(e)
+        }
       }
     } catch (err) {
       isBadForm.value = true

@@ -269,41 +269,6 @@
             }" placeholder="Pilih Jenis Permintaan" label="Jenis Permintaan" fa-icon="" :check="false" />
         </div>
 
-        <!-- KARYAWAN DIGANTIKAN (HANYA MUNCUL JIKA REPLACEMENT / PENGGANTIAN) -->
-        <div v-if="isReplacement">
-          <label class="block text-xs font-semibold text-gray-700 mb-1">Karyawan yang Digantikan <span class="text-red-500">*</span></label>
-          <div class="flex items-center space-x-1.5 !mt-1">
-            <div class="relative flex-1">
-              <input
-                type="text"
-                readonly
-                :value="selectedKaryawanName"
-                placeholder="Klik tombol Pilih untuk mencari..."
-                class="w-full text-sm border rounded-lg px-3 py-2 bg-gray-50 text-gray-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500 truncate"
-                @click="openKaryawanModal"
-                :disabled="!actionText"
-              />
-              <button
-                v-if="actionText && values.karyawan_digantikan_id"
-                @click.stop="clearKaryawanDigantikan"
-                type="button"
-                class="absolute right-2.5 top-2.5 text-gray-400 hover:text-red-500"
-                title="Hapus pilihan">
-                <Icon fa="times" class="text-xs" />
-              </button>
-            </div>
-            <button
-              type="button"
-              @click="openKaryawanModal"
-              :disabled="!actionText"
-              class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-sm transition font-medium whitespace-nowrap">
-              <Icon fa="search" class="text-xs" />
-              <span>Pilih</span>
-            </button>
-          </div>
-          <p v-if="formErrors.karyawan_digantikan_id" class="text-xs text-red-500 mt-1">{{ formErrors.karyawan_digantikan_id }}</p>
-        </div>
-
         <!-- TANGGAL DIBUTUHKAN -->
         <div>
           <FieldX type="date" label="Tanggal Dibutuhkan (Target Masuk)" :bind="{ readonly: !actionText }" :value="values.tgl_dibutuhkan"
@@ -333,6 +298,97 @@
             :value="values.alasan" class="w-full !mt-1" @input="v=>values.alasan=v"
             :errorText="formErrors.alasan?'failed':''" :hints="formErrors.alasan"
             placeholder="Jelaskan alasan kebutuhan penambahan/penggantian personil ini..." :check="false" />
+        </div>
+      </div>
+
+      <!-- KARYAWAN YANG DIGANTIKAN (HANYA MUNCUL JIKA REPLACEMENT / PENGGANTIAN) -->
+      <div v-if="isReplacement" class="mt-4 pt-4 border-t border-gray-200">
+        <div class="flex justify-between items-center mb-2">
+          <div>
+            <h3 class="text-sm font-bold text-gray-700">Daftar Karyawan yang Digantikan <span class="text-red-500">*</span></h3>
+            <p class="text-xs text-gray-500">Pilih personil yang akan digantikan pada divisi terpilih (bisa bulk select jika mengganti lebih dari 1 orang).</p>
+          </div>
+          <div v-if="actionText">
+            <ButtonMultiSelect title="Pilih Karyawan" @add="onKaryawanAdd" :api="{
+                url: `${store.server.url_backend}/operation/m_kary`,
+                headers: {'Content-Type': 'Application/json', authorization: `${store.user.token_type} ${store.user.token}`},
+                params: { 
+                  where: `this.is_active = 'true'` + (values.m_divisi_id ? ` AND this.m_divisi_id = '${values.m_divisi_id}'` : ''),
+                  notin: detailKaryawanDigantikan.length > 0 ? `this.id:${detailKaryawanDigantikan.map(dt => dt.id).join(',')}` : null,
+                  searchfield: 'this.kode,this.nama_lengkap'
+                },
+                onsuccess:(response) => {
+                  response.page = response.current_page;
+                  response.hasNext = response.has_next;
+                  return response;
+                }
+              }" :columns="[
+                {
+                  checkboxSelection: true,
+                  headerCheckboxSelection: true,
+                  headerName: 'No',
+                  valueGetter:(params)=>{
+                    return ''
+                  },
+                  width:60,
+                  sortable: false, resizable: true, filter: false,
+                  cellClass: ['justify-center', 'bg-gray-50', '!border-gray-200']
+                },
+                {
+                  flex: 1,
+                  headerName:'Kode Karyawan',
+                  sortable: false, resizable: true, filter: 'ColFilter',
+                  field: 'kode',
+                  cellClass: ['justify-start','!border-gray-200']
+                },
+                {
+                  flex: 2,
+                  headerName:'Nama Karyawan',
+                  field: 'nama_lengkap',
+                  sortable: false, resizable: true, filter: 'ColFilter',
+                  cellClass: ['justify-start','!border-gray-200']
+                }
+              ]">
+              <div
+                class="bg-[#005FBF] hover:bg-[#0055ab] text-white text-[12px] px-3 py-2 text-sm flex items-center justify-center space-x-1 rounded cursor-pointer transition shadow-sm">
+                <icon fa="plus" size="sm mr-0.5" />
+                <span>Pilih Karyawan</span>
+              </div>
+            </ButtonMultiSelect>
+          </div>
+        </div>
+
+        <!-- Table List Karyawan Digantikan -->
+        <div class="mt-3 overflow-x-auto">
+          <table class="w-full table-auto border border-[#CACACA]">
+            <thead>
+              <tr class="border">
+                <td class="text-[#8F8F8F] font-semibold text-[13px] px-2 py-2 text-center w-[50px] border bg-[#f8f8f8] border-[#CACACA]">No.</td>
+                <td class="text-[#8F8F8F] font-semibold text-[13px] px-3 py-2 text-left w-[200px] border bg-[#f8f8f8] border-[#CACACA]">Kode Karyawan</td>
+                <td class="text-[#8F8F8F] font-semibold text-[13px] px-3 py-2 text-left border bg-[#f8f8f8] border-[#CACACA]">Nama Karyawan</td>
+                <td class="text-[#8F8F8F] font-semibold text-[13px] px-2 py-2 text-center w-[70px] border bg-[#f8f8f8] border-[#CACACA]" v-if="actionText">Aksi</td>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, i) in detailKaryawanDigantikan" :key="item.id" class="border-t hover:bg-gray-50">
+                <td class="p-2 text-center border border-[#CACACA] text-xs text-gray-600">{{ i + 1 }}.</td>
+                <td class="p-2 border border-[#CACACA] font-mono text-xs text-gray-800">{{ item.kode || '-' }}</td>
+                <td class="p-2 border border-[#CACACA] font-medium text-xs text-gray-800">{{ item.nama_lengkap || item.nama || '-' }}</td>
+                <td class="p-2 text-center border border-[#CACACA]" v-if="actionText">
+                  <button type="button" @click="removeKaryawanDigantikan(i)" class="text-red-500 hover:text-red-700 transition" title="Hapus">
+                    <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg" class="inline">
+                      <path d="M14 1H10.5L9.5 0H4.5L3.5 1H0V3H14M1 16C1 16.5304 1.21071 17.0391 1.58579 17.4142C1.96086 17.7893 2.46957 18 3 18H11C11.5304 18 12.0391 17.7893 12.4142 17.4142C12.7893 17.0391 13 16.5304 13 16V4H1V16Z" fill="#F24E1E"/>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="detailKaryawanDigantikan.length === 0">
+                <td :colspan="actionText ? 4 : 3" class="p-4 text-center text-xs text-gray-400 italic bg-white border border-[#CACACA]">
+                  Belum ada karyawan yang dipilih. Klik tombol <b class="text-[#005FBF]">Pilih Karyawan</b> di atas untuk menambahkan.
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -386,131 +442,6 @@
       <icon fa="location-arrow" />
       Send Approval
     </button>
-  </div>
-
-  <!-- MODAL POPUP PILIH KARYAWAN YANG DIGANTIKAN -->
-  <div v-show="modalKaryawanOpen" class="fixed inset-0 flex items-center justify-center z-50">
-    <div class="modal-overlay fixed inset-0 bg-black opacity-50" @click="modalKaryawanOpen = false"></div>
-    <div class="modal-container bg-white w-11/12 md:w-3/5 max-w-4xl mx-auto rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[90vh]">
-      
-      <!-- Header Modal -->
-      <div class="px-6 py-4 bg-gray-700 text-white flex justify-between items-center">
-        <div class="flex items-center space-x-2">
-          <Icon fa="users" class="text-lg text-blue-400" />
-          <h3 class="text-base md:text-lg font-bold">Pilih Karyawan yang Digantikan</h3>
-        </div>
-        <button @click="modalKaryawanOpen = false" class="text-gray-300 hover:text-white transition">
-          <Icon fa="times" class="text-lg" />
-        </button>
-      </div>
-
-      <!-- Filter & Search Bar -->
-      <div class="p-4 bg-gray-50 border-b flex flex-col md:flex-row justify-between items-center gap-3">
-        <div class="w-full md:w-80 relative">
-          <input
-            v-model="karyawanSearch"
-            @keyup.enter="fetchKaryawanList(1)"
-            type="text"
-            placeholder="Cari kode atau nama karyawan..."
-            class="w-full text-sm border border-gray-300 rounded-lg pl-9 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            <Icon fa="search" class="text-xs" />
-          </div>
-          <button v-if="karyawanSearch" @click="karyawanSearch = ''; fetchKaryawanList(1)" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
-            <Icon fa="times" class="text-xs" />
-          </button>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button
-            @click="fetchKaryawanList(1)"
-            type="button"
-            class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg flex items-center gap-1 shadow-sm transition">
-            <Icon fa="search" class="text-xs" />
-            <span>Cari</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Table Data Karyawan -->
-      <div class="flex-1 overflow-y-auto p-4">
-        <div v-if="isLoadingKaryawan" class="flex flex-col items-center justify-center py-12 space-y-2 text-gray-500">
-          <Icon fa="spinner" class="fa-spin text-3xl text-blue-600" />
-          <p class="text-sm">Memuat data karyawan...</p>
-        </div>
-
-        <div v-else-if="karyawanList.length === 0" class="flex flex-col items-center justify-center py-12 text-gray-400">
-          <Icon fa="user-slash" class="text-4xl mb-2 text-gray-300" />
-          <p class="text-sm font-semibold text-gray-500">Tidak ada data karyawan ditemukan</p>
-          <p class="text-xs text-gray-400">Pastikan divisi yang dipilih sudah sesuai.</p>
-        </div>
-
-        <table v-else class="w-full text-sm text-left border-collapse">
-          <thead>
-            <tr class="bg-gray-100 text-gray-700 uppercase text-xs font-semibold border-b">
-              <th class="py-2.5 px-4 w-12 text-center">No</th>
-              <th class="py-2.5 px-4 w-48">Kode Karyawan</th>
-              <th class="py-2.5 px-4">Nama Karyawan</th>
-              <th class="py-2.5 px-4 w-28 text-center">Aksi</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr v-for="(kary, idx) in karyawanList" :key="kary.id" class="hover:bg-blue-50/50 transition">
-              <td class="py-2.5 px-4 text-center text-gray-500">
-                {{ idx + 1 + (karyawanPage - 1) * karyawanPerPage }}
-              </td>
-              <td class="py-2.5 px-4 font-mono font-medium text-gray-800">
-                {{ kary.kode || '-' }}
-              </td>
-              <td class="py-2.5 px-4 text-gray-800 font-medium">
-                {{ kary.nama_lengkap || kary.nama_depan || '-' }}
-              </td>
-              <td class="py-2.5 px-4 text-center">
-                <button
-                  @click="selectKaryawan(kary)"
-                  type="button"
-                  class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-md font-semibold transition flex items-center justify-center gap-1 mx-auto shadow-sm">
-                  <Icon fa="check" class="text-xs" />
-                  <span>Pilih</span>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Footer & Pagination -->
-      <div class="px-6 py-3 bg-gray-50 border-t flex flex-col md:flex-row justify-between items-center gap-2 text-xs text-gray-600">
-        <div>
-          <span>Total: <b>{{ karyawanTotal }}</b> Karyawan</span>
-        </div>
-        <div class="flex items-center space-x-2">
-          <button
-            :disabled="karyawanPage <= 1 || isLoadingKaryawan"
-            @click="fetchKaryawanList(karyawanPage - 1)"
-            type="button"
-            class="px-2.5 py-1.5 border rounded bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
-            <Icon fa="chevron-left" class="text-xs" />
-          </button>
-          <span class="font-medium">Hal {{ karyawanPage }} / {{ karyawanLastPage }}</span>
-          <button
-            :disabled="karyawanPage >= karyawanLastPage || isLoadingKaryawan"
-            @click="fetchKaryawanList(karyawanPage + 1)"
-            type="button"
-            class="px-2.5 py-1.5 border rounded bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
-            <Icon fa="chevron-right" class="text-xs" />
-          </button>
-        </div>
-        <button
-          @click="modalKaryawanOpen = false"
-          type="button"
-          class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs px-4 py-1.5 rounded-lg transition font-medium">
-          Tutup
-        </button>
-      </div>
-
-    </div>
   </div>
 </div>
 @endverbatim
