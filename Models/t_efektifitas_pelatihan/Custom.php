@@ -124,26 +124,15 @@ class t_efektifitas_pelatihan extends \App\Models\BasicModels\t_efektifitas_pela
             trigger_error("Detail efektifitas pelatihan belum terisi");
         }
 
-        // Subordinates check (direct and recursive)
-        $allowedKaryIds = [];
-        if ($atasanId) {
-            $subordinates = \DB::select("
-                WITH RECURSIVE subordinates AS (
-                    SELECT id FROM m_kary WHERE atasan_id = ?
-                    UNION
-                    SELECT k.id FROM m_kary k
-                    INNER JOIN subordinates s ON k.atasan_id = s.id
-                )
-                SELECT id FROM subordinates
-            ", [$atasanId]);
-            $subIds = array_column($subordinates, 'id');
+        // Subordinates check (autodetected leveling and division)
+        $userId = auth()->user()?->id ?? auth()->id();
+        $subIds = $userId ? m_kary::getSubordinateIds($userId) : [];
 
-            $allowedKaryIds = !empty($subIds) ? \DB::table('t_realisasi_pelatihan_d_kary as d')
-                ->where('d.t_realisasi_pelatihan_id', $realisasiId)
-                ->whereIn('d.m_kary_id', $subIds)
-                ->pluck('d.m_kary_id')
-                ->toArray() : [];
-        }
+        $allowedKaryIds = !empty($subIds) ? \DB::table('t_realisasi_pelatihan_d_kary as d')
+            ->where('d.t_realisasi_pelatihan_id', $realisasiId)
+            ->whereIn('d.m_kary_id', $subIds)
+            ->pluck('d.m_kary_id')
+            ->toArray() : [];
 
         if (empty($allowedKaryIds)) {
             response()->json([

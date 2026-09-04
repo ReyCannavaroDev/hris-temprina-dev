@@ -304,7 +304,7 @@
             params: { 
               t_realisasi_pelatihan_id : `${values.t_realisasi_pelatihan_id}`,
               scopes:'Efektifitas',
-              where: `this.is_active = true and this.atasan_id = '${store.user?.data?.m_kary_id || 0}'`,
+              where: 'this.is_active = true',
               selectfield: 'id, kode, nama_lengkap'
             },
             onsuccess:(response)=>{

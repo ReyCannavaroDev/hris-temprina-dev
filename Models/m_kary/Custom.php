@@ -2703,27 +2703,136 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ->where("l.sequence", "<", $level->sequence);
     }
 
-    public function scopeBawahan($query)
+    public static function getSubordinateIds($userId = null)
     {
-        $m_kary = m_kary::whereHas("default_users", function ($q) {
-            $q->where("id", auth()->id());
-        })->first();
+        $userId = $userId ?? (auth()->user()?->id ?? auth()->id());
+        if (!$userId) return [];
 
-        if (!$m_kary) {
-            return $query->whereRaw("1 = 0");
+        $userObj = default_users::find($userId);
+        $myKaryId = $userObj?->m_kary_id;
+
+        if (!$myKaryId) {
+            $myKary = \DB::table('m_kary')->where('id', $userId)->first();
+            $myKaryId = $myKary?->id;
+        } else {
+            $myKary = \DB::table('m_kary')->where('id', $myKaryId)->first();
         }
 
-        $subordinateIds = \DB::select("
-            WITH RECURSIVE subordinates AS (
-                SELECT id FROM m_kary WHERE atasan_id = ?
-                UNION
-                SELECT k.id FROM m_kary k
-                INNER JOIN subordinates s ON k.atasan_id = s.id
-            )
-            SELECT id FROM subordinates
-        ", [$m_kary->id]);
+        if (!$myKary) return [];
 
-        $ids = array_column($subordinateIds, 'id');
+        $myPosisiId = $myKary->m_posisi_id;
+        $myDivisiId = $myKary->m_divisi_id;
+
+        // 1. Get user's level sequence from primary position or m_kary_det_jabatan
+        $mySequence = null;
+        if ($myPosisiId) {
+            $myLevel = \DB::table('m_level_posisi_d as lpd')
+                ->join('m_level_posisi as lp', 'lp.id', '=', 'lpd.m_level_posisi_id')
+                ->where('lpd.m_posisi_id', $myPosisiId)
+                ->where('lp.is_active', true)
+                ->select('lp.sequence')
+                ->first();
+            $mySequence = $myLevel?->sequence ?? null;
+        }
+
+        if (!$mySequence) {
+            $myDetJab = \DB::table('m_kary_det_jabatan as mkdj')
+                ->join('m_level_posisi_d as lpd', 'lpd.m_posisi_id', '=', 'mkdj.m_posisi_id')
+                ->join('m_level_posisi as lp', 'lp.id', '=', 'lpd.m_level_posisi_id')
+                ->where(function($q) use ($myKaryId) {
+                    $q->where('mkdj.m_karyawan_id', $myKaryId)
+                      ->orWhere('mkdj.m_kary_id', $myKaryId);
+                })
+                ->where('mkdj.is_active', true)
+                ->where('lp.is_active', true)
+                ->orderBy('lp.sequence', 'desc')
+                ->select('lp.sequence')
+                ->first();
+            $mySequence = $myDetJab?->sequence ?? null;
+        }
+
+        // 2. Get division tree (current division + child divisions)
+        $divisiIds = [];
+        if ($myDivisiId) {
+            $divisiIds[] = (int)$myDivisiId;
+            try {
+                $divTree = \DB::select("
+                    WITH RECURSIVE div_tree AS (
+                        SELECT id FROM m_divisi WHERE id = ?
+                        UNION ALL
+                        SELECT d.id FROM m_divisi d
+                        INNER JOIN div_tree dt ON d.parent_id = dt.id
+                    )
+                    SELECT id FROM div_tree
+                ", [$myDivisiId]);
+                $divisiIds = array_map('intval', array_column($divTree, 'id'));
+            } catch (\Throwable $e) {
+                $children = \DB::table('m_divisi')->where('parent_id', $myDivisiId)->pluck('id')->toArray();
+                $divisiIds = array_merge($divisiIds, array_map('intval', $children));
+            }
+        }
+
+        // 3. Find subordinates with lower level in same division/sub-divisions, or fallback atasan_id
+        $query = \DB::table('m_kary as k')
+            ->where('k.id', '!=', $myKaryId)
+            ->where('k.is_active', true);
+
+        $query->where(function($mainQ) use ($myKaryId, $mySequence, $divisiIds) {
+            if ($mySequence !== null) {
+                $mainQ->where(function($q) use ($mySequence, $divisiIds) {
+                    if (!empty($divisiIds)) {
+                        $q->where(function($divQ) use ($divisiIds) {
+                            $divQ->whereIn('k.m_divisi_id', $divisiIds)
+                                 ->orWhereExists(function($exDiv) use ($divisiIds) {
+                                     $exDiv->select(\DB::raw(1))
+                                         ->from('m_kary_det_jabatan as mkdj')
+                                         ->where(function($joinK) {
+                                             $joinK->whereColumn('mkdj.m_karyawan_id', 'k.id')
+                                                   ->orWhereColumn('mkdj.m_kary_id', 'k.id');
+                                         })
+                                         ->where('mkdj.is_active', true)
+                                         ->whereIn('mkdj.m_divisi_id', $divisiIds);
+                                 });
+                        });
+                    }
+
+                    $q->where(function($subQ) use ($mySequence) {
+                        $subQ->whereExists(function($ex) use ($mySequence) {
+                            $ex->select(\DB::raw(1))
+                                ->from('m_level_posisi_d as ld')
+                                ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                                ->whereColumn('ld.m_posisi_id', 'k.m_posisi_id')
+                                ->where('l.sequence', '<', $mySequence);
+                        })->orWhereExists(function($ex) use ($mySequence) {
+                            $ex->select(\DB::raw(1))
+                                ->from('m_kary_det_jabatan as mkdj')
+                                ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'mkdj.m_posisi_id')
+                                ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                                ->where(function($joinK) {
+                                    $joinK->whereColumn('mkdj.m_karyawan_id', 'k.id')
+                                          ->orWhereColumn('mkdj.m_kary_id', 'k.id');
+                                })
+                                ->where('mkdj.is_active', true)
+                                ->where('l.sequence', '<', $mySequence);
+                        });
+                    });
+                });
+            }
+
+            $mainQ->orWhere('k.atasan_id', $myKaryId);
+        });
+
+        $subIds = $query->pluck('k.id')->toArray();
+        return array_values(array_unique(array_map('intval', $subIds)));
+    }
+
+    public function scopeBawahan($query)
+    {
+        $ids = self::getSubordinateIds();
+
+        if (empty($ids)) {
+            return $query->whereRaw("1 = 0");
+        }
 
         return $query->whereIn('m_kary.id', $ids);
     }
@@ -2999,9 +3108,15 @@ class m_kary extends \App\Models\BasicModels\m_kary
             return $model->whereRaw('1 = 0');
         }
 
+        $subordinateIds = self::getSubordinateIds();
+        if (empty($subordinateIds)) {
+            return $model->whereRaw('1 = 0');
+        }
+
         $exceptId = $req->except_t_efektifitas_pelatihan_id ?? $req->t_efektifitas_pelatihan_id ?? null;
 
         return $model
+            ->whereIn("m_kary.id", $subordinateIds)
             ->whereIn("m_kary.id", function ($query) use ($req) {
                 $query->select("d.m_kary_id")
                     ->from("t_realisasi_pelatihan_d_kary as d")
