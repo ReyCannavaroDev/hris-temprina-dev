@@ -11,6 +11,7 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
     {
         parent::__construct();
         $this->helper = getCore('Helper');
+        $this->joins = [];
     }
     
     public $fileColumns = [ /*file_column*/ ];
@@ -22,14 +23,24 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
+        $m_kary_id = $arrayData['m_kary_id'] ?? auth()->user()->m_kary_id ?? null;
+        $kary = $m_kary_id ? \DB::table('m_kary')->where('id', $m_kary_id)->first() : null;
+
+        $m_divisi_id = $arrayData['m_divisi_id'] ?? null;
+        $divisi = $m_divisi_id ? \DB::table('m_divisi')->where('id', $m_divisi_id)->first() : null;
+
+        $m_branch_id = $arrayData['m_branch_id'] ?? $divisi?->m_branch_id ?? $kary?->m_branch_id ?? null;
+        $m_subcomp_id = $arrayData['m_subcomp_id'] ?? $kary?->m_subcomp_id ?? null;
+        $m_comp_id = $arrayData['m_comp_id'] ?? $kary?->m_comp_id ?? auth()->user()->m_comp_id ?? null;
+
         $newArrayData = array_merge( $arrayData, [
             'nomor'        => $this->helper->generateNomor('KODE PERMINTAAN KARYAWAN'),
             'tanggal'      => $arrayData['tanggal'] ?? date('Y-m-d'),
             'status'       => $arrayData['status'] ?? 'DRAFT',
-            'm_kary_id'    => $arrayData['m_kary_id'] ?? auth()->user()->m_kary_id ?? null,
-            'm_comp_id'    => $arrayData['m_comp_id'] ?? auth()->user()->m_comp_id ?? null,
-            'm_subcomp_id' => $arrayData['m_subcomp_id'] ?? auth()->user()->m_subcomp_id ?? null,
-            'm_branch_id'  => $arrayData['m_branch_id'] ?? auth()->user()->m_branch_id ?? null,
+            'm_kary_id'    => $m_kary_id,
+            'm_comp_id'    => $m_comp_id,
+            'm_subcomp_id' => $m_subcomp_id,
+            'm_branch_id'  => $m_branch_id,
         ]);
        
         return [
@@ -84,16 +95,28 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         return $model
             ->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
                 if (is_array($m_subcomp_id)) {
-                    $q->whereIn("t_req_recruitment.m_subcomp_id", $m_subcomp_id);
+                    $q->where(function($sq) use ($m_subcomp_id) {
+                        $sq->whereIn("t_req_recruitment.m_subcomp_id", $m_subcomp_id)
+                           ->orWhereNull("t_req_recruitment.m_subcomp_id");
+                    });
                 } else {
-                    $q->where("t_req_recruitment.m_subcomp_id", $m_subcomp_id);
+                    $q->where(function($sq) use ($m_subcomp_id) {
+                        $sq->where("t_req_recruitment.m_subcomp_id", $m_subcomp_id)
+                           ->orWhereNull("t_req_recruitment.m_subcomp_id");
+                    });
                 }
             })
             ->when($m_branch_id, function ($q) use ($m_branch_id) {
                 if (is_array($m_branch_id)) {
-                    $q->whereIn("t_req_recruitment.m_branch_id", $m_branch_id);
+                    $q->where(function($sq) use ($m_branch_id) {
+                        $sq->whereIn("t_req_recruitment.m_branch_id", $m_branch_id)
+                           ->orWhereNull("t_req_recruitment.m_branch_id");
+                    });
                 } else {
-                    $q->where("t_req_recruitment.m_branch_id", $m_branch_id);
+                    $q->where(function($sq) use ($m_branch_id) {
+                        $sq->where("t_req_recruitment.m_branch_id", $m_branch_id)
+                           ->orWhereNull("t_req_recruitment.m_branch_id");
+                    });
                 }
             });
     }
