@@ -202,8 +202,8 @@ Berdasarkan hasil meeting bersama klien tanggal 03 September 2026, terdapat 5 mo
   - [ ] Tambahkan kolom ringkasan peserta pada popup pemilihan pelatihan.
 
 ### 💼 TAHAP 14: Pembenahan Lowongan Kerja, FPTK, Tahapan, & Hasil Tes
-- [ ] **[Javascript/t_lowongan_kerja.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_lowongan_kerja.js)**:
-  - [ ] Perbaiki sinkronisasi parameter landing agar data baru langsung tampil setelah dibuat.
+- [x] **[Javascript/t_lowongan_kerja.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_lowongan_kerja.js)** & **[Models/t_loker/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Custom.php)**:
+  - [x] Perbaiki sinkronisasi parameter landing, auto-assign respo create, status default DRAFT, dan watcher reload agar data baru langsung tampil setelah dibuat.
 - [ ] **[Blades/t_pengajuan_pekerjaan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_pengajuan_pekerjaan.blade.php)**:
   - [ ] Sinkronkan alur pengajuan permintaan karyawan dan integrasikan pilihan referensi pengajuan ke `t_loker`.
 - [ ] **[Blades/t_hasil_test.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_hasil_test.blade.php)** & **[Javascript/t_hasil_test.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_hasil_test.js)**:

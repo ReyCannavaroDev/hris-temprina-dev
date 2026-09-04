@@ -21,7 +21,8 @@ class t_loker extends \App\Models\BasicModels\t_loker
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
         $newArrayData  = array_merge( $arrayData,[
-            'nomor' => $this->helper->generateNomor('KODE LOWONGAN PEKERJAAN')
+            'nomor'  => $this->helper->generateNomor('KODE LOWONGAN PEKERJAAN'),
+            'status' => $arrayData['status'] ?? 'DRAFT'
         ]);
        
         return [
@@ -71,10 +72,10 @@ class t_loker extends \App\Models\BasicModels\t_loker
         $m_subcomp_id = request("m_subcomp_id") ?? null;
         $m_branch_id = request("m_branch_id") ?? null;
 
-        if ($m_subcomp_id === "null") {
+        if ($m_subcomp_id === "null" || $m_subcomp_id === "undefined" || empty($m_subcomp_id)) {
             $m_subcomp_id = null;
         }
-        if ($m_branch_id === "null") {
+        if ($m_branch_id === "null" || $m_branch_id === "undefined" || empty($m_branch_id)) {
             $m_branch_id = null;
         }
 
