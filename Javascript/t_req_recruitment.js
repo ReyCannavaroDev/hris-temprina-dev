@@ -128,9 +128,9 @@ onBeforeMount(async () => {
     try {
       const respoValues = JSON.parse(respoData)
       if (!isRead) {
-        values.m_comp_id = respoValues.m_comp_id || null
-        values.m_subcomp_id = respoValues.m_subcomp_id || null
-        values.m_branch_id = respoValues.m_branch_id || null
+        values.m_comp_id = respoValues.m_comp_id ?? respoValues.comp_id ?? null
+        values.m_subcomp_id = respoValues.m_subcomp_id ?? respoValues.subcomp_id ?? null
+        values.m_branch_id = respoValues.m_branch_id ?? respoValues.branch_id ?? null
       }
     } catch (e) {
       console.error(e)
@@ -371,8 +371,8 @@ onBeforeMount(async () => {
   if (rs) {
     const r = JSON.parse(rs)
     data.respo_id = r.id
-    data.subcomp_id = r.m_subcomp_id
-    data.branch_id = r.m_branch_id
+    data.subcomp_id = r.m_subcomp_id ?? r.subcomp_id ?? null
+    data.branch_id = r.m_branch_id ?? r.branch_id ?? null
   }
 
   if (data.respo_id) {
@@ -536,7 +536,7 @@ const landing = reactive({
       paginate: 25,
       m_subcomp_id: data.subcomp_id,
       m_branch_id: data.branch_id,
-      join: true,
+      join: false,
       transform: true,
       scopes: 'respo',
       ...(statusFilter.value ? { where: statusFilter.value } : {})
@@ -578,7 +578,7 @@ const landing = reactive({
     {
       headerName: "Pemohon",
       field: 'm_kary.nama_lengkap',
-      valueGetter: (params) => params.data?.m_kary?.nama_lengkap || params.data?.['m_kary.nama_lengkap'] || '-',
+      valueGetter: (params) => params.data?.['m_kary.nama_lengkap'] || params.data?.m_kary?.nama_lengkap || params.data?.['creator.name'] || params.data?.creator?.name || '-',
       filter: 'ColFilter',
       sortable: true,
       flex: 1,
@@ -588,7 +588,7 @@ const landing = reactive({
     {
       headerName: "Divisi",
       field: 'm_divisi.name',
-      valueGetter: (params) => params.data?.m_divisi?.name || params.data?.['m_divisi.name'] || '-',
+      valueGetter: (params) => params.data?.['m_divisi.name'] || params.data?.m_divisi?.name || '-',
       filter: 'ColFilter',
       sortable: true,
       flex: 1,
@@ -598,7 +598,7 @@ const landing = reactive({
     {
       headerName: "Posisi yang Diminta",
       field: 'm_posisi.name',
-      valueGetter: (params) => params.data?.m_posisi?.name || params.data?.['m_posisi.name'] || '-',
+      valueGetter: (params) => params.data?.['m_posisi.name'] || params.data?.m_posisi?.name || '-',
       filter: 'ColFilter',
       sortable: true,
       flex: 1,

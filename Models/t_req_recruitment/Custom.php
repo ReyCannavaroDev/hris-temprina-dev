@@ -15,40 +15,58 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
     
     public $fileColumns = [ /*file_column*/ ];
 
-    public $joins = [
-        "m_kary.id=t_req_recruitment.m_kary_id",
-        "m_comp.id=t_req_recruitment.m_comp_id",
-        "m_subcomp.id=t_req_recruitment.m_subcomp_id",
-        "m_branch.id=t_req_recruitment.m_branch_id",
-        "m_divisi.id=t_req_recruitment.m_divisi_id",
-        "m_dept.id=t_req_recruitment.m_dept_id",
-        "m_posisi.id=t_req_recruitment.m_posisi_id",
-        "m_general.id=t_req_recruitment.status_kary_id",
-        "m_general.id=t_req_recruitment.jenis_permintaan_id",
-        "m_kary.id=t_req_recruitment.karyawan_digantikan_id",
-        "m_general.id=t_req_recruitment.prioritas_id",
-        "t_loker.id=t_req_recruitment.t_loker_id",
-        "default_users.id=t_req_recruitment.creator_id",
-        "default_users.id=t_req_recruitment.last_editor_id"
-    ];
+    public $joins = [];
 
     public $createAdditionalData = ["creator_id"=>"auth:id"];
     public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 
     public function createBefore( $model, $arrayData, $metaData, $id=null )
     {
-        $newArrayData  = array_merge( $arrayData,[
-            'nomor'   => $this->helper->generateNomor('KODE PERMINTAAN KARYAWAN'),
-            'tanggal' => $arrayData['tanggal'] ?? date('Y-m-d'),
-            'status'  => $arrayData['status'] ?? 'DRAFT',
-            'm_kary_id' => $arrayData['m_kary_id'] ?? auth()->user()->m_kary_id ?? null,
+        $newArrayData = array_merge( $arrayData, [
+            'nomor'        => $this->helper->generateNomor('KODE PERMINTAAN KARYAWAN'),
+            'tanggal'      => $arrayData['tanggal'] ?? date('Y-m-d'),
+            'status'       => $arrayData['status'] ?? 'DRAFT',
+            'm_kary_id'    => $arrayData['m_kary_id'] ?? auth()->user()->m_kary_id ?? null,
+            'm_comp_id'    => $arrayData['m_comp_id'] ?? auth()->user()->m_comp_id ?? null,
+            'm_subcomp_id' => $arrayData['m_subcomp_id'] ?? auth()->user()->m_subcomp_id ?? null,
+            'm_branch_id'  => $arrayData['m_branch_id'] ?? auth()->user()->m_branch_id ?? null,
         ]);
        
         return [
             "model"  => $model,
             "data"   => $newArrayData,
-            // "errors" => ['error1']
         ];
+    }
+
+    public function transformRowData(array $row)
+    {
+        $m_kary = !empty($row['m_kary_id']) ? \DB::table('m_kary')->where('id', $row['m_kary_id'])->first() : null;
+        $creator = !empty($row['creator_id']) ? \DB::table('default_users')->where('id', $row['creator_id'])->first() : null;
+        $m_divisi = !empty($row['m_divisi_id']) ? \DB::table('m_divisi')->where('id', $row['m_divisi_id'])->first() : null;
+        $m_posisi = !empty($row['m_posisi_id']) ? \DB::table('m_posisi')->where('id', $row['m_posisi_id'])->first() : null;
+        $status_kary = !empty($row['status_kary_id']) ? \DB::table('m_general')->where('id', $row['status_kary_id'])->first() : null;
+        $jenis_permintaan = !empty($row['jenis_permintaan_id']) ? \DB::table('m_general')->where('id', $row['jenis_permintaan_id'])->first() : null;
+        $prioritas = !empty($row['prioritas_id']) ? \DB::table('m_general')->where('id', $row['prioritas_id'])->first() : null;
+        $karyawan_digantikan = !empty($row['karyawan_digantikan_id']) ? \DB::table('m_kary')->where('id', $row['karyawan_digantikan_id'])->first() : null;
+
+        return array_merge($row, [
+            'm_kary' => $m_kary ? (array)$m_kary : null,
+            'm_kary.nama_lengkap' => $m_kary?->nama_lengkap ?? $creator?->name ?? '-',
+            'creator' => $creator ? (array)$creator : null,
+            'creator.name' => $creator?->name ?? '-',
+            'm_divisi' => $m_divisi ? (array)$m_divisi : null,
+            'm_divisi.name' => $m_divisi?->name ?? '-',
+            'm_posisi' => $m_posisi ? (array)$m_posisi : null,
+            'm_posisi.name' => $m_posisi?->name ?? '-',
+            'status_kary' => $status_kary ? (array)$status_kary : null,
+            'status_kary.value' => $status_kary?->value ?? '-',
+            'jenis_permintaan' => $jenis_permintaan ? (array)$jenis_permintaan : null,
+            'jenis_permintaan.value' => $jenis_permintaan?->value ?? '-',
+            'prioritas' => $prioritas ? (array)$prioritas : null,
+            'prioritas.value' => $prioritas?->value ?? '-',
+            'karyawan_digantikan' => $karyawan_digantikan ? (array)$karyawan_digantikan : null,
+            'karyawan_digantikan.nama_lengkap' => $karyawan_digantikan?->nama_lengkap ?? '-',
+        ]);
     }
 
     public function scoperespo($model)
@@ -65,10 +83,18 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
 
         return $model
             ->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
-                $q->where("t_req_recruitment.m_subcomp_id", $m_subcomp_id);
+                if (is_array($m_subcomp_id)) {
+                    $q->whereIn("t_req_recruitment.m_subcomp_id", $m_subcomp_id);
+                } else {
+                    $q->where("t_req_recruitment.m_subcomp_id", $m_subcomp_id);
+                }
             })
             ->when($m_branch_id, function ($q) use ($m_branch_id) {
-                $q->where("t_req_recruitment.m_branch_id", $m_branch_id);
+                if (is_array($m_branch_id)) {
+                    $q->whereIn("t_req_recruitment.m_branch_id", $m_branch_id);
+                } else {
+                    $q->where("t_req_recruitment.m_branch_id", $m_branch_id);
+                }
             });
     }
 
