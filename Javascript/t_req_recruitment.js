@@ -19,6 +19,35 @@ const modalLogOpen = ref(false)
 const dataLog = reactive({ items: [] })
 const tsId = `ts=` + (Date.parse(new Date()))
 
+// ------------------------------ PERSIAPAN
+const endpointApi = '/t_req_recruitment'
+onBeforeMount(() => {
+  document.title = 'Permintaan Karyawan (FPTK)'
+})
+
+//  @if( $id )------------------- VALUES FORM ! PENTING JANGAN DIHAPUS
+let initialValues = {}
+
+const values = reactive({
+  nomor: null,
+  tanggal: new Date().toISOString().slice(0, 10),
+  m_kary_id: store.user.data?.m_kary_id || null,
+  m_comp_id: null,
+  m_subcomp_id: null,
+  m_branch_id: null,
+  m_divisi_id: null,
+  m_dept_id: null,
+  m_posisi_id: null,
+  jumlah_kebutuhan: 1,
+  status_kary_id: null,
+  jenis_permintaan_id: null,
+  karyawan_digantikan_id: null,
+  tgl_dibutuhkan: null,
+  prioritas_id: null,
+  alasan: '',
+  status: 'DRAFT',
+  catatan_approval: ''
+})
 // ------------------------------ DAFTAR KARYAWAN DIGANTIKAN (MULTI / BULK SELECT)
 const jenisPermintaanList = ref([])
 const detailKaryawanDigantikan = ref([])
@@ -89,35 +118,6 @@ watch(() => values.m_divisi_id, (newVal, oldVal) => {
   }
 })
 
-// ------------------------------ PERSIAPAN
-const endpointApi = '/t_req_recruitment'
-onBeforeMount(() => {
-  document.title = 'Permintaan Karyawan (FPTK)'
-})
-
-//  @if( $id )------------------- VALUES FORM ! PENTING JANGAN DIHAPUS
-let initialValues = {}
-
-const values = reactive({
-  nomor: null,
-  tanggal: new Date().toISOString().slice(0, 10),
-  m_kary_id: store.user.data?.m_kary_id || null,
-  m_comp_id: null,
-  m_subcomp_id: null,
-  m_branch_id: null,
-  m_divisi_id: null,
-  m_dept_id: null,
-  m_posisi_id: null,
-  jumlah_kebutuhan: 1,
-  status_kary_id: null,
-  jenis_permintaan_id: null,
-  karyawan_digantikan_id: null,
-  tgl_dibutuhkan: null,
-  prioritas_id: null,
-  alasan: '',
-  status: 'DRAFT',
-  catatan_approval: ''
-})
 
 onBeforeMount(async () => {
   await loadJenisPermintaan()
@@ -371,8 +371,10 @@ onBeforeMount(async () => {
   if (rs) {
     const r = JSON.parse(rs)
     data.respo_id = r.id
-    data.subcomp_id = r.m_subcomp_id ?? r.subcomp_id ?? null
-    data.branch_id = r.m_branch_id ?? r.branch_id ?? null
+    let sub = r.m_subcomp_id ?? r.subcomp_id ?? null
+    let branch = r.m_branch_id ?? r.branch_id ?? null
+    data.subcomp_id = Array.isArray(sub) ? sub[0] : sub
+    data.branch_id = Array.isArray(branch) ? branch[0] : branch
   }
 
   if (data.respo_id) {
@@ -497,11 +499,104 @@ const landing = reactive({
     },
     {
       icon: 'location-arrow',
-      title: "Send Approval",
-      class: 'bg-rose-700 text-white',
+      title: "Post Data",
+      class: 'bg-rose-700 text-white rounded-lg',
       show: (row) => data.can_update && ['DRAFT', 'REVISED'].includes(row.status?.toUpperCase()),
-      click(row) {
-        router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
+      async click(row) {
+        swal.fire({
+          icon: 'warning',
+          text: 'Post Data Pengajuan Ini?',
+          iconColor: '#1469AE',
+          confirmButtonColor: '#1469AE',
+          showDenyButton: true,
+          denyButtonText: 'Batal'
+        }).then(async (res) => {
+          if (res.isConfirmed) {
+            try {
+              const dataURL = `${store.server.url_backend}/operation${endpointApi}/posted`
+              isRequesting.value = true
+              const resHttp = await fetch(dataURL, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'Application/json',
+                  Authorization: `${store.user.token_type} ${store.user.token}`
+                },
+                body: JSON.stringify({ id: row.id })
+              })
+              
+              const responseJson = await resHttp.json()
+              if (!resHttp.ok) {
+                throw new Error(responseJson.message || "Failed when trying to post data")
+              }
+              
+              swal.fire({
+                icon: 'success',
+                text: responseJson.message || 'Berhasil diposting!'
+              })
+            } catch (err) {
+              swal.fire({
+                icon: 'error',
+                iconColor: '#1469AE',
+                confirmButtonColor: '#1469AE',
+                text: err.message || err
+              })
+            } finally {
+              isRequesting.value = false
+              apiTable.value?.reload()
+            }
+          }
+        })
+      }
+    },
+    {
+      icon: 'location-arrow',
+      title: "Send In Approval",
+      class: 'bg-green-700 text-white rounded-lg',
+      show: (row) => data.can_update && ['POSTED'].includes(row.status?.toUpperCase()),
+      async click(row) {
+        swal.fire({
+          icon: 'warning',
+          text: 'Kirim data pengajuan ini?',
+          iconColor: '#1469AE',
+          confirmButtonColor: '#1469AE',
+          showDenyButton: true,
+          denyButtonText: 'Batal'
+        }).then(async (res) => {
+          if (res.isConfirmed) {
+            try {
+              const dataURL = `${store.server.url_backend}/operation${endpointApi}/send_approval`
+              isRequesting.value = true
+              const resHttp = await fetch(dataURL, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'Application/json',
+                  Authorization: `${store.user.token_type} ${store.user.token}`
+                },
+                body: JSON.stringify({ id: row.id })
+              })
+              
+              const responseJson = await resHttp.json()
+              if (!resHttp.ok) {
+                throw new Error(responseJson.message || responseJson.error || "Failed when trying to send in approval")
+              }
+              
+              swal.fire({
+                icon: 'success',
+                text: responseJson.message || 'Berhasil dikirim!'
+              })
+            } catch (err) {
+              swal.fire({
+                icon: 'error',
+                iconColor: '#1469AE',
+                confirmButtonColor: '#1469AE',
+                text: err.message || err
+              })
+            } finally {
+              isRequesting.value = false
+              apiTable.value?.reload()
+            }
+          }
+        })
       }
     },
     {

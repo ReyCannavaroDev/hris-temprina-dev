@@ -84,12 +84,21 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
     {
         $m_subcomp_id = request("m_subcomp_id") ?? null;
         $m_branch_id = request("m_branch_id") ?? null;
-
+        
+        \Log::info("scoperespo hit", ['subcomp' => $m_subcomp_id, 'branch' => $m_branch_id, 'url' => request()->fullUrl()]);
+        
         if ($m_subcomp_id === "null" || $m_subcomp_id === "undefined" || empty($m_subcomp_id)) {
             $m_subcomp_id = null;
         }
         if ($m_branch_id === "null" || $m_branch_id === "undefined" || empty($m_branch_id)) {
             $m_branch_id = null;
+        }
+
+        if (is_string($m_subcomp_id) && str_starts_with(trim($m_subcomp_id), '[')) {
+            $m_subcomp_id = json_decode($m_subcomp_id, true);
+        }
+        if (is_string($m_branch_id) && str_starts_with(trim($m_branch_id), '[')) {
+            $m_branch_id = json_decode($m_branch_id, true);
         }
 
         return $model
@@ -141,15 +150,62 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         return $this->helper->approvalCreateTicket($conf);
     }
 
+    public function custom_posted()
+    {
+        $id = request("id");
+        $data = $this->find($id);
+        if (!$data) {
+            return $this->helper->customResponse("Data tidak ditemukan", 404);
+        }
+        $data->update([
+            "status" => "POSTED"
+        ]);
+        return $this->helper->customResponse("Data berhasil diposting");
+    }
+
     public function custom_send_approval()
     {
+        $user = auth()->user();
+        
+        // AUTO-INJECT MASTER APPROVAL JIKA BELUM ADA DI DATABASE UNTUK CABANG USER INI
+        $master_app = \DB::table('m_approval')
+                        ->where('name', 'APPROVAL PERMINTAAN KARYAWAN')
+                        ->where('m_comp_id', $user->m_comp_id ?? 1)
+                        ->first();
+                        
+        if (!$master_app) {
+            $other_app = \DB::table('m_approval')->whereNotNull('m_menu_id')->first();
+            $m_approval_id = \DB::table('m_approval')->insertGetId([
+                'm_comp_id' => $user->m_comp_id ?? 1,
+                'm_dir_id'  => $user->m_dir_id ?? 1,
+                'm_menu_id' => $other_app ? $other_app->m_menu_id : 1,
+                'name'      => 'APPROVAL PERMINTAAN KARYAWAN',
+                'is_active' => 1,
+                'creator_id'=> $user->id ?? 1,
+                'created_at'=> \Carbon\Carbon::now(),
+            ]);
+
+            $hc_role = \DB::table('m_role')->where('name', 'ILIKE', '%HC%')->orWhere('name', 'ILIKE', '%Human%')->first();
+            $hc_role_id = $hc_role ? $hc_role->id : 1;
+
+            \DB::table('m_approval_det')->insert([
+                'm_approval_id' => $m_approval_id,
+                'm_role_id'     => $hc_role_id,
+                'level'         => 1,
+                'type'          => 'MENYETUJUI',
+                'name'          => 'HC APPROVAL',
+                'creator_id'    => $user->id ?? 1,
+                'created_at'    => \Carbon\Carbon::now(),
+            ]);
+        }
+
         $target_id = req("target_id");
         $user_target = $target_id ? default_users::where('m_kary_id', $target_id)->first()?->id : null;
 
         $app = $this->createAppTicket(req("id"), $user_target);
         if (!$app) {
             return $this->helper->customResponse(
-                "Terjadi kesalahan saat memproses approval, coba kembali nanti",
+                "Gagal membuat tiket approval. Hubungi admin.",
                 400
             );
         }
@@ -164,7 +220,7 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         }
 
         return $this->helper->customResponse(
-            "Permintaan approval berhasil dibuat"
+            "Permintaan approval berhasil dibuat dan notifikasi masuk ke Inbox HC"
         );
     }
 
