@@ -302,6 +302,12 @@ function onReset() {
   })
 }
 
+function onPrint(id = null) {
+  const targetId = id || route.params.id
+  if (!targetId || targetId === 'create') return
+  window.open(`${store.server.url_backend}/web/report_req_pelatihan?id=${targetId}&export=pdf`, '_blank')
+}
+
 async function posted() {
   const payload = {
     id: route.params.id
@@ -792,6 +798,15 @@ const landing = computed(() => {
         show: (row) => ['APPROVED', 'IN APPROVAL', 'HALF APPROVED', 'REVISED', 'REJECTED'].includes(row['status']) && data.can_read,
         click(row) {
           openModal(row.id)
+        }
+      },
+      {
+        icon: 'print',
+        title: "Cetak Surat Pengajuan",
+        class: 'bg-emerald-600 rounded-lg text-white',
+        show: (row) => data.can_read,
+        click(row) {
+          onPrint(row.id)
         }
       }
 

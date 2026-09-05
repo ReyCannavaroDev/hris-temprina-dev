@@ -189,11 +189,11 @@ Berdasarkan hasil meeting bersama klien tanggal 03 September 2026, terdapat 5 mo
   - [ ] Batasi pemilihan karyawan hanya mencakup bawahan langsung atasan dalam divisi yang bersangkutan.
 
 ### 📄 TAHAP 12: Printout & Pembenahan Label `t_req_pelatihan`
-- [ ] **[Blades/web_report_req_pelatihan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/web_report_req_pelatihan.blade.php)**:
-  - [ ] Tulis layout cetak surat pengajuan pelatihan resmi (HTML/CSS cetak A4).
-- [ ] **[Blades/t_req_pelatihan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_req_pelatihan.blade.php)** & **[Javascript/t_req_pelatihan.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_req_pelatihan.js)**:
+- [x] **[Blades/web_report_req_pelatihan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/web_report_req_pelatihan.blade.php)**:
+  - [x] Tulis layout cetak surat pengajuan pelatihan resmi (HTML/CSS cetak A4 bergaris mengadaptasi form standar HRD Temprina).
+- [x] **[Blades/t_req_pelatihan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_req_pelatihan.blade.php)** & **[Javascript/t_req_pelatihan.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_req_pelatihan.js)**:
   - [x] Ubah judul form menjadi "Form Pengajuan Pelatihan".
-  - [ ] Tambahkan tombol aksi `Print` yang membuka route web report pelatihan.
+  - [x] Tambahkan tombol aksi `Print` di landing table dan form view yang membuka route web report pelatihan.
 
 ### 🎯 TAHAP 13: Proteksi Duplikasi & Tampilan Peserta `t_efektifitas_pelatihan`
 - [ ] **[Models/t_efektifitas_pelatihan/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_efektifitas_pelatihan/Custom.php)**:

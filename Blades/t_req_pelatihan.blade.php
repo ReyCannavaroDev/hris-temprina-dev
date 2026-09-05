@@ -490,6 +490,15 @@
   <div class="flex flex-row items-center justify-end space-x-2 p-2">
     <i class="text-gray-500 text-[12px]">Tekan CTRL + S untuk shortcut Save Data</i>
     <button
+        type="button"
+        class="bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2 flex items-center space-x-1"
+        v-if="isRead"
+        @click="onPrint()"
+      >
+        <icon fa="print" />
+        <span>Cetak Surat</span>
+      </button>
+    <button
         class="bg-red-600 text-white font-semibold hover:bg-red-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
         v-show="actionText"
         @click="onReset(true)"
