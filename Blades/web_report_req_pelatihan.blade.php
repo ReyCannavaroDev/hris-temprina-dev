@@ -11,12 +11,15 @@
       ->leftJoin('m_subcomp as ms', 'ms.id', '=', 't.m_subcomp_id')
       ->leftJoin('m_branch as mb', 'mb.id', '=', 't.m_branch_id')
       ->leftJoin('default_users as u', 'u.id', '=', 't.creator_id')
+      ->leftJoin('m_kary as uk', 'uk.id', '=', 'u.m_kary_id')
+      ->leftJoin('m_divisi as ukd', 'ukd.id', '=', 'uk.m_divisi_id')
+      ->leftJoin('m_general as ukg_div', 'ukg_div.id', '=', 'ukd.name')
       ->where('t.id', $id)
       ->select(
           't.*',
           'mp.tema_pelatihan as program_nama',
           'mt.nama_trainer',
-          \DB::raw("COALESCE(mg_div.value, md.name_old, md.nomor, '-') as divisi_nama"),
+          \DB::raw("COALESCE(mg_div.value, md.name_old, md.nomor, ukg_div.value, ukd.name_old, ukd.nomor, '-') as divisi_nama"),
           'mc.name as comp_nama',
           'ms.name as subcomp_nama',
           'mb.name as branch_nama',
@@ -64,15 +67,14 @@
   });
   
   $appLogDisetujui = $logs->first(function($l) {
-      return in_array(strtoupper($l->action_type ?? ''), ['APPROVED', 'APPROVE', 'SUBMITTED', 'IN APPROVAL']);
+      return in_array(strtoupper($l->action_type ?? ''), ['APPROVED', 'APPROVE', 'SUBMITTED', 'IN APPROVAL', 'PROGRESS']);
   });
 
   $tglPengajuan = $data && !empty($data->created_at) ? date('d/m/Y', strtotime($data->created_at)) : date('d/m/Y');
   $tglMulai = $data && !empty($data->date_from) ? date('d/m/Y', strtotime($data->date_from)) : '-';
   $tglSelesai = $data && !empty($data->date_to) ? date('d/m/Y', strtotime($data->date_to)) : '-';
-@endphp
-@php
-  $logoBase64 = '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';
+
+  $logoBase64 = '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';
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -82,21 +84,18 @@
   <style>
     @page {
       size: A4 portrait;
-      margin: 10mm 12mm 10mm 12mm;
+      margin: 8mm 10mm 8mm 10mm;
     }
     body {
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 11px;
+      font-size: 10pt;
       color: #000;
       margin: 0;
       padding: 0;
       background-color: #fff;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
     }
     .print-container {
       width: 100%;
-      max-width: 190mm;
       margin: 0 auto;
     }
     .main-table {
@@ -108,193 +107,11 @@
       border: 1px solid #000;
       vertical-align: middle;
     }
-    
-    /* Header Styles */
-    .header-logo {
-      width: 25%;
-      padding: 8px 10px;
-      text-align: center;
-      border-right: 1px solid #000;
-    }
-    .logo-text-group {
-      display: inline-block;
-      text-align: left;
-    }
-    .logo-title {
-      font-size: 18px;
-      font-weight: 900;
-      color: #0070ba;
-      letter-spacing: -0.5px;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-    }
-    .logo-subtitle {
-      font-size: 8px;
-      font-weight: bold;
-      color: #1a4480;
-      display: flex;
-      align-items: center;
-      gap: 3px;
-      margin-top: 2px;
-    }
-    .logo-square-red { width: 5px; height: 5px; background: #e31b23; display: inline-block; }
-    .logo-square-yellow { width: 5px; height: 5px; background: #fdb813; display: inline-block; }
-    .logo-square-blue { width: 5px; height: 5px; background: #0070ba; display: inline-block; }
-
-    .header-title {
-      width: 50%;
-      text-align: center;
-      font-size: 13px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-      padding: 10px;
-      text-transform: uppercase;
-      border-right: 1px solid #000;
-    }
-    .header-meta {
-      width: 25%;
-      padding: 6px 8px;
-      font-size: 9.5px;
-      line-height: 1.5;
-    }
-    
-    /* Sub Header */
-    .sub-header-row td {
-      padding: 5px 10px;
-      font-size: 10px;
-      border-bottom: 1px solid #000;
-    }
-
-    /* Content Form Body */
-    .form-body {
-      padding: 10px 14px;
-    }
-    .field-table {
-      width: 100%;
-      border-collapse: collapse;
-      border: none;
-      margin-bottom: 8px;
-    }
-    .field-table td {
-      border: none !important;
-      padding: 4px 2px;
-      font-size: 10.5px;
-      vertical-align: top;
-    }
-    .field-label {
-      width: 220px;
-      font-weight: bold;
-      color: #111;
-    }
-    .field-separator {
-      width: 15px;
-      text-align: center;
-      font-weight: bold;
-    }
-    .field-value {
-      color: #000;
-    }
-
-    /* Peserta Table */
-    .peserta-section-title {
-      font-weight: bold;
-      font-size: 11px;
-      margin-top: 10px;
-      margin-bottom: 5px;
-      text-transform: uppercase;
-    }
-    .peserta-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 4px;
-      margin-bottom: 8px;
-    }
-    .peserta-table th {
-      border: 1px solid #000 !important;
-      background-color: #f0f0f0;
-      padding: 5px 4px;
-      font-size: 9.5px;
-      font-weight: bold;
-      text-align: center;
-      text-transform: uppercase;
-    }
-    .peserta-table td {
-      border: 1px solid #000 !important;
-      padding: 4.5px 6px;
-      font-size: 9.5px;
-    }
-
-    /* Signature Box (Footer) */
-    .footer-table {
-      width: 100%;
-      border-collapse: collapse;
-      border-top: 1px solid #000;
-    }
-    .footer-table td {
-      border: 1px solid #000;
-      text-align: center;
-      vertical-align: top;
-      padding: 4px;
-      font-size: 9.5px;
-    }
-    .sig-col-page { width: 18%; }
-    .sig-col { width: 27.33%; }
-    .sig-space {
-      height: 55px;
-    }
-    .sig-name {
-      font-weight: bold;
-      text-decoration: underline;
-    }
-    .sig-date {
-      font-size: 8.5px;
-      color: #555;
-    }
-
-    /* Print Action Bar */
-    .no-print {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #2d3748;
-      color: #fff;
-      padding: 10px 15px;
-      margin-bottom: 15px;
-      border-radius: 6px;
-    }
-    .btn-print {
-      background: #3182ce;
-      color: #fff;
-      border: none;
-      padding: 6px 14px;
-      font-weight: bold;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .btn-print:hover { background: #2b6cb0; }
-    
-    @media print {
-      .no-print { display: none !important; }
-      body { margin: 0; }
-      .print-container { max-width: 100%; }
-    }
   </style>
 </head>
 <body>
 
 <div class="print-container">
-
-  <!-- Action Bar (Hidden when printed) -->
-  <div class="no-print">
-    <div>
-      <strong>Cetak Formulir Pengajuan Pelatihan</strong> | No: {{ $data->kode ?? '-' }}
-    </div>
-    <div>
-      <button class="btn-print" onclick="window.print()">🖨️ Print / Simpan PDF</button>
-    </div>
-  </div>
 
   @if(!$data)
     <div style="border: 1px solid #e53e3e; background: #fff5f5; color: #c53030; padding: 20px; text-align: center; border-radius: 6px;">
@@ -303,42 +120,42 @@
     </div>
   @else
 
-  <!-- KOTAK SURAT UTAMA TEMPRINA -->
-  <table class="main-table">
+  <!-- KOTAK SURAT UTAMA TEMPRINA (FM-HRD-004) -->
+  <table class="main-table" width="100%" cellpadding="0" cellspacing="0">
     
     <!-- 1. HEADER 3 KOLOM -->
     <tr>
-      <td class="header-logo">
-        <img src="data:image/jpeg;base64,{{ $logoBase64 }}" alt="Logo Temprina" style="max-height: 44px; max-width: 140px; display: block; margin: 0 auto;">
+      <td style="width: 25%; text-align: center; vertical-align: middle; padding: 8px 10px; border-right: 1px solid #000; border-bottom: 1px solid #000;">
+        <img src="data:image/jpeg;base64,{{ $logoBase64 }}" alt="Logo Temprina" style="max-height: 46px; max-width: 140px; display: block; margin: 0 auto;">
       </td>
-      <td class="header-title">
+      <td style="width: 45%; text-align: center; vertical-align: middle; padding: 10px 5px; font-size: 13pt; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 0.5px;">
         FORM PENGAJUAN PELATIHAN
       </td>
-      <td class="header-meta">
-        <table style="width: 100%; border-collapse: collapse; border: none;">
+      <td style="width: 30%; vertical-align: middle; padding: 6px 10px; border-bottom: 1px solid #000;">
+        <table style="width: 100%; border: none; border-collapse: collapse;">
           <tr>
-            <td style="border: none; padding: 1px; width: 65px; font-weight: normal;">No. Form</td>
-            <td style="border: none; padding: 1px; width: 5px;">:</td>
-            <td style="border: none; padding: 1px; font-weight: bold;">FM-HRD-004</td>
+            <td style="width: 55px; border: none; padding: 1px 0; font-size: 9.5pt;">No. Form</td>
+            <td style="width: 8px; border: none; padding: 1px 0; font-size: 9.5pt;">:</td>
+            <td style="border: none; padding: 1px 0; font-weight: bold; font-size: 9.5pt;">FM-HRD-004</td>
           </tr>
           <tr>
-            <td style="border: none; padding: 1px; font-weight: normal;">No. Urut</td>
-            <td style="border: none; padding: 1px;">:</td>
-            <td style="border: none; padding: 1px; font-weight: bold;">{{ $data->kode ?? '-' }}</td>
+            <td style="width: 55px; border: none; padding: 1px 0; font-size: 9.5pt;">No. Urut</td>
+            <td style="width: 8px; border: none; padding: 1px 0; font-size: 9.5pt;">:</td>
+            <td style="border: none; padding: 1px 0; font-weight: bold; font-size: 9.5pt; white-space: nowrap;">{{ $data->kode ?? '-' }}</td>
           </tr>
         </table>
       </td>
     </tr>
 
     <!-- 2. SUB HEADER TANGGAL -->
-    <tr class="sub-header-row">
-      <td colspan="3">
-        <table style="width: 100%; border-collapse: collapse; border: none;">
+    <tr>
+      <td colspan="3" style="padding: 5px 12px; border-bottom: 1px solid #000; font-size: 9.5pt;">
+        <table style="width: 100%; border: none; border-collapse: collapse;">
           <tr>
-            <td style="border: none; padding: 0; width: 50%;">
+            <td style="width: 50%; border: none; padding: 0; font-size: 9.5pt;">
               <strong>Tanggal</strong> : {{ $tglPengajuan }}
             </td>
-            <td style="border: none; padding: 0; width: 50%; text-align: right;">
+            <td style="width: 50%; border: none; padding: 0; text-align: right; font-size: 9.5pt;">
               <strong>Rev. / Tgl</strong> : 00 / -
             </td>
           </tr>
@@ -348,90 +165,85 @@
 
     <!-- 3. BODY PENGISIAN FORM -->
     <tr>
-      <td colspan="3" style="padding: 12px 14px;">
+      <td colspan="3" style="padding: 10px 14px; border-bottom: 1px solid #000;">
         
-        <table class="field-table">
+        <table style="width: 100%; border: none; border-collapse: collapse; margin-bottom: 8px;">
           <tr>
-            <td class="field-label">Nama Pemohon</td>
-            <td class="field-separator">:</td>
-            <td class="field-value">{{ $data->creator_name ?? '-' }}</td>
+            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Nama Pemohon</td>
+            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $data->creator_name ?? '-' }}</td>
           </tr>
           <tr>
-            <td class="field-label">Divisi</td>
-            <td class="field-separator">:</td>
-            <td class="field-value">{{ $data->divisi_nama ?? '-' }}</td>
+            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Divisi</td>
+            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $data->divisi_nama ?? '-' }}</td>
           </tr>
           <tr>
-            <td class="field-label">Unit / Perusahaan</td>
-            <td class="field-separator">:</td>
-            <td class="field-value">
+            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Unit / Perusahaan</td>
+            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">
               {{ $data->comp_nama ?? 'PT Temprina Media Grafika' }}
               @if(!empty($data->branch_nama)) ({{ $data->branch_nama }}) @endif
             </td>
           </tr>
           <tr>
-            <td class="field-label">Tema / Program Pelatihan</td>
-            <td class="field-separator">:</td>
-            <td class="field-value"><strong>{{ $data->program_nama ?? '-' }}</strong></td>
+            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Tema / Program Pelatihan</td>
+            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 3.5px 0; font-size: 10pt; font-weight: bold;">{{ $data->program_nama ?? '-' }}</td>
           </tr>
           <tr>
-            <td class="field-label">Instruktur / Trainer</td>
-            <td class="field-separator">:</td>
-            <td class="field-value">{{ $data->nama_trainer ?? '-' }}</td>
+            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Instruktur / Trainer</td>
+            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $data->nama_trainer ?? '-' }}</td>
           </tr>
           <tr>
-            <td class="field-label">Tanggal Pelaksanaan</td>
-            <td class="field-separator">:</td>
-            <td class="field-value">
-              {{ $tglMulai }} s/d {{ $tglSelesai }}
-            </td>
+            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Tanggal Pelaksanaan</td>
+            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $tglMulai }} s/d {{ $tglSelesai }}</td>
           </tr>
           <tr>
-            <td class="field-label">Lokasi / Sarana Pelatihan</td>
-            <td class="field-separator">:</td>
-            <td class="field-value">{{ $data->sarana ?? '-' }}</td>
+            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Lokasi / Sarana Pelatihan</td>
+            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $data->sarana ?? '-' }}</td>
           </tr>
           <tr>
-            <td class="field-label">Tujuan / Alasan Pelatihan</td>
-            <td class="field-separator">:</td>
-            <td class="field-value">{{ $data->desc ?? '-' }}</td>
+            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Tujuan / Alasan Pelatihan</td>
+            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $data->desc ?? '-' }}</td>
           </tr>
           <tr>
-            <td class="field-label">Status Pengajuan</td>
-            <td class="field-separator">:</td>
-            <td class="field-value">
-              <span style="font-weight: bold; text-transform: uppercase;">{{ $data->status ?? 'DRAFT' }}</span>
-            </td>
+            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Status Pengajuan</td>
+            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 3.5px 0; font-size: 10pt; font-weight: bold;">{{ strtoupper($data->status ?? 'APPROVED') }}</td>
           </tr>
         </table>
 
-        <!-- DAFTAR PESERTA PELATIHAN -->
-        <div class="peserta-section-title">
-          Daftar Peserta Pelatihan (Total: {{ count($peserta) }} Orang) :
+        <!-- TABEL PESERTA PELATIHAN -->
+        <div style="font-weight: bold; font-size: 10pt; margin-top: 8px; margin-bottom: 4px; text-transform: uppercase;">
+          DAFTAR PESERTA PELATIHAN (TOTAL: {{ count($peserta) }} ORANG) :
         </div>
-        
-        <table class="peserta-table">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-top: 4px; margin-bottom: 6px;" cellpadding="4">
           <thead>
-            <tr>
-              <th style="width: 5%;">No</th>
-              <th style="width: 20%;">NIK</th>
-              <th style="width: 35%;">Nama Lengkap Karyawan</th>
-              <th style="width: 20%;">Divisi</th>
-              <th style="width: 20%;">Posisi / Jabatan</th>
+            <tr style="background-color: #f2f2f2;">
+              <th style="width: 6%; border: 1px solid #000; text-align: center; font-size: 9pt; font-weight: bold; text-transform: uppercase;">No</th>
+              <th style="width: 20%; border: 1px solid #000; text-align: center; font-size: 9pt; font-weight: bold; text-transform: uppercase;">NIK</th>
+              <th style="width: 34%; border: 1px solid #000; text-align: left; font-size: 9pt; font-weight: bold; text-transform: uppercase;">Nama Lengkap Karyawan</th>
+              <th style="width: 20%; border: 1px solid #000; text-align: left; font-size: 9pt; font-weight: bold; text-transform: uppercase;">Divisi</th>
+              <th style="width: 20%; border: 1px solid #000; text-align: left; font-size: 9pt; font-weight: bold; text-transform: uppercase;">Posisi / Jabatan</th>
             </tr>
           </thead>
           <tbody>
             @forelse($peserta as $idx => $p)
               <tr>
-                <td style="text-align: center;">{{ $idx + 1 }}</td>
-                <td style="text-align: center;">{{ $p->nik ?? '-' }}</td>
-                <td>{{ $p->nama_lengkap ?? '-' }}</td>
-                <td>{{ $p->peserta_divisi ?? '-' }}</td>
-                <td>{{ $p->peserta_posisi ?? '-' }}</td>
+                <td style="border: 1px solid #000; text-align: center; font-size: 9pt;">{{ $idx + 1 }}</td>
+                <td style="border: 1px solid #000; text-align: center; font-size: 9pt;">{{ $p->nik ?? '-' }}</td>
+                <td style="border: 1px solid #000; text-align: left; font-size: 9pt;">{{ $p->nama_lengkap ?? '-' }}</td>
+                <td style="border: 1px solid #000; text-align: left; font-size: 9pt;">{{ $p->peserta_divisi ?? '-' }}</td>
+                <td style="border: 1px solid #000; text-align: left; font-size: 9pt;">{{ $p->peserta_posisi ?? '-' }}</td>
               </tr>
             @empty
               <tr>
-                <td colspan="5" style="text-align: center; font-style: italic; color: #666; padding: 10px;">
+                <td colspan="5" style="border: 1px solid #000; text-align: center; font-style: italic; color: #666; font-size: 9pt; padding: 8px;">
                   Belum ada peserta pelatihan yang ditambahkan.
                 </td>
               </tr>
@@ -445,29 +257,29 @@
     <!-- 4. FOOTER APPROVAL (4 KOLOM) -->
     <tr>
       <td colspan="3" style="padding: 0;">
-        <table class="footer-table">
+        <table style="width: 100%; border-collapse: collapse; border: none;" cellpadding="3">
           <tr>
-            <td class="sig-col-page">
-              <div style="font-weight: bold; margin-bottom: 25px;">Halaman</div>
-              <div style="font-weight: bold; font-size: 11px;">1 / 1</div>
+            <td style="width: 18%; border-right: 1px solid #000; text-align: center; vertical-align: top; padding: 4px;">
+              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 24px;">Halaman</div>
+              <div style="font-weight: bold; font-size: 10pt;">1 / 1</div>
             </td>
-            <td class="sig-col">
-              <div style="font-weight: bold; margin-bottom: 5px;">Dibuat :</div>
-              <div class="sig-space"></div>
-              <div class="sig-name">({{ $data->creator_name ?? 'Pemohon' }})</div>
-              <div class="sig-date">Tgl: {{ $tglPengajuan }}</div>
+            <td style="width: 27.33%; border-right: 1px solid #000; text-align: center; vertical-align: top; padding: 4px;">
+              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 5px;">Dibuat :</div>
+              <div style="height: 48px;"></div>
+              <div style="font-weight: bold; text-decoration: underline; font-size: 9.5pt;">({{ $data->creator_name ?? 'Pemohon' }})</div>
+              <div style="font-size: 8.5pt; color: #444; margin-top: 2px;">Tgl: {{ $tglPengajuan }}</div>
             </td>
-            <td class="sig-col">
-              <div style="font-weight: bold; margin-bottom: 5px;">Disetujui :</div>
-              <div class="sig-space"></div>
-              <div class="sig-name">
+            <td style="width: 27.33%; border-right: 1px solid #000; text-align: center; vertical-align: top; padding: 4px;">
+              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 5px;">Disetujui :</div>
+              <div style="height: 48px;"></div>
+              <div style="font-weight: bold; text-decoration: underline; font-size: 9.5pt;">
                 @if($appLogDisetujui && !empty($appLogDisetujui->action_user))
                   ({{ $appLogDisetujui->action_user }})
                 @else
                   ( Atasan / Manager )
                 @endif
               </div>
-              <div class="sig-date">
+              <div style="font-size: 8.5pt; color: #444; margin-top: 2px;">
                 @if($appLogDisetujui && !empty($appLogDisetujui->action_at))
                   Tgl: {{ date('d/m/Y', strtotime($appLogDisetujui->action_at)) }}
                 @else
@@ -475,17 +287,17 @@
                 @endif
               </div>
             </td>
-            <td class="sig-col">
-              <div style="font-weight: bold; margin-bottom: 5px;">Diketahui :</div>
-              <div class="sig-space"></div>
-              <div class="sig-name">
+            <td style="width: 27.34%; text-align: center; vertical-align: top; padding: 4px;">
+              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 5px;">Diketahui :</div>
+              <div style="height: 48px;"></div>
+              <div style="font-weight: bold; text-decoration: underline; font-size: 9.5pt;">
                 @if($appLogApproved && !empty($appLogApproved->action_user))
                   ({{ $appLogApproved->action_user }})
                 @else
                   ( Human Capital / HRD )
                 @endif
               </div>
-              <div class="sig-date">
+              <div style="font-size: 8.5pt; color: #444; margin-top: 2px;">
                 @if($appLogApproved && !empty($appLogApproved->action_at))
                   Tgl: {{ date('d/m/Y', strtotime($appLogApproved->action_at)) }}
                 @else
