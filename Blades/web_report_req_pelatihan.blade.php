@@ -7,7 +7,6 @@
       ->leftJoin('m_trainer as mt', 'mt.id', '=', 't.trainer_id')
       ->leftJoin('m_divisi as md', 'md.id', '=', 't.m_divisi_id')
       ->leftJoin('m_general as mg_div', 'mg_div.id', '=', 'md.name')
-      ->leftJoin('m_dept as mdp', 'mdp.id', '=', 't.m_dept_id')
       ->leftJoin('m_comp as mc', 'mc.id', '=', 't.m_comp_id')
       ->leftJoin('m_subcomp as ms', 'ms.id', '=', 't.m_subcomp_id')
       ->leftJoin('m_branch as mb', 'mb.id', '=', 't.m_branch_id')
@@ -17,8 +16,7 @@
           't.*',
           'mp.tema_pelatihan as program_nama',
           'mt.nama_trainer',
-          \DB::raw("COALESCE(mg_div.value, md.nama, md.kode, '-') as divisi_nama"),
-          'mdp.nama as dept_nama',
+          \DB::raw("COALESCE(mg_div.value, md.name_old, md.nomor, '-') as divisi_nama"),
           'mc.name as comp_nama',
           'ms.name as subcomp_nama',
           'mb.name as branch_nama',
@@ -38,7 +36,7 @@
               'd.*',
               'k.nik',
               'k.nama_lengkap',
-              \DB::raw("COALESCE(kg_div.value, kd.nama, kd.kode, '-') as peserta_divisi"),
+              \DB::raw("COALESCE(kg_div.value, kd.name_old, kd.nomor, '-') as peserta_divisi"),
               'kp.desc_kerja as peserta_posisi'
           )
           ->orderBy('d.id', 'asc')
@@ -358,12 +356,9 @@
             <td class="field-value">{{ $data->creator_name ?? '-' }}</td>
           </tr>
           <tr>
-            <td class="field-label">Dept. / Divisi</td>
+            <td class="field-label">Divisi</td>
             <td class="field-separator">:</td>
-            <td class="field-value">
-              {{ $data->divisi_nama ?? '-' }} 
-              @if(!empty($data->dept_nama) && $data->dept_nama !== '-') / {{ $data->dept_nama }} @endif
-            </td>
+            <td class="field-value">{{ $data->divisi_nama ?? '-' }}</td>
           </tr>
           <tr>
             <td class="field-label">Unit / Perusahaan</td>
