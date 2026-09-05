@@ -37,25 +37,27 @@
               'k.nik',
               'k.nama_lengkap',
               \DB::raw("COALESCE(kg_div.value, kd.name_old, kd.nomor, '-') as peserta_divisi"),
-              'kp.desc_kerja as peserta_posisi'
+              'kp.name as peserta_posisi'
           )
           ->orderBy('d.id', 'asc')
           ->get();
   }
 
-  $logs = \DB::table('generate_approval_log')
+  $logs = \DB::table('generate_approval_log as l')
+      ->leftJoin('default_users as u', 'u.id', '=', 'l.action_user_id')
       ->where(function($q) use ($id, $data) {
-          $q->where('trx_id', $id);
+          $q->where('l.trx_id', $id);
           if ($data && !empty($data->kode)) {
-              $q->orWhere('trx_nomor', $data->kode);
+              $q->orWhere('l.trx_nomor', $data->kode);
           }
       })
       ->where(function($q) {
-          $q->where('form_name', 't_req_pelatihan')
-            ->orWhere('form_name', 't_request_pelatihan')
-            ->orWhere('trx_table', 't_request_pelatihan');
+          $q->where('l.form_name', 't_req_pelatihan')
+            ->orWhere('l.form_name', 't_request_pelatihan')
+            ->orWhere('l.trx_table', 't_request_pelatihan');
       })
-      ->orderBy('id', 'desc')
+      ->select('l.*', 'u.name as action_user')
+      ->orderBy('l.id', 'desc')
       ->get();
 
   $appLogApproved = $logs->first(function($l) {
