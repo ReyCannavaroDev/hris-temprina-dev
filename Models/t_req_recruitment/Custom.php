@@ -33,10 +33,26 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         $m_subcomp_id = $arrayData['m_subcomp_id'] ?? $kary?->m_subcomp_id ?? null;
         $m_comp_id = $arrayData['m_comp_id'] ?? $kary?->m_comp_id ?? auth()->user()->m_comp_id ?? null;
 
+        $user = auth()->user();
+        $is_hc = false;
+        if ($user) {
+            $is_hc = str_contains(strtolower($user->username), 'hc') || 
+                     str_contains(strtolower($user->name), 'hc') || 
+                     str_contains(strtolower($user->username), 'turikan') || 
+                     str_contains(strtolower($user->name), 'turikan') ||
+                     str_contains(strtolower($user->username), 'hrd') || 
+                     str_contains(strtolower($user->name), 'hrd');
+        }
+
+        $status = $arrayData['status'] ?? 'DRAFT';
+        if ($is_hc) {
+            $status = 'APPROVED';
+        }
+
         $newArrayData = array_merge( $arrayData, [
             'nomor'        => $this->helper->generateNomor('KODE PERMINTAAN KARYAWAN'),
             'tanggal'      => $arrayData['tanggal'] ?? date('Y-m-d'),
-            'status'       => $arrayData['status'] ?? 'DRAFT',
+            'status'       => $status,
             'm_kary_id'    => $m_kary_id,
             'm_comp_id'    => $m_comp_id,
             'm_subcomp_id' => $m_subcomp_id,
@@ -46,6 +62,21 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         return [
             "model"  => $model,
             "data"   => $newArrayData,
+        ];
+    }
+
+    public function updateBefore( $model, $arrayData, $metaData, $id=null )
+    {
+        if ($id) {
+            $oldData = $this->find($id);
+            if ($oldData && $oldData->status === 'REVISED') {
+                $arrayData['status'] = 'DRAFT';
+            }
+        }
+        
+        return [
+            "model"  => $model,
+            "data"   => $arrayData,
         ];
     }
 
@@ -82,6 +113,21 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
 
     public function scoperespo($model)
     {
+        $user = auth()->user();
+        if ($user) {
+            $is_hc = str_contains(strtolower($user->username), 'hc') || 
+                     str_contains(strtolower($user->name), 'hc') || 
+                     str_contains(strtolower($user->username), 'turikan') || 
+                     str_contains(strtolower($user->name), 'turikan') ||
+                     str_contains(strtolower($user->username), 'hrd') || 
+                     str_contains(strtolower($user->name), 'hrd');
+                     
+            // Jika user adalah HC, bebaskan filter cabang agar bisa melihat semua pengajuan FPTK
+            if ($is_hc) {
+                return $model;
+            }
+        }
+
         $m_subcomp_id = request("m_subcomp_id") ?? null;
         $m_branch_id = request("m_branch_id") ?? null;
         
@@ -161,6 +207,33 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
             "status" => "POSTED"
         ]);
         return $this->helper->customResponse("Data berhasil diposting");
+    }
+
+    public function custom_get_hc()
+    {
+        // Ambil semua user yang berbau HC atau HRD
+        $users = \DB::table('default_users')
+            ->where('username', 'ILIKE', '%hc%')
+            ->orWhere('name', 'ILIKE', '%hc%')
+            ->orWhere('username', 'ILIKE', '%turikan%') // Hardcode for testing since we know Turikan is HC
+            ->orWhere('name', 'ILIKE', '%turikan%')
+            ->orWhere('username', 'ILIKE', '%hrd%')
+            ->orWhere('name', 'ILIKE', '%hrd%')
+            ->select('m_kary_id', 'name', 'username')
+            ->get();
+            
+        // Jika tidak ketemu dengan pencarian teks, ambil semua user saja supaya user bisa pilih
+        if ($users->isEmpty()) {
+            $users = \DB::table('default_users')
+                ->whereNotNull('m_kary_id')
+                ->select('m_kary_id', 'name', 'username')
+                ->get();
+        }
+        
+        return response()->json([
+            'message' => 'Success',
+            'data' => $users
+        ]);
     }
 
     public function custom_send_approval()

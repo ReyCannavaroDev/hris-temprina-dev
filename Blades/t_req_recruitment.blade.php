@@ -292,6 +292,21 @@
             }" placeholder="Pilih Prioritas" label="Prioritas Kebutuhan" fa-icon="" :check="false" />
         </div>
 
+        <!-- TARGET HC APPROVAL -->
+        <div v-if="route.query.action?.toLowerCase() === 'verifikasi' || route.query.action?.toLowerCase() === 'edit'">
+          <FieldSelect :bind="{ disabled: false, clearable:true }" class="w-full !mt-1" :value="values.target_approval_id"
+            @input="v=>values.target_approval_id=v" :errorText="formErrors.target_approval_id?'failed':''"
+            :hints="formErrors.target_approval_id" valueField="m_kary_id" displayField="name" :api="{
+                url: `${store.server.url_backend}/operation/t_req_recruitment/get_hc`,
+                headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+                params: {
+                  simplest: true,
+                  transform: false,
+                  join: false
+                }
+            }" placeholder="Pilih Target HC Approval" label="Target HC Approval" fa-icon="" :check="false" />
+        </div>
+
         <!-- ALASAN KEBUTUHAN -->
         <div class="col-span-1 md:col-span-3">
           <FieldX type="textarea" label="Alasan / Justifikasi Permintaan Karyawan" :bind="{ readonly: !actionText }"

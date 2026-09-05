@@ -44,6 +44,7 @@ const values = reactive({
   karyawan_digantikan_id: null,
   tgl_dibutuhkan: null,
   prioritas_id: null,
+  target_approval_id: null,
   alasan: '',
   status: 'DRAFT',
   catatan_approval: ''
@@ -141,20 +142,52 @@ onBeforeMount(async () => {
     // READ DATA
     try {
       const editedId = route.params.id
-      const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
-      isRequesting.value = true
+      let dataURL = ''
+      
+      if (route.query.is_approval) {
+        // Fetch approval ticket detail
+        const dataURLAprv = `${store.server.url_backend}/operation${endpointApi}/detail?id=${editedId}`
+        isRequesting.value = true
+        const apiApp = await fetch(dataURLAprv, {
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          }
+        })
+        const resultJson = await apiApp.json()
+        
+        // Fetch transaction using trx_id from approval
+        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${resultJson.data.approval.trx_id}`, {
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          }
+        })
+        
+        if (!apiTrx.ok || !apiApp.ok) throw new Error("Gagal membaca data pengajuan")
+        
+        const resultTrxJson = await apiTrx.json()
+        values.approval = resultJson?.data.approval
+        values.trx = resultJson?.data.trx
+        values.datalog = resultJson?.data.approval_log
+        initialValues = resultTrxJson.data
+        
+      } else {
+        dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
+        isRequesting.value = true
 
-      const params = { join: false, transform: false }
-      const fixedParams = new URLSearchParams(params)
-      const res = await fetch(dataURL + '?' + fixedParams, {
-        headers: {
-          'Content-Type': 'Application/json',
-          Authorization: `${store.user.token_type} ${store.user.token}`
-        },
-      })
-      if (!res.ok) throw new Error("Gagal membaca data pengajuan")
-      const resultJson = await res.json()
-      initialValues = resultJson.data
+        const params = { join: false, transform: false }
+        const fixedParams = new URLSearchParams(params)
+        const res = await fetch(dataURL + '?' + fixedParams, {
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          },
+        })
+        if (!res.ok) throw new Error("Gagal membaca data pengajuan")
+        const resultJson = await res.json()
+        initialValues = resultJson.data
+      }
 
       for (const key in initialValues) {
         values[key] = initialValues[key]
@@ -263,9 +296,17 @@ async function onSave() {
 }
 
 async function onSendApproval() {
+  if (!values.target_approval_id) {
+    swal.fire({
+      icon: 'error',
+      text: 'Harap pilih Target HC Approval terlebih dahulu pada form di atas!'
+    })
+    return
+  }
+
   swal.fire({
     icon: 'warning',
-    text: 'Kirim pengajuan ini untuk approval?',
+    text: 'Kirim pengajuan ini untuk approval ke HC terpilih?',
     confirmButtonText: 'Ya, Kirim',
     showDenyButton: true,
     denyButtonText: 'Batal'
@@ -280,7 +321,7 @@ async function onSendApproval() {
             'Content-Type': 'Application/json',
             Authorization: `${store.user.token_type} ${store.user.token}`
           },
-          body: JSON.stringify({ id: route.params.id })
+          body: JSON.stringify({ id: route.params.id, target_id: values.target_approval_id })
         })
 
         const resultJson = await response.json()
@@ -553,50 +594,8 @@ const landing = reactive({
       title: "Send In Approval",
       class: 'bg-green-700 text-white rounded-lg',
       show: (row) => data.can_update && ['POSTED'].includes(row.status?.toUpperCase()),
-      async click(row) {
-        swal.fire({
-          icon: 'warning',
-          text: 'Kirim data pengajuan ini?',
-          iconColor: '#1469AE',
-          confirmButtonColor: '#1469AE',
-          showDenyButton: true,
-          denyButtonText: 'Batal'
-        }).then(async (res) => {
-          if (res.isConfirmed) {
-            try {
-              const dataURL = `${store.server.url_backend}/operation${endpointApi}/send_approval`
-              isRequesting.value = true
-              const resHttp = await fetch(dataURL, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'Application/json',
-                  Authorization: `${store.user.token_type} ${store.user.token}`
-                },
-                body: JSON.stringify({ id: row.id })
-              })
-              
-              const responseJson = await resHttp.json()
-              if (!resHttp.ok) {
-                throw new Error(responseJson.message || responseJson.error || "Failed when trying to send in approval")
-              }
-              
-              swal.fire({
-                icon: 'success',
-                text: responseJson.message || 'Berhasil dikirim!'
-              })
-            } catch (err) {
-              swal.fire({
-                icon: 'error',
-                iconColor: '#1469AE',
-                confirmButtonColor: '#1469AE',
-                text: err.message || err
-              })
-            } finally {
-              isRequesting.value = false
-              apiTable.value?.reload()
-            }
-          }
-        })
+      click(row) {
+        router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
       }
     },
     {
