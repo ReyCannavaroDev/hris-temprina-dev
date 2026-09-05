@@ -52,9 +52,8 @@
           }
       })
       ->where(function($q) {
-          $q->where('l.form_name', 't_req_pelatihan')
-            ->orWhere('l.form_name', 't_request_pelatihan')
-            ->orWhere('l.trx_table', 't_request_pelatihan');
+          $q->where('l.trx_table', 't_request_pelatihan')
+            ->orWhere('l.trx_name', 'like', '%Pelatihan%');
       })
       ->select('l.*', 'u.name as action_user')
       ->orderBy('l.id', 'desc')
