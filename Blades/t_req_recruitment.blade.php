@@ -3,60 +3,20 @@
 @verbatim
 <div class="bg-white p-1 rounded-md min-h-[520px] border-t-10 border-gray-500">
   <div class="flex justify-between items-center px-2.5 py-1">
-    <div class="flex flex-col md:flex-row md:items-center gap-y-2 md:gap-y-0 gap-x-4">
-      <p class="font-semibold">Filter Status:</p>
-
-      <!-- Dropdown Mobile -->
-      <div class="block md:hidden">
-        <select
-          @change="onStatusChange"
-          class="border rounded-md text-sm py-1 px-2.5 w-full"
-        >
-          <option value="">Semua Status</option>
-          <option value="1">DRAFT</option>
-          <option value="2">IN APPROVAL</option>
-          <option value="3">APPROVED</option>
-          <option value="4">REJECTED</option>
-        </select>
-      </div>
-
-      <!-- Button Desktop -->
-      <div class="hidden md:flex flex-wrap gap-2">
-        <button
-          @click="filterShowData('DRAFT', 1)"
-          :class="activeBtn === 1 
-            ? 'bg-gray-700 text-white' 
-            : 'border border-gray-700 text-gray-700 bg-white hover:bg-gray-700 hover:text-white'"
-          class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-          DRAFT
-        </button>
-
-        <button
-          @click="filterShowData('IN APPROVAL', 2)"
-          :class="activeBtn === 2 
-            ? 'bg-amber-600 text-white' 
-            : 'border border-amber-600 text-amber-600 bg-white hover:bg-amber-600 hover:text-white'"
-          class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-          IN APPROVAL
-        </button>
-
-        <button
-          @click="filterShowData('APPROVED', 3)"
-          :class="activeBtn === 3 
-            ? 'bg-green-600 text-white' 
-            : 'border border-green-600 text-green-600 bg-white hover:bg-green-600 hover:text-white'"
-          class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-          APPROVED
-        </button>
-
-        <button
-          @click="filterShowData('REJECTED', 4)"
-          :class="activeBtn === 4 
-            ? 'bg-red-600 text-white' 
-            : 'border border-red-600 text-red-600 bg-white hover:bg-red-600 hover:text-white'"
-          class="rounded-md text-sm py-1 px-3 transition-all duration-300">
-          REJECTED
-        </button>
+    <div class="flex items-center gap-x-4">
+      <p>Filter Status :</p>
+      <div class="gap-x-2 flex">
+        <button @click="filterShowData('DRAFT',1)" :class="activeBtn === 1?'bg-gray-600 text-white hover:bg-gray-400':'border border-gray-600 text-gray-600 bg-white  hover:bg-gray-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">DRAFT</button>
+        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
+        <button @click="filterShowData('POSTED',2)" :class="activeBtn === 2?'bg-green-600 text-white hover:bg-green-400':'border border-green-600 text-green-600 bg-white  hover:bg-green-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">POSTED</button>
+        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
+        <button @click="filterShowData('IN APPROVAL',3)" :class="activeBtn === 3?'bg-blue-600 text-white hover:bg-blue-400':'border border-blue-600 text-blue-600 bg-white  hover:bg-blue-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">IN APPROVAL</button>
+        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
+        <button @click="filterShowData('REVISED',4)" :class="activeBtn === 4?'bg-amber-600 text-white hover:bg-amber-400':'border border-amber-600 text-amber-600 bg-white  hover:bg-amber-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">REVISED</button>
+        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
+        <button @click="filterShowData('APPROVED',6)" :class="activeBtn === 6?'bg-green-600 text-white hover:bg-green-400':'border border-green-600 text-green-600 bg-white  hover:bg-green-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">APPROVED</button>
+        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
+        <button @click="filterShowData('REJECTED',7)" :class="activeBtn === 7?'bg-red-600 text-white hover:bg-red-400':'border border-red-600 text-red-600 bg-white  hover:bg-red-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">REJECTED</button>
       </div>
     </div>
 
@@ -71,22 +31,57 @@
   <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions" class="" />
 
   <!-- Modal Log Approval -->
-  <ModalX :open="modalLogOpen" @close="modalLogOpen = false" title="Riwayat Approval Permintaan Karyawan">
-    <div class="p-4">
-      <div v-if="dataLog.items && dataLog.items.length > 0" class="space-y-3">
-        <div v-for="(log, idx) in dataLog.items" :key="idx" class="border-b pb-2 flex justify-between items-center text-sm">
-          <div>
-            <p class="font-semibold text-gray-800">{{ log.action_type || 'APPROVAL' }}</p>
-            <p class="text-xs text-gray-500">{{ log.user?.name || log.action_user_name || 'User' }} - {{ log.action_note || 'Tidak ada catatan' }}</p>
+  <div v-show="modalLogOpen" class="fixed inset-0 flex items-center justify-center z-50">
+    <div class="modal-overlay fixed inset-0 bg-black opacity-50"></div>
+    <div class="modal-container bg-white w-[70%] mx-auto rounded shadow-lg z-50 overflow-y-auto">
+      <div class="modal-content py-4 text-left px-6">
+        <!-- Modal Header -->
+        <div class="modal-header flex items-center justify-between flex-wrap">
+          <div class="flex items-center">
+            <h3 class="text-xl font-semibold ml-2">Log Approval
+              <span v-if="!dataLog.items.length" class="!text-red-600"> | Belum ada log approval</span>
+            </h3>
           </div>
-          <span class="text-xs text-gray-400">{{ log.action_at || log.created_at }}</span>
+        </div>
+
+        <!-- Modal Body -->
+        <div v-if="dataLog.items.length" class="modal-body">
+          <table class="w-[100%] my-3 border">
+            <thead>
+              <tr class="border">
+                <td class="border px-2 py-1 font-medium ">Urutan</td>
+                <td class="border px-2 py-1 font-medium ">Nomor Transaksi</td>
+                <td class="border px-2 py-1 font-medium ">Tipe Aksi</td>
+                <td class="border px-2 py-1 font-medium ">Target</td>
+                <td class="border px-2 py-1 font-medium ">Tanggal Aksi</td>
+                <td class="border px-2 py-1 font-medium ">User Aksi</td>
+                <td class="border px-2 py-1 font-medium ">Catatan</td>
+              </tr>
+            </thead>
+            <tr class="border" v-for="d,i in dataLog.items" :key="i">
+              <td class="border px-2 py-1">{{ i+1 }}</td>
+              <td class="border px-2 py-1">{{ d.trx_nomor ?? '-' }}</td>
+              <td class="border px-2 py-1">{{ d.action_type ?? '-' }}</td>
+              <td class="border px-2 py-1">{{
+                Array.isArray(d.target_approval)
+                ? d.target_approval[0] ?? '-'
+                : d.target_approval ?? '-'
+                }}</td>
+              <td class="border px-2 py-1">{{ d.action_at ? d.action_at.replace(/-/g, '/') : '-' }}</td>
+              <td class="border px-2 py-1">{{ d.action_user ?? '-' }}</td>
+              <td class="border px-2 py-1">{{ d.action_note ?? '-' }}</td>
+            </tr>
+          </table>
+        </div>
+        <!-- Modal Footer -->
+        <div class="modal-footer flex justify-end mt-2">
+          <button @click="modalLogOpen = false" class="modal-buttona bg-yellow-500 hover:bg-yellow-600 text-white font-semibold ml-2 px-2 py-1 rounded-sm">
+            Tutup
+          </button>
         </div>
       </div>
-      <div v-else class="text-center py-6 text-gray-400">
-        Belum ada riwayat approval.
-      </div>
     </div>
-  </ModalX>
+  </div>
 </div>
 @endverbatim
 @else
@@ -409,14 +404,52 @@
     </div>
 
     <!-- BANNER FEEDBACK / CATATAN APPROVAL -->
-    <div v-if="route.query.is_approval || ['IN APPROVAL', 'APPROVED', 'REJECTED', 'REVISED'].includes(values.status)" class="bg-amber-50 p-5 border border-amber-200 rounded-xl">
+    <div v-if="route.query.is_approval || ['IN APPROVAL', 'APPROVED', 'REJECTED', 'REVISED'].includes(values.status)" 
+         :class="{
+            'bg-green-50 border-green-200': ['POSTED', 'APPROVED'].includes(values.status),
+            'bg-blue-50 border-blue-200': values.status === 'IN APPROVAL',
+            'bg-amber-50 border-amber-200': values.status === 'REVISED',
+            'bg-red-50 border-red-200': values.status === 'REJECTED',
+            'bg-gray-50 border-gray-200': !['POSTED', 'APPROVED', 'IN APPROVAL', 'REVISED', 'REJECTED'].includes(values.status)
+         }"
+         class="p-5 border rounded-xl">
       <div v-if="route.query.is_approval" class="max-w-2xl">
-        <label class="font-bold text-amber-900 block mb-2">Catatan Feedback / Approval <span class="text-red-500">*</span></label>
+        <label class="font-bold text-gray-800 block mb-2">Catatan Feedback / Approval <span class="text-sm font-normal text-gray-500">(Wajib jika Revisi / Reject)</span></label>
         <FieldX type="textarea" :bind="{ readonly: false }" class="w-full !mt-0" :value="values.catatan_approval" :errorText="formErrors.catatan_approval?'failed':''" @input="v=>values.catatan_approval=v" :hints="formErrors.catatan_approval" placeholder="Berikan alasan jika Revisi atau Reject..." :check="false" />
       </div>
-      <div v-else class="flex gap-4 items-center">
-        <div class="px-3 py-1 bg-amber-200 text-amber-800 rounded text-xs font-bold uppercase">{{ values.status }}</div>
-        <p class="text-sm text-amber-900"><span class="font-semibold">Status Pengajuan:</span> {{ values.status }}</p>
+      <div v-else class="flex flex-col gap-3">
+        <div class="flex gap-4 items-center">
+          <div :class="{
+                'bg-green-200 text-green-800': ['POSTED', 'APPROVED'].includes(values.status),
+                'bg-blue-200 text-blue-800': values.status === 'IN APPROVAL',
+                'bg-amber-200 text-amber-800': values.status === 'REVISED',
+                'bg-red-200 text-red-800': values.status === 'REJECTED',
+                'bg-gray-200 text-gray-800': !['POSTED', 'APPROVED', 'IN APPROVAL', 'REVISED', 'REJECTED'].includes(values.status)
+               }"
+               class="px-3 py-1 rounded text-xs font-bold uppercase">{{ values.status }}</div>
+          <p :class="{
+                'text-green-900': ['POSTED', 'APPROVED'].includes(values.status),
+                'text-blue-900': values.status === 'IN APPROVAL',
+                'text-amber-900': values.status === 'REVISED',
+                'text-red-900': values.status === 'REJECTED',
+                'text-gray-900': !['POSTED', 'APPROVED', 'IN APPROVAL', 'REVISED', 'REJECTED'].includes(values.status)
+             }"
+             class="text-sm"><span class="font-semibold">Status Pengajuan:</span> {{ values.status }}</p>
+        </div>
+        <div v-if="['REVISED', 'REJECTED'].includes(values.status)" class="w-full">
+          <label :class="{
+                'text-amber-900': values.status === 'REVISED',
+                'text-red-900': values.status === 'REJECTED'
+             }"
+             class="font-bold block mb-1">Catatan dari HC:</label>
+          <div :class="{
+                'border-amber-200 text-amber-900': values.status === 'REVISED',
+                'border-red-200 text-red-900': values.status === 'REJECTED'
+             }"
+             class="p-3 bg-white border rounded text-sm whitespace-pre-wrap">
+            {{ values.catatan_hc || '-' }}
+          </div>
+        </div>
       </div>
     </div>
   </div>

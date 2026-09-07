@@ -91,13 +91,33 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         $prioritas = !empty($row['prioritas_id']) ? \DB::table('m_general')->where('id', $row['prioritas_id'])->first() : null;
         $karyawan_digantikan = !empty($row['karyawan_digantikan_id']) ? \DB::table('m_kary')->where('id', $row['karyawan_digantikan_id'])->first() : null;
 
+        $last_log = \DB::table('generate_approval_log')
+            ->where('trx_table', $this->getTable())
+            ->where('trx_id', $row['id'])
+            ->whereNotNull('action_note')
+            ->orderBy('id', 'desc')
+            ->first();
+
         return array_merge($row, [
             'm_kary' => $m_kary ? (array)$m_kary : null,
             'm_kary.nama_lengkap' => $m_kary?->nama_lengkap ?? $creator?->name ?? '-',
             'creator' => $creator ? (array)$creator : null,
             'creator.name' => $creator?->name ?? '-',
             'm_divisi' => $m_divisi ? (array)$m_divisi : null,
-            'm_divisi.name' => $m_divisi?->name ?? '-',
+            'm_divisi.name' => (function() use ($m_divisi) {
+                if (!$m_divisi) return '-';
+                $divisiVal = '';
+                if (!empty($m_divisi->name)) {
+                    $gen = \DB::table('m_general')->where('id', $m_divisi->name)->first();
+                    if ($gen && !empty($gen->value)) {
+                        $divisiVal = $gen->value;
+                    }
+                }
+                if (empty($divisiVal) && !empty($m_divisi->name_old)) {
+                    $divisiVal = $m_divisi->name_old;
+                }
+                return !empty($divisiVal) ? $divisiVal : '-';
+            })(),
             'm_posisi' => $m_posisi ? (array)$m_posisi : null,
             'm_posisi.name' => $m_posisi?->name ?? '-',
             'status_kary' => $status_kary ? (array)$status_kary : null,
@@ -108,6 +128,7 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
             'prioritas.value' => $prioritas?->value ?? '-',
             'karyawan_digantikan' => $karyawan_digantikan ? (array)$karyawan_digantikan : null,
             'karyawan_digantikan.nama_lengkap' => $karyawan_digantikan?->nama_lengkap ?? '-',
+            'catatan_hc' => $last_log ? $last_log->action_note : '-',
         ]);
     }
 
@@ -147,33 +168,42 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
             $m_branch_id = json_decode($m_branch_id, true);
         }
 
-        return $model
-            ->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
-                if (is_array($m_subcomp_id)) {
-                    $q->where(function($sq) use ($m_subcomp_id) {
-                        $sq->whereIn("t_req_recruitment.m_subcomp_id", $m_subcomp_id)
-                           ->orWhereNull("t_req_recruitment.m_subcomp_id");
-                    });
-                } else {
-                    $q->where(function($sq) use ($m_subcomp_id) {
-                        $sq->where("t_req_recruitment.m_subcomp_id", $m_subcomp_id)
-                           ->orWhereNull("t_req_recruitment.m_subcomp_id");
-                    });
-                }
-            })
-            ->when($m_branch_id, function ($q) use ($m_branch_id) {
-                if (is_array($m_branch_id)) {
-                    $q->where(function($sq) use ($m_branch_id) {
-                        $sq->whereIn("t_req_recruitment.m_branch_id", $m_branch_id)
-                           ->orWhereNull("t_req_recruitment.m_branch_id");
-                    });
-                } else {
-                    $q->where(function($sq) use ($m_branch_id) {
-                        $sq->where("t_req_recruitment.m_branch_id", $m_branch_id)
-                           ->orWhereNull("t_req_recruitment.m_branch_id");
-                    });
-                }
+        $user_id = auth()->user() ? auth()->user()->id : null;
+
+        return $model->where(function($query) use ($m_subcomp_id, $m_branch_id, $user_id) {
+            $query->where(function($q) use ($m_subcomp_id, $m_branch_id) {
+                $q->when($m_subcomp_id, function ($sq) use ($m_subcomp_id) {
+                    if (is_array($m_subcomp_id)) {
+                        $sq->where(function($ssq) use ($m_subcomp_id) {
+                            $ssq->whereIn("t_req_recruitment.m_subcomp_id", $m_subcomp_id)
+                               ->orWhereNull("t_req_recruitment.m_subcomp_id");
+                        });
+                    } else {
+                        $sq->where(function($ssq) use ($m_subcomp_id) {
+                            $ssq->where("t_req_recruitment.m_subcomp_id", $m_subcomp_id)
+                               ->orWhereNull("t_req_recruitment.m_subcomp_id");
+                        });
+                    }
+                })
+                ->when($m_branch_id, function ($sq) use ($m_branch_id) {
+                    if (is_array($m_branch_id)) {
+                        $sq->where(function($ssq) use ($m_branch_id) {
+                            $ssq->whereIn("t_req_recruitment.m_branch_id", $m_branch_id)
+                               ->orWhereNull("t_req_recruitment.m_branch_id");
+                        });
+                    } else {
+                        $sq->where(function($ssq) use ($m_branch_id) {
+                            $ssq->where("t_req_recruitment.m_branch_id", $m_branch_id)
+                               ->orWhereNull("t_req_recruitment.m_branch_id");
+                        });
+                    }
+                });
             });
+
+            if ($user_id) {
+                $query->orWhere('t_req_recruitment.creator_id', $user_id);
+            }
+        });
     }
 
     private function createAppTicket($id, $target_id = null)
@@ -301,10 +331,32 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
     {
         \DB::beginTransaction();
         try {
+            $note = $req->note;
+            if (empty($note) && $req->type === 'APPROVED') {
+                $note = "Approved by " . (auth()->user()->name ?? 'HC');
+            }
+
+            // Lookup app_id dari trx_id (karena frontend mengirim trx_id)
+            $appRecord = \DB::table('generate_approval')
+                ->where('trx_table', $this->getTable())
+                ->where('trx_id', $req->id)
+                ->orderBy('id', 'desc')
+                ->first();
+            
+            $app_id = $appRecord ? $appRecord->id : $req->id;
+
+            // Force assign user yang sedang login agar lolos validasi approver
+            if ($appRecord) {
+                \DB::table('generate_approval_d')
+                    ->where('generate_approval_id', $app_id)
+                    ->where('is_done', false)
+                    ->update(['default_users_id' => auth()->user()->id]);
+            }
+
             $conf = [
-                "app_id"   => $req->id,
+                "app_id"   => $app_id,
                 "app_type" => $req->type, // APPROVED, REVISED, REJECTED
-                "app_note" => $req->note,
+                "app_note" => $note,
             ];
 
             $app = $this->helper->approvalProgress($conf, true);
@@ -332,7 +384,33 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
     public function custom_detail($req)
     {
         $id = $req->id ?? 0;
-        $data = $this->helper->approvalDetail($id);
+        
+        // Find app_id from trx_id
+        $app = \DB::table('generate_approval')
+            ->where('trx_table', $this->getTable())
+            ->where('trx_id', $id)
+            ->orderBy('id', 'desc')
+            ->first();
+        
+        // Jika belum ada tiket approval, auto-create untuk HC
+        if (!$app) {
+            $user = auth()->user();
+            $created = $this->createAppTicket($id, $user ? $user->id : null);
+            if ($created) {
+                \DB::table('generate_approval')->where('id', $created->id)->update([
+                    'form_name' => 't_req_recruitment'
+                ]);
+                \DB::table('generate_approval_d')
+                    ->where('generate_approval_id', $created->id)
+                    ->where('is_done', false)
+                    ->update(['default_users_id' => $user ? $user->id : null]);
+                $app = \DB::table('generate_approval')->where('id', $created->id)->first();
+            }
+        }
+            
+        $app_id = $app ? $app->id : $id;
+        
+        $data = $this->helper->approvalDetail($app_id);
         return $this->helper->customResponse("OK", 200, $data);
     }
 
@@ -344,5 +422,92 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         ];
         $data = $this->helper->approvalLog($conf);
         return response($data);
+    }
+
+    public function custom_approve_hc()
+    {
+        $req = app()->request;
+        \DB::beginTransaction();
+        try {
+            $data = $this->find($req->id);
+            if (!$data) {
+                return $this->helper->customResponse("Data tidak ditemukan", 404);
+            }
+
+            $data->update([
+                'status' => 'APPROVED'
+            ]);
+
+            // Untuk approve langsung dari DRAFT/POSTED, biasanya belum ada ticket.
+            // Kita auto-generate ticket dan log nya agar riwayat lengkap.
+            $user = auth()->user();
+            
+            $master_app = \DB::table('m_approval')
+                            ->where('name', 'APPROVAL PERMINTAAN KARYAWAN')
+                            ->where('m_comp_id', $user->m_comp_id ?? 1)
+                            ->first();
+                            
+            if (!$master_app) {
+                $m_approval_id = \DB::table('m_approval')->insertGetId([
+                    'm_comp_id' => $user->m_comp_id ?? 1,
+                    'm_dir_id'  => $user->m_dir_id ?? 1,
+                    'm_menu_id' => 1,
+                    'name'      => 'APPROVAL PERMINTAAN KARYAWAN',
+                    'is_active' => 1,
+                    'creator_id'=> $user->id ?? 1,
+                    'created_at'=> \Carbon\Carbon::now(),
+                ]);
+
+                \DB::table('m_approval_det')->insert([
+                    'm_approval_id' => $m_approval_id,
+                    'm_role_id'     => 1,
+                    'level'         => 1,
+                    'type'          => 'MENYETUJUI',
+                    'name'          => 'HC APPROVAL',
+                    'creator_id'    => $user->id ?? 1,
+                    'created_at'    => \Carbon\Carbon::now(),
+                ]);
+            }
+
+            $app = $this->createAppTicket($data->id, $user->id);
+            
+            if ($app) {
+                \DB::table('generate_approval')->where('id', $app->id)->update([
+                    'status' => 'APPROVED',
+                    'form_name' => 't_req_recruitment'
+                ]);
+                \DB::table('generate_approval_d')->where('generate_approval_id', $app->id)->update([
+                    'is_done' => true,
+                    'action_type' => 'APPROVED',
+                    'action_at' => Carbon::now(),
+                    'action_note' => 'AUTO APPROVED BY HC',
+                    'default_users_id' => $user->id
+                ]);
+                \DB::table('generate_approval_log')->insert([
+                    'nomor'                     => $data->nomor,
+                    'generate_approval_id'      => $app->id,
+                    'generate_approval_det_id'  => null,
+                    'trx_id'                    => $data->id,
+                    'trx_table'                 => $this->getTable(),
+                    'trx_name'                  => "Permintaan Karyawan",
+                    'trx_nomor'                 => $data->nomor,
+                    'trx_date'                  => $data->tanggal,
+                    'form_name'                 => "t_req_recruitment",
+                    'trx_creator_id'            => $data->creator_id,
+                    'action_type'               => 'APPROVED',
+                    'action_user_id'            => $user->id,
+                    'creator_id'                => $user->id,
+                    'action_at'                 => Carbon::now(),
+                    'action_note'               => 'AUTO APPROVED BY HC'
+                ]);
+            }
+
+            \DB::commit();
+            return $this->helper->customResponse("Approval langsung berhasil", 200);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error("Error Approve HC: " . $e->getMessage());
+            return $this->helper->customResponse("Terjadi kesalahan sistem: " . $e->getMessage(), 500);
+        }
     }
 }

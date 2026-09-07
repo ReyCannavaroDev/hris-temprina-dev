@@ -129,9 +129,13 @@ onBeforeMount(async () => {
     try {
       const respoValues = JSON.parse(respoData)
       if (!isRead) {
-        values.m_comp_id = respoValues.m_comp_id ?? respoValues.comp_id ?? null
-        values.m_subcomp_id = respoValues.m_subcomp_id ?? respoValues.subcomp_id ?? null
-        values.m_branch_id = respoValues.m_branch_id ?? respoValues.branch_id ?? null
+        let sub = respoValues.m_subcomp_id ?? respoValues.subcomp_id ?? null
+        let branch = respoValues.m_branch_id ?? respoValues.branch_id ?? null
+        let comp = respoValues.m_comp_id ?? respoValues.comp_id ?? null
+        
+        values.m_comp_id = Array.isArray(comp) ? comp[0] : (typeof comp === 'string' && comp.startsWith('[') ? JSON.parse(comp)[0] : comp)
+        values.m_subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
+        values.m_branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
       }
     } catch (e) {
       console.error(e)
@@ -156,20 +160,21 @@ onBeforeMount(async () => {
         })
         const resultJson = await apiApp.json()
         
-        // Fetch transaction using trx_id from approval
-        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${resultJson.data.approval.trx_id}`, {
+        // Fetch transaction using trx_id from approval, fallback to editedId
+        const trxId = resultJson?.data?.approval?.trx_id || editedId
+        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${trxId}`, {
           headers: {
             'Content-Type': 'Application/json',
             Authorization: `${store.user.token_type} ${store.user.token}`
           }
         })
         
-        if (!apiTrx.ok || !apiApp.ok) throw new Error("Gagal membaca data pengajuan")
+        if (!apiTrx.ok) throw new Error("Gagal membaca data pengajuan")
         
         const resultTrxJson = await apiTrx.json()
-        values.approval = resultJson?.data.approval
-        values.trx = resultJson?.data.trx
-        values.datalog = resultJson?.data.approval_log
+        values.approval = resultJson?.data?.approval
+        values.trx = resultJson?.data?.trx
+        values.datalog = resultJson?.data?.approval_log
         initialValues = resultTrxJson.data
         
       } else {
@@ -414,8 +419,8 @@ onBeforeMount(async () => {
     data.respo_id = r.id
     let sub = r.m_subcomp_id ?? r.subcomp_id ?? null
     let branch = r.m_branch_id ?? r.branch_id ?? null
-    data.subcomp_id = Array.isArray(sub) ? sub[0] : sub
-    data.branch_id = Array.isArray(branch) ? branch[0] : branch
+    data.subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
+    data.branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
   }
 
   if (data.respo_id) {
@@ -539,10 +544,19 @@ const landing = reactive({
       }
     },
     {
+      icon: 'copy',
+      title: "Copy",
+      class: 'bg-gray-600 text-light-100',
+      show: (row) => data.can_create,
+      click(row) {
+        router.push(`${route.path}/${row.id}?action=Copy&` + tsId)
+      }
+    },
+    {
       icon: 'location-arrow',
       title: "Post Data",
       class: 'bg-rose-700 text-white rounded-lg',
-      show: (row) => data.can_update && ['DRAFT', 'REVISED'].includes(row.status?.toUpperCase()),
+      show: (row) => data.can_update && ['DRAFT'].includes(row.status?.toUpperCase()),
       async click(row) {
         swal.fire({
           icon: 'warning',
@@ -593,14 +607,78 @@ const landing = reactive({
       icon: 'location-arrow',
       title: "Send In Approval",
       class: 'bg-green-700 text-white rounded-lg',
-      show: (row) => data.can_update && ['POSTED'].includes(row.status?.toUpperCase()),
+      show: (row) => {
+        const isHc = store.user?.data?.username?.toLowerCase().includes('hc') || 
+                     store.user?.data?.name?.toLowerCase().includes('hc') || 
+                     store.user?.data?.username?.toLowerCase().includes('turikan') || 
+                     store.user?.data?.username?.toLowerCase().includes('hrd');
+        return data.can_update && !isHc && ['POSTED'].includes(row.status?.toUpperCase());
+      },
       click(row) {
         router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
       }
     },
     {
+      icon: 'check',
+      title: "Approval",
+      class: 'bg-emerald-600 text-white rounded-lg',
+      show: (row) => {
+        const isHc = store.user?.data?.username?.toLowerCase().includes('hc') || 
+                     store.user?.data?.name?.toLowerCase().includes('hc') || 
+                     store.user?.data?.username?.toLowerCase().includes('turikan') || 
+                     store.user?.data?.username?.toLowerCase().includes('hrd');
+        return data.can_update && isHc && ['IN APPROVAL'].includes(row.status?.toUpperCase());
+      },
+      click(row) {
+        router.push(`${route.path}/${row.id}?is_approval=true&` + tsId)
+      }
+    },
+    {
+      icon: 'check-circle',
+      title: "Approve Langsung (HC)",
+      class: 'bg-teal-600 text-white rounded-lg',
+      show: (row) => {
+        const isHc = store.user?.data?.username?.toLowerCase().includes('hc') || 
+                     store.user?.data?.name?.toLowerCase().includes('hc') || 
+                     store.user?.data?.username?.toLowerCase().includes('turikan') || 
+                     store.user?.data?.username?.toLowerCase().includes('hrd');
+        return data.can_update && isHc && ['DRAFT', 'POSTED'].includes(row.status?.toUpperCase());
+      },
+      async click(row) {
+        swal.fire({
+          icon: 'warning',
+          text: 'Langsung Approve data ini?',
+          showDenyButton: true,
+          confirmButtonText: 'Ya, Approve'
+        }).then(async (res) => {
+          if (res.isConfirmed) {
+            try {
+              const dataURL = `${store.server.url_backend}/operation${endpointApi}/approve_hc`
+              isRequesting.value = true
+              const resHttp = await fetch(dataURL, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'Application/json',
+                  Authorization: `${store.user.token_type} ${store.user.token}`
+                },
+                body: JSON.stringify({ id: row.id })
+              })
+              const responseJson = await resHttp.json()
+              if (!resHttp.ok) throw new Error(responseJson.message)
+              swal.fire({ icon: 'success', text: responseJson.message || 'Berhasil di-Approve!' })
+            } catch (err) {
+              swal.fire({ icon: 'error', text: err.message || err })
+            } finally {
+              isRequesting.value = false
+              apiTable.value?.reload()
+            }
+          }
+        })
+      }
+    },
+    {
       icon: 'history',
-      title: "Riwayat Approval",
+      title: "Log Approval",
       class: 'bg-purple-600 text-white',
       show: (row) => row.status?.toUpperCase() !== 'DRAFT',
       async click(row) {
@@ -633,7 +711,7 @@ const landing = reactive({
       join: false,
       transform: true,
       scopes: 'respo',
-      ...(statusFilter.value ? { where: statusFilter.value } : {})
+      where: statusFilter.value || null
     })),
     onsuccess(response) {
       response.page = response.current_page
@@ -652,6 +730,12 @@ const landing = reactive({
       cellClass: ['justify-center', 'bg-gray-50', 'border-r', '!border-gray-200']
     },
     {
+      headerName: "ID",
+      field: 'id',
+      sort: 'desc',
+      hide: true
+    },
+    {
       headerName: "Nomor",
       field: 'nomor',
       filter: 'ColFilter',
@@ -663,6 +747,7 @@ const landing = reactive({
     {
       headerName: "Tanggal",
       field: 'tanggal',
+      valueFormatter: (params) => params.value ? params.value.replace(/-/g, '/') : '-',
       filter: 'ColFilter',
       sortable: true,
       width: 120,
@@ -682,7 +767,24 @@ const landing = reactive({
     {
       headerName: "Divisi",
       field: 'm_divisi.name',
-      valueGetter: (params) => params.data?.['m_divisi.name'] || params.data?.m_divisi?.name || '-',
+      valueGetter: (params) => {
+        let name = params.data?.['m_divisi.name'] || params.data?.m_divisi?.name;
+        if (!name || name === '-') {
+           return params.data?.m_divisi_id ? `ID: ${params.data.m_divisi_id}` : '-';
+        }
+        if (typeof name === 'string' && name.startsWith('{')) {
+          try {
+            name = JSON.parse(name).value || name;
+          } catch(e){}
+        } else if (typeof name === 'object' && name !== null) {
+          name = name.value || name.label || name.name || name;
+        }
+        // Fallback to name or m_divisi_id if name equals the ID
+        if (name == params.data?.m_divisi_id) {
+           return `ID: ${name}`; 
+        }
+        return name;
+      },
       filter: 'ColFilter',
       sortable: true,
       flex: 1,
@@ -712,6 +814,7 @@ const landing = reactive({
     {
       headerName: "Tgl Dibutuhkan",
       field: 'tgl_dibutuhkan',
+      valueFormatter: (params) => params.value ? params.value.replace(/-/g, '/') : '-',
       filter: 'ColFilter',
       sortable: true,
       width: 140,
@@ -727,20 +830,17 @@ const landing = reactive({
       width: 140,
       cellClass: ['border-r', '!border-gray-200', 'justify-center'],
       cellRenderer: (params) => {
-        const status = (params.value || '').toUpperCase()
-        const colorMap = {
-          'DRAFT': 'text-gray-700 bg-gray-100',
-          'IN APPROVAL': 'text-amber-700 bg-amber-100',
-          'APPROVED': 'text-green-700 bg-green-100',
-          'REJECTED': 'text-red-700 bg-red-100',
-          'REVISED': 'text-blue-700 bg-blue-100'
-        }
-        const colorClass = colorMap[status] || 'text-gray-700 bg-gray-100'
-        return `
-          <span class="px-2 py-1 rounded-md text-xs font-semibold ${colorClass}">
-            ${params.value || 'DRAFT'}
-          </span>
-        `
+        const value = (params.value || '').toUpperCase()
+        let color = 'gray'
+        if (value == 'POSTED' || value == 'APPROVED')
+          color = 'green'
+        else if (value == 'IN APPROVAL')
+          color = 'blue'
+        else if (value == 'REVISED')
+          color = 'yellow'
+        else if (value == 'REJECTED')
+          color = 'red'
+        return `<span class="text-${color}-500 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">${value}</span>`
       }
     }
   ]
