@@ -189,11 +189,11 @@
 
     <!-- 2. SUB HEADER TANGGAL (TANPA NESTED TABLE AGAR TIDAK KEPOTONG DI TCPDF) -->
     <tr>
-      <td colspan="2" style="padding: 6px 14px; border-bottom: 1px solid #000; border-right: none; font-size: 9.5pt; background-color: #fafafa; line-height: 1.5; vertical-align: middle;">
-        <strong>Tanggal Cetak :</strong> &nbsp;{{ $tglCetak }}
+      <td colspan="2" style="padding: 7px 16px; border-bottom: 1px solid #000; border-right: none; font-size: 9.5pt; background-color: #fafafa; line-height: 1.5; vertical-align: middle;">
+        &nbsp;<strong>Tanggal Cetak :</strong> &nbsp;{{ $tglCetak }}
       </td>
-      <td style="padding: 6px 14px; border-bottom: 1px solid #000; border-left: none; text-align: right; font-size: 9.5pt; background-color: #fafafa; line-height: 1.5; vertical-align: middle;">
-        <strong>Rev. / Tgl :</strong> &nbsp;00 / -
+      <td style="padding: 7px 20px; border-bottom: 1px solid #000; border-left: none; text-align: right; font-size: 9.5pt; background-color: #fafafa; line-height: 1.5; vertical-align: middle;">
+        <strong>Rev. / Tgl :</strong> &nbsp;00 / -&nbsp;&nbsp;&nbsp;
       </td>
     </tr>
 
