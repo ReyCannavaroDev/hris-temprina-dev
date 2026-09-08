@@ -132,11 +132,12 @@
   <style>
     @page {
       size: A4 portrait;
-      margin: 8mm 10mm 8mm 10mm;
+      margin: 12mm 14mm 12mm 14mm;
     }
     body {
       font-family: Arial, Helvetica, sans-serif;
       font-size: 10pt;
+      line-height: 1.4;
       color: #000;
       margin: 0;
       padding: 0;
@@ -149,7 +150,7 @@
     .main-table {
       width: 100%;
       border-collapse: collapse;
-      border: 1.5px solid #000;
+      border: 1px solid #000;
     }
     .main-table td, .main-table th {
       border: 1px solid #000;
@@ -162,9 +163,9 @@
 <div class="print-container">
 
   @if(!$data)
-    <div style="border: 1px solid #e53e3e; background: #fff5f5; color: #c53030; padding: 20px; text-align: center; border-radius: 6px;">
-      <h3>Data Pengajuan Pelatihan Tidak Ditemukan</h3>
-      <p>Silakan periksa kembali parameter ID transaksi yang diberikan.</p>
+    <div style="border: 1px solid #e53e3e; background: #fff5f5; color: #c53030; padding: 24px; text-align: center; border-radius: 6px;">
+      <h3 style="margin-bottom: 8px;">Data Pengajuan Pelatihan Tidak Ditemukan</h3>
+      <p style="margin: 0;">Silakan periksa kembali parameter ID transaksi yang diberikan.</p>
     </div>
   @else
 
@@ -173,27 +174,29 @@
     
     <!-- 1. HEADER 3 KOLOM -->
     <tr>
-      <td style="width: 25%; text-align: center; vertical-align: middle; padding: 8px 10px; border-right: 1px solid #000; border-bottom: 1px solid #000;">
+      <td style="width: 26%; text-align: center; vertical-align: middle; padding: 10px 8px; border-right: 1px solid #000; border-bottom: 1px solid #000;">
         @if(!empty($logoPath) && file_exists($logoPath))
-          <img src="{{ $logoPath }}" alt="Logo Temprina" style="max-height: 48px; max-width: 140px; display: block; margin: 0 auto; object-fit: contain;">
+          <div style="text-align: center; padding: 4px 0;">
+            <img src="{{ $logoPath }}" alt="Logo Temprina" height="36" border="0" style="height: 36px; max-width: 130px;">
+          </div>
         @else
           <div style="font-size: 13pt; font-weight: bold; color: #1e3a8a; line-height: 1.1;">TEMPRINA<br><span style="font-size: 8pt; color: #374151; font-weight: normal;">MEDIA GRAFIKA</span></div>
         @endif
       </td>
-      <td style="width: 45%; text-align: center; vertical-align: middle; padding: 10px 5px; font-size: 13pt; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 0.5px;">
+      <td style="width: 44%; text-align: center; vertical-align: middle; padding: 14px 8px; font-size: 13pt; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 0.5px;">
         FORM PENGAJUAN PELATIHAN
       </td>
-      <td style="width: 30%; vertical-align: middle; padding: 6px 10px; border-bottom: 1px solid #000;">
-        <table style="width: 100%; border: none; border-collapse: collapse;">
+      <td style="width: 30%; vertical-align: middle; padding: 10px 14px; border-bottom: 1px solid #000;">
+        <table style="width: 100%; border: none; border-collapse: collapse;" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="width: 55px; border: none; padding: 1px 0; font-size: 9.5pt;">No. Form</td>
-            <td style="width: 8px; border: none; padding: 1px 0; font-size: 9.5pt;">:</td>
-            <td style="border: none; padding: 1px 0; font-weight: bold; font-size: 9.5pt;">FM-HRD-004</td>
+            <td style="width: 65px; border: none; padding: 3px 0; font-size: 9.5pt;">No. Form</td>
+            <td style="width: 10px; border: none; padding: 3px 0; font-size: 9.5pt;">:</td>
+            <td style="border: none; padding: 3px 0; font-weight: bold; font-size: 9.5pt;">FM-HRD-004</td>
           </tr>
           <tr>
-            <td style="width: 55px; border: none; padding: 1px 0; font-size: 9.5pt;">No. Urut</td>
-            <td style="width: 8px; border: none; padding: 1px 0; font-size: 9.5pt;">:</td>
-            <td style="border: none; padding: 1px 0; font-weight: bold; font-size: 9.5pt; white-space: nowrap;">{{ $data->kode ?? '-' }}</td>
+            <td style="width: 65px; border: none; padding: 3px 0; font-size: 9.5pt;">No. Urut</td>
+            <td style="width: 10px; border: none; padding: 3px 0; font-size: 9.5pt;">:</td>
+            <td style="border: none; padding: 3px 0; font-weight: bold; font-size: 9.5pt; white-space: nowrap;">{{ $data->kode ?? '-' }}</td>
           </tr>
         </table>
       </td>
@@ -201,8 +204,8 @@
 
     <!-- 2. SUB HEADER TANGGAL -->
     <tr>
-      <td colspan="3" style="padding: 5px 12px; border-bottom: 1px solid #000; font-size: 9.5pt;">
-        <table style="width: 100%; border: none; border-collapse: collapse;">
+      <td colspan="3" style="padding: 8px 18px; border-bottom: 1px solid #000; font-size: 9.5pt; background-color: #fafafa;">
+        <table style="width: 100%; border: none; border-collapse: collapse;" cellpadding="0" cellspacing="0">
           <tr>
             <td style="width: 50%; border: none; padding: 0; font-size: 9.5pt;">
               <strong>Tanggal</strong> : {{ $tglPengajuan }}
@@ -217,85 +220,87 @@
 
     <!-- 3. BODY PENGISIAN FORM -->
     <tr>
-      <td colspan="3" style="padding: 10px 14px; border-bottom: 1px solid #000;">
+      <td colspan="3" style="padding: 18px 22px; border-bottom: 1px solid #000;">
         
-        <table style="width: 100%; border: none; border-collapse: collapse; margin-bottom: 8px;">
+        <table style="width: 100%; border: none; border-collapse: collapse; margin-bottom: 12px;" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Nama Pemohon</td>
-            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
-            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $data->creator_name ?? '-' }}</td>
+            <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Nama Pemohon</td>
+            <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 6px 0; font-size: 10pt;">{{ $data->creator_name ?? '-' }}</td>
           </tr>
           <tr>
-            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Divisi</td>
-            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
-            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $data->divisi_nama ?? '-' }}</td>
+            <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Divisi</td>
+            <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 6px 0; font-size: 10pt;">{{ $data->divisi_nama ?? '-' }}</td>
           </tr>
           <tr>
-            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Unit / Perusahaan</td>
-            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
-            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">
+            <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Unit / Perusahaan</td>
+            <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 6px 0; font-size: 10pt;">
               {{ $data->comp_nama ?? 'PT Temprina Media Grafika' }}
               @if(!empty($data->branch_nama)) ({{ $data->branch_nama }}) @endif
             </td>
           </tr>
           <tr>
-            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Tema / Program Pelatihan</td>
-            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
-            <td style="border: none; padding: 3.5px 0; font-size: 10pt; font-weight: bold;">{{ $data->program_nama ?? '-' }}</td>
+            <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Tema / Program Pelatihan</td>
+            <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 6px 0; font-size: 10pt; font-weight: bold; color: #1e3a8a;">{{ $data->program_nama ?? '-' }}</td>
           </tr>
           <tr>
-            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Instruktur / Trainer</td>
-            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
-            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $data->nama_trainer ?? '-' }}</td>
+            <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Instruktur / Trainer</td>
+            <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 6px 0; font-size: 10pt;">{{ $data->nama_trainer ?? '-' }}</td>
           </tr>
           <tr>
-            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Tanggal Pelaksanaan</td>
-            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
-            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $tglMulai }} s/d {{ $tglSelesai }}</td>
+            <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Tanggal Pelaksanaan</td>
+            <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 6px 0; font-size: 10pt;">{{ $tglMulai }} s/d {{ $tglSelesai }}</td>
           </tr>
           <tr>
-            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Lokasi / Sarana Pelatihan</td>
-            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
-            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $data->sarana ?? '-' }}</td>
+            <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Lokasi / Sarana Pelatihan</td>
+            <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 6px 0; font-size: 10pt;">{{ $data->sarana ?? '-' }}</td>
           </tr>
           <tr>
-            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Tujuan / Alasan Pelatihan</td>
-            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
-            <td style="border: none; padding: 3.5px 0; font-size: 10pt;">{{ $data->desc ?? '-' }}</td>
+            <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Tujuan / Alasan Pelatihan</td>
+            <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 6px 0; font-size: 10pt; line-height: 1.45;">{{ $data->desc ?? '-' }}</td>
           </tr>
           <tr>
-            <td style="width: 200px; border: none; padding: 3.5px 0; font-weight: bold; font-size: 10pt;">Status Pengajuan</td>
-            <td style="width: 15px; border: none; padding: 3.5px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
-            <td style="border: none; padding: 3.5px 0; font-size: 10pt; font-weight: bold;">{{ strtoupper($data->status ?? 'APPROVED') }}</td>
+            <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Status Pengajuan</td>
+            <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
+            <td style="border: none; padding: 6px 0; font-size: 10pt; font-weight: bold;">
+              <span style="color: #047857;">{{ strtoupper($data->status ?? 'APPROVED') }}</span>
+            </td>
           </tr>
         </table>
 
         <!-- TABEL PESERTA PELATIHAN -->
-        <div style="font-weight: bold; font-size: 10pt; margin-top: 8px; margin-bottom: 4px; text-transform: uppercase;">
+        <div style="font-weight: bold; font-size: 10pt; margin-top: 16px; margin-bottom: 8px; text-transform: uppercase;">
           DAFTAR PESERTA PELATIHAN (TOTAL: {{ count($peserta) }} ORANG) :
         </div>
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-top: 4px; margin-bottom: 6px;" cellpadding="4">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-top: 6px; margin-bottom: 8px;" cellpadding="6">
           <thead>
-            <tr style="background-color: #f2f2f2;">
-              <th style="width: 6%; border: 1px solid #000; text-align: center; font-size: 9pt; font-weight: bold; text-transform: uppercase;">No</th>
-              <th style="width: 20%; border: 1px solid #000; text-align: center; font-size: 9pt; font-weight: bold; text-transform: uppercase;">NIK</th>
-              <th style="width: 34%; border: 1px solid #000; text-align: left; font-size: 9pt; font-weight: bold; text-transform: uppercase;">Nama Lengkap Karyawan</th>
-              <th style="width: 20%; border: 1px solid #000; text-align: left; font-size: 9pt; font-weight: bold; text-transform: uppercase;">Divisi</th>
-              <th style="width: 20%; border: 1px solid #000; text-align: left; font-size: 9pt; font-weight: bold; text-transform: uppercase;">Posisi / Jabatan</th>
+            <tr style="background-color: #f3f4f6;">
+              <th style="width: 6%; border: 1px solid #000; text-align: center; font-size: 9.5pt; font-weight: bold; padding: 8px 4px; text-transform: uppercase;">No</th>
+              <th style="width: 20%; border: 1px solid #000; text-align: center; font-size: 9.5pt; font-weight: bold; padding: 8px 6px; text-transform: uppercase;">NIK</th>
+              <th style="width: 34%; border: 1px solid #000; text-align: left; font-size: 9.5pt; font-weight: bold; padding: 8px 8px; text-transform: uppercase;">Nama Lengkap Karyawan</th>
+              <th style="width: 20%; border: 1px solid #000; text-align: left; font-size: 9.5pt; font-weight: bold; padding: 8px 8px; text-transform: uppercase;">Divisi</th>
+              <th style="width: 20%; border: 1px solid #000; text-align: left; font-size: 9.5pt; font-weight: bold; padding: 8px 8px; text-transform: uppercase;">Posisi / Jabatan</th>
             </tr>
           </thead>
           <tbody>
             @forelse($peserta as $idx => $p)
               <tr>
-                <td style="border: 1px solid #000; text-align: center; font-size: 9pt;">{{ $idx + 1 }}</td>
-                <td style="border: 1px solid #000; text-align: center; font-size: 9pt;">{{ $p->nik ?? '-' }}</td>
-                <td style="border: 1px solid #000; text-align: left; font-size: 9pt;">{{ $p->nama_lengkap ?? '-' }}</td>
-                <td style="border: 1px solid #000; text-align: left; font-size: 9pt;">{{ $p->peserta_divisi ?? '-' }}</td>
-                <td style="border: 1px solid #000; text-align: left; font-size: 9pt;">{{ $p->peserta_posisi ?? '-' }}</td>
+                <td style="border: 1px solid #000; text-align: center; font-size: 9.5pt; padding: 7px 4px;">{{ $idx + 1 }}</td>
+                <td style="border: 1px solid #000; text-align: center; font-size: 9.5pt; padding: 7px 6px;">{{ $p->nik ?? '-' }}</td>
+                <td style="border: 1px solid #000; text-align: left; font-size: 9.5pt; padding: 7px 8px;">{{ $p->nama_lengkap ?? '-' }}</td>
+                <td style="border: 1px solid #000; text-align: left; font-size: 9.5pt; padding: 7px 8px;">{{ $p->peserta_divisi ?? '-' }}</td>
+                <td style="border: 1px solid #000; text-align: left; font-size: 9.5pt; padding: 7px 8px;">{{ $p->peserta_posisi ?? '-' }}</td>
               </tr>
             @empty
               <tr>
-                <td colspan="5" style="border: 1px solid #000; text-align: center; font-style: italic; color: #666; font-size: 9pt; padding: 8px;">
+                <td colspan="5" style="border: 1px solid #000; text-align: center; font-style: italic; color: #666; font-size: 9.5pt; padding: 16px;">
                   Belum ada peserta pelatihan yang ditambahkan.
                 </td>
               </tr>
@@ -309,21 +314,21 @@
     <!-- 4. FOOTER APPROVAL (4 KOLOM) -->
     <tr>
       <td colspan="3" style="padding: 0;">
-        <table style="width: 100%; border-collapse: collapse; border: none;" cellpadding="3">
+        <table style="width: 100%; border-collapse: collapse; border: none;" cellpadding="6">
           <tr>
-            <td style="width: 18%; border-right: 1px solid #000; text-align: center; vertical-align: top; padding: 4px;">
-              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 24px;">Halaman</div>
+            <td style="width: 18%; border-right: 1px solid #000; text-align: center; vertical-align: top; padding: 12px 6px 16px 6px;">
+              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 36px;">Halaman</div>
               <div style="font-weight: bold; font-size: 10pt;">1 / 1</div>
             </td>
-            <td style="width: 27.33%; border-right: 1px solid #000; text-align: center; vertical-align: top; padding: 4px;">
-              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 5px;">Dibuat :</div>
-              <div style="height: 48px;"></div>
+            <td style="width: 27.33%; border-right: 1px solid #000; text-align: center; vertical-align: top; padding: 12px 8px 16px 8px;">
+              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 6px;">Dibuat :</div>
+              <div style="height: 60px;"></div>
               <div style="font-weight: bold; text-decoration: underline; font-size: 9.5pt;">({{ $data->creator_name ?? 'Pemohon' }})</div>
-              <div style="font-size: 8.5pt; color: #444; margin-top: 2px;">Tgl: {{ $tglPengajuan }}</div>
+              <div style="font-size: 8.5pt; color: #555; margin-top: 4px;">Tgl: {{ $tglPengajuan }}</div>
             </td>
-            <td style="width: 27.33%; border-right: 1px solid #000; text-align: center; vertical-align: top; padding: 4px;">
-              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 5px;">Disetujui :</div>
-              <div style="height: 48px;"></div>
+            <td style="width: 27.33%; border-right: 1px solid #000; text-align: center; vertical-align: top; padding: 12px 8px 16px 8px;">
+              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 6px;">Disetujui :</div>
+              <div style="height: 60px;"></div>
               <div style="font-weight: bold; text-decoration: underline; font-size: 9.5pt;">
                 @if($appLogDisetujui && !empty($appLogDisetujui->action_user))
                   ({{ $appLogDisetujui->action_user }})
@@ -331,7 +336,7 @@
                   ( Atasan / Manager )
                 @endif
               </div>
-              <div style="font-size: 8.5pt; color: #444; margin-top: 2px;">
+              <div style="font-size: 8.5pt; color: #555; margin-top: 4px;">
                 @if($appLogDisetujui && !empty($appLogDisetujui->action_at))
                   Tgl: {{ date('d/m/Y', strtotime($appLogDisetujui->action_at)) }}
                 @else
@@ -339,9 +344,9 @@
                 @endif
               </div>
             </td>
-            <td style="width: 27.34%; text-align: center; vertical-align: top; padding: 4px;">
-              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 5px;">Diketahui :</div>
-              <div style="height: 48px;"></div>
+            <td style="width: 27.34%; text-align: center; vertical-align: top; padding: 12px 8px 16px 8px;">
+              <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 6px;">Diketahui :</div>
+              <div style="height: 60px;"></div>
               <div style="font-weight: bold; text-decoration: underline; font-size: 9.5pt;">
                 @if($appLogApproved && !empty($appLogApproved->action_user))
                   ({{ $appLogApproved->action_user }})
@@ -349,7 +354,7 @@
                   ( Human Capital / HRD )
                 @endif
               </div>
-              <div style="font-size: 8.5pt; color: #444; margin-top: 2px;">
+              <div style="font-size: 8.5pt; color: #555; margin-top: 4px;">
                 @if($appLogApproved && !empty($appLogApproved->action_at))
                   Tgl: {{ date('d/m/Y', strtotime($appLogApproved->action_at)) }}
                 @else
