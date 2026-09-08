@@ -713,7 +713,7 @@ const landing = computed(() => {
         icon: 'edit',
         title: "Edit",
         class: 'bg-blue-600 text-light-100',
-        show: (row) => !['POSTED', 'REJECTED', 'APPROVED', 'IN APPROVAL'].includes(row.status?.toUpperCase()) && data.can_update && !['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase()),
+        show: (row) => ['DRAFT', 'REVISED'].includes(row.status?.toUpperCase()) && data.can_update,
         click(row) {
           router.push(`${route.path}/${row.id}?action=Edit&` + tsId)
         }
@@ -722,7 +722,7 @@ const landing = computed(() => {
         icon: 'copy',
         title: "Copy",
         class: 'bg-gray-600 text-light-100',
-        show: (row) => !['POSTED', 'REJECTED'].includes(row.status?.toUpperCase()) && data.can_create && !['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase()),
+        show: (row) => !['POSTED', 'REJECTED'].includes(row.status?.toUpperCase()) && data.can_create,
         click(row) {
           router.push(`${route.path}/${row.id}?action=Copy&` + tsId)
         }
@@ -731,7 +731,7 @@ const landing = computed(() => {
         icon: 'paper-plane',
         title: "Posted Data",
         class: 'bg-rose-700 rounded-lg text-white',
-        show: (row) => row.status?.toUpperCase() === 'DRAFT' && data.can_update && !['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase()),
+        show: (row) => row.status?.toUpperCase() === 'DRAFT' && data.can_update,
         async click(row) {
           const result = await swal.fire({
             icon: 'warning',
@@ -768,13 +768,12 @@ const landing = computed(() => {
             isRequesting.value = false
           }
         }
-      }
-      ,
+      },
       {
         icon: 'location-arrow',
         title: "Send Approval",
         class: 'bg-rose-700 rounded-lg text-white',
-        show: (row) => row.status?.toUpperCase() === 'POSTED' && data.can_update && !['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase()),
+        show: (row) => row.status?.toUpperCase() === 'POSTED' && data.can_update,
         click(row) {
           router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
         }
@@ -783,10 +782,7 @@ const landing = computed(() => {
         icon: 'check-square',
         title: "Review Data",
         class: 'bg-blue-600 rounded-lg text-white',
-        show: (row) => {
-          const isAtasan = ['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase());
-          return row.status?.toUpperCase() === 'IN APPROVAL' && isAtasan;
-        },
+        show: (row) => row.status?.toUpperCase() === 'IN APPROVAL' && data.can_update,
         click(row) {
           router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
         }
