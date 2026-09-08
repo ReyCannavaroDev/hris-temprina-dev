@@ -62,6 +62,7 @@ onBeforeMount(async () => {
       initialValues = resultJson.data
       detailArr.value = (initialValues.t_hasil_tes_det || []).map((items) => ({
         ...items,
+        nilai_tes: items.nilai_tes !== null && items.nilai_tes !== undefined && items.nilai_tes !== '' ? Number(items.nilai_tes) : null,
         __id: ++_id,
       }))
     } catch (err) {

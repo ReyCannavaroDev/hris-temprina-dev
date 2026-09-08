@@ -330,7 +330,7 @@
                   {{ $det->nama_tes ?? '-' }}
                 </td>
                 <td style="border: 1px solid #000; text-align: center; font-size: 9.5pt; font-weight: bold; padding: 7px 4px;">
-                  {{ !is_null($det->nilai_tes) ? $det->nilai_tes : '-' }}
+                  {{ !is_null($det->nilai_tes) ? (is_numeric($det->nilai_tes) ? $det->nilai_tes + 0 : $det->nilai_tes) : '-' }}
                 </td>
                 <td style="border: 1px solid #000; text-align: center; font-size: 9pt; color: #555; padding: 7px 4px;">
                   {{ !empty($det->dokumen) ? 'Ada Berkas' : '-' }}

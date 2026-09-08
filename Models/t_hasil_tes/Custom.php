@@ -47,7 +47,13 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             ->where('t_hasil_tes_id', $row['id'])
             ->orderBy('id', 'asc')
             ->get();
-        $data['t_hasil_tes_det'] = json_decode(json_encode($details), true);
+        $detArr = json_decode(json_encode($details), true);
+        foreach ($detArr as &$d) {
+            if (isset($d['nilai_tes']) && is_numeric($d['nilai_tes'])) {
+                $d['nilai_tes'] = $d['nilai_tes'] + 0;
+            }
+        }
+        $data['t_hasil_tes_det'] = $detArr;
 
         return array_merge($row, $data);
     }
@@ -76,7 +82,7 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             $cleanRow = [
                 'tanggal'   => !empty($det['tanggal']) ? $det['tanggal'] : date('Y-m-d'),
                 'nama_tes'  => $det['nama_tes'] ?? null,
-                'nilai_tes' => isset($det['nilai_tes']) && $det['nilai_tes'] !== '' ? $det['nilai_tes'] : null,
+                'nilai_tes' => isset($det['nilai_tes']) && $det['nilai_tes'] !== '' && is_numeric($det['nilai_tes']) ? floatval($det['nilai_tes']) : null,
                 'dokumen'   => $det['dokumen'] ?? null,
             ];
 

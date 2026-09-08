@@ -257,9 +257,10 @@
               </td>
 
               <td class="p-2 border border-[#CACACA]">
-                <FieldNumber :bind="{ readonly: !actionText }" :value="item.nilai_tes"
-                  :errorText="formErrors.nilai_tes?'failed':''" @input="v=>item.nilai_tes=v"
-                  :hints="formErrors.nilai_tes" placeholder="Masukkan Nilai Test" label="" fa-icon="" :check="false" />
+                <FieldX :bind="{ readonly: !actionText }" type="number" step="any" min="0" max="100" class="w-full !mt-0"
+                  :value="item.nilai_tes" :errorText="formErrors.nilai_tes?'failed':''"
+                  @input="v=>item.nilai_tes=v" :hints="formErrors.nilai_tes"
+                  placeholder="Masukkan Nilai Test" label="" fa-icon="" :check="false" />
               </td>
 
               <td>
