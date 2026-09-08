@@ -155,26 +155,32 @@
     
     <!-- 1. HEADER 3 KOLOM -->
     <tr>
-      <td style="width: 22%; text-align: center; vertical-align: middle; padding: 6px 4px; border-right: 1px solid #000; border-bottom: 1px solid #000;">
+      <td style="width: 25%; text-align: center; vertical-align: middle; padding: 6px 6px; border-right: 1px solid #000; border-bottom: 1px solid #000;">
         @if(!empty($logoPath) && file_exists($logoPath))
-          <img src="{{ $logoPath }}" alt="Logo Temprina" height="30" border="0" style="height: 30px; vertical-align: middle;">
+          <table style="width: 100%; border: none; margin: 0 auto;" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="border: none; text-align: center; vertical-align: middle; padding: 0;">
+                <img src="{{ $logoPath }}" alt="Logo Temprina" height="38" border="0" style="height: 38px;">
+              </td>
+            </tr>
+          </table>
         @else
-          <div style="font-size: 12pt; font-weight: bold; color: #1e3a8a; line-height: 1.1;">TEMPRINA<br><span style="font-size: 8pt; color: #374151; font-weight: normal;">MEDIA GRAFIKA</span></div>
+          <div style="font-size: 13pt; font-weight: bold; color: #1e3a8a; line-height: 1.1;">TEMPRINA<br><span style="font-size: 8pt; color: #374151; font-weight: normal;">MEDIA GRAFIKA</span></div>
         @endif
       </td>
-      <td style="width: 42%; text-align: center; vertical-align: middle; padding: 12px 6px; font-size: 12pt; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 0.5px;">
+      <td style="width: 44%; text-align: center; vertical-align: middle; padding: 10px 6px; font-size: 12pt; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 0.5px;">
         FORM EVALUASI & HASIL TEST SELEKSI KARYAWAN
       </td>
-      <td style="width: 36%; vertical-align: middle; padding: 6px 12px; border-bottom: 1px solid #000;">
+      <td style="width: 31%; vertical-align: middle; padding: 6px 10px; border-bottom: 1px solid #000;">
         <table style="width: 100%; border: none; border-collapse: collapse;" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="width: 60px; border: none; padding: 2px 0; font-size: 9pt;">No. Form</td>
-            <td style="width: 10px; border: none; padding: 2px 0; font-size: 9pt;">:</td>
+            <td style="width: 55px; border: none; padding: 2px 0; font-size: 9pt;">No. Form</td>
+            <td style="width: 8px; border: none; padding: 2px 0; font-size: 9pt;">:</td>
             <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 9pt; white-space: nowrap;">FM-HRD-REC-002</td>
           </tr>
           <tr>
-            <td style="width: 60px; border: none; padding: 2px 0; font-size: 9pt;">No. Urut</td>
-            <td style="width: 10px; border: none; padding: 2px 0; font-size: 9pt;">:</td>
+            <td style="width: 55px; border: none; padding: 2px 0; font-size: 9pt;">No. Urut</td>
+            <td style="width: 8px; border: none; padding: 2px 0; font-size: 9pt;">:</td>
             <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 9pt; white-space: nowrap;">{{ $data->nomor ?? '-' }}</td>
           </tr>
         </table>
