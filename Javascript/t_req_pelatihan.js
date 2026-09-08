@@ -806,13 +806,17 @@ const landing = computed(() => {
         class: 'bg-emerald-600 rounded-lg text-white',
         show: (row) => data.can_read,
         click(row) {
-          const targetId = row?.id || (apiTable.value?.selectedRows || [])[0]?.id
+          const targetId = row?.id 
+            || (apiTable.value?.selectedRows || [])[0]?.id 
+            || apiTable.value?.selectedRow?.id 
+            || apiTable.value?.selected?.id
+            || apiTable.value?.dataSelected?.id
           if (targetId) {
             onPrint(targetId)
           } else {
             swal.fire({
               icon: 'info',
-              text: 'Pilih salah satu baris data terlebih dahulu untuk dicetak.'
+              text: 'Silakan klik salah satu baris pengajuan pada tabel terlebih dahulu, lalu klik tombol Cetak.'
             })
           }
         }

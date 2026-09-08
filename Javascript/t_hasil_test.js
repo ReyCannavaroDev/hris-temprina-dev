@@ -413,13 +413,17 @@ const landing = computed(() => {
         class: 'bg-emerald-600 text-white rounded-md p-1.5',
         show: () => data.can_read,
         click(row) {
-          const targetId = row?.id || (apiTable.value?.selectedRows || [])[0]?.id
+          const targetId = row?.id 
+            || (apiTable.value?.selectedRows || [])[0]?.id 
+            || apiTable.value?.selectedRow?.id 
+            || apiTable.value?.selected?.id
+            || apiTable.value?.dataSelected?.id
           if (targetId) {
             onPrint(targetId)
           } else {
             swal.fire({
               icon: 'info',
-              text: 'Pilih salah satu baris data terlebih dahulu untuk dicetak.'
+              text: 'Silakan klik salah satu baris hasil tes pada tabel terlebih dahulu, lalu klik tombol Cetak.'
             })
           }
         }

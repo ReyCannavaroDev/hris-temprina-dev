@@ -60,35 +60,46 @@
               $q->where('m_media.m_comp_id', $data->m_comp_id);
           }
           $q->orWhere('m_media.kode', 'LOGO_UTAMA')
+            ->orWhere('m_media.kode', 'LOGO-TMG')
+            ->orWhere('m_media.kode', 'LOGO-IMG')
             ->orWhereRaw("UPPER(m_general.value) = 'LOGO'")
             ->orWhereRaw("UPPER(m_media.kode) LIKE '%LOGO%'");
       })
-      ->orderByRaw("CASE WHEN m_media.kode = 'LOGO_UTAMA' THEN 0 ELSE 1 END")
+      ->orderByRaw("CASE WHEN m_media.kode = 'LOGO_UTAMA' THEN 0 WHEN m_media.kode LIKE '%LOGO%' THEN 1 ELSE 2 END")
       ->orderBy('m_media.id', 'asc')
       ->first();
 
-  $rootUrl = function_exists('app') && app()->request ? rtrim(app()->request->root(), '/') : '';
-  $makeAssetUrl = function($path) use ($rootUrl) {
-      if (empty($path)) return $rootUrl ? ($rootUrl . '/images/logo.png') : '/images/logo.png';
-      if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, 'data:')) {
-          return $path;
+  $resolveLogoFile = function($rawPath) {
+      if (empty($rawPath)) return '';
+
+      // Bersihkan protokol & domain jika tersimpan full URL
+      $clean = preg_replace('#^https?://[^/]+/#i', '', ltrim($rawPath, '/'));
+      $clean = ltrim($clean, '/');
+
+      $candidates = [
+          $clean,
+          'uploads/m_media/' . $clean,
+          'uploads/' . $clean,
+          'storage/' . $clean,
+          'images/' . $clean
+      ];
+
+      foreach ($candidates as $cand) {
+          $full = function_exists('public_path') ? public_path($cand) : (function_exists('base_path') ? base_path('public/' . $cand) : ('/opt/www/hris/public/' . $cand));
+          if ($full && file_exists($full) && is_file($full)) {
+              return $full;
+          }
       }
-      $clean = ltrim($path, '/');
-      return $rootUrl ? ($rootUrl . '/' . $clean) : ('/' . $clean);
+
+      $default = function_exists('public_path') ? public_path('images/logo.png') : (function_exists('base_path') ? base_path('public/images/logo.png') : '/opt/www/hris/public/images/logo.png');
+      if ($default && file_exists($default) && is_file($default)) {
+          return $default;
+      }
+
+      return '';
   };
 
-  $logoSrc = $makeAssetUrl('images/logo.png');
-  if ($mediaLogo && !empty($mediaLogo->file_path)) {
-      $p = ltrim($mediaLogo->file_path, '/');
-      if (str_starts_with($p, 'http://') || str_starts_with($p, 'https://')) {
-          $logoSrc = $p;
-      } else {
-          if (!str_starts_with($p, 'uploads/')) {
-              $p = 'uploads/m_media/' . $p;
-          }
-          $logoSrc = $makeAssetUrl($p);
-      }
-  }
+  $logoPath = $mediaLogo ? $resolveLogoFile($mediaLogo->file_path) : $resolveLogoFile('images/logo.png');
 
   $tglCetak = date('d/m/Y');
   $tglDibuat = $data && !empty($data->created_at) ? date('d/m/Y', strtotime($data->created_at)) : date('d/m/Y');
@@ -144,7 +155,11 @@
     <!-- 1. HEADER 3 KOLOM -->
     <tr>
       <td style="width: 25%; text-align: center; vertical-align: middle; padding: 8px 10px; border-right: 1px solid #000; border-bottom: 1px solid #000;">
-        <img src="{{ $logoSrc }}" alt="Logo Temprina" style="max-height: 48px; max-width: 140px; display: block; margin: 0 auto; object-fit: contain;">
+        @if(!empty($logoPath) && file_exists($logoPath))
+          <img src="{{ $logoPath }}" alt="Logo Temprina" style="max-height: 48px; max-width: 140px; display: block; margin: 0 auto; object-fit: contain;">
+        @else
+          <div style="font-size: 13pt; font-weight: bold; color: #1e3a8a; line-height: 1.1;">TEMPRINA<br><span style="font-size: 8pt; color: #374151; font-weight: normal;">MEDIA GRAFIKA</span></div>
+        @endif
       </td>
       <td style="width: 45%; text-align: center; vertical-align: middle; padding: 10px 5px; font-size: 12pt; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 0.5px;">
         FORM EVALUASI & HASIL TEST SELEKSI KARYAWAN
