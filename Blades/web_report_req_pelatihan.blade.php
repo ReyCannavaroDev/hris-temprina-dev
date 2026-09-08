@@ -174,53 +174,45 @@
     
     <!-- 1. HEADER 3 KOLOM -->
     <tr>
-      <td style="width: 26%; text-align: center; vertical-align: middle; padding: 10px 8px; border-right: 1px solid #000; border-bottom: 1px solid #000;">
+      <td style="width: 22%; text-align: center; vertical-align: middle; padding: 6px 4px; border-right: 1px solid #000; border-bottom: 1px solid #000;">
         @if(!empty($logoPath) && file_exists($logoPath))
-          <div style="text-align: center; padding: 4px 0;">
-            <img src="{{ $logoPath }}" alt="Logo Temprina" height="36" border="0" style="height: 36px; max-width: 130px;">
-          </div>
+          <img src="{{ $logoPath }}" alt="Logo Temprina" height="30" border="0" style="height: 30px; vertical-align: middle;">
         @else
-          <div style="font-size: 13pt; font-weight: bold; color: #1e3a8a; line-height: 1.1;">TEMPRINA<br><span style="font-size: 8pt; color: #374151; font-weight: normal;">MEDIA GRAFIKA</span></div>
+          <div style="font-size: 12pt; font-weight: bold; color: #1e3a8a; line-height: 1.1;">TEMPRINA<br><span style="font-size: 8pt; color: #374151; font-weight: normal;">MEDIA GRAFIKA</span></div>
         @endif
       </td>
-      <td style="width: 44%; text-align: center; vertical-align: middle; padding: 14px 8px; font-size: 13pt; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 0.5px;">
+      <td style="width: 42%; text-align: center; vertical-align: middle; padding: 12px 6px; font-size: 13pt; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 0.5px;">
         FORM PENGAJUAN PELATIHAN
       </td>
-      <td style="width: 30%; vertical-align: middle; padding: 10px 14px; border-bottom: 1px solid #000;">
+      <td style="width: 36%; vertical-align: middle; padding: 6px 12px; border-bottom: 1px solid #000;">
         <table style="width: 100%; border: none; border-collapse: collapse;" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="width: 65px; border: none; padding: 3px 0; font-size: 9.5pt;">No. Form</td>
-            <td style="width: 10px; border: none; padding: 3px 0; font-size: 9.5pt;">:</td>
-            <td style="border: none; padding: 3px 0; font-weight: bold; font-size: 9.5pt;">FM-HRD-004</td>
+            <td style="width: 60px; border: none; padding: 2px 0; font-size: 9pt;">No. Form</td>
+            <td style="width: 10px; border: none; padding: 2px 0; font-size: 9pt;">:</td>
+            <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 9pt; white-space: nowrap;">FM-HRD-004</td>
           </tr>
           <tr>
-            <td style="width: 65px; border: none; padding: 3px 0; font-size: 9.5pt;">No. Urut</td>
-            <td style="width: 10px; border: none; padding: 3px 0; font-size: 9.5pt;">:</td>
-            <td style="border: none; padding: 3px 0; font-weight: bold; font-size: 9.5pt; white-space: nowrap;">{{ $data->kode ?? '-' }}</td>
+            <td style="width: 60px; border: none; padding: 2px 0; font-size: 9pt;">No. Urut</td>
+            <td style="width: 10px; border: none; padding: 2px 0; font-size: 9pt;">:</td>
+            <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 9pt; white-space: nowrap;">{{ $data->kode ?? '-' }}</td>
           </tr>
         </table>
       </td>
     </tr>
 
-    <!-- 2. SUB HEADER TANGGAL -->
+    <!-- 2. SUB HEADER TANGGAL (TANPA NESTED TABLE AGAR TIDAK KEPOTONG DI TCPDF) -->
     <tr>
-      <td colspan="3" style="padding: 8px 18px; border-bottom: 1px solid #000; font-size: 9.5pt; background-color: #fafafa;">
-        <table style="width: 100%; border: none; border-collapse: collapse;" cellpadding="0" cellspacing="0">
-          <tr>
-            <td style="width: 50%; border: none; padding: 0; font-size: 9.5pt;">
-              <strong>Tanggal</strong> : {{ $tglPengajuan }}
-            </td>
-            <td style="width: 50%; border: none; padding: 0; text-align: right; font-size: 9.5pt;">
-              <strong>Rev. / Tgl</strong> : 00 / -
-            </td>
-          </tr>
-        </table>
+      <td colspan="2" style="padding: 6px 14px; border-bottom: 1px solid #000; border-right: none; font-size: 9.5pt; background-color: #fafafa; line-height: 1.5; vertical-align: middle;">
+        <strong>Tanggal :</strong> &nbsp;{{ $tglPengajuan }}
+      </td>
+      <td style="padding: 6px 14px; border-bottom: 1px solid #000; border-left: none; text-align: right; font-size: 9.5pt; background-color: #fafafa; line-height: 1.5; vertical-align: middle;">
+        <strong>Rev. / Tgl :</strong> &nbsp;00 / -
       </td>
     </tr>
 
     <!-- 3. BODY PENGISIAN FORM -->
     <tr>
-      <td colspan="3" style="padding: 18px 22px; border-bottom: 1px solid #000;">
+      <td colspan="3" style="padding: 16px 20px; border-bottom: 1px solid #000;">
         
         <table style="width: 100%; border: none; border-collapse: collapse; margin-bottom: 12px;" cellpadding="0" cellspacing="0">
           <tr>
