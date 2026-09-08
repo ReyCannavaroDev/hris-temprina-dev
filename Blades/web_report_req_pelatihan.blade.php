@@ -90,7 +90,17 @@
       ->orderBy('m_media.id', 'asc')
       ->first();
 
-  $logoSrc = asset('images/logo.png');
+  $rootUrl = function_exists('app') && app()->request ? rtrim(app()->request->root(), '/') : '';
+  $makeAssetUrl = function($path) use ($rootUrl) {
+      if (empty($path)) return $rootUrl ? ($rootUrl . '/images/logo.png') : '/images/logo.png';
+      if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, 'data:')) {
+          return $path;
+      }
+      $clean = ltrim($path, '/');
+      return $rootUrl ? ($rootUrl . '/' . $clean) : ('/' . $clean);
+  };
+
+  $logoSrc = $makeAssetUrl('images/logo.png');
   if ($mediaLogo && !empty($mediaLogo->file_path)) {
       $p = ltrim($mediaLogo->file_path, '/');
       if (str_starts_with($p, 'http://') || str_starts_with($p, 'https://')) {
@@ -99,7 +109,7 @@
           if (!str_starts_with($p, 'uploads/')) {
               $p = 'uploads/m_media/' . $p;
           }
-          $logoSrc = asset($p);
+          $logoSrc = $makeAssetUrl($p);
       }
   }
 @endphp

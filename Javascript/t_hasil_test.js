@@ -407,6 +407,23 @@ const landing = computed(() => {
           })
         }
       },
+      {
+        icon: 'print',
+        title: "Cetak Hasil Tes",
+        class: 'bg-emerald-600 text-white rounded-md p-1.5',
+        show: () => data.can_read,
+        click(row) {
+          const targetId = row?.id || (apiTable.value?.selectedRows || [])[0]?.id
+          if (targetId) {
+            onPrint(targetId)
+          } else {
+            swal.fire({
+              icon: 'info',
+              text: 'Pilih salah satu baris data terlebih dahulu untuk dicetak.'
+            })
+          }
+        }
+      },
     ],
     api: {
        url: data.can_read

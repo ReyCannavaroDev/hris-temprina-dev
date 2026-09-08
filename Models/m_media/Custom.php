@@ -23,17 +23,18 @@ class m_media extends \App\Models\BasicModels\m_media
 
     public static function formatMediaUrl($path)
     {
+        $root = function_exists('app') && app()->request ? rtrim(app()->request->root(), '/') : '';
         if (empty($path)) {
-            return asset('images/logo.png');
+            return $root ? ($root . '/images/logo.png') : '/images/logo.png';
         }
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, 'data:')) {
             return $path;
         }
         $clean = ltrim($path, '/');
         if (!str_starts_with($clean, 'uploads/')) {
             $clean = 'uploads/m_media/' . $clean;
         }
-        return asset($clean);
+        return $root ? ($root . '/' . $clean) : ('/' . $clean);
     }
 
     /**
@@ -68,6 +69,6 @@ class m_media extends \App\Models\BasicModels\m_media
             return self::formatMediaUrl($defaultLogo->file_path);
         }
 
-        return asset('images/logo.png');
+        return self::formatMediaUrl('images/logo.png');
     }
 }

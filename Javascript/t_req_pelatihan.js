@@ -806,7 +806,15 @@ const landing = computed(() => {
         class: 'bg-emerald-600 rounded-lg text-white',
         show: (row) => data.can_read,
         click(row) {
-          onPrint(row.id)
+          const targetId = row?.id || (apiTable.value?.selectedRows || [])[0]?.id
+          if (targetId) {
+            onPrint(targetId)
+          } else {
+            swal.fire({
+              icon: 'info',
+              text: 'Pilih salah satu baris data terlebih dahulu untuk dicetak.'
+            })
+          }
         }
       }
 
