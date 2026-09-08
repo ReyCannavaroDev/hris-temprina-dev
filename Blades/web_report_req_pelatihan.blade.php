@@ -187,20 +187,20 @@
           <div style="font-size: 13pt; font-weight: bold; color: #1e3a8a; line-height: 1.1;">TEMPRINA<br><span style="font-size: 8pt; color: #374151; font-weight: normal;">MEDIA GRAFIKA</span></div>
         @endif
       </td>
-      <td style="width: 44%; text-align: center; vertical-align: middle; padding: 10px 6px; font-size: 13pt; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 0.5px;">
+      <td style="width: 40%; text-align: center; vertical-align: middle; padding: 10px 6px; font-size: 13pt; font-weight: bold; border-right: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 0.5px;">
         FORM PENGAJUAN PELATIHAN
       </td>
-      <td style="width: 31%; vertical-align: middle; padding: 6px 10px; border-bottom: 1px solid #000;">
+      <td style="width: 35%; vertical-align: middle; padding: 6px 12px; border-bottom: 1px solid #000;">
         <table style="width: 100%; border: none; border-collapse: collapse;" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="width: 55px; border: none; padding: 2px 0; font-size: 9pt;">No. Form</td>
-            <td style="width: 8px; border: none; padding: 2px 0; font-size: 9pt;">:</td>
-            <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 9pt; white-space: nowrap;">FM-HRD-004</td>
+            <td style="width: 50px; border: none; padding: 2px 0; font-size: 8.5pt;">No. Form</td>
+            <td style="width: 8px; border: none; padding: 2px 0; font-size: 8.5pt;">:</td>
+            <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 8.5pt; white-space: nowrap;">FM-HRD-004</td>
           </tr>
           <tr>
-            <td style="width: 55px; border: none; padding: 2px 0; font-size: 9pt;">No. Urut</td>
-            <td style="width: 8px; border: none; padding: 2px 0; font-size: 9pt;">:</td>
-            <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 9pt; white-space: nowrap;">{{ $data->kode ?? '-' }}</td>
+            <td style="width: 50px; border: none; padding: 2px 0; font-size: 8.5pt;">No. Urut</td>
+            <td style="width: 8px; border: none; padding: 2px 0; font-size: 8.5pt;">:</td>
+            <td style="border: none; padding: 2px 0; font-weight: bold; font-size: 8.5pt; white-space: nowrap;">{{ $data->kode ?? '-' }}</td>
           </tr>
         </table>
       </td>
@@ -225,11 +225,6 @@
             <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Nama Pemohon</td>
             <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
             <td style="border: none; padding: 6px 0; font-size: 10pt;">{{ $data->creator_name ?? '-' }}</td>
-          </tr>
-          <tr>
-            <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Divisi</td>
-            <td style="width: 15px; border: none; padding: 6px 0; text-align: center; font-weight: bold; font-size: 10pt;">:</td>
-            <td style="border: none; padding: 6px 0; font-size: 10pt;">{{ $data->divisi_nama ?? '-' }}</td>
           </tr>
           <tr>
             <td style="width: 220px; border: none; padding: 6px 0; font-weight: bold; font-size: 10pt;">Unit / Perusahaan</td>
