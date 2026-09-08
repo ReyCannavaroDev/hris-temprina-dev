@@ -360,15 +360,6 @@ const landing = computed(() => {
         }
       },
       {
-        icon: 'print',
-        title: "Print Hasil Tes",
-        class: 'bg-blue-600 text-white rounded-md',
-        show: () => data.can_read,
-        click(row) {
-          onPrint(row.id)
-        }
-      },
-      {
         icon: 'location-arrow',
         class: 'bg-rose-700 rounded-lg text-white',
         title: "Register Karyawan",
@@ -411,7 +402,7 @@ const landing = computed(() => {
       {
         icon: 'print',
         title: "Cetak Hasil Tes",
-        class: 'bg-emerald-600 text-white rounded-md p-1.5',
+        class: 'bg-emerald-600 rounded-lg text-white',
         show: () => data.can_read,
         click(row) {
           const targetId = row?.id 
