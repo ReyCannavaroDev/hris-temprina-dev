@@ -140,9 +140,10 @@
       <!-- PREVIEW GAMBAR -->
       <div v-if="values.file_path" class="mt-3 p-3 border rounded-md bg-gray-50 flex items-center gap-4">
         <span class="text-xs text-gray-500 font-semibold">Preview :</span>
-        <img :src="values.file_path.startsWith('http') ? values.file_path : `${store.server.url_backend}/${values.file_path.replace(/^\//, '')}`" 
+        <img :src="getMediaPreview(values.file_path)" 
+             @error="onImgPreviewError"
              alt="Preview Media" 
-             class="max-h-20 max-w-[200px] border rounded bg-white p-1 object-contain shadow-sm" />
+             class="max-h-24 max-w-[240px] border rounded bg-white p-1.5 object-contain shadow-sm" />
       </div>
     </div>
 

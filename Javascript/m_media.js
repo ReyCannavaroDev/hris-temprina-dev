@@ -24,6 +24,39 @@ onBeforeMount(() => {
   document.title = 'Master Media & Aset Visual'
 })
 
+function getMediaPreview(path) {
+  if (!path) return ''
+  if (typeof path !== 'string') return ''
+  const trimmed = path.trim()
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+    return trimmed
+  }
+  const backend = (store.server?.url_backend || '').replace(/\/$/, '')
+  let clean = trimmed.replace(/^\//, '')
+  if (!clean.startsWith('uploads/')) {
+    clean = `uploads/m_media/${clean}`
+  }
+  return `${backend}/${clean}`
+}
+
+function onImgPreviewError(e) {
+  const target = e.target
+  if (!target) return
+  const backend = (store.server?.url_backend || '').replace(/\/$/, '')
+  const rawPath = (values.file_path || '').replace(/^\//, '')
+
+  if (!target.dataset.tried) {
+    target.dataset.tried = '1'
+    target.src = `${backend}/${rawPath}`
+  } else if (target.dataset.tried === '1') {
+    target.dataset.tried = '2'
+    target.src = `${backend}/storage/${rawPath}`
+  } else if (target.dataset.tried === '2') {
+    target.dataset.tried = '3'
+    target.src = `${backend}/storage/uploads/m_media/${rawPath}`
+  }
+}
+
 // ------------------------------ FORM VALUES
 let initialValues = {}
 const values = reactive({
@@ -288,7 +321,7 @@ const landing = computed(() => {
         cellClass: ['justify-center', 'border-r', '!border-gray-200'],
         cellRenderer: (params) => {
           if (!params.value) return '<span class="text-xs text-gray-400 italic">No Image</span>'
-          const imgUrl = params.value.startsWith('http') ? params.value : `${store.server.url_backend}/${params.value.replace(/^\//, '')}`
+          const imgUrl = getMediaPreview(params.value)
           return `<img src="${imgUrl}" class="max-h-8 max-w-[80px] object-contain rounded border p-0.5 bg-white shadow-sm" alt="Thumbnail" />`
         }
       },

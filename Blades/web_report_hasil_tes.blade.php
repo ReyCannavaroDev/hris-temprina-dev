@@ -67,9 +67,18 @@
       ->orderBy('m_media.id', 'asc')
       ->first();
 
-  $logoSrc = ($mediaLogo && !empty($mediaLogo->file_path)) 
-      ? (str_starts_with($mediaLogo->file_path, 'http') ? $mediaLogo->file_path : asset(ltrim($mediaLogo->file_path, '/')))
-      : asset('images/logo.png');
+  $logoSrc = asset('images/logo.png');
+  if ($mediaLogo && !empty($mediaLogo->file_path)) {
+      $p = ltrim($mediaLogo->file_path, '/');
+      if (str_starts_with($p, 'http://') || str_starts_with($p, 'https://')) {
+          $logoSrc = $p;
+      } else {
+          if (!str_starts_with($p, 'uploads/')) {
+              $p = 'uploads/m_media/' . $p;
+          }
+          $logoSrc = asset($p);
+      }
+  }
 
   $tglCetak = date('d/m/Y');
   $tglDibuat = $data && !empty($data->created_at) ? date('d/m/Y', strtotime($data->created_at)) : date('d/m/Y');

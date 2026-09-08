@@ -21,8 +21,23 @@ class m_media extends \App\Models\BasicModels\m_media
     public $createAdditionalData = ["creator_id" => "auth:id"];
     public $updateAdditionalData = ["last_editor_id" => "auth:id"];
 
+    public static function formatMediaUrl($path)
+    {
+        if (empty($path)) {
+            return asset('images/logo.png');
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        $clean = ltrim($path, '/');
+        if (!str_starts_with($clean, 'uploads/')) {
+            $clean = 'uploads/m_media/' . $clean;
+        }
+        return asset($clean);
+    }
+
     /**
-     * Ambil URL Logo aktif (bisa spesifik comp_id atau fallback ke LOGO_UTAMA)
+     * Ambil URL Logo aktif (bisa spesifik comp_id atau fallback ke LOGO_UTAMA / LOGO-IMG)
      */
     public static function getLogoUrl($compId = null)
     {
@@ -37,19 +52,20 @@ class m_media extends \App\Models\BasicModels\m_media
         if ($compId) {
             $compLogo = (clone $query)->where('m_media.m_comp_id', $compId)->first();
             if ($compLogo && !empty($compLogo->file_path)) {
-                $path = $compLogo->file_path;
-                return (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) ? $path : asset(ltrim($path, '/'));
+                return self::formatMediaUrl($compLogo->file_path);
             }
         }
 
         $defaultLogo = $query->where(function($q) {
             $q->where('m_media.kode', 'LOGO_UTAMA')
+              ->orWhere('m_media.kode', 'LOGO-IMG')
               ->orWhereNull('m_media.m_comp_id');
-        })->orderBy('m_media.id', 'asc')->first();
+        })->orderByRaw("CASE WHEN m_media.kode = 'LOGO_UTAMA' THEN 0 WHEN m_media.kode LIKE '%LOGO%' THEN 1 ELSE 2 END")
+          ->orderBy('m_media.id', 'asc')
+          ->first();
 
         if ($defaultLogo && !empty($defaultLogo->file_path)) {
-            $path = $defaultLogo->file_path;
-            return (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) ? $path : asset(ltrim($path, '/'));
+            return self::formatMediaUrl($defaultLogo->file_path);
         }
 
         return asset('images/logo.png');
