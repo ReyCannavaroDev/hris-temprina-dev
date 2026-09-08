@@ -142,6 +142,12 @@ function onReset() {
   })
 }
 
+function onPrint(id = null) {
+  const targetId = id || route.params.id
+  if (!targetId || targetId === 'create') return
+  window.open(`${store.server.url_backend}/web/report_hasil_tes?id=${targetId}&export=pdf`, '_blank')
+}
+
 async function onSave() {
   //values.tags = JSON.stringify(values.tags)
   try {
@@ -350,6 +356,15 @@ const landing = computed(() => {
         show: () => data.can_create,
         click(row) {
           router.push(`${route.path}/${row.id}?action=Copy&` + tsId)
+        }
+      },
+      {
+        icon: 'print',
+        title: "Print Hasil Tes",
+        class: 'bg-blue-600 text-white rounded-md',
+        show: () => data.can_read,
+        click(row) {
+          onPrint(row.id)
         }
       },
       {

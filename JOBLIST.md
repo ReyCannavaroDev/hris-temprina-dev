@@ -184,9 +184,9 @@ Berdasarkan hasil meeting bersama klien tanggal 03 September 2026, terdapat 5 mo
   - [x] Uji pembuatan data perdin di hari yang sama vs berganti hari untuk memastikan nomor surat me-reset dengan benar.
 
 ### 👥 TAHAP 11: Otomatisasi Filter Bawahan pada `t_penilaian_kary`
-- [ ] **[Javascript/t_penilaian_kary.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_penilaian_kary.js)** & **[Blades/t_penilaian_kary.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_penilaian_kary.blade.php)**:
-  - [ ] Pasang parameter `scopes: 'bawahan'` dan `atasan_id` pada `apiKary`.
-  - [ ] Batasi pemilihan karyawan hanya mencakup bawahan langsung atasan dalam divisi yang bersangkutan.
+- [x] **[Javascript/t_penilaian_kary.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_penilaian_kary.js)** & **[Blades/t_penilaian_kary.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_penilaian_kary.blade.php)**:
+  - [x] Pasang parameter filter `atasan_id` sesuai user login pada `apiKary`.
+  - [x] Batasi pemilihan karyawan hanya mencakup bawahan langsung atasan dalam divisi yang bersangkutan.
 
 ### 📄 TAHAP 12: Printout & Pembenahan Label `t_req_pelatihan`
 - [x] **[Blades/web_report_req_pelatihan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/web_report_req_pelatihan.blade.php)**:
@@ -196,10 +196,10 @@ Berdasarkan hasil meeting bersama klien tanggal 03 September 2026, terdapat 5 mo
   - [x] Tambahkan tombol aksi `Print` di landing table dan form view yang membuka route web report pelatihan.
 
 ### 🎯 TAHAP 13: Proteksi Duplikasi & Tampilan Peserta `t_efektifitas_pelatihan`
-- [ ] **[Models/t_efektifitas_pelatihan/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_efektifitas_pelatihan/Custom.php)**:
-  - [ ] Tambahkan validasi dan filter data agar peserta yang sudah berstatus `POSTED` tidak dapat diinput ulang.
-- [ ] **[Blades/t_efektifitas_pelatihan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_efektifitas_pelatihan.blade.php)** & **[Javascript/t_efektifitas_pelatihan.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_efektifitas_pelatihan.js)**:
-  - [ ] Tambahkan kolom ringkasan peserta pada popup pemilihan pelatihan.
+- [x] **[Models/t_efektifitas_pelatihan/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_efektifitas_pelatihan/Custom.php)**:
+  - [x] Tambahkan validasi dan filter data agar peserta yang sudah dinilai/berstatus selain REJECTED tidak dapat diinput ulang.
+- [x] **[Blades/t_efektifitas_pelatihan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_efektifitas_pelatihan.blade.php)** & **[Javascript/t_efektifitas_pelatihan.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_efektifitas_pelatihan.js)**:
+  - [x] Tambahkan kolom ringkasan peserta yang belum dinilai (`peserta_efektifitas`) pada popup pemilihan pelatihan.
 
 ### 💼 TAHAP 14: Pembenahan Lowongan Kerja, FPTK, Tahapan, & Hasil Tes
 - [x] **[Javascript/t_lowongan_kerja.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_lowongan_kerja.js)** & **[Models/t_loker/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Custom.php)**:
@@ -209,5 +209,16 @@ Berdasarkan hasil meeting bersama klien tanggal 03 September 2026, terdapat 5 mo
 - [x] **[Blades/t_hasil_test.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_hasil_test.blade.php)** & **[Javascript/t_hasil_test.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_hasil_test.js)**:
   - [x] Konfigurasi kolom tahapan (m_general group TAHAPAN-PENERIMAAN-KARYAWAN) dan status pending/proses/diterima/tidak diterima.
   - [x] Ubah input nama tes detail menjadi dropdown pilihan (m_general group NAMA-TEST-PELAMAR).
-- [ ] **[Blades/web_report_hasil_tes.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/web_report_hasil_tes.blade.php)**:
-  - [ ] Susun template printout lembar hasil tes lamaran kerja.
+- [x] **[Blades/web_report_hasil_tes.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/web_report_hasil_tes.blade.php)**:
+  - [x] Susun template printout lembar hasil tes lamaran kerja (Form FM-HRD-REC-002: data pelamar, lowongan, tahapan, rincian skor tes, dan tanda tangan).
+
+### 🖼️ TAHAP 15: Master Data Media & Aset Visual (`m_media`)
+- [x] **[Models/m_media/*](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/m_media/Migration.php)**:
+  - [x] Schema `m_media`: `kode`, `nama`, `kategori_id` (relasi `m_general` group `KATEGORI-MEDIA`), `m_comp_id`, `file_path`, `keterangan`, `is_active`.
+  - [x] Konfigurasi upload handler `$fileColumns = ['file_path']` dan helper `getLogoUrl($compId)`.
+- [x] **[Blades/m_media.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/m_media.blade.php)** & **[Javascript/m_media.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/m_media.js)**:
+  - [x] Form CRUD Master Media dengan upload gambar dan live thumbnail preview.
+- [x] **Integrasi Kop Cetak Surat**:
+  - [x] [Blades/web_report_req_pelatihan.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/web_report_req_pelatihan.blade.php): Hapus hardcode base64, ambil logo dinamis dari `m_media`.
+  - [x] [Blades/web_report_hasil_tes.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/web_report_hasil_tes.blade.php): Gunakan resolver logo `m_media`.
+
