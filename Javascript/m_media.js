@@ -12,6 +12,7 @@ const isBadForm = ref(false)
 const isRequesting = ref(false)
 const modulPath = route.params.modul || 'm_media'
 const currentMenu = store.currentMenu
+const data = computed(() => store.currentMenu || { can_create: true, can_read: true, can_update: true, can_delete: true })
 const apiTable = ref(null)
 const formErrors = ref({})
 const tsId = `ts=` + (Date.parse(new Date()))

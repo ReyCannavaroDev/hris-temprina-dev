@@ -12,9 +12,9 @@
     </div>
     <div>
       <RouterLink :to="$route.path+'/create?'+(Date.parse(new Date()))"
-        v-if="data?.can_create"
-        class="border border-blue-600 text-blue-600 bg-white hover:bg-blue-600 hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-3 text-sm">
-        Create New
+        v-if="currentMenu ? (currentMenu.can_create ?? true) : true"
+        class="border border-[#428BCA] text-[#428BCA] font-semibold bg-white hover:bg-[#428BCA] hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1.5 px-3 text-sm flex items-center gap-1 shadow-sm">
+        <Icon fa="plus" /> Create New
       </RouterLink>
     </div>
   </div>
