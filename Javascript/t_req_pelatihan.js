@@ -713,7 +713,7 @@ const landing = computed(() => {
         icon: 'edit',
         title: "Edit",
         class: 'bg-blue-600 text-light-100',
-        show: (row) => !['POSTED', 'REJECTED'].includes(row.status?.toUpperCase()) && data.can_update && !['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase()),
+        show: (row) => !['POSTED', 'REJECTED', 'APPROVED', 'IN APPROVAL'].includes(row.status?.toUpperCase()) && data.can_update && !['danvers', 'developer'].includes(store.user.data?.username?.toLowerCase()),
         click(row) {
           router.push(`${route.path}/${row.id}?action=Edit&` + tsId)
         }
@@ -792,9 +792,9 @@ const landing = computed(() => {
         }
       },
       {
-        icon: 'table',
+        icon: 'history',
         title: "Log Approval",
-        class: 'bg-gray-700 rounded-lg text-white',
+        class: 'bg-purple-600 rounded-lg text-white',
         show: (row) => ['APPROVED', 'IN APPROVAL', 'HALF APPROVED', 'REVISED', 'REJECTED'].includes(row['status']) && data.can_read,
         click(row) {
           openModal(row.id)

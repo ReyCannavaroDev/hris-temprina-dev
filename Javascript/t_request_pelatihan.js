@@ -763,9 +763,9 @@ const landing = computed(() => {
         }
       },
       {
-        icon: 'table',
+        icon: 'history',
         title: "Log Approval",
-        class: 'bg-gray-700 rounded-lg text-white',
+        class: 'bg-purple-600 rounded-lg text-white',
         show: (row) => ['APPROVED', 'IN APPROVAL', 'HALF APPROVED', 'REJECTED', 'REVISED'].includes(row['status']?.toUpperCase()) && data.can_read,
         click(row) {
           openModal(row.id)
