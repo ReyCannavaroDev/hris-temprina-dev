@@ -42,6 +42,12 @@ onBeforeMount(() => {
   document.title = 'Pengajuan Pelatihan'
 })
 
+function onPrint(id = null) {
+  const targetId = id || route.params.id
+  if (!targetId || targetId === 'create') return
+  window.open(`${store.server.url_backend}/web/report_req_pelatihan?id=${targetId}&export=pdf`, '_blank')
+}
+
 //  @if( $id )------------------- VALUES FORM ! PENTING JANGAN DIHAPUS
 let initialValues = {}
 const changedValues = []
@@ -302,11 +308,6 @@ function onReset() {
   })
 }
 
-function onPrint(id = null) {
-  const targetId = id || route.params.id
-  if (!targetId || targetId === 'create') return
-  window.open(`${store.server.url_backend}/web/report_req_pelatihan?id=${targetId}&export=pdf`, '_blank')
-}
 
 async function posted() {
   const payload = {
@@ -807,8 +808,9 @@ const landing = computed(() => {
             || apiTable.value?.selectedRow?.id 
             || apiTable.value?.selected?.id
             || apiTable.value?.dataSelected?.id
-          if (targetId) {
-            onPrint(targetId)
+          if (targetId && targetId !== 'create') {
+            const url = `${store.server.url_backend}/web/report_req_pelatihan?id=${targetId}&export=pdf`
+            window.open(url, '_blank')
           } else {
             swal.fire({
               icon: 'info',
