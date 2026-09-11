@@ -49,9 +49,9 @@ class tloker extends Migration
             //$table->string('_columnName_');
             //$table->dropColumn(['is_active']);
             // $table->boolean('is_active')->nullable()->default(false);
-            $table->bigInteger('jk_id')->comment('{"src":"m_general.id"}')->nullable();
-            $table->bigInteger('status_kary_id')->comment('{"src":"m_general.id"}')->nullable();
-            $table->bigInteger('jumlah')->nullable();
+            // $table->bigInteger('jk_id')->comment('{"src":"m_general.id"}')->nullable();
+            // $table->bigInteger('status_kary_id')->comment('{"src":"m_general.id"}')->nullable();
+            // $table->bigInteger('jumlah')->nullable();
             $table->bigInteger('t_req_recruitment_id')->comment('{"src":"t_req_recruitment.id"}')->nullable();
         });
     }
