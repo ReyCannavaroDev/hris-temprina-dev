@@ -117,6 +117,29 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
     {
         $this->prepareDetailRequest();
 
+        $t_loker_id = $arrayData['t_loker_id'] ?? null;
+        $t_pelamar_id = $arrayData['t_pelamar_id'] ?? null;
+        $tahapan_id = $arrayData['tahapan_id'] ?? null;
+
+        // Proteksi Duplikasi: Pelamar tidak boleh diinput ulang untuk loker yang sama
+        if ($t_loker_id && $t_pelamar_id) {
+            $isDuplicate = \DB::table('t_hasil_tes')
+                ->where('t_loker_id', $t_loker_id)
+                ->where('t_pelamar_id', $t_pelamar_id)
+                ->when($tahapan_id, function($q) use ($tahapan_id) {
+                    $q->where('tahapan_id', $tahapan_id);
+                })
+                ->exists();
+
+            if ($isDuplicate) {
+                return [
+                    "model"  => $model,
+                    "data"   => $arrayData,
+                    "errors" => ["Pelamar ini sudah memiliki penilaian pada lowongan kerja tersebut."]
+                ];
+            }
+        }
+
         $newArrayData = array_merge($arrayData, [
             'nomor'  => $this->helper->generateNomor('KODE HASIL TES PELAMAR'),
             'status' => $arrayData['status'] ?? 'PENDING'
@@ -138,6 +161,99 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         ];
     }
 
+    private function createAppTicket($id, $target_id = null)
+    {
+        $trx = $this->find($id);
+        if (!$trx) return false;
+
+        // Cari pemohon FPTK dari loker terkait
+        $loker = \DB::table('t_loker')->where('id', $trx->t_loker_id)->first();
+        $targetUserId = null;
+        if ($target_id) {
+            $targetUserId = $target_id;
+        } elseif ($loker && !empty($loker->t_req_recruitment_id)) {
+            $fptk = \DB::table('t_req_recruitment')->where('id', $loker->t_req_recruitment_id)->first();
+            if ($fptk && !empty($fptk->creator_id)) {
+                $targetUserId = $fptk->creator_id;
+            } elseif ($fptk && !empty($fptk->m_kary_id)) {
+                $targetUserId = \DB::table('default_users')->where('m_kary_id', $fptk->m_kary_id)->value('id');
+            }
+        }
+
+        $conf = [
+            "app_name"       => "APPROVAL HASIL TES PELAMAR",
+            "trx_id"         => $trx->id,
+            "trx_table"      => $this->getTable(),
+            "trx_name"       => "Hasil Test Lamaran Kerja",
+            "form_name"      => "t_hasil_test",
+            "trx_nomor"      => $trx->nomor,
+            "trx_date"       => date("Y-m-d"),
+            "trx_creator_id" => $trx->creator_id,
+            "target_id"      => $targetUserId,
+        ];
+
+        return $this->helper->approvalCreateTicket($conf);
+    }
+
+    public function custom_send_approval()
+    {
+        $target_id = req("target_id");
+        $user_target = $target_id ? \App\Models\BasicModels\default_users::where('m_kary_id', $target_id)->first()?->id : null;
+
+        $app = $this->createAppTicket(req("id"), $user_target);
+        if (!$app) {
+            return $this->helper->customResponse("Terjadi kesalahan, coba kembali nanti", 400);
+        }
+
+        $data = $this->find(req("id"));
+        if ($data) {
+            $data->update([
+                "status" => "PROSES",
+            ]);
+        }
+
+        return $this->helper->customResponse("Permintaan approval hasil tes berhasil dikirim");
+    }
+
+    public function custom_progress($req)
+    {
+        \DB::beginTransaction();
+        try {
+            $conf = [
+                "app_id"   => $req->id,
+                "app_type" => $req->type, // APPROVED, REVISED, REJECTED
+                "app_note" => $req->note,
+            ];
+
+            $app = $this->helper->approvalProgress($conf, true);
+            if ($app->status) {
+                $data = $this->find($app->trx_id);
+                if ($app->finish) {
+                    $finalStatus = ($req->type === 'APPROVED') ? 'DITERIMA' : 'TIDAK DITERIMA';
+                    $data->update([
+                        "status" => $finalStatus
+                    ]);
+
+                    // JIKA DITERIMA: Auto-sync ke Master Karyawan & trigger status loker dinamis
+                    if ($finalStatus === 'DITERIMA') {
+                        $this->syncPelamarToKaryawan($data);
+                        \App\Models\CustomModels\t_loker::updateStatusLoker($data->t_loker_id);
+                    }
+                } else {
+                    $data->update([
+                        "status" => "PROSES",
+                    ]);
+                }
+            }
+
+            \DB::commit();
+            return $this->helper->customResponse("Proses approval berhasil diproses");
+        } catch (\Exception $e) {
+            \DB::rollback();
+            return $this->helper->responseCatch($e);
+        }
+    }
+
     public function custom_postData($request)
     {
         $data = t_hasil_tes::find($request->id);
@@ -148,163 +264,217 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
         try {
             $update = $data->update([
-                'status' => "POSTED"
+                'status' => "PROSES"
             ]);
 
             if ($update) {
-                return response()->json(['message' => 'Data berhasil diposting.']);
+                return response()->json(['message' => 'Data berhasil diproses.']);
             } else {
                 return response()->json(['error' => 'Gagal memperbarui status.'], 500);
             }
         } catch (\Exception $e) {
-            // Handle exception, log error messages, etc.
             return response()->json(['error' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
         }
     }
 
-    public function custom_registerKary($request)
+    public function syncPelamarToKaryawan($data)
     {
-      $data = t_hasil_tes::find($request->id);
-
-      if (!$data) {
-          return response()->json(['error' => 'Data tidak ditemukan.'], 404);
-      }
-
         try {
+            $pelamar = \App\Models\BasicModels\t_pelamar::find($data->t_pelamar_id);
+            $loker = \App\Models\BasicModels\t_loker::find($data->t_loker_id);
 
-            $pelamar = t_pelamar::find($data->t_pelamar_id);
-            $loker = t_loker::find($data->t_loker_id);
+            if (!$pelamar) return false;
 
-            // dd($loker);
+            $kode = $this->helper->generateNomor("KODE KARYAWAN");
 
-            if (!$pelamar) {
-                return response()->json(['error' => 'Data pelamar terkait tidak ditemukan.'], 404);
-            }
-
-            $kode = @$this->helper->generateNomor("KODE KARYAWAN");
-
-            $kary = m_kary::updateOrCreate(
-                  ['nik' => $pelamar->no_ktp], 
-                  [
-                    'ref_id'          => $pelamar->id,
+            $kary = \App\Models\BasicModels\m_kary::updateOrCreate(
+                ['nik' => $pelamar->ktp_no],
+                [
                     'm_comp_id'       => $loker->m_comp_id ?? null,
                     'm_subcomp_id'    => $loker->m_subcomp_id ?? null,
                     'm_branch_id'     => $loker->m_branch_id ?? null,
                     'm_divisi_id'     => $loker->m_divisi_id ?? null,
                     'm_posisi_id'     => $loker->m_posisi_id ?? null,
-                    
-                    'nip'             => $kode,
                     'kode'            => $kode,
-                    'no_registrasi'   => substr($kode, -10),
                     'nik'             => $pelamar->ktp_no,
                     'nama_depan'      => $pelamar->nama_depan,
                     'nama_belakang'   => $pelamar->nama_belakang,
-                    'nama_lengkap'    => $pelamar->nama_lengkap,
-                    'nama_panggilan'  => $pelamar->nama_lengkap,
-                    
-                    // Data Personal
+                    'nama_lengkap'    => $pelamar->nama_lengkap ?? ($pelamar->nama_depan . ' ' . $pelamar->nama_belakang),
+                    'nama_panggilan'  => $pelamar->nama_panggilan ?? $pelamar->nama_depan,
                     'jk_id'           => $pelamar->jk_id,
                     'tempat_lahir'    => $pelamar->tempat_lahir,
                     'tgl_lahir'       => $pelamar->tgl_lahir,
                     'email'           => $pelamar->email,
                     'no_tlp'          => $pelamar->telp,
-                    
-                    // Sosial Media
                     'ig'              => $pelamar->ig,
                     'x'               => $pelamar->x,
                     'facebook'        => $pelamar->facebook,
                     'linkedin'        => $pelamar->linkedin,
-                    
-                    // Status & Tanggal
                     'tgl_masuk'       => Carbon::now()->toDateString(),
                     'is_active'       => true,
-                    'is_sync'         => false,
                     'status_kary_id'  => $loker->status_kary_id ?? null,
-                    
-                    // Audit Trail
-                    'creator_id'      => auth()->id() ?? $req->creator_id,
-                    'last_editor_id'  => auth()->id() ?? $req->last_editor_id,
+                    'creator_id'      => auth()->id() ?? $data->creator_id,
+                    'last_editor_id'  => auth()->id() ?? $data->last_editor_id,
                 ]
-              );
+            );
 
-              DB::table('m_kary_det_jabatan')
-                  ->where(function($q) use ($kary) {
-                      $q->where('m_karyawan_id', $kary->id)
-                        ->orWhere('m_kary_id', $kary->id);
-                  })
-                  ->delete();
+            // 1. Detail Jabatan
+            \DB::table('m_kary_det_jabatan')
+                ->where('m_kary_id', $kary->id)
+                ->delete();
 
-              // Insert Jabatan baru berdasarkan Loker yang dilamar
-              DB::table('m_kary_det_jabatan')->insert([
-                  'm_kary_id'      => $kary->id,
-                  'm_karyawan_id'  => $kary->id,
-                  'm_comp_id'      => $loker->m_comp_id ?? null,
-                  'm_subcomp_id'   => $loker->m_subcomp_id ?? null, // Sesuaikan jika ada di t_loker
-                  'm_branch_id'    => $loker->m_branch_id ?? null,
-                  'm_divisi_id'    => $loker->m_divisi_id ?? null,
-                  'm_posisi_id'    => $loker->m_posisi_id ?? null,
-                  'start_time'     => null, // Tanggal mulai menjabat (hari ini)
-                  'end_time'       => null,                  // Kosong karena jabatan aktif
-                  'desc'           => 'Jabatan awal dari hasil seleksi loker: ' . ($loker->nomor ?? ''),
-                  'is_primary'     => true,                  // Jabatan utama
-                  'is_active'      => true,
-                  'creator_id'     => auth()->id() ?? $req->creator_id,
-                  'last_editor_id' => auth()->id() ?? $req->last_editor_id,
-                  'created_at'     => Carbon::now(),
-              ]);
+            \DB::table('m_kary_det_jabatan')->insert([
+                'm_kary_id'      => $kary->id,
+                'm_comp_id'      => $loker->m_comp_id ?? null,
+                'm_subcomp_id'   => $loker->m_subcomp_id ?? null,
+                'm_branch_id'    => $loker->m_branch_id ?? null,
+                'm_divisi_id'    => $loker->m_divisi_id ?? null,
+                'm_posisi_id'    => $loker->m_posisi_id ?? null,
+                'desc'           => 'Jabatan awal dari seleksi loker: ' . ($loker->nomor ?? ''),
+                'is_primary'     => true,
+                'is_active'      => true,
+                'creator_id'     => auth()->id() ?? $data->creator_id,
+                'created_at'     => Carbon::now(),
+            ]);
 
-              // --- Detail Organisasi ---
-              DB::table('m_kary_det_org')->where('m_kary_id', $kary->id)->delete();
-              foreach ($pelamar->t_pelamar_det_org as $det) {
-                  DB::table('m_kary_det_org')->insert(array_merge($det->toArray(), ['m_kary_id' => $kary->id]));
-              }
-
-              // --- Detail Pelatihan ---
-              DB::table('m_kary_det_pel')->where('m_kary_id', $kary->id)->delete();
-              foreach ($pelamar->t_pelamar_det_pel as $det) {
-                  DB::table('m_kary_det_pel')->insert(array_merge($det->toArray(), ['m_kary_id' => $kary->id]));
-              }
-
-              // --- Detail Pendidikan ---
-              DB::table('m_kary_det_pend')->where('m_kary_id', $kary->id)->delete();
-              foreach ($pelamar->t_pelamar_det_pend as $det) {
-                  DB::table('m_kary_det_pend')->insert(array_merge($det->toArray(), ['m_kary_id' => $kary->id]));
-              }
-
-              // --- Detail Pengalaman Kerja ---
-              DB::table('m_kary_det_pk')->where('m_kary_id', $kary->id)->delete();
-              foreach ($pelamar->t_pelamar_det_pk as $det) {
-                  DB::table('m_kary_det_pk')->insert(array_merge($det->toArray(), ['m_kary_id' => $kary->id]));
-              }
-
-              // --- Detail Prestasi ---
-              DB::table('m_kary_det_pres')->where('m_kary_id', $kary->id)->delete();
-              foreach ($pelamar->t_pelamar_det_pres as $det) {
-                  DB::table('m_kary_det_pres')->insert(array_merge($det->toArray(), ['m_kary_id' => $kary->id]));
-              }
-              
-
-
-
-              if ($kary) {
-                  // Opsional: Update status di tabel hasil tes bahwa pelamar sudah jadi karyawan
-                  $data->update(['status' => 'HIRED']);
-                  
-                  return response()->json([
-                      'success' => true,
-                      'message' => 'Registrasi karyawan berhasil.',
-                      'data'    => $kary
-                  ]);
-              }
-
-            if ($update) {
-                return response()->json(['message' => 'Registrasi karyawan berhasil.']);
-            } else {
-                return response()->json(['error' => 'Gagal registrasi karyawan.'], 500);
+            // 2. Detail Organisasi
+            $pOrg = \DB::table('t_pelamar_det_org')->where('t_pelamar_id', $pelamar->id)->get();
+            if ($pOrg->isNotEmpty()) {
+                \DB::table('m_kary_det_org')->where('m_kary_id', $kary->id)->delete();
+                foreach ($pOrg as $row) {
+                    \DB::table('m_kary_det_org')->insert([
+                        'm_kary_id'     => $kary->id,
+                        'nama'          => $row->nama ?? null,
+                        'tahun'         => $row->tahun ?? null,
+                        'jenis_org_id'  => $row->jenis_org_id ?? null,
+                        'kota_id'       => $row->kota_id ?? null,
+                        'posisi'        => $row->posisi ?? null,
+                        'desc'          => $row->desc ?? null,
+                        'created_at'    => Carbon::now()
+                    ]);
+                }
             }
+
+            // 3. Detail Pelatihan
+            $pPel = \DB::table('t_pelamar_det_pel')->where('t_pelamar_id', $pelamar->id)->get();
+            if ($pPel->isNotEmpty()) {
+                \DB::table('m_kary_det_pel')->where('m_kary_id', $kary->id)->delete();
+                foreach ($pPel as $row) {
+                    \DB::table('m_kary_det_pel')->insert([
+                        'm_kary_id'  => $kary->id,
+                        'nama_pel'   => $row->nama_pel ?? null,
+                        'tahun'      => $row->tahun ?? null,
+                        'nama_lem'   => $row->nama_lem ?? null,
+                        'kota_id'    => $row->kota_id ?? null,
+                        'created_at' => Carbon::now()
+                    ]);
+                }
+            }
+
+            // 4. Detail Pendidikan
+            $pPend = \DB::table('t_pelamar_det_pend')->where('t_pelamar_id', $pelamar->id)->get();
+            if ($pPend->isNotEmpty()) {
+                \DB::table('m_kary_det_pend')->where('m_kary_id', $kary->id)->delete();
+                foreach ($pPend as $row) {
+                    \DB::table('m_kary_det_pend')->insert([
+                        'm_kary_id'         => $kary->id,
+                        'tingkat_id'        => $row->tingkat_id ?? null,
+                        'nama_sekolah'      => $row->nama_sekolah ?? null,
+                        'tahun_masuk'       => $row->tahun_masuk ?? null,
+                        'tahun_lulus'       => $row->tahun_lulus ?? null,
+                        'kota_id'           => $row->kota_id ?? null,
+                        'nilai'             => $row->nilai ?? null,
+                        'jurusan'           => $row->jurusan ?? null,
+                        'is_pend_terakhir'  => $row->is_pend_terakhir ?? 0,
+                        'ijazah_no'         => $row->ijazah_no ?? null,
+                        'ijazah_foto'       => $row->ijazah_foto ?? null,
+                        'created_at'        => Carbon::now()
+                    ]);
+                }
+            }
+
+            // 5. Detail Pengalaman Kerja Formal (PK)
+            $pPk = \DB::table('t_pelamar_det_pk')->where('t_pelamar_id', $pelamar->id)->get();
+            if ($pPk->isNotEmpty()) {
+                \DB::table('m_kary_det_pk')->where('m_kary_id', $kary->id)->delete();
+                foreach ($pPk as $row) {
+                    \DB::table('m_kary_det_pk')->insert([
+                        'm_kary_id'        => $kary->id,
+                        'instansi'         => $row->instansi ?? null,
+                        'bidang_usaha'     => $row->bidang_usaha ?? null,
+                        'no_tlp'           => $row->no_tlp ?? null,
+                        'posisi'           => $row->posisi ?? null,
+                        'thn_masuk'        => $row->thn_masuk ?? null,
+                        'thn_keluar'       => $row->thn_keluar ?? null,
+                        'alamat_kantor'    => $row->alamat_kantor ?? null,
+                        'kota_id'          => $row->kota_id ?? null,
+                        'surat_referensi'  => $row->surat_referensi ?? null,
+                        'created_at'       => Carbon::now()
+                    ]);
+                }
+            }
+
+            // 6. Detail Prestasi
+            $pPres = \DB::table('t_pelamar_det_pres')->where('t_pelamar_id', $pelamar->id)->get();
+            if ($pPres->isNotEmpty()) {
+                \DB::table('m_kary_det_pres')->where('m_kary_id', $kary->id)->delete();
+                foreach ($pPres as $row) {
+                    \DB::table('m_kary_det_pres')->insert([
+                        'm_kary_id'        => $kary->id,
+                        'nama_pres'        => $row->nama_pres ?? null,
+                        'tahun'            => $row->tahun ?? null,
+                        'tingkat_pres_id'  => $row->tingkat_pres_id ?? null,
+                        'desc'             => $row->desc ?? null,
+                        'created_at'       => Carbon::now()
+                    ]);
+                }
+            }
+
+            // 7. Detail Bahasa
+            $pBhs = \DB::table('t_pelamar_det_bhs')->where('t_pelamar_id', $pelamar->id)->get();
+            if ($pBhs->isNotEmpty()) {
+                \DB::table('m_kary_det_bhs')->where('m_kary_id', $kary->id)->delete();
+                foreach ($pBhs as $row) {
+                    \DB::table('m_kary_det_bhs')->insert([
+                        'm_kary_id'       => $kary->id,
+                        'bhs_dikuasai'    => $row->bhs_dikuasai ?? null,
+                        'nilai_lisan'     => $row->nilai_lisan ?? null,
+                        'level_lisan'     => $row->level_lisan ?? null,
+                        'nilai_tertulis'  => $row->nilai_tertulis ?? null,
+                        'level_tertulis'  => $row->level_tertulis ?? null,
+                        'desc'            => $row->desc ?? null,
+                        'created_at'      => Carbon::now()
+                    ]);
+                }
+            }
+
+            return $kary;
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
+            \Log::error("Error syncPelamarToKaryawan: " . $e->getMessage());
+            return false;
         }
+    }
+
+    public function custom_registerKary($request)
+    {
+        $data = t_hasil_tes::find($request->id);
+
+        if (!$data) {
+            return response()->json(['error' => 'Data tidak ditemukan.'], 404);
+        }
+
+        $res = $this->syncPelamarToKaryawan($data);
+        if ($res) {
+            $data->update(['status' => 'DITERIMA']);
+            \App\Models\CustomModels\t_loker::updateStatusLoker($data->t_loker_id);
+            return response()->json([
+                'success' => true,
+                'message' => 'Registrasi karyawan berhasil.',
+                'data'    => $res
+            ]);
+        }
+
+        return response()->json(['error' => 'Gagal registrasi karyawan.'], 500);
     }
 
     public function custom_addTahapanColumn()

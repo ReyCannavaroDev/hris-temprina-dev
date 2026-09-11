@@ -82,6 +82,9 @@ function formatDateTime() {
 }
 
 const values = reactive({
+  t_loker_id: null,
+  file_cv: null,
+  file_dokumen: null,
   tanggal: formatDateTime(),
   is_active: true,
   can_outscope: true,
@@ -1490,6 +1493,16 @@ const landing = computed(() => {
     {
       headerName: 'No. KTP',
       field: 'ktp_no',
+      filter: true,
+      sortable: true,
+      flex: 1,
+      filter: 'ColFilter',
+      resizable: true,
+      cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    },
+    {
+      headerName: 'Lowongan Kerja',
+      field: 't_loker.title',
       filter: true,
       sortable: true,
       flex: 1,

@@ -130,51 +130,53 @@ graph TD
 ---
 
 ### 🚀 TAHAP 1: Hak Akses Lowongan Kerja & Pengikatan Pengajuan (FPTK)
-- [ ] **[Models/t_loker/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Custom.php)** & **[Javascript/t_lowongan_kerja.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_lowongan_kerja.js)**:
-  - [ ] Implementasikan bypass `scoperespo` untuk Administrator / HR Central agar dapat melihat seluruh data loker.
-  - [ ] Tambahkan relasi `t_req_recruitment_id` pada model `t_loker`.
-- [ ] **[Blades/t_lowongan_kerja.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_lowongan_kerja.blade.php)** & **[Blades/t_loker.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_loker.blade.php)**:
-  - [ ] Pasang FieldPopup/Select `t_req_recruitment_id` yang hanya memfilter FPTK berstatus `APPROVED`.
-  - [ ] Integrasikan auto-fill field posisi, divisi, cabang, dan kuota kebutuhan saat FPTK dipilih.
+- [x] **[Models/t_loker/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Custom.php)** & **[Javascript/t_lowongan_kerja.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_lowongan_kerja.js)**:
+  - [x] Implementasikan bypass `scoperespo` untuk Administrator / HR Central agar dapat melihat seluruh data loker.
+  - [x] Tambahkan relasi `t_req_recruitment_id` pada model `t_loker` ($joins dan column).
+- [x] **[Blades/t_lowongan_kerja.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_lowongan_kerja.blade.php)** & **[Blades/t_loker.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_loker.blade.php)**:
+  - [x] Pasang FieldPopup/Select `t_req_recruitment_id` yang hanya memfilter FPTK berstatus `APPROVED`.
+  - [x] Integrasikan auto-fill field posisi, divisi, cabang, dan kuota kebutuhan saat FPTK dipilih (`onSelectFptk`).
 
 ---
 
 ### ⚙️ TAHAP 2: Siklus Status Loker Dinamis (`OPEN`, `PROGRESS`, `CLOSED`)
-- [ ] **[Models/t_loker/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Custom.php)** & **[Models/t_loker/Alter.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Alter.php)**:
-  - [ ] Tambahkan helper `updateStatusLoker($lokerId)` untuk sinkronisasi otomatis status:
+- [x] **[Models/t_loker/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Custom.php)** & **[Models/t_loker/Alter.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Alter.php)**:
+  - [x] Tambahkan helper `updateStatusLoker($lokerId)` untuk sinkronisasi otomatis status:
     - `OPEN`: Belum ada kandidat diterima.
     - `PROGRESS`: Kandidat diterima $> 0$ dan $<$ kebutuhan kuota.
     - `CLOSED`: Kandidat diterima $\ge$ kebutuhan kuota.
-  - [ ] Pasang badge tampilan status (`OPEN`, `PROGRESS`, `CLOSED`) di tabel landing dan form loker.
+  - [x] Pasang badge tampilan status (`OPEN`, `PROGRESS`, `CLOSED`, `POSTED`) di tabel landing dan form loker.
 
 ---
 
 ### 📝 TAHAP 3: Form Input Berjenjang & Proteksi Duplikasi Hasil Test
-- [ ] **[Blades/t_hasil_test.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_hasil_test.blade.php)** & **[Javascript/t_hasil_test.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_hasil_test.js)**:
-  - [ ] Ubah form agar memilih **Nama Lowongan Kerja** terlebih dahulu (hanya status `OPEN` / `PROGRESS`).
-  - [ ] Cascading filter: Pilihan **Nama Pelamar** otomatis memfilter pelamar yang melamar pada lowongan terpilih.
-  - [ ] Sembunyikan/cegah pemilihan lowongan yang sudah berstatus `CLOSED`.
-- [ ] **[Models/t_hasil_test/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_hasil_test/Custom.php)**:
-  - [ ] Tambahkan validasi anti-duplikasi: Mencegah penyimpanan jika pelamar sudah memiliki hasil tes pada loker/tahapan yang sama.
-  - [ ] Implementasikan alur approval hasil tes berjenjang yang ditujukan ke User Pemohon FPTK dan Manager / Atasan Divisi.
+- [x] **[Blades/t_hasil_test.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_hasil_test.blade.php)** & **[Javascript/t_hasil_test.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_hasil_test.js)**:
+  - [x] Ubah form agar memilih **Nama Lowongan Kerja** terlebih dahulu (hanya status non-`CLOSED`).
+  - [x] Cascading filter: Pilihan **Nama Pelamar** otomatis memfilter pelamar yang melamar pada lowongan terpilih (`scopes: 'loker'`).
+  - [x] Sembunyikan/cegah pemilihan lowongan yang sudah berstatus `CLOSED`.
+- [x] **[Models/t_hasil_tes/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_hasil_tes/Custom.php)**:
+  - [x] Tambahkan validasi anti-duplikasi: Mencegah penyimpanan jika pelamar sudah memiliki hasil tes pada loker/tahapan yang sama.
+  - [x] Implementasikan alur approval hasil tes berjenjang yang ditujukan ke User Pemohon FPTK dan Manager / Atasan Divisi.
+  - [x] Tambahkan tombol Kirim Approval di form dan landing action bar.
 
 ---
 
 ### 👥 TAHAP 4: Relasi Loker, Upload CV & Auto-Sinkronisasi Master Karyawan
-- [ ] **[Models/t_pelamar/Migration.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_pelamar/Migration.php)** & **[Models/t_pelamar/Alter.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_pelamar/Alter.php)**:
-  - [ ] Tambahkan kolom `t_loker_id`, `file_cv`, dan `file_dokumen`.
-- [ ] **[Blades/t_pelamar.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_pelamar.blade.php)** & **[Javascript/t_pelamar.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_pelamar.js)**:
-  - [ ] Tambahkan input pilihan lowongan kerja yang dilamar.
-  - [ ] Tambahkan komponen upload file untuk CV dan dokumen pendukung.
-- [ ] **[Models/t_pelamar/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_pelamar/Custom.php)** & **[Models/t_hasil_test/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_hasil_test/Custom.php)**:
-  - [ ] Implementasikan fungsi `syncToMasterKaryawan($pelamarId, $lokerId)` saat hasil tes di-approve berstatus `DITERIMA`.
-  - [ ] Salin biodata pelamar ke tabel `m_kary` dan kaitkan data divisi/posisi dari loker.
+- [x] **[Models/t_pelamar/Migration.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_pelamar/Migration.php)** & **[Models/t_pelamar/Alter.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_pelamar/Alter.php)**:
+  - [x] Tambahkan kolom `t_loker_id`, `file_cv`, dan `file_dokumen`.
+- [x] **[Blades/t_pelamar.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_pelamar.blade.php)** & **[Javascript/t_pelamar.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_pelamar.js)**:
+  - [x] Tambahkan input pilihan lowongan kerja yang dilamar (`FieldPopup` loker non-closed).
+  - [x] Tambahkan komponen upload file untuk CV (`file_cv`) dan dokumen pendukung (`file_dokumen`).
+  - [x] Tambahkan kolom Lowongan Kerja di landing table.
+- [x] **[Models/t_pelamar/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_pelamar/Custom.php)** & **[Models/t_hasil_tes/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_hasil_tes/Custom.php)**:
+  - [x] Implementasikan fungsi `syncPelamarToKaryawan($data)` saat hasil tes di-approve berstatus `DITERIMA` / melalui action `registerKary`.
+  - [x] Salin biodata pelamar ke tabel `m_kary` + 7 tabel detail (`m_kary_det_jabatan`, `org`, `pel`, `pend`, `pk`, `pres`, `bhs`) dan kaitkan data divisi/posisi dari loker.
 
 ---
 
 ### 🧪 TAHAP 5: Pengujian & Validasi Alur End-to-End
-- [ ] Uji pengajuan recruitment (FPTK) sampai disetujui (`APPROVED`).
-- [ ] Uji pembukaan Lowongan Kerja memilih data FPTK yang disetujui.
-- [ ] Uji pendaftaran Pelamar memilih Loker dan upload berkas CV.
-- [ ] Uji input Hasil Test: Memilih Loker $\rightarrow$ Memilih Pelamar $\rightarrow$ Validasi anti duplikasi.
-- [ ] Uji approval Hasil Test: Verifikasi transisi status Loker (`OPEN` $\rightarrow$ `PROGRESS` $\rightarrow$ `CLOSED`) dan verifikasi auto-insert data kandidat ke Master Karyawan (`m_kary`).
+- [x] Uji pengajuan recruitment (FPTK) sampai disetujui (`APPROVED`).
+- [x] Uji pembukaan Lowongan Kerja memilih data FPTK yang disetujui.
+- [x] Uji pendaftaran Pelamar memilih Loker dan upload berkas CV & Dokumen.
+- [x] Uji input Hasil Test: Memilih Loker $\rightarrow$ Memilih Pelamar $\rightarrow$ Validasi anti duplikasi.
+- [x] Uji approval Hasil Test: Verifikasi transisi status Loker (`OPEN` $\rightarrow$ `PROGRESS` $\rightarrow$ `CLOSED`) dan verifikasi auto-insert data kandidat ke Master Karyawan (`m_kary`).

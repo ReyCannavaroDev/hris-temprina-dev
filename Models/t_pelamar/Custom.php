@@ -58,11 +58,11 @@ class YourImportClass implements ToModel, WithHeadingRow
                     "kota_id" => $row["kota_id"] ?? null,
                     "nilai" => $row["nilai"] ?? null,
                     "jurusan" => $row["jurusan"] ?? null,
-                    "is_pend_terakhir" => (($row["is_pend_terakhir"] == '=TRUE()') ? 1 : 0 ) ?? null,
+                    "is_pend_terakhir" => (($row["is_pend_terakhir"] == '=TRUE()') ? 1 : 0) ?? null,
                     "ijazah_no" => $row["ijazah_no"] ?? null,
                     "ijazah_foto" => $row["ijazah_foto"] ?? null,
                     "keterangan" => $row["keterangan"] ?? null,
-                    "is_active" => (($row["is_active"] == '=TRUE()') ? 1 : 0 ) ?? null,
+                    "is_active" => (($row["is_active"] == '=TRUE()') ? 1 : 0) ?? null,
                 ];
 
                 $filteredRow = array_filter($filteredRow, function ($value) {
@@ -131,8 +131,24 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
     }
 
     public $fileColumns = [
-        /*file_column*/
+        'file_cv',
+        'file_dokumen'
     ];
+
+    public $joins = [
+        "t_loker.id=t_pelamar.t_loker_id",
+        "m_general.id=t_pelamar.jk_id",
+        "default_users.id=t_pelamar.creator_id",
+        "default_users.id=t_pelamar.last_editor_id"
+    ];
+
+    public function scopeloker($model)
+    {
+        $loker_id = request("t_loker_id") ?? null;
+        return $model->when($loker_id, function ($q) use ($loker_id) {
+            $q->where("t_pelamar.t_loker_id", $loker_id);
+        });
+    }
 
     public $createAdditionalData = ["creator_id" => "auth:id"];
     public $updateAdditionalData = ["last_editor_id" => "auth:id"];
@@ -216,7 +232,7 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
 
         DB::beginTransaction();
 
-        try {            
+        try {
             if (!$req->hasFile('file')) {
                 return response()->json(['error' => 'File tidak ditemukan'], 422);
             }
@@ -239,37 +255,37 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
                 $lastName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : $firstName;
 
                 $l = m_general::where('group', 'JENIS KELAMIN')->where('value', 'Laki-Laki')->first()?->id ?? null;
-                $p = m_general::where('group', 'JENIS KELAMIN')->where('value', 'Perempuan')->first()?->id ?? null;                
+                $p = m_general::where('group', 'JENIS KELAMIN')->where('value', 'Perempuan')->first()?->id ?? null;
 
                 $jkInput = strtoupper(trim($row[5]));
                 $jkId = ($jkInput == 'L') ? $l : (($jkInput == 'P') ? $p : null);
 
                 //cek blacklist
-                $ktpNo = (string)$row[1];
+                $ktpNo = (string) $row[1];
                 $existingPelamar = t_pelamar::where('ktp_no', $ktpNo)->first();
-                $newStatus = ($existingPelamar && $existingPelamar->status === 'blacklist') 
-                            ? 'blacklist' 
-                            : 'aktif';
+                $newStatus = ($existingPelamar && $existingPelamar->status === 'blacklist')
+                    ? 'blacklist'
+                    : 'aktif';
 
                 $pelamar = t_pelamar::updateOrCreate(
-                    ['ktp_no' => (string)$row[1]], 
+                    ['ktp_no' => (string) $row[1]],
                     [
-                        'nomor'          => $this->helper->generateNomor("KODE PELAMAR"),
-                        'nama_lengkap'   => $fullName,
-                        'nama_depan'     => $firstName,
-                        'nama_belakang'  => $lastName,
+                        'nomor' => $this->helper->generateNomor("KODE PELAMAR"),
+                        'nama_lengkap' => $fullName,
+                        'nama_depan' => $firstName,
+                        'nama_belakang' => $lastName,
                         'nama_panggilan' => $row[2],
-                        'ktp_no'         => (string)$row[1],
-                        'telp'           => $row[3],
-                        'email'          => $row[4],
-                        'jk_id'          => $jkId,
-                        'tempat_lahir'   => $row[6],
-                        'tgl_lahir'      => $this->formatDateExcel($row[7]),
-                        'tanggal'        => Carbon::now(),
-                        'ig'             => $row[8],
-                        'linkedin'       => $row[9],
-                        'status'         => $newStatus,
-                        'creator_id'     => auth()->id(),
+                        'ktp_no' => (string) $row[1],
+                        'telp' => $row[3],
+                        'email' => $row[4],
+                        'jk_id' => $jkId,
+                        'tempat_lahir' => $row[6],
+                        'tgl_lahir' => $this->formatDateExcel($row[7]),
+                        'tanggal' => Carbon::now(),
+                        'ig' => $row[8],
+                        'linkedin' => $row[9],
+                        'status' => $newStatus,
+                        'creator_id' => auth()->id(),
                     ]
                 );
             }
@@ -284,11 +300,12 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
     }
 
     /**
-    * Helper untuk handle format tanggal dari Excel
-    */
+     * Helper untuk handle format tanggal dari Excel
+     */
     private function formatDateExcel($value)
     {
-        if (!$value) return null;
+        if (!$value)
+            return null;
         try {
             // Jika formatnya angka (excel serial date)
             if (is_numeric($value)) {
@@ -327,7 +344,7 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
                 // Handle exception, for example, log error messages
                 return response()->json(
                     "Error importing data from sheet {$sheet}: " .
-                        $e->getMessage()
+                    $e->getMessage()
                 );
             }
         }
@@ -524,8 +541,7 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
                     "deskripsi" => $data["deskripsi"] ?? null,
                     "status" => $data["status"] ?? null,
                 ]);
-                if(isset($data["t_pelamar_det_peng"]))
-                {
+                if (isset($data["t_pelamar_det_peng"])) {
                     foreach ($data["t_pelamar_det_peng"] as $detPeng) {
                         t_pelamar_det_peng::create([
                             "t_pelamar_id" => $pelamar->id,
@@ -539,16 +555,15 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
                         ]);
                     }
                 }
-                if(isset($data["t_pelamar_det_pend"]))
-                {
+                if (isset($data["t_pelamar_det_pend"])) {
                     foreach ($data["t_pelamar_det_pend"] as $detPend) {
                         t_pelamar_det_pend::create([
                             "t_pelamar_id" => $pelamar->id,
-                            "tingkat_id" =>  m_general::where('value', $detPend["tingkat_id"])->value('id') ?? 0,
+                            "tingkat_id" => m_general::where('value', $detPend["tingkat_id"])->value('id') ?? 0,
                             "nama_sekolah" => $detPend["nama_sekolah"],
                             "tahun_masuk" => $detPend["tahun_masuk"],
                             "tahun_lulus" => $detPend["tahun_lulus"],
-                            "kota_id" => m_general::where('value', $detPend["kota_id"])->value('id') ?? 0 ,
+                            "kota_id" => m_general::where('value', $detPend["kota_id"])->value('id') ?? 0,
                             "nilai" => $detPend["nilai"],
                             "jurusan" => $detPend["jurusan"],
                             "is_pend_terakhir" => $detPend["is_pend_terakhir"],
@@ -559,63 +574,59 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
                         ]);
                     }
                 }
-                if(isset($data["t_pelamar_det_pel"]))
-                {
+                if (isset($data["t_pelamar_det_pel"])) {
                     foreach ($data["t_pelamar_det_pel"] as $detPel) {
                         t_pelamar_det_pel::create([
                             "t_pelamar_id" => $pelamar->id,
-                            "nama_pel"=> $detPel['nama_pel'],
-                            "tahun"=> $detPel['tahun'],
-                            "nama_lem"=> $detPel['nama_lem'],
-                            "kota_id"=>  m_general::where('value', $detPel["kota_id"])->value('id') ?? 0,
+                            "nama_pel" => $detPel['nama_pel'],
+                            "tahun" => $detPel['tahun'],
+                            "nama_lem" => $detPel['nama_lem'],
+                            "kota_id" => m_general::where('value', $detPel["kota_id"])->value('id') ?? 0,
                         ]);
                     }
                 }
 
-                if(isset($data["t_pelamar_det_org"]))
-                {
+                if (isset($data["t_pelamar_det_org"])) {
                     foreach ($data["t_pelamar_det_org"] as $detOrg) {
                         t_pelamar_det_org::create([
                             "t_pelamar_id" => $pelamar->id,
-                            "nama"=> $detOrg['nama'],
-                            "tahun"=> $detOrg['tahun'],
+                            "nama" => $detOrg['nama'],
+                            "tahun" => $detOrg['tahun'],
                             // "jenis_org_id"=> m_general::where('value', $detPend["jenis_org_id"])->value('value') ?? 0,
-                            "kota_id"=> m_general::where('value', $detOrg["kota_id"])->value('id') ?? 0,
-                            "posisi"=> $detOrg['posisi'],
-                            "desc"=> $detOrg['desc'],
+                            "kota_id" => m_general::where('value', $detOrg["kota_id"])->value('id') ?? 0,
+                            "posisi" => $detOrg['posisi'],
+                            "desc" => $detOrg['desc'],
                         ]);
                     }
                 }
 
-                if(isset($data["t_pelamar_det_bhs"]))
-                {
+                if (isset($data["t_pelamar_det_bhs"])) {
                     foreach ($data["t_pelamar_det_bhs"] as $detBhs) {
                         t_pelamar_det_bhs::create([
                             "t_pelamar_id" => $pelamar->id,
-                            "bhs_dikuasai"=> $detBhs['bhs_dikuasai'],
-                            "nilai_lisan"=> $detBhs['nilai_lisan'] ?? null,
+                            "bhs_dikuasai" => $detBhs['bhs_dikuasai'],
+                            "nilai_lisan" => $detBhs['nilai_lisan'] ?? null,
                             "level_lisan" => $detBhs('level_lisan') ?? null,
-                            "nilai_tertulis"=> $detBhs['nilai_tertulis'] ?? null,
+                            "nilai_tertulis" => $detBhs['nilai_tertulis'] ?? null,
                             "level_tertulis" => $detBhs('level_tertulis') ?? null,
-                            "desc"=>$detBhs['desc'],
+                            "desc" => $detBhs['desc'],
                         ]);
                     }
                 }
 
-                if(isset($data["t_pelamar_det_pres"]))
-                {
+                if (isset($data["t_pelamar_det_pres"])) {
                     foreach ($data["t_pelamar_det_pres"] as $detPres) {
                         t_pelamar_det_pres::create([
                             "t_pelamar_id" => $pelamar->id,
-                            "nama_pres"=> $detPres['nama_pres'],
-                            "tahun"=> $detPres['tahun'],
+                            "nama_pres" => $detPres['nama_pres'],
+                            "tahun" => $detPres['tahun'],
                             "tingkat_pres_id" => m_general::where('value', $detPres["tingkat_pres_id"])->value('id') ?? 0,
-                            "desc"=>$detPres['desc'],
+                            "desc" => $detPres['desc'],
                         ]);
                     }
                 }
 
-                
+
                 \DB::commit(); // Commit transaksi jika semuanya berhasil
             }
 

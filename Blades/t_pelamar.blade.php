@@ -131,6 +131,41 @@
           </button>
       </div>
       <div v-show="activeTabIndex === 0">
+        <!-- Pilihan Lowongan Pekerjaan yang dilamar -->
+        <div class="p-4 pb-0" v-show="activeTabIndex === 0">
+          <FieldPopup
+            class="w-full !mt-0"
+            :bind="{ readonly: !actionText }"
+            :value="values.t_loker_id"
+            @input="v => values.t_loker_id = v"
+            :errorText="formErrors.t_loker_id ? 'failed' : ''"
+            :hints="formErrors.t_loker_id"
+            valueField="id"
+            displayField="title"
+            :api="{
+              url: `${store.server.url_backend}/operation/t_loker`,
+              headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+              params: {
+                simplest: true,
+                join: true,
+                transform: true,
+                where: `upper(status) != 'CLOSED'`
+              }
+            }"
+            placeholder="Pilih Lowongan Pekerjaan yang Dilamar"
+            label="Lowongan Pekerjaan yang Dilamar"
+            :check="false"
+            :columns="[
+              { headerName: 'No', valueGetter: (params) => params.node.rowIndex + 1, width: 60 },
+              { headerName: 'Kode Loker', field: 'nomor', width: 170 },
+              { headerName: 'Nama Lowongan', field: 'title', flex: 1 },
+              { headerName: 'Posisi', field: 'm_posisi.name', width: 160 },
+              { headerName: 'Divisi', field: 'm_divisi.nama', width: 150 },
+              { headerName: 'Status', field: 'status', width: 110 }
+            ]"
+          />
+        </div>
+
         <!-- Data Pelamar -->
         <h2 class="font-bold mt-5 text-[18px] px-6" v-show="activeTabIndex === 0">Data Pelamar</h2>
         <div class="p-4 grid <md:grid-cols-1 grid-cols-3 gap-2" v-show="activeTabIndex === 0">
@@ -580,6 +615,34 @@
                  }" :hints="formErrors.berkas_lain" label="" placeholder="Upload Berkas" fa-icon="upload"
               accept="application/pdf" :check="false" />
 
+          </div>
+
+          <div>
+            <label>Curriculum Vitae (CV)<label class="text-red-500 space-x-0 pl-0"></label></label>
+            <FieldUpload class="w-full mt-3" :bind="{ readonly: !actionText }" :value="values.file_cv"
+              @input="(v)=>values.file_cv=v" :maxSize="10"
+              :reducerDisplay="val=>!val?null:val.split(':::')[val.split(':::').length-1]" :api="{
+                  url: `${store.server.url_backend}/operation/t_pelamar/upload`,
+                  headers: { Authorization: `${store.user.token_type} ${store.user.token}`},
+                  params: { field: 'file_cv' },
+                  onsuccess: response=>response,
+                  onerror:(error)=>{},
+                 }" :hints="formErrors.file_cv" label="" placeholder="Upload Berkas CV (PDF)" fa-icon="upload"
+              accept="application/pdf" :check="false" />
+          </div>
+
+          <div>
+            <label>Berkas File Pendukung (Portofolio/Sertifikat)<label class="text-red-500 space-x-0 pl-0"></label></label>
+            <FieldUpload class="w-full mt-3" :bind="{ readonly: !actionText }" :value="values.file_dokumen"
+              @input="(v)=>values.file_dokumen=v" :maxSize="10"
+              :reducerDisplay="val=>!val?null:val.split(':::')[val.split(':::').length-1]" :api="{
+                  url: `${store.server.url_backend}/operation/t_pelamar/upload`,
+                  headers: { Authorization: `${store.user.token_type} ${store.user.token}`},
+                  params: { field: 'file_dokumen' },
+                  onsuccess: response=>response,
+                  onerror:(error)=>{},
+                 }" :hints="formErrors.file_dokumen" label="" placeholder="Upload Berkas Pendukung (PDF)" fa-icon="upload"
+              accept="application/pdf" :check="false" />
           </div>
         </div>
         <!-- Ukuran -->

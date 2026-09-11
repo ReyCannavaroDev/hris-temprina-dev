@@ -36,12 +36,34 @@ let initialValues = {}
 const changedValues = []
 
 const values = reactive({
-  status: 'DRAFT',
+  t_req_recruitment_id: null,
+  status: 'OPEN',
   deskripsi: "",
   t_loker_d_kualifikasi: [
     { value: '' }
   ],
 })
+
+function onSelectFptk(obj) {
+  if (obj) {
+    values.t_req_recruitment_id = obj.id || null
+    if (obj.m_comp_id) values.m_comp_id = obj.m_comp_id
+    if (obj.m_subcomp_id) values.m_subcomp_id = obj.m_subcomp_id
+    if (obj.m_branch_id) values.m_branch_id = obj.m_branch_id
+    if (obj.m_divisi_id) values.m_divisi_id = obj.m_divisi_id
+    if (obj.m_posisi_id) values.m_posisi_id = obj.m_posisi_id
+    if (obj.status_kary_id) values.status_kary_id = obj.status_kary_id
+    if (obj.jumlah_kebutuhan) values.jumlah = obj.jumlah_kebutuhan
+    
+    const posName = obj['m_posisi.name'] || obj.m_posisi?.name || ''
+    const divName = obj['m_divisi.nama'] || obj.m_divisi?.nama || ''
+    if (posName) {
+      values.title = posName + (divName ? ' - ' + divName : '')
+    }
+  } else {
+    values.t_req_recruitment_id = null
+  }
+}
 
 onBeforeMount(async () => {
   const respoData = localStorage.getItem('respo')
@@ -690,14 +712,18 @@ const landing = computed(() => {
         authorization: `${store.user.token_type} ${store.user.token}`
       },
 
-      params: computed(() => ({
-        paginate: 25,
-        m_subcomp_id: data.subcomp_id,
-        m_branch_id: data.branch_id,
-        join: true,
-        transform: true,
-        scopes: 'respo'
-      })),
+      params: computed(() => {
+        const user = store.user?.data
+        const isAdmin = user?.user_type?.toLowerCase() === 'admin' || user?.is_hc || ['developer', 'admin', 'danvers'].includes(user?.username?.toLowerCase())
+        return {
+          paginate: 25,
+          m_subcomp_id: isAdmin ? null : (data.subcomp_id || null),
+          m_branch_id: isAdmin ? null : (data.branch_id || null),
+          join: true,
+          transform: true,
+          scopes: 'respo'
+        }
+      }),
 
       onsuccess(response) {
         response.page = response.current_page
@@ -785,10 +811,17 @@ const landing = computed(() => {
       flex: 1,
       cellClass: ['border-r', '!border-gray-200', 'justify-center'],
       cellRenderer: ({ value }) => {
-        return value
-          === "POSTED"
-          ? `<span class="text-green-500 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">${value}</span>`
-          : `<span class="text-red-500 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">${value}</span>`
+        const v = (value || '').toUpperCase()
+        if (v === 'OPEN') {
+          return `<span class="bg-blue-100 text-blue-700 rounded-md text-xs font-semibold px-3 py-1 inline-block">OPEN</span>`
+        } else if (v === 'PROGRESS') {
+          return `<span class="bg-amber-100 text-amber-800 rounded-md text-xs font-semibold px-3 py-1 inline-block">PROGRESS</span>`
+        } else if (v === 'CLOSED') {
+          return `<span class="bg-gray-200 text-gray-700 rounded-md text-xs font-semibold px-3 py-1 inline-block">CLOSED</span>`
+        } else if (v === 'POSTED') {
+          return `<span class="bg-green-100 text-green-700 rounded-md text-xs font-semibold px-3 py-1 inline-block">POSTED</span>`
+        }
+        return `<span class="bg-red-100 text-red-700 rounded-md text-xs font-semibold px-3 py-1 inline-block">${value || 'DRAFT'}</span>`
       }
     }
     ]

@@ -92,44 +92,80 @@
 
   <div class="p-4 grid <md:grid-cols-1 grid-cols-2 gap-2">
     <!-- START COLUMN -->
-    <!-- <div>
-      <FieldX :bind="{ readonly: true }" :value="values.kode" :errorText="formErrors.kode?'failed':''"
-        @input="v=>values.kode=v" :hints="formErrors.kode" :check="false" class="w-full !mt-3" label="Kode"
-        placeholder="Tuliskan Kode" />
-    </div> -->
-
     <div>
-      <FieldX :bind="{ readonly: true }" :value="values.nomor" :errorText="formErrors.desc?'failed':''"
+      <FieldX :bind="{ readonly: true }" :value="values.nomor" :errorText="formErrors.nomor?'failed':''"
         @input="v=>values.nomor=v" :hints="formErrors.nomor" :check="false" class="w-full !mt-3" label="Nomor"
         placeholder="Auto Generate By System" />
     </div>
 
+    <!-- 1. PILIH LOWONGAN KERJA TERLEBIH DAHULU (EXCLUDE CLOSED) -->
     <div>
-      <FieldSelect :bind="{ disabled: !actionText, clearable:false }" :value="values.t_pelamar_id" class="w-full !mt-3"
-        @input="v=>values.t_pelamar_id=v" :errorText="formErrors.t_pelamar_id?'failed':''"
-        :hints="formErrors.t_pelamar_id" valueField="id" displayField="nama_depan" :api="{
-            url: `${store.server.url_backend}/operation/t_pelamar`,
-            headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-            params: {
-              simplest:true,
-              transform:false,
-              join:false
-            }
-        }" placeholder="Pilih Pelamar" label="Nama Pelamar" fa-icon="" :check="false" />
+      <FieldPopup
+        class="w-full !mt-3"
+        :bind="{ readonly: !actionText }"
+        :value="values.t_loker_id"
+        @input="onLokerChange"
+        :errorText="formErrors.t_loker_id ? 'failed' : ''"
+        :hints="formErrors.t_loker_id"
+        valueField="id"
+        displayField="title"
+        :api="{
+          url: `${store.server.url_backend}/operation/t_loker`,
+          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+          params: {
+            simplest: true,
+            join: true,
+            transform: true,
+            where: `upper(status) != 'CLOSED'`
+          }
+        }"
+        placeholder="Pilih Lowongan Kerja"
+        label="Nama Lowongan Kerja"
+        :check="false"
+        :columns="[
+          { headerName: 'No', valueGetter: (params) => params.node.rowIndex + 1, width: 60 },
+          { headerName: 'Kode', field: 'nomor', width: 160 },
+          { headerName: 'Nama Lowongan', field: 'title', flex: 1 },
+          { headerName: 'Posisi', field: 'm_posisi.name', width: 150 },
+          { headerName: 'Status', field: 'status', width: 110 }
+        ]"
+      />
     </div>
 
+    <!-- 2. PILIH PELAMAR SESUAI LOKER YANG DIPILIH -->
     <div>
-      <FieldSelect :bind="{ disabled: !actionText, clearable:false }" :value="values.t_loker_id" class="w-full !mt-3"
-        @input="v=>values.t_loker_id=v" :errorText="formErrors.t_loker_id?'failed':''" :hints="formErrors.t_loker_id"
-        valueField="id" displayField="title" :api="{
-            url: `${store.server.url_backend}/operation/t_loker`,
-            headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-            params: {
-              simplest:true,
-              transform:false,
-              join:false
-            }
-        }" placeholder="Pilih Loker" label="Nama Loker" fa-icon="" :check="false" />
+      <FieldPopup
+        class="w-full !mt-3"
+        :bind="{ readonly: !actionText || !values.t_loker_id }"
+        :value="values.t_pelamar_id"
+        @input="v => values.t_pelamar_id = v"
+        :errorText="formErrors.t_pelamar_id ? 'failed' : ''"
+        :hints="formErrors.t_pelamar_id"
+        valueField="id"
+        displayField="nama_depan"
+        :api="{
+          url: `${store.server.url_backend}/operation/t_pelamar`,
+          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+          params: {
+            simplest: true,
+            transform: true,
+            join: true,
+            scopes: 'loker',
+            t_loker_id: values.t_loker_id || 0
+          }
+        }"
+        :placeholder="values.t_loker_id ? 'Pilih Pelamar' : 'Pilih Lowongan Kerja Terlebih Dahulu'"
+        label="Nama Pelamar"
+        :check="false"
+        :columns="[
+          { headerName: 'No', valueGetter: (params) => params.node.rowIndex + 1, width: 60 },
+          { headerName: 'Kode Pelamar', field: 'nomor', width: 160 },
+          { headerName: 'Nama Depan', field: 'nama_depan', flex: 1 },
+          { headerName: 'Nama Belakang', field: 'nama_belakang', flex: 1 },
+          { headerName: 'No. KTP', field: 'ktp_no', width: 160 },
+          { headerName: 'Status', field: 'status', width: 100 }
+        ]"
+      />
     </div>
 
     <div>
@@ -163,7 +199,6 @@
           { value: 'TIDAK DITERIMA' }
         ]" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
     </div>
-
 
     <!-- END COLUMN -->
     <!-- ACTION BUTTON START -->
@@ -303,6 +338,14 @@
 
   <div class="flex flex-row items-center justify-end space-x-2 p-2">
     <i class="text-gray-500 text-[12px]">Tekan CTRL + S untuk shortcut Save Data</i>
+    <button
+        class="bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
+        v-show="isRead && (values.status === 'PENDING' || values.status === 'DRAFT')"
+        @click="onSendApproval()"
+      >
+        <icon fa="paper-plane" />
+        Kirim Approval
+      </button>
     <button
         class="bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
         v-show="isRead"

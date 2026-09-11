@@ -13,12 +13,9 @@ class tpelamar extends Migration
             //$table->string('_existColumnName_')->change();
             //$table->string('_columnName_');
             //$table->dropColumn(['m_divisi_id', 'm_dept_id', 'm_posisi_id']);
-            // $table->bigInteger('m_dir_id')->comment('{"src":"m_dir.id"}')->nullable();
-            // $table->bigInteger('t_loker_id')->comment('{"src":"t_loker.id"}')->nullable();
-            // $table->bigInteger('m_dept_id')->comment('{"src":"m_dept.id"}')->nullable();
-            // $table->bigInteger('m_posisi_id')->comment('{"src":"m_posisi.id"}')->nullable();
-            // $table->string('tempat_lahir', 100)->nullable();
-            //$table->date('tanggal')->nullable()->change();
+            $table->bigInteger('t_loker_id')->comment('{"src":"t_loker.id"}')->nullable();
+            $table->string('file_cv')->nullable();
+            $table->string('file_dokumen')->nullable();
         });
     }
 }

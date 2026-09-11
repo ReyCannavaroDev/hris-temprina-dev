@@ -28,11 +28,70 @@ function onPrint(id = null) {
   window.open(`${store.server.url_backend}/web/report_hasil_tes?id=${targetId}&export=pdf`, '_blank')
 }
 
+function onLokerChange(v) {
+  values.t_loker_id = v
+  values.t_pelamar_id = null
+}
+
+async function onSendApproval(id = null) {
+  const targetId = id || route.params.id
+  if (!targetId || targetId === 'create') return
+
+  swal.fire({
+    icon: 'question',
+    title: 'Kirim Approval',
+    text: 'Apakah Anda yakin ingin mengirim hasil tes ini untuk approval?',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Kirim',
+    cancelButtonText: 'Batal'
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        isRequesting.value = true
+        const dataURL = `${store.server.url_backend}/operation${endpointApi}/send_approval`
+        const res = await fetch(dataURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          },
+          body: JSON.stringify({ id: targetId })
+        })
+        const resJson = await res.json()
+        if (!res.ok) throw new Error(resJson.message || 'Gagal mengirim approval')
+
+        swal.fire({
+          icon: 'success',
+          title: 'Berhasil',
+          text: resJson.message || 'Approval berhasil dikirim'
+        }).then(() => {
+          if (isRead) {
+            router.replace('/' + modulPath + '?reload=' + Date.now())
+          } else if (apiTable.value) {
+            apiTable.value.reload()
+          }
+        })
+      } catch (err) {
+        swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: err.message || err
+        })
+      } finally {
+        isRequesting.value = false
+      }
+    }
+  })
+}
+
 //  @if( $id )------------------- VALUES FORM ! PENTING JANGAN DIHAPUS
 let initialValues = {}
 const changedValues = []
 
 const values = reactive({
+  t_loker_id: null,
+  t_pelamar_id: null,
+  tahapan_id: null,
   is_active: true,
   status: 'PENDING',
   //direktorat: store.user.data?.direktorat,
@@ -358,6 +417,15 @@ const landing = computed(() => {
         show: () => data.can_create,
         click(row) {
           router.push(`${route.path}/${row.id}?action=Copy&` + tsId)
+        }
+      },
+      {
+        icon: 'paper-plane',
+        title: "Kirim Approval",
+        class: 'bg-indigo-600 text-light-100',
+        show: (row) => ['PENDING', 'DRAFT'].includes(row.status?.toUpperCase()) && data.can_update,
+        click(row) {
+          onSendApproval(row.id)
         }
       },
       {

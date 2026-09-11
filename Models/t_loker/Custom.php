@@ -5,17 +5,18 @@ use DB;
 use Carbon\Carbon;
 
 class t_loker extends \App\Models\BasicModels\t_loker
-{    
+{
     private $helper;
     public function __construct()
     {
         parent::__construct();
         $this->helper = getCore('Helper');
     }
-    
-    public $fileColumns    = [ /*file_column*/ ];
+
+    public $fileColumns = [ /*file_column*/];
 
     public $joins = [
+        "t_req_recruitment.id=t_loker.t_req_recruitment_id",
         "m_comp.id=t_loker.m_comp_id",
         "m_subcomp.id=t_loker.m_subcomp_id",
         "m_branch.id=t_loker.m_branch_id",
@@ -29,19 +30,19 @@ class t_loker extends \App\Models\BasicModels\t_loker
         "default_users.id=t_loker.last_editor_id"
     ];
 
-    public $createAdditionalData = ["creator_id"=>"auth:id"];
-    public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
+    public $createAdditionalData = ["creator_id" => "auth:id"];
+    public $updateAdditionalData = ["last_editor_id" => "auth:id"];
 
-    public function createBefore( $model, $arrayData, $metaData, $id=null )
+    public function createBefore($model, $arrayData, $metaData, $id = null)
     {
-        $newArrayData  = array_merge( $arrayData,[
-            'nomor'  => $this->helper->generateNomor('KODE LOWONGAN PEKERJAAN'),
-            'status' => $arrayData['status'] ?? 'DRAFT'
+        $newArrayData = array_merge($arrayData, [
+            'nomor' => $this->helper->generateNomor('KODE LOWONGAN PEKERJAAN'),
+            'status' => $arrayData['status'] ?? 'OPEN'
         ]);
-       
+
         return [
-            "model"  => $model,
-            "data"   => $newArrayData,
+            "model" => $model,
+            "data" => $newArrayData,
             // "errors" => ['error1']
         ];
     }
@@ -58,7 +59,7 @@ class t_loker extends \App\Models\BasicModels\t_loker
 
         $data = t_loker::with(['m_comp', 'm_dir', 'm_dept', 'jenis_loker', 'prioritas'])->where('id', $id)->first();
 
-        if(!$data){
+        if (!$data) {
             return response()->json(['errors' => 'Data Tidak ada']);
         }
 
@@ -68,14 +69,14 @@ class t_loker extends \App\Models\BasicModels\t_loker
     public function custom_posted($req)
     {
         \DB::beginTransaction();
-        try{
+        try {
             $data = $this->find($req->id);
             $data->status = 'POSTED';
             $data->save();
 
-         \DB::commit();
-         return $this->helper->customResponse("Data berhasil diposting");
-        }catch (\Exception $e) {
+            \DB::commit();
+            return $this->helper->customResponse("Data berhasil diposting");
+        } catch (\Exception $e) {
             \DB::rollback();
             return $this->helper->responseCatch($e);
         }
@@ -83,6 +84,18 @@ class t_loker extends \App\Models\BasicModels\t_loker
 
     public function scoperespo($model)
     {
+        $user = auth()->user();
+        $is_admin = false;
+        if ($user) {
+            $is_admin = $user->is_hc ||
+                strtolower($user->user_type ?? '') === 'admin' ||
+                in_array(strtolower($user->username ?? ''), ['developer', 'admin', 'danvers']);
+        }
+
+        if ($is_admin) {
+            return $model;
+        }
+
         $m_subcomp_id = request("m_subcomp_id") ?? null;
         $m_branch_id = request("m_branch_id") ?? null;
 
@@ -100,6 +113,47 @@ class t_loker extends \App\Models\BasicModels\t_loker
             ->when($m_branch_id, function ($q) use ($m_branch_id) {
                 $q->where("t_loker.m_branch_id", $m_branch_id);
             });
+    }
+
+    public static function updateStatusLoker($lokerId)
+    {
+        if (!$lokerId)
+            return;
+
+        $loker = \DB::table('t_loker')->where('id', $lokerId)->first();
+        if (!$loker)
+            return;
+
+        // Ambil kuota kebutuhan personil dari loker atau FPTK
+        $kebutuhan = $loker->jumlah ?? 1;
+        if (!empty($loker->t_req_recruitment_id)) {
+            $fptk = \DB::table('t_req_recruitment')->where('id', $loker->t_req_recruitment_id)->first();
+            if ($fptk && !empty($fptk->jumlah_kebutuhan)) {
+                $kebutuhan = $fptk->jumlah_kebutuhan;
+            }
+        }
+
+        // Hitung total pelamar yang berstatus Diterima / Approved pada hasil tes
+        $totalDiterima = \DB::table('t_hasil_tes')
+            ->where('t_loker_id', $lokerId)
+            ->where(function ($q) {
+                $q->whereRaw("upper(status) = 'DITERIMA'")
+                    ->orWhereRaw("upper(status) = 'APPROVED'");
+            })
+            ->count();
+
+        // Tentukan status dinamis loker (OPEN, PROGRESS, CLOSED)
+        $newStatus = 'OPEN';
+        if ($totalDiterima >= $kebutuhan && $kebutuhan > 0) {
+            $newStatus = 'CLOSED';
+        } elseif ($totalDiterima > 0) {
+            $newStatus = 'PROGRESS';
+        }
+
+        \DB::table('t_loker')->where('id', $lokerId)->update([
+            'status' => $newStatus,
+            'updated_at' => Carbon::now()
+        ]);
     }
 
     private function createAppTicket($id, $target_id = null)
@@ -172,7 +226,7 @@ class t_loker extends \App\Models\BasicModels\t_loker
                     $data->update([
                         "status" => $req->type
                     ]);
-                   
+
                 } else {
                     $data->update([
                         "status" => "IN APPROVAL",
@@ -233,7 +287,7 @@ class t_loker extends \App\Models\BasicModels\t_loker
             \Log::error("Error Approve HC: " . $e->getMessage());
 
             return $this->helper->customResponse(
-                "Terjadi kesalahan sistem: " . $e->getMessage(), 
+                "Terjadi kesalahan sistem: " . $e->getMessage(),
                 500
             );
         }
@@ -242,25 +296,25 @@ class t_loker extends \App\Models\BasicModels\t_loker
     public function logHc($trxId)
     {
         $prevLog = generate_approval_log::where('trx_id', $trxId)->where('action_type', 'HALF APPROVED');
-        if($check = $prevLog->exists()){
+        if ($check = $prevLog->exists()) {
             $prev = $prevLog->first();
             $log_insert = generate_approval_log::create([
-                'nomor'                     => $prev->nomor,
-                'generate_approval_id'      => $prev->id,
-                'generate_approval_det_id'  => null,
-                'trx_id'                    => $prev->trx_id,
-                'trx_table'                 => $prev->trx_table,
-                'trx_name'                  => $prev->trx_name,
-                'trx_nomor'                 => $prev->trx_nomor,
-                'trx_date'                  => $prev->trx_date,
-                'form_name'                 => $prev->form_name,
-                'trx_creator_id'            => $prev->trx_creator_id,
-                'action_type'               => 'APPROVED',
-                'action_user_id'            => auth()->user()->id,
-                'creator_id'                => auth()->user()->id,
-                'action_at'                 => Carbon::now(),
-                'action_note'               => 'APPROVED BY HC'
-            ]); 
+                'nomor' => $prev->nomor,
+                'generate_approval_id' => $prev->id,
+                'generate_approval_det_id' => null,
+                'trx_id' => $prev->trx_id,
+                'trx_table' => $prev->trx_table,
+                'trx_name' => $prev->trx_name,
+                'trx_nomor' => $prev->trx_nomor,
+                'trx_date' => $prev->trx_date,
+                'form_name' => $prev->form_name,
+                'trx_creator_id' => $prev->trx_creator_id,
+                'action_type' => 'APPROVED',
+                'action_user_id' => auth()->user()->id,
+                'creator_id' => auth()->user()->id,
+                'action_at' => Carbon::now(),
+                'action_note' => 'APPROVED BY HC'
+            ]);
         }
     }
 }

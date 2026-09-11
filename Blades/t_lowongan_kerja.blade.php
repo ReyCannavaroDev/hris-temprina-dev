@@ -44,6 +44,40 @@
     <div class="grid <md:grid-cols-1 grid-cols-3 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
       <FieldX label="Nomor" :bind="{ readonly: true }" :value="values.nomor" class="w-full mt-3" @input="v=>values.nomor=v" :check="false" />
       
+      <!-- Field Popup FPTK Approved -->
+      <FieldPopup
+        class="w-full !mt-3 col-span-2"
+        :bind="{ readonly: !actionText }"
+        :value="values.t_req_recruitment_id"
+        @input="v => values.t_req_recruitment_id = v"
+        :errorText="formErrors.t_req_recruitment_id ? 'failed' : ''"
+        :hints="formErrors.t_req_recruitment_id"
+        valueField="id"
+        displayField="nomor"
+        :api="{
+          url: `${store.server.url_backend}/operation/t_req_recruitment`,
+          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+          params: {
+            simplest: true,
+            join: true,
+            transform: true,
+            scopes: 'approved'
+          }
+        }"
+        placeholder="Pilih Pengajuan Rekrutmen (FPTK)"
+        label="Pengajuan Rekrutmen (FPTK)"
+        :check="false"
+        @update:valueFull="obj => onSelectFptk(obj)"
+        :columns="[
+          { headerName: 'No', valueGetter: (params) => params.node.rowIndex + 1, width: 60 },
+          { headerName: 'No. FPTK', field: 'nomor', width: 180 },
+          { headerName: 'Divisi', field: 'm_divisi.nama', width: 160 },
+          { headerName: 'Posisi', field: 'm_posisi.name', width: 160 },
+          { headerName: 'Jml Kebutuhan', field: 'jumlah_kebutuhan', width: 120 },
+          { headerName: 'Status', field: 'status', width: 100 }
+        ]"
+      />
+      
       <!-- <FieldSelect label="SBU" :value="values.m_comp_id" :bind="{ disabled: !actionText }" class="w-full" @update:valueFull="obj => values.m_comp_id = obj?.id || null" :api="{ url: `${store.server.url_backend}/operation/m_comp`, params: { simplest:true } }" displayField="name" valueField="id" :check="false" />
       
       <FieldSelect label="SUB" :value="values.m_subcomp_id" :bind="{ disabled: !actionText }" class="w-full" @update:valueFull="obj => values.m_subcomp_id = obj?.id || null" :api="{ url: `${store.server.url_backend}/operation/m_subcomp`, params: { simplest:true } }" displayField="name" valueField="id" :check="false" />

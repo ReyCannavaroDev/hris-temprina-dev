@@ -11,12 +11,27 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
     {
         parent::__construct();
         $this->helper = getCore('Helper');
-        $this->joins = [];
     }
     
-    public $fileColumns = [ /*file_column*/ ];
+    public $joins = [
+        "m_kary.id=t_req_recruitment.m_kary_id",
+        "m_comp.id=t_req_recruitment.m_comp_id",
+        "m_subcomp.id=t_req_recruitment.m_subcomp_id",
+        "m_branch.id=t_req_recruitment.m_branch_id",
+        "m_divisi.id=t_req_recruitment.m_divisi_id",
+        "m_dept.id=t_req_recruitment.m_dept_id",
+        "m_posisi.id=t_req_recruitment.m_posisi_id",
+        "m_general.id=t_req_recruitment.status_kary_id",
+        "m_general.id=t_req_recruitment.jenis_permintaan_id",
+        "m_general.id=t_req_recruitment.prioritas_id",
+        "default_users.id=t_req_recruitment.creator_id",
+        "default_users.id=t_req_recruitment.last_editor_id"
+    ];
 
-    public $joins = [];
+    public function scopeapproved($model)
+    {
+        return $model->whereRaw("upper(t_req_recruitment.status) = 'APPROVED'");
+    }
 
     public $createAdditionalData = ["creator_id"=>"auth:id"];
     public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
