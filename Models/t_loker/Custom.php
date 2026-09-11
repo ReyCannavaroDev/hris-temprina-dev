@@ -37,7 +37,8 @@ class t_loker extends \App\Models\BasicModels\t_loker
     {
         $newArrayData = array_merge($arrayData, [
             'nomor' => $this->helper->generateNomor('KODE LOWONGAN PEKERJAAN'),
-            'status' => $arrayData['status'] ?? 'OPEN'
+            'status' => $arrayData['status'] ?? 'OPEN',
+            'tgl_dibuka' => !empty($arrayData['tgl_dibuka']) ? $arrayData['tgl_dibuka'] : date('Y-m-d'),
         ]);
 
         return [

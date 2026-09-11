@@ -37,6 +37,8 @@ const changedValues = []
 
 const values = reactive({
   t_req_recruitment_id: null,
+  tgl_dibuka: new Date().toISOString().slice(0, 10),
+  tgl_akhir: null,
   status: 'OPEN',
   deskripsi: "",
   t_loker_d_kualifikasi: [
