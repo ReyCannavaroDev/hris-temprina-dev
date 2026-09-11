@@ -131,17 +131,18 @@ class t_loker extends \App\Models\BasicModels\t_loker
         ];
     }
 
-    public function createAfter($model, $data, $metaData)
+    public function createAfter($model, $arrayData, $metaData, $id = null)
     {
+        $targetId = $id ?? $model->id ?? null;
         $req = app()->request;
         $details = $req->t_loker_d_kualifikasi ?? [];
-        if (!empty($details) && !empty($model->id)) {
-            \DB::table('t_loker_d_kualifikasi')->where('t_loker_id', $model->id)->delete();
+        if (!empty($details) && !empty($targetId)) {
+            \DB::table('t_loker_d_kualifikasi')->where('t_loker_id', $targetId)->delete();
             foreach ($details as $det) {
                 $val = is_array($det) ? ($det['value'] ?? '') : ($det->value ?? '');
                 if (trim($val) !== '') {
                     \DB::table('t_loker_d_kualifikasi')->insert([
-                        't_loker_id' => $model->id,
+                        't_loker_id' => $targetId,
                         'value' => trim($val),
                         'created_at' => Carbon::now(),
                         'updated_at' => Carbon::now()
@@ -149,6 +150,11 @@ class t_loker extends \App\Models\BasicModels\t_loker
                 }
             }
         }
+
+        return [
+            "model" => $model,
+            "data" => $arrayData,
+        ];
     }
 
     public function updateBefore($model, $arrayData, $metaData, $id = null)
@@ -161,17 +167,18 @@ class t_loker extends \App\Models\BasicModels\t_loker
         ];
     }
 
-    public function updateAfter($model, $data, $metaData)
+    public function updateAfter($model, $arrayData, $metaData, $id = null)
     {
+        $targetId = $id ?? $model->id ?? null;
         $req = app()->request;
         $details = $req->t_loker_d_kualifikasi ?? [];
-        if (isset($req->t_loker_d_kualifikasi) && !empty($model->id)) {
-            \DB::table('t_loker_d_kualifikasi')->where('t_loker_id', $model->id)->delete();
+        if (isset($req->t_loker_d_kualifikasi) && !empty($targetId)) {
+            \DB::table('t_loker_d_kualifikasi')->where('t_loker_id', $targetId)->delete();
             foreach ($details as $det) {
                 $val = is_array($det) ? ($det['value'] ?? '') : ($det->value ?? '');
                 if (trim($val) !== '') {
                     \DB::table('t_loker_d_kualifikasi')->insert([
-                        't_loker_id' => $model->id,
+                        't_loker_id' => $targetId,
                         'value' => trim($val),
                         'created_at' => Carbon::now(),
                         'updated_at' => Carbon::now()
@@ -179,6 +186,11 @@ class t_loker extends \App\Models\BasicModels\t_loker
                 }
             }
         }
+
+        return [
+            "model" => $model,
+            "data" => $arrayData,
+        ];
     }
 
     public function public_lowongan($req)
