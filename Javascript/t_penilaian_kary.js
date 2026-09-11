@@ -46,6 +46,73 @@ let initialValues = {}
 
 const userLocal = JSON.parse(localStorage.getItem('user') || '{}')
 const loggedInAtasanId = computed(() => store.user?.data?.m_kary_id || userLocal?.data?.m_kary_id || userLocal?.m_kary_id || null)
+const loggedInKaryData = ref(null)
+const posisiLevelMap = ref({})
+const posisiSequenceMap = ref({})
+
+const getPosisiRank = (posisiId, posisiName = '') => {
+  if (posisiId && posisiSequenceMap.value[posisiId] !== undefined) {
+    return Number(posisiSequenceMap.value[posisiId]);
+  }
+
+  const name = String(posisiName || posisiLevelMap.value[posisiId] || '').toLowerCase();
+  
+  if (/direktur|director|president/i.test(name)) return 6;
+  if (/general manager|gm\b|wadir/i.test(name)) return 5;
+  if (/manager|asmen|operational manager|\bom\b/i.test(name)) return 4;
+  if (/kadiv|wakadiv|kepala divisi/i.test(name)) return 3;
+  if (/karu|wakaru|kepala regu|supervisor|spv|koordinator/i.test(name)) return 2;
+  if (/staff|specialist|officer|analyst|programmer|developer|designer|admin|operator|pelaksana|helper|teknisi/i.test(name)) return 1;
+
+  return 1;
+};
+
+const loadPosisiLevel = async () => {
+  try {
+    const res = await fetch(`${store.server.url_backend}/operation/m_posisi?scopes=GetValueGen&transform=false&join=true`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    })
+    if (res.ok) {
+      const json = await res.json()
+      const list = json.data || []
+      const map = {}
+      const seqMap = {}
+      list.forEach((p) => {
+        if (p.id) {
+          map[p.id] = p.level_name || p['m_level_posisi.level_name'] || p['lp.level_name'] || p.name || '-'
+          const seq = p.sequence ?? p.level_sequence ?? p['lp.sequence'];
+          seqMap[p.id] = (seq !== null && seq !== undefined) ? Number(seq) : getPosisiRank(null, p.name || '');
+        }
+      })
+      posisiLevelMap.value = map
+      posisiSequenceMap.value = seqMap
+    }
+  } catch (e) {
+    console.error('Error fetching posisi level:', e)
+  }
+}
+
+const loadLoggedInKaryawan = async () => {
+  const atasanId = loggedInAtasanId.value
+  if (!atasanId) return
+  try {
+    const res = await fetch(`${store.server.url_backend}/operation/m_kary/${atasanId}?join=true&transform=false`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    })
+    if (res.ok) {
+      const json = await res.json()
+      loggedInKaryData.value = json.data ?? json
+    }
+  } catch (e) {
+    console.error('Error fetching logged in kary data:', e)
+  }
+}
 
 const values = reactive({
   m_kary_id: kary,
@@ -54,6 +121,18 @@ const values = reactive({
 
 const apiKary = computed(() => {
   const atasanId = loggedInAtasanId.value || 0
+  const myDivisiId = loggedInKaryData.value?.m_divisi_id || null
+  const isAdmin = store.user?.data?.user_type === 'admin' || !atasanId
+
+  let whereClause = `this.is_active = true`
+  if (!isAdmin && atasanId) {
+    if (myDivisiId) {
+      whereClause += ` and (this.atasan_id = '${atasanId}' or this.m_divisi_id = '${myDivisiId}')`
+    } else {
+      whereClause += ` and this.atasan_id = '${atasanId}'`
+    }
+  }
+
   return {
     url: `${store.server.url_backend}/operation/m_kary`,
     headers: {
@@ -64,12 +143,47 @@ const apiKary = computed(() => {
       simplest: false,
       transform: false,
       join: true,
-      where: `this.is_active = true and this.atasan_id = '${atasanId}'`,
+      where: whereClause,
       searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name,m_divisi.name_old'
     },
     onsuccess(response) {
       response.page = response.current_page
       response.hasNext = response.has_next
+
+      let list = response.data || []
+
+      if (!isAdmin && atasanId) {
+        list = list.filter(k => String(k.id) !== String(atasanId))
+
+        const myPosisiId = loggedInKaryData.value?.m_posisi_id
+        const myPosisiName = loggedInKaryData.value?.['m_posisi.name'] || loggedInKaryData.value?.posisi_name || ''
+        const myRank = getPosisiRank(myPosisiId, myPosisiName)
+
+        list = list.filter(item => {
+          const itemAtasanId = item.atasan_id || item['atasan.id'] || (item.atasan ? item.atasan.id : null)
+          if (itemAtasanId && String(itemAtasanId) === String(atasanId)) {
+            return true
+          }
+
+          if (myDivisiId && (String(item.m_divisi_id) === String(myDivisiId) || String(item['m_divisi.id']) === String(myDivisiId))) {
+            const kPosisiId = item.m_posisi_id
+            const kPosisiName = item['m_posisi.name'] ?? item.posisi_name ?? ''
+            const kRank = getPosisiRank(kPosisiId, kPosisiName)
+
+            if (kRank >= myRank) return false
+
+            if (itemAtasanId && String(itemAtasanId) !== String(atasanId)) {
+              return false
+            }
+
+            return true
+          }
+
+          return false
+        })
+      }
+
+      response.data = list
       return response
     }
   }
@@ -506,6 +620,9 @@ const onTipePenilaianSelected = async (v) => {
 };
 
 onBeforeMount(async () => {
+  loadPosisiLevel();
+  loadLoggedInKaryawan();
+
   if (localStorage.getItem('respo')) {
     const respoValues = JSON.parse(localStorage.getItem('respo'))
     values.m_comp_id = respoValues.m_comp_id

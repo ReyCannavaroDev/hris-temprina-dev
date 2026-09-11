@@ -55,12 +55,12 @@ const handleKeyDown = (event) => {
 let initialValues = {}
 const changedValues = []
 
-const user = JSON.parse(localStorage.getItem('user'))
+const userLocal = JSON.parse(localStorage.getItem('user') || '{}')
+const loggedInAtasanId = computed(() => store.user?.data?.m_kary_id || userLocal?.data?.m_kary_id || userLocal?.m_kary_id || null)
 
 const values = reactive({
-  // penilaian: route.query.isKaryId || '',
   m_kary_id: route.query.isKaryId,
-  atasan_id: store.user.data.m_kary_id
+  atasan_id: store.user?.data?.m_kary_id || userLocal?.data?.m_kary_id || userLocal?.m_kary_id || null
 })
 
 const yearOptions = ref([])

@@ -2826,6 +2826,99 @@ class m_kary extends \App\Models\BasicModels\m_kary
         return array_values(array_unique(array_map('intval', $subIds)));
     }
 
+    public static function getDirectSubordinateIds($userId = null)
+    {
+        $userId = $userId ?? (auth()->user()?->id ?? auth()->id());
+        if (!$userId) return [];
+
+        $userObj = default_users::find($userId);
+        $myKaryId = $userObj?->m_kary_id;
+
+        if (!$myKaryId) {
+            $myKary = \DB::table('m_kary')->where('id', $userId)->first();
+            $myKaryId = $myKary?->id;
+        } else {
+            $myKary = \DB::table('m_kary')->where('id', $myKaryId)->first();
+        }
+
+        if (!$myKary) return [];
+
+        $myPosisiId = $myKary->m_posisi_id;
+        $myDivisiId = $myKary->m_divisi_id;
+
+        // 1. Ambil sequence level atasan
+        $mySequence = null;
+        if ($myPosisiId) {
+            $myLevel = \DB::table('m_level_posisi_d as lpd')
+                ->join('m_level_posisi as lp', 'lp.id', '=', 'lpd.m_level_posisi_id')
+                ->where('lpd.m_posisi_id', $myPosisiId)
+                ->where('lp.is_active', true)
+                ->select('lp.sequence')
+                ->first();
+            $mySequence = $myLevel?->sequence ?? null;
+        }
+
+        if (!$mySequence) {
+            $myDetJab = \DB::table('m_kary_det_jabatan as mkdj')
+                ->join('m_level_posisi_d as lpd', 'lpd.m_posisi_id', '=', 'mkdj.m_posisi_id')
+                ->join('m_level_posisi as lp', 'lp.id', '=', 'lpd.m_level_posisi_id')
+                ->where(function($q) use ($myKaryId) {
+                    $q->where('mkdj.m_karyawan_id', $myKaryId)
+                      ->orWhere('mkdj.m_kary_id', $myKaryId);
+                })
+                ->where('mkdj.is_active', true)
+                ->where('lp.is_active', true)
+                ->orderBy('lp.sequence', 'desc')
+                ->select('lp.sequence')
+                ->first();
+            $mySequence = $myDetJab?->sequence ?? null;
+        }
+
+        // 2. Query bawahan langsung
+        $query = \DB::table('m_kary as k')
+            ->where('k.id', '!=', $myKaryId)
+            ->where('k.is_active', true);
+
+        $query->where(function($mainQ) use ($myKaryId, $mySequence, $myDivisiId) {
+            // Relasi eksplisit atasan_id
+            $mainQ->where('k.atasan_id', $myKaryId);
+
+            // Atau berada pada divisi yang sama dengan level lebih rendah (dan tidak terikat atasan lain)
+            if ($myDivisiId && $mySequence !== null) {
+                $mainQ->orWhere(function($divQ) use ($myDivisiId, $mySequence) {
+                    $divQ->where('k.m_divisi_id', $myDivisiId)
+                         ->where(function($subQ) use ($mySequence) {
+                             $subQ->whereExists(function($ex) use ($mySequence) {
+                                 $ex->select(\DB::raw(1))
+                                     ->from('m_level_posisi_d as ld')
+                                     ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                                     ->whereColumn('ld.m_posisi_id', 'k.m_posisi_id')
+                                     ->where('l.sequence', '<', $mySequence);
+                             });
+                         })
+                         ->where(function($atasanQ) {
+                             $atasanQ->whereNull('k.atasan_id')
+                                     ->orWhere('k.atasan_id', 0);
+                         });
+                });
+            }
+        });
+
+        $subIds = $query->pluck('k.id')->toArray();
+        return array_values(array_unique(array_map('intval', $subIds)));
+    }
+
+    public function scopeBawahanLangsung($query)
+    {
+        $ids = self::getDirectSubordinateIds();
+
+        if (empty($ids)) {
+            return $query->whereRaw("1 = 0");
+        }
+
+        return $query->whereIn('m_kary.id', $ids);
+    }
+
     public function scopeBawahan($query)
     {
         $ids = self::getSubordinateIds();
