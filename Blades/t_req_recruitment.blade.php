@@ -192,13 +192,14 @@
               values.karyawan_digantikan_id = null;
               selectedKaryawanName = '';
             }" :errorText="formErrors.m_divisi_id?'failed':''"
-            :hints="formErrors.m_divisi_id" valueField="id" displayField="name.value" :api="{
+            :hints="formErrors.m_divisi_id" valueField="id" displayField="value" :api="{
                 url: `${store.server.url_backend}/operation/m_divisi`,
                 headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                 params: {
                   scopes:'Name',
                   simplest:true,
-                  groupBy: 'name.value',
+                  transform:false,
+                  join:false,
                   where: `this.is_active = 'true'` + (values.m_branch_id ? ` AND this.m_branch_id = '${values.m_branch_id}'` : '')
                 }
             }" placeholder="Pilih Divisi" label="Divisi" fa-icon="sort-desc" :check="false" />
@@ -427,7 +428,7 @@
                 'bg-gray-200 text-gray-800': !['POSTED', 'APPROVED', 'IN APPROVAL', 'REVISED', 'REJECTED'].includes(values.status)
                }"
                class="px-3 py-1 rounded text-xs font-bold uppercase">{{ values.status }}</div>
-          <p :class="{
+          <p :class="{g
                 'text-green-900': ['POSTED', 'APPROVED'].includes(values.status),
                 'text-blue-900': values.status === 'IN APPROVAL',
                 'text-amber-900': values.status === 'REVISED',
