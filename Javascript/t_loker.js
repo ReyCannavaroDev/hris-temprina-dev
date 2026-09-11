@@ -36,7 +36,18 @@ let initialValues = {}
 const changedValues = []
 
 const values = reactive({
+  id: null,
+  nomor: null,
   t_req_recruitment_id: null,
+  m_comp_id: null,
+  m_subcomp_id: null,
+  m_branch_id: null,
+  m_divisi_id: null,
+  m_posisi_id: null,
+  title: "",
+  prioritas_id: null,
+  status_kary_id: null,
+  jumlah: null,
   tgl_dibuka: new Date().toISOString().slice(0, 10),
   tgl_akhir: null,
   status: 'OPEN',

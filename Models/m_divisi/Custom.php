@@ -32,6 +32,8 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
 
         $data['name.value'] = $divisiVal;
         $data['value'] = $divisiVal;
+        $data['name'] = $divisiVal;
+        $data['nama'] = $divisiVal;
 
         if(app()->request->concat_branch){
             $getData = $this->where('m_divisi.id',$row['id'])
@@ -61,6 +63,8 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
                     'm_divisi.m_branch_id',
                     \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as \"name.value\""),
                     \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as value"),
+                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as name"),
+                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as nama"),
                     \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as name_old"),
                     'm_divisi.nomor'
                 );

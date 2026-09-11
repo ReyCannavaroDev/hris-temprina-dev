@@ -59,7 +59,7 @@
           headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
           params: {
             simplest: true,
-            join: true,
+            join: false,
             transform: true,
             scopes: 'approved'
           }
@@ -184,9 +184,10 @@
                       scopes:'Name',
                       simplest:true,
                       transform:false,
-                      join:false
+                      join:false,
+                      where: `this.is_active = 'true'` + (values.m_branch_id ? ` AND this.m_branch_id = '${values.m_branch_id}'` : '')
                     }
-                }" valueField="id" displayField="name.value" :check="false" />
+                }" valueField="id" displayField="value" :check="false" />
 
           </div>
 
