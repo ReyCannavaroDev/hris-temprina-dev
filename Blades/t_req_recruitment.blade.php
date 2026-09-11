@@ -428,7 +428,7 @@
                 'bg-gray-200 text-gray-800': !['POSTED', 'APPROVED', 'IN APPROVAL', 'REVISED', 'REJECTED'].includes(values.status)
                }"
                class="px-3 py-1 rounded text-xs font-bold uppercase">{{ values.status }}</div>
-          <p :class="{g
+          <p :class="{
                 'text-green-900': ['POSTED', 'APPROVED'].includes(values.status),
                 'text-blue-900': values.status === 'IN APPROVAL',
                 'text-amber-900': values.status === 'REVISED',

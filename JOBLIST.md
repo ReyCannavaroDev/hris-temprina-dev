@@ -180,3 +180,30 @@ graph TD
 - [x] Uji pendaftaran Pelamar memilih Loker dan upload berkas CV & Dokumen.
 - [x] Uji input Hasil Test: Memilih Loker $\rightarrow$ Memilih Pelamar $\rightarrow$ Validasi anti duplikasi.
 - [x] Uji approval Hasil Test: Verifikasi transisi status Loker (`OPEN` $\rightarrow$ `PROGRESS` $\rightarrow$ `CLOSED`) dan verifikasi auto-insert data kandidat ke Master Karyawan (`m_kary`).
+
+---
+
+## 🛠️ 6. Catatan Perbaikan Live Testing (11-09-2026)
+
+Berikut adalah daftar isu/error yang ditemukan saat live testing dan telah diselesaikan hari ini:
+
+| No | Isu / Temuan | Root Cause | File yang Diperbaiki | Status |
+|---|---|---|---|---|
+| 1 | **Error Alter Termwind `mb_strimwidth()`** | Function `mb_*` belum tersedia di environment PHP cli Termwind. | [Models/t_pelamar/Alter.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_pelamar/Alter.php)<br>[Models/t_loker/Alter.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Alter.php) | ✅ Selesai (Polyfill) |
+| 2 | **Duplicate Column `jk_id` saat Alter Loker** | Kolom `jk_id`, `status_kary_id`, `jumlah` sudah pernah ada di tabel database. | [Models/t_loker/Alter.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Alter.php) | ✅ Selesai |
+| 3 | **Tanggal Dibuka Kosong di Landing Loker** | Default value belum di-set di frontend dan backend. | [Models/t_loker/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Custom.php)<br>[Javascript/t_lowongan_kerja.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_lowongan_kerja.js)<br>[Javascript/t_loker.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_loker.js) | ✅ Selesai |
+| 4 | **Detail Kualifikasi Spesifik Tidak Tersimpan** | Parameter method `createAfter` tidak cocok dengan signature 4-parameter `Basic.php` (`$model, $arrayData, $metaData, $id=null`). | [Models/t_loker/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/t_loker/Custom.php)<br>[Javascript/t_lowongan_kerja.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_lowongan_kerja.js)<br>[Javascript/t_loker.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_loker.js) | ✅ Selesai |
+| 5 | **Divisi Kosong / Dobel Saat Auto-Fill FPTK & Form Loker** | `FieldSelect` menggunakan `displayField="name.value"` yang gagal di-resolve parser Vue, serta filter query divisi memuat `groupBy: 'name.value'` yang merusak query di PostgreSQL. | [Models/m_divisi/Custom.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Models/m_divisi/Custom.php)<br>[Blades/t_lowongan_kerja.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_lowongan_kerja.blade.php)<br>[Blades/t_loker.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_loker.blade.php)<br>[Javascript/t_lowongan_kerja.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_lowongan_kerja.js)<br>[Javascript/t_loker.js](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Javascript/t_loker.js) | ✅ Selesai |
+| 6 | **Divisi Tidak Muncul di Detail FPTK (`/t_req_recruitment/:id`)** | Parameter `groupBy: 'name.value'` dan `displayField="name.value"` di Blade FPTK menyebabkan kegagalan rendering nama divisi terpilih. | [Blades/t_req_recruitment.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_req_recruitment.blade.php) | ✅ Selesai |
+| 7 | **Typo Class Tag di Blade FPTK** | Typo `<p :class="{g` pada baris 431 telah diperbaiki menjadi `<p :class="{`. | [Blades/t_req_recruitment.blade.php](file:///c:/Users/Rey%20Cannavaro/hris-temprina-dev/Blades/t_req_recruitment.blade.php) | ✅ Selesai |
+
+---
+
+## 🎯 7. Agenda Lanjutan Untuk Besok
+1. **Verifikasi Tampilan Form**:
+   - Buka `/t_req_recruitment/:id` (detail pengajuan) $\rightarrow$ pastikan Divisi tampil (*Information Technology*).
+   - Buka `/t_lowongan_kerja/create` $\rightarrow$ pilih FPTK $\rightarrow$ pastikan Divisi dan Nama Lowongan terisi otomatis tanpa dobel opsi.
+2. **Pengujian Flow Pelamar & Hasil Tes**:
+   - Buka modul **Pelamar** $\rightarrow$ pilih Lowongan Kerja $\rightarrow$ upload CV.
+   - Buka modul **Hasil Test Lamaran Kerja** $\rightarrow$ pilih Lowongan $\rightarrow$ pilih Pelamar $\rightarrow$ submit nilai & kirim approval.
+   - Verifikasi kandidat berstatus **DITERIMA** otomatis tercatat ke Master Karyawan (`m_kary`).
