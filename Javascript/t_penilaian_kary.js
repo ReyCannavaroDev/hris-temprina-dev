@@ -163,14 +163,8 @@ const apiKary = computed(() => {
         list = list.filter((item, idx) => {
           const kRank = allRanks[idx]
 
-          // Harus memiliki level lebih rendah dari atasan login
-          if (kRank >= myRank) return false
-
-          // Cek apakah ada level perantara di divisi yang berada di antara kRank dan myRank
-          const hasIntermediate = allRanks.some(otherRank => otherRank > kRank && otherRank < myRank)
-
-          // Jika tidak ada level perantara, maka atasan login adalah atasan langsung terdekatnya!
-          if (!hasIntermediate) {
+          // Menampilkan seluruh bawahan yang level jabatannya di bawah atasan login dalam divisi ini
+          if (kRank < myRank) {
             item['atasan.nama_lengkap'] = myName
             item.atasan_kary = myName
             return true

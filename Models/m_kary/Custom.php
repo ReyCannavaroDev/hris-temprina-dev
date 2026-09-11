@@ -2892,21 +2892,9 @@ class m_kary extends \App\Models\BasicModels\m_kary
         $directSubIds = [];
         foreach ($divKary as $karyItem) {
             $kSeq = $karyItem->sequence !== null ? (int)$karyItem->sequence : 1;
-            // Harus memiliki level lebih rendah
+            // Menampilkan semua karyawan di divisi yang levelnya di bawah atasan login
             if ($kSeq < $mySequence) {
-                // Cari apakah ada level perantara di divisi yang berada di antara kSeq dan mySequence
-                $hasIntermediate = false;
-                foreach ($divKary as $other) {
-                    $oSeq = $other->sequence !== null ? (int)$other->sequence : 1;
-                    if ($oSeq > $kSeq && $oSeq < $mySequence) {
-                        $hasIntermediate = true;
-                        break;
-                    }
-                }
-                // Jika tidak ada level perantara di divisi tersebut, maka myKary adalah atasan langsungnya!
-                if (!$hasIntermediate) {
-                    $directSubIds[] = (int)$karyItem->id;
-                }
+                $directSubIds[] = (int)$karyItem->id;
             }
         }
 
