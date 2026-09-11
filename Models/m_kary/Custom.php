@@ -2874,38 +2874,43 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $mySequence = $myDetJab?->sequence ?? null;
         }
 
-        // 2. Query bawahan langsung
-        $query = \DB::table('m_kary as k')
+        // 2. Query bawahan langsung berdasarkan hirarki murni divisi
+        if (!$myDivisiId || $mySequence === null) {
+            return [];
+        }
+
+        // Ambil semua karyawan aktif di divisi tersebut selain user sendiri
+        $divKary = \DB::table('m_kary as k')
+            ->leftJoin('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'k.m_posisi_id')
+            ->leftJoin('m_level_posisi as lp', 'lp.id', '=', 'ld.m_level_posisi_id')
             ->where('k.id', '!=', $myKaryId)
-            ->where('k.is_active', true);
+            ->where('k.m_divisi_id', $myDivisiId)
+            ->where('k.is_active', true)
+            ->select('k.id', 'lp.sequence')
+            ->get();
 
-        $query->where(function($mainQ) use ($myKaryId, $mySequence, $myDivisiId) {
-            // Relasi eksplisit atasan_id
-            $mainQ->where('k.atasan_id', $myKaryId);
-
-            // Atau berada pada divisi yang sama dengan level lebih rendah (dan tidak terikat atasan lain)
-            if ($myDivisiId && $mySequence !== null) {
-                $mainQ->orWhere(function($divQ) use ($myDivisiId, $mySequence) {
-                    $divQ->where('k.m_divisi_id', $myDivisiId)
-                         ->where(function($subQ) use ($mySequence) {
-                             $subQ->whereExists(function($ex) use ($mySequence) {
-                                 $ex->select(\DB::raw(1))
-                                     ->from('m_level_posisi_d as ld')
-                                     ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
-                                     ->whereColumn('ld.m_posisi_id', 'k.m_posisi_id')
-                                     ->where('l.sequence', '<', $mySequence);
-                             });
-                         })
-                         ->where(function($atasanQ) {
-                             $atasanQ->whereNull('k.atasan_id')
-                                     ->orWhere('k.atasan_id', 0);
-                         });
-                });
+        $directSubIds = [];
+        foreach ($divKary as $karyItem) {
+            $kSeq = $karyItem->sequence !== null ? (int)$karyItem->sequence : 1;
+            // Harus memiliki level lebih rendah
+            if ($kSeq < $mySequence) {
+                // Cari apakah ada level perantara di divisi yang berada di antara kSeq dan mySequence
+                $hasIntermediate = false;
+                foreach ($divKary as $other) {
+                    $oSeq = $other->sequence !== null ? (int)$other->sequence : 1;
+                    if ($oSeq > $kSeq && $oSeq < $mySequence) {
+                        $hasIntermediate = true;
+                        break;
+                    }
+                }
+                // Jika tidak ada level perantara di divisi tersebut, maka myKary adalah atasan langsungnya!
+                if (!$hasIntermediate) {
+                    $directSubIds[] = (int)$karyItem->id;
+                }
             }
-        });
+        }
 
-        $subIds = $query->pluck('k.id')->toArray();
-        return array_values(array_unique(array_map('intval', $subIds)));
+        return array_values(array_unique($directSubIds));
     }
 
     public function scopeBawahanLangsung($query)

@@ -125,12 +125,8 @@ const apiKary = computed(() => {
   const isAdmin = store.user?.data?.user_type === 'admin' || !atasanId
 
   let whereClause = `this.is_active = true`
-  if (!isAdmin && atasanId) {
-    if (myDivisiId) {
-      whereClause += ` and (this.atasan_id = '${atasanId}' or this.m_divisi_id = '${myDivisiId}')`
-    } else {
-      whereClause += ` and this.atasan_id = '${atasanId}'`
-    }
+  if (!isAdmin && atasanId && myDivisiId) {
+    whereClause += ` and this.m_divisi_id = '${myDivisiId}'`
   }
 
   return {
@@ -152,30 +148,31 @@ const apiKary = computed(() => {
 
       let list = response.data || []
 
-      if (!isAdmin && atasanId) {
+      if (!isAdmin && atasanId && myDivisiId) {
+        // Exclude current atasan themselves
         list = list.filter(k => String(k.id) !== String(atasanId))
 
         const myPosisiId = loggedInKaryData.value?.m_posisi_id
         const myPosisiName = loggedInKaryData.value?.['m_posisi.name'] || loggedInKaryData.value?.posisi_name || ''
         const myRank = getPosisiRank(myPosisiId, myPosisiName)
+        const myName = loggedInKaryData.value?.nama_lengkap || store.user?.data?.name || '-'
 
-        list = list.filter(item => {
-          const itemAtasanId = item.atasan_id || item['atasan.id'] || (item.atasan ? item.atasan.id : null)
-          if (itemAtasanId && String(itemAtasanId) === String(atasanId)) {
-            return true
-          }
+        // Hitung rank posisi seluruh karyawan di divisi ini
+        const allRanks = list.map(item => getPosisiRank(item.m_posisi_id, item['m_posisi.name'] ?? item.posisi_name ?? ''))
 
-          if (myDivisiId && (String(item.m_divisi_id) === String(myDivisiId) || String(item['m_divisi.id']) === String(myDivisiId))) {
-            const kPosisiId = item.m_posisi_id
-            const kPosisiName = item['m_posisi.name'] ?? item.posisi_name ?? ''
-            const kRank = getPosisiRank(kPosisiId, kPosisiName)
+        list = list.filter((item, idx) => {
+          const kRank = allRanks[idx]
 
-            if (kRank >= myRank) return false
+          // Harus memiliki level lebih rendah dari atasan login
+          if (kRank >= myRank) return false
 
-            if (itemAtasanId && String(itemAtasanId) !== String(atasanId)) {
-              return false
-            }
+          // Cek apakah ada level perantara di divisi yang berada di antara kRank dan myRank
+          const hasIntermediate = allRanks.some(otherRank => otherRank > kRank && otherRank < myRank)
 
+          // Jika tidak ada level perantara, maka atasan login adalah atasan langsung terdekatnya!
+          if (!hasIntermediate) {
+            item['atasan.nama_lengkap'] = myName
+            item.atasan_kary = myName
             return true
           }
 
