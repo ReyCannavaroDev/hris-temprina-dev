@@ -129,7 +129,7 @@ onBeforeMount(async () => {
       // Halaman normal (bukan approval)
       const editedId = route.params.id;
       const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`;
-      const params = { join: false, transform: false };
+      const params = { join: true, transform: true, detail: true };
       const fixedParams = new URLSearchParams(params);
 
       const res = await fetch(`${dataURL}?${fixedParams}`, {
@@ -148,6 +148,15 @@ onBeforeMount(async () => {
     // Assign ke reactive values
     for (const key in initialValues) {
       values[key] = initialValues[key];
+    }
+
+    if (initialValues.t_loker_d_kualifikasi && initialValues.t_loker_d_kualifikasi.length > 0) {
+      values.t_loker_d_kualifikasi = initialValues.t_loker_d_kualifikasi.map(k => ({
+        id: k.id,
+        value: k.value || ''
+      }));
+    } else {
+      values.t_loker_d_kualifikasi = [{ value: '' }];
     }
 
   } catch (err) {

@@ -11,7 +11,21 @@ class t_loker extends \App\Models\BasicModels\t_loker
     {
         parent::__construct();
         $this->helper = getCore('Helper');
+
+        $this->heirs = array_values(array_unique(array_merge($this->heirs, [
+            "t_loker_d_kualifikasi",
+        ])));
+        $this->detailsChild = array_values(array_unique(array_merge($this->detailsChild, [
+            "t_loker_d_kualifikasi",
+        ])));
+
+        if (app()->request->isMethod('GET')) {
+            $this->details = [];
+            $this->detailsChild = [];
+        }
     }
+
+    public $details = ['t_loker_d_kualifikasi'];
 
     public $fileColumns = [ /*file_column*/];
 
@@ -33,8 +47,78 @@ class t_loker extends \App\Models\BasicModels\t_loker
     public $createAdditionalData = ["creator_id" => "auth:id"];
     public $updateAdditionalData = ["last_editor_id" => "auth:id"];
 
+    public function transformRowData(array $row)
+    {
+        $data = [];
+        $details = \DB::table('t_loker_d_kualifikasi')
+            ->where('t_loker_id', $row['id'])
+            ->orderBy('id', 'asc')
+            ->get();
+        $detArr = json_decode(json_encode($details), true);
+        $data['t_loker_d_kualifikasi'] = $detArr;
+
+        return array_merge($row, $data);
+    }
+
+    public function t_loker_d_kualifikasi(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany('App\Models\BasicModels\t_loker_d_kualifikasi', 't_loker_id', 'id');
+    }
+
+    private function prepareDetailRequest($id = null)
+    {
+        $req = app()->request;
+        $details = $req->t_loker_d_kualifikasi ?? [];
+
+        if (empty($details)) {
+            if ($id) {
+                \App\Models\BasicModels\t_loker_d_kualifikasi::where('t_loker_id', $id)->delete();
+            }
+            $this->details = [];
+            return;
+        }
+
+        $cleanDetails = [];
+        foreach ($details as $det) {
+            $det = is_array($det) ? $det : (array) $det;
+            $val = trim($det['value'] ?? '');
+            if ($val === '') continue;
+
+            $cleanRow = [
+                'value' => $val,
+            ];
+
+            if ($id && !empty($det['id'])) {
+                $isExisting = \App\Models\BasicModels\t_loker_d_kualifikasi::where('id', $det['id'])
+                    ->where('t_loker_id', $id)
+                    ->exists();
+                if ($isExisting) {
+                    $cleanRow['id'] = $det['id'];
+                }
+            }
+
+            $cleanDetails[] = $cleanRow;
+        }
+
+        if ($id) {
+            $keepIds = array_values(array_filter(array_map(function ($row) {
+                return $row['id'] ?? null;
+            }, $cleanDetails)));
+
+            $deleteQuery = \App\Models\BasicModels\t_loker_d_kualifikasi::where('t_loker_id', $id);
+            if (!empty($keepIds)) {
+                $deleteQuery->whereNotIn('id', $keepIds);
+            }
+            $deleteQuery->delete();
+        }
+
+        $req->merge(['t_loker_d_kualifikasi' => $cleanDetails]);
+    }
+
     public function createBefore($model, $arrayData, $metaData, $id = null)
     {
+        $this->prepareDetailRequest();
+
         $newArrayData = array_merge($arrayData, [
             'nomor' => $this->helper->generateNomor('KODE LOWONGAN PEKERJAAN'),
             'status' => $arrayData['status'] ?? 'OPEN',
@@ -44,8 +128,57 @@ class t_loker extends \App\Models\BasicModels\t_loker
         return [
             "model" => $model,
             "data" => $newArrayData,
-            // "errors" => ['error1']
         ];
+    }
+
+    public function createAfter($model, $data, $metaData)
+    {
+        $req = app()->request;
+        $details = $req->t_loker_d_kualifikasi ?? [];
+        if (!empty($details) && !empty($model->id)) {
+            \DB::table('t_loker_d_kualifikasi')->where('t_loker_id', $model->id)->delete();
+            foreach ($details as $det) {
+                $val = is_array($det) ? ($det['value'] ?? '') : ($det->value ?? '');
+                if (trim($val) !== '') {
+                    \DB::table('t_loker_d_kualifikasi')->insert([
+                        't_loker_id' => $model->id,
+                        'value' => trim($val),
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now()
+                    ]);
+                }
+            }
+        }
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $this->prepareDetailRequest($id);
+
+        return [
+            "model" => $model,
+            "data" => $arrayData,
+        ];
+    }
+
+    public function updateAfter($model, $data, $metaData)
+    {
+        $req = app()->request;
+        $details = $req->t_loker_d_kualifikasi ?? [];
+        if (isset($req->t_loker_d_kualifikasi) && !empty($model->id)) {
+            \DB::table('t_loker_d_kualifikasi')->where('t_loker_id', $model->id)->delete();
+            foreach ($details as $det) {
+                $val = is_array($det) ? ($det['value'] ?? '') : ($det->value ?? '');
+                if (trim($val) !== '') {
+                    \DB::table('t_loker_d_kualifikasi')->insert([
+                        't_loker_id' => $model->id,
+                        'value' => trim($val),
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now()
+                    ]);
+                }
+            }
+        }
     }
 
     public function public_lowongan($req)
