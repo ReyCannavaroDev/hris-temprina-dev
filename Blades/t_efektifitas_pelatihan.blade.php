@@ -200,6 +200,26 @@
         cellClass: ['border-r', '!border-gray-200', 'justify-start']
         },
         {
+        flex: 1.3,
+        headerName: 'Tgl Pelaksanaan',
+        valueGetter: (p) => {
+          const formatDate = (d) => {
+            if (!d) return '';
+            const parts = String(d).split('T')[0].split('-');
+            if (parts.length === 3) {
+              return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return d;
+          };
+          const from = formatDate(p.data?.date_from);
+          const to = formatDate(p.data?.date_to);
+          if (from && to) return from === to ? from : `${from} s/d ${to}`;
+          return from || to || '-';
+        },
+        sortable: false, resizable: true, filter: false,
+        cellClass: ['border-r', '!border-gray-200', 'justify-center']
+        },
+        {
         flex: 2,
         field: 'peserta_efektifitas',
         headerName: 'Karyawan yang Perlu Dinilai',
