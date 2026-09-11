@@ -133,8 +133,23 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
                 }
                 return !empty($divisiVal) ? $divisiVal : '-';
             })(),
+            'm_divisi.nama' => (function() use ($m_divisi) {
+                if (!$m_divisi) return '-';
+                $divisiVal = '';
+                if (!empty($m_divisi->name)) {
+                    $gen = \DB::table('m_general')->where('id', $m_divisi->name)->first();
+                    if ($gen && !empty($gen->value)) {
+                        $divisiVal = $gen->value;
+                    }
+                }
+                if (empty($divisiVal) && !empty($m_divisi->name_old)) {
+                    $divisiVal = $m_divisi->name_old;
+                }
+                return !empty($divisiVal) ? $divisiVal : '-';
+            })(),
             'm_posisi' => $m_posisi ? (array)$m_posisi : null,
             'm_posisi.name' => $m_posisi?->name ?? '-',
+            'm_posisi.nama' => $m_posisi?->name ?? '-',
             'status_kary' => $status_kary ? (array)$status_kary : null,
             'status_kary.value' => $status_kary?->value ?? '-',
             'jenis_permintaan' => $jenis_permintaan ? (array)$jenis_permintaan : null,

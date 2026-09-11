@@ -74,7 +74,7 @@
         :columns="[
           { headerName: 'No', valueGetter: (params) => params.node.rowIndex + 1, width: 60 },
           { headerName: 'No. FPTK', field: 'nomor', width: 180 },
-          { headerName: 'Divisi', field: 'm_divisi.nama', width: 160 },
+          { headerName: 'Divisi', field: 'm_divisi.name', width: 160 },
           { headerName: 'Posisi', field: 'm_posisi.name', width: 160 },
           { headerName: 'Jml Kebutuhan', field: 'jumlah_kebutuhan', width: 120 },
           { headerName: 'Status', field: 'status', width: 100 }
@@ -166,7 +166,7 @@
 
           <!-- DIVISI -->
           <div v-show="!isProfile">
-            <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_id, clearable:false }" class="w-full mt-3" :value="values.m_divisi_id"
+            <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="w-full mt-3" :value="values.m_divisi_id"
               @input="v=>values.m_divisi_id=v" :errorText="formErrors.m_divisi_id?'failed':''" @update:valueFull="(objVal)=>{
                   values.m_dept_id = null
                 }" label="Divisi" placeholder="Pilih Divisi" :hints="formErrors.m_divisi_id" :api="{
@@ -175,8 +175,8 @@
                     params: {
                       scopes:'Name',
                       simplest:true,
-                      groupBy: 'name.value',
-                      where: `this.is_active = 'true'` + (values.m_branch_id ? ` AND this.m_branch_id = '${values.m_branch_id}'` : '')
+                      transform:false,
+                      join:false
                     }
                 }" valueField="id" displayField="name.value" :check="false" />
 

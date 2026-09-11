@@ -49,18 +49,37 @@ const values = reactive({
 function onSelectFptk(obj) {
   if (obj) {
     values.t_req_recruitment_id = obj.id || null
-    if (obj.m_comp_id) values.m_comp_id = obj.m_comp_id
-    if (obj.m_subcomp_id) values.m_subcomp_id = obj.m_subcomp_id
-    if (obj.m_branch_id) values.m_branch_id = obj.m_branch_id
-    if (obj.m_divisi_id) values.m_divisi_id = obj.m_divisi_id
-    if (obj.m_posisi_id) values.m_posisi_id = obj.m_posisi_id
-    if (obj.status_kary_id) values.status_kary_id = obj.status_kary_id
-    if (obj.jumlah_kebutuhan) values.jumlah = obj.jumlah_kebutuhan
-    
-    const posName = obj['m_posisi.name'] || obj.m_posisi?.name || ''
-    const divName = obj['m_divisi.nama'] || obj.m_divisi?.nama || ''
+    if (obj.m_comp_id !== undefined && obj.m_comp_id !== null) values.m_comp_id = obj.m_comp_id
+    else if (obj['m_comp.id']) values.m_comp_id = obj['m_comp.id']
+    else if (obj.m_comp?.id) values.m_comp_id = obj.m_comp.id
+
+    if (obj.m_subcomp_id !== undefined && obj.m_subcomp_id !== null) values.m_subcomp_id = obj.m_subcomp_id
+    else if (obj['m_subcomp.id']) values.m_subcomp_id = obj['m_subcomp.id']
+    else if (obj.m_subcomp?.id) values.m_subcomp_id = obj.m_subcomp.id
+
+    if (obj.m_branch_id !== undefined && obj.m_branch_id !== null) values.m_branch_id = obj.m_branch_id
+    else if (obj['m_branch.id']) values.m_branch_id = obj['m_branch.id']
+    else if (obj.m_branch?.id) values.m_branch_id = obj.m_branch.id
+
+    if (obj.m_divisi_id !== undefined && obj.m_divisi_id !== null) values.m_divisi_id = obj.m_divisi_id
+    else if (obj['m_divisi.id']) values.m_divisi_id = obj['m_divisi.id']
+    else if (obj.m_divisi?.id) values.m_divisi_id = obj.m_divisi.id
+
+    if (obj.m_posisi_id !== undefined && obj.m_posisi_id !== null) values.m_posisi_id = obj.m_posisi_id
+    else if (obj['m_posisi.id']) values.m_posisi_id = obj['m_posisi.id']
+    else if (obj.m_posisi?.id) values.m_posisi_id = obj.m_posisi.id
+
+    if (obj.status_kary_id !== undefined && obj.status_kary_id !== null) values.status_kary_id = obj.status_kary_id
+    else if (obj['status_kary.id']) values.status_kary_id = obj['status_kary.id']
+    else if (obj.status_kary?.id) values.status_kary_id = obj.status_kary.id
+
+    if (obj.jumlah_kebutuhan !== undefined && obj.jumlah_kebutuhan !== null) values.jumlah = obj.jumlah_kebutuhan
+    else if (obj.jumlah !== undefined && obj.jumlah !== null) values.jumlah = obj.jumlah
+
+    const posName = obj['m_posisi.name'] || obj['m_posisi.nama'] || obj.m_posisi?.name || obj.m_posisi?.nama || ''
+    const divName = obj['m_divisi.name'] || obj['m_divisi.nama'] || obj.m_divisi?.name || obj.m_divisi?.nama || ''
     if (posName) {
-      values.title = posName + (divName ? ' - ' + divName : '')
+      values.title = posName + (divName && divName !== '-' ? ' - ' + divName : '')
     }
   } else {
     values.t_req_recruitment_id = null

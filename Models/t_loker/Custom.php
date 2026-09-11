@@ -57,6 +57,23 @@ class t_loker extends \App\Models\BasicModels\t_loker
         $detArr = json_decode(json_encode($details), true);
         $data['t_loker_d_kualifikasi'] = $detArr;
 
+        $m_divisi = !empty($row['m_divisi_id']) ? \DB::table('m_divisi')->where('id', $row['m_divisi_id'])->first() : null;
+        if ($m_divisi) {
+            $divisiVal = '';
+            if (!empty($m_divisi->name)) {
+                $gen = \DB::table('m_general')->where('id', $m_divisi->name)->first();
+                if ($gen && !empty($gen->value)) {
+                    $divisiVal = $gen->value;
+                }
+            }
+            if (empty($divisiVal) && !empty($m_divisi->name_old)) {
+                $divisiVal = $m_divisi->name_old;
+            }
+            $data['m_divisi'] = (array)$m_divisi;
+            $data['m_divisi.name'] = !empty($divisiVal) ? $divisiVal : '-';
+            $data['m_divisi.nama'] = !empty($divisiVal) ? $divisiVal : '-';
+        }
+
         return array_merge($row, $data);
     }
 
