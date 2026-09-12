@@ -26,6 +26,9 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
                 $divisiVal = $gen->value;
             }
         }
+        if (empty($divisiVal) && !empty($row['name'])) {
+            $divisiVal = $row['name'];
+        }
         if (empty($divisiVal) && !empty($row['name_old'])) {
             $divisiVal = $row['name_old'];
         }
@@ -57,24 +60,24 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
     }
         
     public function scopeName($model){
-        return $model->leftjoin('m_general', 'm_divisi.name', 'm_general.id')
+        return $model->leftjoin('m_general', \DB::raw('CAST(m_divisi.name AS text)'), '=', \DB::raw('CAST(m_general.id AS text)'))
                 ->select(
                     'm_divisi.id',
                     'm_divisi.m_branch_id',
-                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as \"name.value\""),
-                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as value"),
-                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as name"),
-                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as nama"),
-                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as name_old"),
+                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as \"name.value\""),
+                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as value"),
+                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as name"),
+                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as nama"),
+                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as name_old"),
                     'm_divisi.nomor'
                 );
     }
 
     public function scopeNames($model){
-        return $model->leftjoin('m_general', 'm_divisi.name', 'm_general.id')
+        return $model->leftjoin('m_general', \DB::raw('CAST(m_divisi.name AS text)'), '=', \DB::raw('CAST(m_general.id AS text)'))
                 ->select(
                     'm_divisi.id',
-                    \DB::raw("COALESCE(m_general.value, m_divisi.name_old, '') as value"),
+                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as value"),
                     'm_divisi.nomor'
                 );
     }

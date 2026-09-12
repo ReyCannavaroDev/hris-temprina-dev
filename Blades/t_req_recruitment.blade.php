@@ -170,8 +170,11 @@
         <div>
           <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="w-full !mt-1" :value="values.m_branch_id"
             @input="v=>{
+              if (values.m_branch_id != v && actionText) {
+                values.m_divisi_id = null;
+              }
+              if (!actionText && !v) return;
               values.m_branch_id = v;
-              values.m_divisi_id = null;
             }" :errorText="formErrors.m_branch_id?'failed':''"
             :hints="formErrors.m_branch_id" valueField="id" displayField="name" :api="{
                 url: `${store.server.url_backend}/operation/m_branch`,
@@ -186,11 +189,14 @@
 
         <!-- DIVISI -->
         <div>
-          <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_id, clearable:true }" class="w-full !mt-1" :value="values.m_divisi_id"
+          <FieldSelect :key="actionText ? (values.m_branch_id || 'default') : 'read_mode'" :bind="{ disabled: !actionText || !values.m_branch_id, clearable:true }" class="w-full !mt-1" :value="values.m_divisi_id"
             @input="v=>{
+              if (values.m_divisi_id != v && actionText) {
+                values.karyawan_digantikan_id = null;
+                selectedKaryawanName = '';
+              }
+              if (!actionText && !v) return;
               values.m_divisi_id = v;
-              values.karyawan_digantikan_id = null;
-              selectedKaryawanName = '';
             }" :errorText="formErrors.m_divisi_id?'failed':''"
             :hints="formErrors.m_divisi_id" valueField="id" displayField="value" :api="{
                 url: `${store.server.url_backend}/operation/m_divisi`,
@@ -200,7 +206,7 @@
                   simplest:true,
                   transform:false,
                   join:false,
-                  where: `this.is_active = 'true'` + (values.m_branch_id ? ` AND this.m_branch_id = '${values.m_branch_id}'` : '')
+                  where: (actionText && values.m_branch_id) ? `this.m_branch_id = '${values.m_branch_id}' OR this.m_branch_id = '0'` : undefined
                 }
             }" placeholder="Pilih Divisi" label="Divisi" fa-icon="sort-desc" :check="false" />
         </div>
