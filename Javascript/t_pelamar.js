@@ -1342,7 +1342,33 @@ function uploadFile(file) {
     })
 }
 
-function handleCvUpload(file) {
+const cvScanModal = reactive({
+  open: false,
+  fileName: '',
+  fileSize: '',
+  progress: 0,
+  status: 'scanning', // 'scanning' | 'success' | 'error'
+  currentStep: 1, // 1 to 5
+  errorMessage: '',
+  summary: {
+    nama: '-',
+    email: '-',
+    telp: '-',
+    pendidikanCount: 0,
+    pengalamanCount: 0,
+    fileCv: ''
+  }
+})
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+async function handleCvUpload(file) {
   if (!file) return
 
   const ext = file.name.split('.').pop().toLowerCase()
@@ -1357,153 +1383,202 @@ function handleCvUpload(file) {
     return
   }
 
-  swal.fire({
-    title: 'Memproses CV...',
-    text: 'Sedang mengekstrak data dari dokumen CV, mohon tunggu sebentar...',
-    allowOutsideClick: false,
-    showConfirmButton: false,
-    didOpen: () => {
-      swal.showLoading()
+  // Buka Modal & Reset State
+  cvScanModal.open = true
+  cvScanModal.fileName = file.name
+  cvScanModal.fileSize = formatFileSize(file.size)
+  cvScanModal.progress = 15
+  cvScanModal.status = 'scanning'
+  cvScanModal.currentStep = 1
+  cvScanModal.errorMessage = ''
+  cvScanModal.summary = {
+    nama: '-',
+    email: '-',
+    telp: '-',
+    pendidikanCount: 0,
+    pengalamanCount: 0,
+    fileCv: ''
+  }
+
+  // Simulasi langkah visual ekstraksi
+  const stepTimer1 = setTimeout(() => {
+    if (cvScanModal.status === 'scanning') {
+      cvScanModal.currentStep = 2
+      cvScanModal.progress = 35
     }
-  })
+  }, 400)
+
+  const stepTimer2 = setTimeout(() => {
+    if (cvScanModal.status === 'scanning') {
+      cvScanModal.currentStep = 3
+      cvScanModal.progress = 60
+    }
+  }, 800)
+
+  const stepTimer3 = setTimeout(() => {
+    if (cvScanModal.status === 'scanning') {
+      cvScanModal.currentStep = 4
+      cvScanModal.progress = 80
+    }
+  }, 1200)
 
   const formData = new FormData()
   formData.append('file', file)
 
   const dataURL = `${store.server.url_backend}/operation/t_pelamar/parseCv`
 
-  fetch(dataURL, {
-    method: 'POST',
-    headers: {
-      Authorization: `${store.user.token_type} ${store.user.token}`
-    },
-    body: formData
-  })
-    .then(async res => {
-      const json = await res.json()
-      if (!res.ok) {
-        throw new Error(json.error || json.message || "Gagal memproses file CV")
-      }
-      return json
+  try {
+    const res = await fetch(dataURL, {
+      method: 'POST',
+      headers: {
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      },
+      body: formData
     })
-    .then(result => {
-      const data = result.data || {}
 
-      // Isi field header utama jika terdeteksi
-      if (data.nama_lengkap) values.nama_lengkap = data.nama_lengkap
-      if (data.nama_depan) values.nama_depan = data.nama_depan
-      if (data.nama_belakang) values.nama_belakang = data.nama_belakang
-      if (data.nama_panggilan) values.nama_panggilan = data.nama_panggilan
-      if (data.email) values.email = data.email
-      if (data.telp) values.telp = data.telp
-      if (data.no_tlp_lainnya) values.no_tlp_lainnya = data.no_tlp_lainnya
-      if (data.tempat_lahir) values.tempat_lahir = data.tempat_lahir
-      if (data.tgl_lahir) values.tgl_lahir = data.tgl_lahir
-      if (data.jk_id) values.jk_id = data.jk_id
-      if (data.linkedin) values.linkedin = data.linkedin
-      if (data.ig) values.ig = data.ig
-      if (data.facebook) values.facebook = data.facebook
-      if (data.x) values.x = data.x
-      if (data.file_cv) values.file_cv = data.file_cv
+    clearTimeout(stepTimer1)
+    clearTimeout(stepTimer2)
+    clearTimeout(stepTimer3)
 
-      // Isi Riwayat Pendidikan
-      if (Array.isArray(data.t_pelamar_det_pend) && data.t_pelamar_det_pend.length > 0) {
-        data.t_pelamar_det_pend.forEach(pend => {
-          detailPendidikan.value.push({
-            _id: ++_idPend,
-            tingkat_id: pend.tingkat_id ?? null,
-            tingkat: pend.tingkat ?? null,
-            nama_sekolah: pend.nama_sekolah ?? null,
-            thn_masuk: pend.thn_masuk ?? null,
-            thn_lulus: pend.thn_lulus ?? null,
-            kota_id: pend.kota_id ?? null,
-            nilai: pend.nilai ?? null,
-            jurusan: pend.jurusan ?? null,
-            is_pend_terakhir: pend.is_pend_terakhir ? 1 : 0,
-            desc: pend.desc ?? null,
-            ijazah_foto: null
-          })
+    const json = await res.json()
+    if (!res.ok) {
+      throw new Error(json.error || json.message || "Gagal memproses file CV")
+    }
+
+    const data = json.data || {}
+
+    // Step 5: Auto-fill ke formulir
+    cvScanModal.currentStep = 5
+    cvScanModal.progress = 95
+
+    // Isi field header utama jika terdeteksi
+    if (data.nama_lengkap) values.nama_lengkap = data.nama_lengkap
+    if (data.nama_depan) values.nama_depan = data.nama_depan
+    if (data.nama_belakang) values.nama_belakang = data.nama_belakang
+    if (data.nama_panggilan) values.nama_panggilan = data.nama_panggilan
+    if (data.email) values.email = data.email
+    if (data.telp) values.telp = data.telp
+    if (data.no_tlp_lainnya) values.no_tlp_lainnya = data.no_tlp_lainnya
+    if (data.tempat_lahir) values.tempat_lahir = data.tempat_lahir
+    if (data.tgl_lahir) values.tgl_lahir = data.tgl_lahir
+    if (data.jk_id) values.jk_id = data.jk_id
+    if (data.linkedin) values.linkedin = data.linkedin
+    if (data.ig) values.ig = data.ig
+    if (data.facebook) values.facebook = data.facebook
+    if (data.x) values.x = data.x
+    if (data.file_cv) values.file_cv = data.file_cv
+
+    let countPend = 0
+    let countPk = 0
+
+    // Isi Riwayat Pendidikan
+    if (Array.isArray(data.t_pelamar_det_pend) && data.t_pelamar_det_pend.length > 0) {
+      countPend = data.t_pelamar_det_pend.length
+      data.t_pelamar_det_pend.forEach(pend => {
+        detailPendidikan.value.push({
+          _id: ++_idPend,
+          tingkat_id: pend.tingkat_id ?? null,
+          tingkat: pend.tingkat ?? null,
+          nama_sekolah: pend.nama_sekolah ?? null,
+          thn_masuk: pend.thn_masuk ?? null,
+          thn_lulus: pend.thn_lulus ?? null,
+          kota_id: pend.kota_id ?? null,
+          nilai: pend.nilai ?? null,
+          jurusan: pend.jurusan ?? null,
+          is_pend_terakhir: pend.is_pend_terakhir ? 1 : 0,
+          desc: pend.desc ?? null,
+          ijazah_foto: null
         })
-      }
-
-      // Isi Pengalaman Kerja
-      if (Array.isArray(data.t_pelamar_det_pk) && data.t_pelamar_det_pk.length > 0) {
-        data.t_pelamar_det_pk.forEach(pk => {
-          detailPengalaman.value.push({
-            _id: ++_idPk,
-            instansi: pk.instansi ?? null,
-            thn_masuk: pk.thn_masuk ?? null,
-            thn_keluar: pk.thn_keluar ?? null,
-            kota_id: pk.kota_id ?? null,
-            alamat_kantor: pk.alamat_kantor ?? null,
-            bidang_usaha: pk.bidang_usaha ?? null,
-            no_tlp: pk.no_tlp ?? null,
-            posisi: pk.posisi ?? null,
-            surat_referensi: null
-          })
-        })
-      }
-
-      // Isi Organisasi
-      if (Array.isArray(data.t_pelamar_det_org) && data.t_pelamar_det_org.length > 0) {
-        data.t_pelamar_det_org.forEach(org => {
-          detailOrganisasi.value.push({
-            _id: ++_idOrg,
-            nama: org.nama ?? null,
-            tahun: org.tahun ?? null,
-            jenis_org_id: org.jenis_org_id ?? null,
-            kota_id: org.kota_id ?? null,
-            posisi: org.posisi ?? null,
-            desc: org.desc ?? null
-          })
-        })
-      }
-
-      // Isi Pelatihan
-      if (Array.isArray(data.t_pelamar_det_pel) && data.t_pelamar_det_pel.length > 0) {
-        data.t_pelamar_det_pel.forEach(pel => {
-          detailPelatihan.value.push({
-            _id: ++_idPel,
-            nama_pel: pel.nama_pel ?? null,
-            tahun: pel.tahun ?? null,
-            nama_lem: pel.nama_lem ?? null,
-            kota_id: pel.kota_id ?? null
-          })
-        })
-      }
-
-      // Isi Bahasa
-      if (Array.isArray(data.t_pelamar_det_bhs) && data.t_pelamar_det_bhs.length > 0) {
-        data.t_pelamar_det_bhs.forEach(bhs => {
-          detailBahasa.value.push({
-            _id: ++_idBhs,
-            bhs_dikuasai: bhs.bhs_dikuasai ?? null,
-            nilai_lisan: bhs.nilai_lisan ?? null,
-            nilai_tertulis: bhs.nilai_tertulis ?? null
-          })
-        })
-      }
-
-      swal.fire({
-        icon: 'success',
-        title: 'CV Berhasil Dipindai!',
-        text: 'Data dari CV telah otomatis diisikan ke formulir. Silakan periksa kembali dan lengkapi field yang diperlukan.',
-        confirmButtonColor: '#3085d6',
-        confirmButtonText: 'Baik, Saya Periksa'
       })
+    }
 
-      const el = document.getElementById('fileUploadCv')
-      if (el) el.value = ''
-    })
-    .catch(err => {
-      swal.fire({
-        icon: 'error',
-        title: 'Gagal Memindai CV',
-        text: err.message || 'Terjadi kesalahan saat memproses file CV.'
+    // Isi Pengalaman Kerja
+    if (Array.isArray(data.t_pelamar_det_pk) && data.t_pelamar_det_pk.length > 0) {
+      countPk = data.t_pelamar_det_pk.length
+      data.t_pelamar_det_pk.forEach(pk => {
+        detailPengalaman.value.push({
+          _id: ++_idPk,
+          instansi: pk.instansi ?? null,
+          thn_masuk: pk.thn_masuk ?? null,
+          thn_keluar: pk.thn_keluar ?? null,
+          kota_id: pk.kota_id ?? null,
+          alamat_kantor: pk.alamat_kantor ?? null,
+          bidang_usaha: pk.bidang_usaha ?? null,
+          no_tlp: pk.no_tlp ?? null,
+          posisi: pk.posisi ?? null,
+          surat_referensi: null
+        })
       })
-      const el = document.getElementById('fileUploadCv')
-      if (el) el.value = ''
-    })
+    }
+
+    // Isi Organisasi
+    if (Array.isArray(data.t_pelamar_det_org) && data.t_pelamar_det_org.length > 0) {
+      data.t_pelamar_det_org.forEach(org => {
+        detailOrganisasi.value.push({
+          _id: ++_idOrg,
+          nama: org.nama ?? null,
+          tahun: org.tahun ?? null,
+          jenis_org_id: org.jenis_org_id ?? null,
+          kota_id: org.kota_id ?? null,
+          posisi: org.posisi ?? null,
+          desc: org.desc ?? null
+        })
+      })
+    }
+
+    // Isi Pelatihan
+    if (Array.isArray(data.t_pelamar_det_pel) && data.t_pelamar_det_pel.length > 0) {
+      data.t_pelamar_det_pel.forEach(pel => {
+        detailPelatihan.value.push({
+          _id: ++_idPel,
+          nama_pel: pel.nama_pel ?? null,
+          tahun: pel.tahun ?? null,
+          nama_lem: pel.nama_lem ?? null,
+          kota_id: pel.kota_id ?? null
+        })
+      })
+    }
+
+    // Isi Bahasa
+    if (Array.isArray(data.t_pelamar_det_bhs) && data.t_pelamar_det_bhs.length > 0) {
+      data.t_pelamar_det_bhs.forEach(bhs => {
+        detailBahasa.value.push({
+          _id: ++_idBhs,
+          bhs_dikuasai: bhs.bhs_dikuasai ?? null,
+          nilai_lisan: bhs.nilai_lisan ?? null,
+          nilai_tertulis: bhs.nilai_tertulis ?? null
+        })
+      })
+    }
+
+    // Sukses & Selesai
+    setTimeout(() => {
+      cvScanModal.progress = 100
+      cvScanModal.status = 'success'
+      cvScanModal.summary = {
+        nama: data.nama_lengkap || data.nama_depan || '-',
+        email: data.email || '-',
+        telp: data.telp || '-',
+        pendidikanCount: countPend,
+        pengalamanCount: countPk,
+        fileCv: data.file_cv || ''
+      }
+    }, 400)
+
+    const el = document.getElementById('fileUploadCv')
+    if (el) el.value = ''
+
+  } catch (err) {
+    clearTimeout(stepTimer1)
+    clearTimeout(stepTimer2)
+    clearTimeout(stepTimer3)
+
+    cvScanModal.status = 'error'
+    cvScanModal.errorMessage = err.message || 'Terjadi kesalahan saat memproses file CV.'
+
+    const el = document.getElementById('fileUploadCv')
+    if (el) el.value = ''
+  }
 }
 
 const landing = computed(() => {
