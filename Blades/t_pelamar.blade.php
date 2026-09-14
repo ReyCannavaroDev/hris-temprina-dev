@@ -47,7 +47,7 @@
     <div class="flex flex-col border rounded shadow-sm <md:w-full w-full bg-white ">
 
       <!-- HEADER START -->
-      <div class="bg-gray-500 text-white rounded-t-md py-2 px-4">
+      <div class="bg-gray-500 text-white rounded-t-md py-2 px-4 flex justify-between items-center">
         <div class="flex items-center">
           <Icon fa="arrow-left" class="cursor-pointer mr-2 font-bold hover:text-yellow-500" title="Kembali"
             @click="onBack" />
@@ -55,6 +55,24 @@
             <h1 class="text-20px font-bold">Form Pelamar</h1>
             <p class="text-gray-100">Master Pelamar</p>
           </div>
+        </div>
+        <div class="flex items-center gap-2" v-if="actionText">
+          <label
+            for="fileUploadCv"
+            class="cursor-pointer flex items-center gap-1.5 border border-yellow-400 bg-yellow-500 text-white hover:bg-yellow-600 text-xs font-semibold py-1.5 px-3 rounded shadow transition duration-200"
+            title="Unggah berkas CV (.pdf atau .docx) untuk mengisi formulir otomatis"
+          >
+            <Icon fa="bolt" />
+            <span>Upload CV</span>
+          </label>
+          <input
+            id="fileUploadCv"
+            ref="inputCvFile"
+            type="file"
+            accept=".pdf,.docx,.doc"
+            class="sr-only"
+            @change="(e) => handleCvUpload(e.target.files[0])"
+          />
         </div>
       </div>
       <!-- HEADER END -->

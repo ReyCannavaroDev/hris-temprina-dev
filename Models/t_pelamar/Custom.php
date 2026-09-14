@@ -224,6 +224,635 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
         }
     }
 
+    public function custom_parseCv($req)
+    {
+        try {
+            if (!$req->hasFile('file')) {
+                return response()->json(['error' => 'File CV tidak ditemukan dalam request'], 422);
+            }
+
+            $file = $req->file('file');
+            $ext = strtolower($file->getClientOriginalExtension());
+
+            if (!in_array($ext, ['pdf', 'docx', 'doc'])) {
+                return response()->json(['error' => 'Format berkas harus PDF (.pdf) atau Word (.docx)'], 422);
+            }
+
+            // Simpan berkas fisik ke folder uploads
+            $targetDir = public_path('uploads/t_pelamar');
+            if (!file_exists($targetDir)) {
+                @mkdir($targetDir, 0777, true);
+            }
+
+            $filename = 'cv_' . time() . '_' . uniqid() . '.' . $ext;
+            $file->move($targetDir, $filename);
+            $fullPath = $targetDir . DIRECTORY_SEPARATOR . $filename;
+            $savedFilePath = 'uploads/t_pelamar/' . $filename;
+
+            // Ekstrak teks mentah
+            $rawText = $this->extractTextFromFile($fullPath, $ext);
+
+            // Parsing teks menggunakan regex & aturan heuristik
+            $parsedData = $this->parseCvText($rawText);
+            $parsedData['file_cv'] = $savedFilePath;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'CV berhasil dipindai dan diekstrak',
+                'data' => $parsedData
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Gagal memproses file CV: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function extractTextFromFile($filePath, $ext)
+    {
+        if ($ext === 'docx') {
+            return $this->extractTextFromDocx($filePath);
+        } elseif ($ext === 'pdf') {
+            return $this->extractTextFromPdf($filePath);
+        } elseif ($ext === 'doc') {
+            return $this->extractTextFromDoc($filePath);
+        }
+        return '';
+    }
+
+    private function extractTextFromDocx($filePath)
+    {
+        $text = '';
+        if (class_exists('ZipArchive')) {
+            $zip = new \ZipArchive();
+            if ($zip->open($filePath) === true) {
+                if (($index = $zip->locateName('word/document.xml')) !== false) {
+                    $xmlData = $zip->getFromIndex($index);
+                    // Pertahankan baris baru dan pemisah kolom/tabel
+                    $xmlData = preg_replace('/<w:p[^>]*>/', "\n", $xmlData);
+                    $xmlData = preg_replace('/<w:br[^>]*>/', "\n", $xmlData);
+                    $xmlData = preg_replace('/<w:tab[^>]*>/', "\t", $xmlData);
+                    $xmlData = preg_replace('/<w:tr[^>]*>/', "\n", $xmlData);
+                    $text = strip_tags($xmlData);
+                }
+                $zip->close();
+            }
+        }
+        return $text;
+    }
+
+    private function extractTextFromDoc($filePath)
+    {
+        $fileHandle = @fopen($filePath, "r");
+        $line = @fread($fileHandle, filesize($filePath));
+        @fclose($fileHandle);
+        $lines = explode(chr(0x0D), $line);
+        $outtext = "";
+        foreach ($lines as $thisline) {
+            $pos = strpos($thisline, chr(0x00));
+            if ($pos !== false || strlen($thisline) == 0) {
+                // skip
+            } else {
+                $outtext .= $thisline . " ";
+            }
+        }
+        $outtext = preg_replace("/[^a-zA-Z0-9\s\,\.\-\_\@\:\/\(\)\+]/", " ", $outtext);
+        return $outtext;
+    }
+
+    private function extractTextFromPdf($filePath)
+    {
+        $content = @file_get_contents($filePath);
+        if (!$content) return '';
+
+        $text = '';
+
+        // Ekstrak seluruh stream biner di dalam PDF
+        if (preg_match_all('/stream[\r\n]+([\s\S]*?)[\r\n]+endstream/m', $content, $matches)) {
+            foreach ($matches[1] as $stream) {
+                // Dekompresi FlateDecode
+                $decompressed = @gzuncompress($stream);
+                if ($decompressed === false) {
+                    $decompressed = @gzinflate($stream);
+                }
+                if ($decompressed === false) {
+                    $decompressed = $stream;
+                }
+
+                // Ambil blok teks PDF: BT ... ET
+                if (preg_match_all('/BT[\s\S]*?ET/m', $decompressed, $textBlocks)) {
+                    foreach ($textBlocks[0] as $block) {
+                        // Pola string tunggal: (Teks) Tj
+                        if (preg_match_all('/\(([\s\S]*?)\)\s*Tj/s', $block, $tjMatches)) {
+                            foreach ($tjMatches[1] as $t) {
+                                $text .= $this->decodePdfString($t) . ' ';
+                            }
+                            $text .= "\n";
+                        }
+                        // Pola array teks: [(Teks1) 120 (Teks2)] TJ
+                        if (preg_match_all('/\[([\s\S]*?)\]\s*TJ/s', $block, $tjArrayMatches)) {
+                            foreach ($tjArrayMatches[1] as $arr) {
+                                if (preg_match_all('/\(([\s\S]*?)\)/s', $arr, $innerMatches)) {
+                                    foreach ($innerMatches[1] as $t) {
+                                        $text .= $this->decodePdfString($t);
+                                    }
+                                }
+                            }
+                            $text .= "\n";
+                        }
+                        // Operator petik: (Teks) ' atau "
+                        if (preg_match_all('/\(([\s\S]*?)\)\s*[\'"]/s', $block, $quoteMatches)) {
+                            foreach ($quoteMatches[1] as $t) {
+                                $text .= $this->decodePdfString($t) . "\n";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback jika tidak terdeteksi via stream (uncompressed PDF biasa)
+        if (trim($text) === '') {
+            if (preg_match_all('/\(([\s\S]*?)\)\s*Tj/s', $content, $tjMatches)) {
+                foreach ($tjMatches[1] as $t) {
+                    $text .= $this->decodePdfString($t) . ' ';
+                }
+            }
+        }
+
+        return $text;
+    }
+
+    private function decodePdfString($str)
+    {
+        $str = str_replace(['\\\\', '\(', '\)', '\n', '\r', '\t'], ['\\', '(', ')', "\n", "\r", "\t"], $str);
+        $str = preg_replace_callback('/\\\\([0-7]{1,3})/', function ($m) {
+            return chr(octdec($m[1]));
+        }, $str);
+        return $str;
+    }
+
+    private function parseCvText($rawText)
+    {
+        $lines = array_values(array_filter(array_map('trim', explode("\n", $rawText)), function ($l) {
+            return strlen($l) > 0;
+        }));
+
+        $result = [
+            'nama_lengkap' => null,
+            'nama_depan' => null,
+            'nama_belakang' => null,
+            'nama_panggilan' => null,
+            'email' => null,
+            'telp' => null,
+            'no_tlp_lainnya' => null,
+            'tempat_lahir' => null,
+            'tgl_lahir' => null,
+            'jk_id' => null,
+            'alamat_domisili' => null,
+            'linkedin' => null,
+            'ig' => null,
+            'facebook' => null,
+            'x' => null,
+            't_pelamar_det_pend' => [],
+            't_pelamar_det_pk' => [],
+            't_pelamar_det_pel' => [],
+            't_pelamar_det_org' => [],
+            't_pelamar_det_bhs' => [],
+        ];
+
+        // 1. Email Regex
+        if (preg_match('/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $rawText, $matchEmail)) {
+            $result['email'] = strtolower(trim($matchEmail[0]));
+        }
+
+        // 2. Nomor HP / WhatsApp
+        if (preg_match('/(?:\+62|62|08)[0-9\s\-]{8,15}/', $rawText, $matchPhone)) {
+            $cleanPhone = preg_replace('/[^\d+]/', '', $matchPhone[0]);
+            if (strlen($cleanPhone) >= 9 && strlen($cleanPhone) <= 16) {
+                $result['telp'] = $cleanPhone;
+            }
+        }
+
+        // 3. Media Sosial
+        if (preg_match('/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9_\-\.]+)/i', $rawText, $matchIn)) {
+            $result['linkedin'] = 'https://linkedin.com/in/' . $matchIn[1];
+        }
+        if (preg_match('/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9_\.]+)/i', $rawText, $matchIg)) {
+            $result['ig'] = '@' . $matchIg[1];
+        } elseif (preg_match('/(?:IG|Instagram)\s*[:=]?\s*@?([a-zA-Z0-9_\.]{3,30})/i', $rawText, $matchIg2)) {
+            $result['ig'] = '@' . $matchIg2[1];
+        }
+        if (preg_match('/(?:https?:\/\/)?(?:www\.)?facebook\.com\/([a-zA-Z0-9_\.]+)/i', $rawText, $matchFb)) {
+            $result['facebook'] = $matchFb[1];
+        }
+        if (preg_match('/(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/i', $rawText, $matchX)) {
+            $result['x'] = '@' . $matchX[1];
+        }
+
+        // 4. Jenis Kelamin (Auto-lookup ke m_general)
+        $isMale = preg_match('/\b(laki[\s-]?laki|pria|male)\b/i', $rawText);
+        $isFemale = preg_match('/\b(perempuan|wanita|female)\b/i', $rawText);
+        if ($isMale && !$isFemale) {
+            $result['jk_id'] = \DB::table('m_general')
+                ->where('group', 'JENIS KELAMIN')
+                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('value', 'ILIKE', '%laki%')->orWhere('code', 'ILIKE', '%L%');
+                })->value('id');
+        } elseif ($isFemale && !$isMale) {
+            $result['jk_id'] = \DB::table('m_general')
+                ->where('group', 'JENIS KELAMIN')
+                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('value', 'ILIKE', '%perempuan%')->orWhere('value', 'ILIKE', '%wanita%')->orWhere('code', 'ILIKE', '%P%');
+                })->value('id');
+        }
+
+        // 5. Nama Pelamar (Membaca baris awal dokumen sebelum kontak)
+        $headerIgnores = ['curriculum vitae', 'resume', 'biodata', 'data diri', 'cv', 'profile', 'personal profile', 'tentang saya', 'about me'];
+        foreach ($lines as $line) {
+            $cleanLine = trim($line);
+            $lowerLine = strtolower($cleanLine);
+            if (in_array($lowerLine, $headerIgnores) || strlen($cleanLine) < 3) {
+                continue;
+            }
+            if (strpos($cleanLine, '@') !== false || preg_match('/\d{5,}/', $cleanLine) || strpos($lowerLine, 'http') !== false) {
+                continue;
+            }
+            // Validasi string nama (hanya huruf, spasi, titik, koma, gelar)
+            if (preg_match('/^[a-zA-Z\s\.,\'\(\)]+$/', $cleanLine) && strlen($cleanLine) <= 70) {
+                $cleanName = ucwords(strtolower($cleanLine));
+                $result['nama_lengkap'] = $cleanName;
+                $parts = explode(' ', $cleanName);
+                $result['nama_depan'] = $parts[0] ?? '';
+                $result['nama_belakang'] = count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : $result['nama_depan'];
+                $result['nama_panggilan'] = $result['nama_depan'];
+                break;
+            }
+        }
+
+        // 6. Tempat, Tanggal Lahir (TTL)
+        if (preg_match('/(?:tempat[\s,]*(?:dan[\s,]*)?tanggal\s*lahir|ttl|tempat\/tgl\s*lahir|date\s*of\s*birth|dob)\s*[:=]?\s*([^\n\r,]+)[,\s]+([0-9]{1,2}[\s\/\-\.](?:Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|[0-9]{1,2})[\s\/\-\.][0-9]{4})/i', $rawText, $matchTtl)) {
+            $result['tempat_lahir'] = trim($matchTtl[1]);
+            $result['tgl_lahir'] = $this->parseIndoDate(trim($matchTtl[2]));
+        } elseif (preg_match('/\b([0-9]{1,2}[\s\/\-\.](?:Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember|[0-9]{1,2})[\s\/\-\.](?:19[6-9][0-9]|20[0-2][0-9]))\b/i', $rawText, $matchDate)) {
+            $result['tgl_lahir'] = $this->parseIndoDate(trim($matchDate[1]));
+        }
+
+        // 7. Segmentasi Bagian & Parsing Detail
+        $sections = $this->splitIntoSections($rawText);
+
+        if (!empty($sections['pendidikan'])) {
+            $result['t_pelamar_det_pend'] = $this->parseEducationSection($sections['pendidikan']);
+        }
+        if (!empty($sections['pengalaman'])) {
+            $result['t_pelamar_det_pk'] = $this->parseExperienceSection($sections['pengalaman']);
+        }
+        if (!empty($sections['organisasi'])) {
+            $result['t_pelamar_det_org'] = $this->parseOrganizationSection($sections['organisasi']);
+        }
+        if (!empty($sections['pelatihan'])) {
+            $result['t_pelamar_det_pel'] = $this->parseTrainingSection($sections['pelatihan']);
+        }
+        if (!empty($sections['bahasa'])) {
+            $result['t_pelamar_det_bhs'] = $this->parseLanguageSection($sections['bahasa']);
+        }
+
+        return $result;
+    }
+
+    private function splitIntoSections($rawText)
+    {
+        $sections = [
+            'pendidikan' => '',
+            'pengalaman' => '',
+            'organisasi' => '',
+            'pelatihan' => '',
+            'bahasa' => '',
+        ];
+
+        $lines = explode("\n", $rawText);
+        $currentSection = null;
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            $upper = strtoupper($trimmed);
+
+            // Deteksi judul section
+            if (preg_match('/^(?:RIWAYAT\s+)?PENDIDIKAN|EDUCATION|LATAR\s+BELAKANG\s+PENDIDIKAN$/i', $upper)) {
+                $currentSection = 'pendidikan';
+                continue;
+            } elseif (preg_match('/^(?:RIWAYAT\s+)?PENGALAMAN(?:\s+KERJA)?|WORK\s+EXPERIENCE|PENGALAMAN\s+KERJA|PENGALAMAN\s+PROFESIONAL$/i', $upper)) {
+                $currentSection = 'pengalaman';
+                continue;
+            } elseif (preg_match('/^ORGANISASI|PENGALAMAN\s+ORGANISASI|ORGANIZATIONAL\s+EXPERIENCE$/i', $upper)) {
+                $currentSection = 'organisasi';
+                continue;
+            } elseif (preg_match('/^PELATIHAN|SERTIFIKASI|TRAINING|COURSES|SERTIFIKAT$/i', $upper)) {
+                $currentSection = 'pelatihan';
+                continue;
+            } elseif (preg_match('/^BAHASA|KEMAMPUAN\s+BAHASA|LANGUAGES$/i', $upper)) {
+                $currentSection = 'bahasa';
+                continue;
+            } elseif (preg_match('/^KEAHLIAN|SKILLS|PROYEK|PROJECTS|MINAT|HOBBY$/i', $upper)) {
+                $currentSection = null; // Lewati section yang tidak masuk tabel detail
+                continue;
+            }
+
+            if ($currentSection && isset($sections[$currentSection])) {
+                $sections[$currentSection] .= $trimmed . "\n";
+            }
+        }
+
+        return $sections;
+    }
+
+    private function parseEducationSection($sectionText)
+    {
+        $items = [];
+        $lines = array_values(array_filter(array_map('trim', explode("\n", $sectionText)), function ($l) {
+            return strlen($l) > 0;
+        }));
+
+        $current = null;
+
+        foreach ($lines as $line) {
+            // Cek apakah baris mengandung tahun kelulusan / rentang tahun (contoh: 2018 - 2022 atau 2020)
+            $hasYear = preg_match('/(?:(20[0-2][0-9]|19[8-9][0-9])\s*[-–]\s*(20[0-2][0-9]|Sekarang|Present|\d{4})|(20[0-2][0-9]|19[8-9][0-9]))/i', $line, $matchYear);
+
+            // Cek apakah ada kata kunci sekolah / universitas / jenjang
+            $hasDegreeOrSchool = preg_match('/\b(Universitas|Institut|Politeknik|Sekolah Tinggi|Akademi|SMA|SMK|MAN|SMP|SD|S1|S2|S3|D3|D4|Sarjana|Diploma|Magister)\b/i', $line);
+
+            if ($hasDegreeOrSchool || $hasYear) {
+                if ($current && (!empty($current['nama_sekolah']) || !empty($current['tingkat_id']))) {
+                    $items[] = $current;
+                }
+
+                $current = [
+                    'tingkat_id' => null,
+                    'tingkat' => null,
+                    'nama_sekolah' => null,
+                    'thn_masuk' => null,
+                    'thn_lulus' => null,
+                    'kota_id' => null,
+                    'nilai' => null,
+                    'jurusan' => null,
+                    'is_pend_terakhir' => 0,
+                    'desc' => null,
+                ];
+
+                // Tangkap tahun
+                if ($hasYear) {
+                    if (isset($matchYear[1]) && !empty($matchYear[1])) {
+                        $current['thn_masuk'] = $matchYear[1];
+                        $current['thn_lulus'] = is_numeric($matchYear[2]) ? $matchYear[2] : date('Y');
+                    } elseif (isset($matchYear[3])) {
+                        $current['thn_lulus'] = $matchYear[3];
+                    }
+                }
+
+                // Tangkap jenjang pendidikan & lookup m_general
+                if (preg_match('/\b(S3|Doktor)\b/i', $line)) {
+                    $current['tingkat'] = 'S3';
+                } elseif (preg_match('/\b(S2|Magister|Master)\b/i', $line)) {
+                    $current['tingkat'] = 'S2';
+                } elseif (preg_match('/\b(S1|Sarjana|Bachelor)\b/i', $line)) {
+                    $current['tingkat'] = 'S1';
+                } elseif (preg_match('/\b(D4|Diploma 4)\b/i', $line)) {
+                    $current['tingkat'] = 'D4';
+                } elseif (preg_match('/\b(D3|Diploma 3|Diploma)\b/i', $line)) {
+                    $current['tingkat'] = 'D3';
+                } elseif (preg_match('/\b(SMK|Sekolah Menengah Kejuruan)\b/i', $line)) {
+                    $current['tingkat'] = 'SMK';
+                } elseif (preg_match('/\b(SMA|MA|Sekolah Menengah Atas)\b/i', $line)) {
+                    $current['tingkat'] = 'SMA';
+                } elseif (preg_match('/\b(SMP|MTS)\b/i', $line)) {
+                    $current['tingkat'] = 'SMP';
+                } elseif (preg_match('/\b(SD)\b/i', $line)) {
+                    $current['tingkat'] = 'SD';
+                }
+
+                if ($current['tingkat']) {
+                    $current['tingkat_id'] = \DB::table('m_general')
+                        ->where(function ($q) {
+                            $q->where('group', 'ILIKE', '%PENDIDIKAN%')->orWhere('group', 'ILIKE', '%TINGKAT%');
+                        })
+                        ->where('is_active', true)
+                        ->where(function ($q) use ($current) {
+                            $q->where('code', $current['tingkat'])->orWhere('value', 'ILIKE', '%' . $current['tingkat'] . '%');
+                        })->value('id');
+                }
+
+                // Tangkap nama institusi sekolah/universitas
+                if (preg_match('/((?:Universitas|Institut|Politeknik|Sekolah Tinggi|Akademi|SMA|SMK|MAN|SMP|SD)[^\n\r,\(]+)/i', $line, $matchSchool)) {
+                    $current['nama_sekolah'] = trim($matchSchool[1]);
+                } else {
+                    $current['nama_sekolah'] = trim($line);
+                }
+            } else if ($current) {
+                // Baris lanjutan: cek jurusan atau IPK
+                if (preg_match('/(?:IPK|GPA|Nilai)\s*[:=]?\s*([0-4](?:\.[0-9]{1,2})?)/i', $line, $matchIpk)) {
+                    $current['nilai'] = $matchIpk[1];
+                }
+                if (preg_match('/(?:Jurusan|Program Studi|Prodi|Major)\s*[:=]?\s*([^\n\r,]+)/i', $line, $matchJurusan)) {
+                    $current['jurusan'] = trim($matchJurusan[1]);
+                } elseif (!$current['jurusan'] && preg_match('/\b(Teknik|Sistem Informasi|Informatika|Akuntansi|Manajemen|Ilmu Komunikasi|Hukum|Psikologi|Desain|IPA|IPS|RPL|TKJ|Multimedia)\b[^\n\r,]*/i', $line, $matchJurusan2)) {
+                    $current['jurusan'] = trim($matchJurusan2[0]);
+                }
+            }
+        }
+
+        if ($current && (!empty($current['nama_sekolah']) || !empty($current['tingkat_id']))) {
+            $items[] = $current;
+        }
+
+        // Tandai item pertama/terakhir sebagai pendidikan terakhir
+        if (count($items) > 0) {
+            $items[0]['is_pend_terakhir'] = 1;
+        }
+
+        return $items;
+    }
+
+    private function parseExperienceSection($sectionText)
+    {
+        $items = [];
+        $lines = array_values(array_filter(array_map('trim', explode("\n", $sectionText)), function ($l) {
+            return strlen($l) > 0;
+        }));
+
+        $current = null;
+
+        foreach ($lines as $line) {
+            $hasYear = preg_match('/(?:(20[0-2][0-9]|19[8-9][0-9])\s*[-–]\s*(20[0-2][0-9]|Sekarang|Present|\d{4})|(20[0-2][0-9]|19[8-9][0-9]))/i', $line, $matchYear);
+            $hasPositionOrCompany = preg_match('/\b(PT|CV|Agency|Studio|Software|Developer|Engineer|Staff|Supervisor|Manager|Admin|Operator|Intern|Magang|Lead|Officer|Spesialis|Specialist|Designer|Marketing|Sales)\b/i', $line);
+
+            if ($hasYear || $hasPositionOrCompany) {
+                if ($current && (!empty($current['instansi']) || !empty($current['posisi']))) {
+                    $items[] = $current;
+                }
+
+                $current = [
+                    'instansi' => null,
+                    'thn_masuk' => null,
+                    'thn_keluar' => null,
+                    'kota_id' => null,
+                    'alamat_kantor' => null,
+                    'bidang_usaha' => null,
+                    'no_tlp' => null,
+                    'posisi' => null,
+                ];
+
+                if ($hasYear) {
+                    if (isset($matchYear[1]) && !empty($matchYear[1])) {
+                        $current['thn_masuk'] = $matchYear[1];
+                        $current['thn_keluar'] = is_numeric($matchYear[2]) ? $matchYear[2] : date('Y');
+                    } elseif (isset($matchYear[3])) {
+                        $current['thn_masuk'] = $matchYear[3];
+                        $current['thn_keluar'] = $matchYear[3];
+                    }
+                }
+
+                // Cek nama perusahaan (PT/CV)
+                if (preg_match('/((?:PT|CV)\s+[^\n\r,\(]+)/i', $line, $matchComp)) {
+                    $current['instansi'] = trim($matchComp[1]);
+                }
+
+                // Cek posisi
+                if (preg_match('/\b((?:Software\s+Engineer|Frontend\s+Developer|Backend\s+Developer|Fullstack\s+Developer|Web\s+Developer|Mobile\s+Developer|Staff|Supervisor|Manager|Admin|Operator|Intern|Magang|Designer|Marketing|Sales|Accountant)[^\n\r,]*)/i', $line, $matchPos)) {
+                    $current['posisi'] = trim($matchPos[1]);
+                }
+
+                if (!$current['instansi'] && !$current['posisi']) {
+                    $current['posisi'] = trim($line);
+                }
+            } elseif ($current) {
+                if (!$current['instansi'] && preg_match('/((?:PT|CV)\s+[^\n\r,\(]+)/i', $line, $matchComp2)) {
+                    $current['instansi'] = trim($matchComp2[1]);
+                } elseif (!$current['instansi'] && strlen($line) < 50 && !strpos($line, '•') && !strpos($line, '-')) {
+                    $current['instansi'] = trim($line);
+                }
+            }
+        }
+
+        if ($current && (!empty($current['instansi']) || !empty($current['posisi']))) {
+            $items[] = $current;
+        }
+
+        return $items;
+    }
+
+    private function parseOrganizationSection($sectionText)
+    {
+        $items = [];
+        $lines = array_values(array_filter(array_map('trim', explode("\n", $sectionText)), function ($l) {
+            return strlen($l) > 0;
+        }));
+
+        foreach ($lines as $line) {
+            if (preg_match('/(?:(20[0-2][0-9]|19[8-9][0-9]))/i', $line, $matchYear)) {
+                $items[] = [
+                    'nama' => trim(preg_replace('/\b(20[0-2][0-9]|19[8-9][0-9])\b.*$/', '', $line)) ?: trim($line),
+                    'tahun' => $matchYear[1],
+                    'jenis_org_id' => null,
+                    'kota_id' => null,
+                    'posisi' => 'Anggota / Pengurus',
+                    'desc' => null
+                ];
+            }
+        }
+        return $items;
+    }
+
+    private function parseTrainingSection($sectionText)
+    {
+        $items = [];
+        $lines = array_values(array_filter(array_map('trim', explode("\n", $sectionText)), function ($l) {
+            return strlen($l) > 0;
+        }));
+
+        foreach ($lines as $line) {
+            preg_match('/(?:(20[0-2][0-9]|19[8-9][0-9]))/i', $line, $matchYear);
+            $items[] = [
+                'nama_pel' => trim($line),
+                'tahun' => $matchYear[1] ?? date('Y'),
+                'nama_lem' => '-',
+                'kota_id' => null
+            ];
+        }
+        return $items;
+    }
+
+    private function parseLanguageSection($sectionText)
+    {
+        $items = [];
+        if (preg_match('/\b(Inggris|English)\b/i', $sectionText)) {
+            $items[] = [
+                'bhs_dikuasai' => 'Bahasa Inggris',
+                'nilai_lisan' => 'Aktif',
+                'nilai_tertulis' => 'Aktif'
+            ];
+        }
+        if (preg_match('/\b(Indonesia)\b/i', $sectionText)) {
+            $items[] = [
+                'bhs_dikuasai' => 'Bahasa Indonesia',
+                'nilai_lisan' => 'Aktif',
+                'nilai_tertulis' => 'Aktif'
+            ];
+        }
+        if (preg_match('/\b(Mandarin|Jepang|Arab|Jerman)\b/i', $sectionText, $matchOtherLang)) {
+            $items[] = [
+                'bhs_dikuasai' => 'Bahasa ' . ucfirst($matchOtherLang[1]),
+                'nilai_lisan' => 'Pasif',
+                'nilai_tertulis' => 'Pasif'
+            ];
+        }
+        return $items;
+    }
+
+    private function parseIndoDate($dateStr)
+    {
+        $months = [
+            'januari' => '01', 'jan' => '01',
+            'februari' => '02', 'feb' => '02',
+            'maret' => '03', 'mar' => '03',
+            'april' => '04', 'apr' => '04',
+            'mei' => '05', 'may' => '05',
+            'juni' => '06', 'jun' => '06',
+            'juli' => '07', 'jul' => '07',
+            'agustus' => '08', 'agu' => '08', 'aug' => '08',
+            'september' => '09', 'sep' => '09',
+            'oktober' => '10', 'okt' => '10', 'oct' => '10',
+            'november' => '11', 'nov' => '11',
+            'desember' => '12', 'des' => '12', 'dec' => '12'
+        ];
+
+        // Format DD-MM-YYYY atau DD/MM/YYYY
+        if (preg_match('/^([0-9]{1,2})[\s\/\-\.]([0-9]{1,2})[\s\/\-\.]([0-9]{4})$/', $dateStr, $m)) {
+            return sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+        }
+
+        // Format YYYY-MM-DD
+        if (preg_match('/^([0-9]{4})[\s\/\-\.]([0-9]{1,2})[\s\/\-\.]([0-9]{1,2})$/', $dateStr, $m)) {
+            return sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]);
+        }
+
+        // Format DD Bulan YYYY (contoh: 17 Agustus 1995)
+        if (preg_match('/^([0-9]{1,2})[\s\/\-\.]([a-zA-Z]+)[\s\/\-\.]([0-9]{4})$/', $dateStr, $m)) {
+            $monthKey = strtolower($m[2]);
+            $monthNum = $months[$monthKey] ?? '01';
+            return sprintf('%04d-%02d-%02d', $m[3], $monthNum, $m[1]);
+        }
+
+        try {
+            return Carbon::parse($dateStr)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
     public function custom_importPelamar($req)
     {
         // $request->validate([
