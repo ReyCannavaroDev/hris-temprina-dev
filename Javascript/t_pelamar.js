@@ -1202,169 +1202,6 @@ async function onSave() {
   isRequesting.value = false
 }
 
-//  @else----------------------- LANDING
-
-const activeBtn = ref()
-const page = ref(1)
-
-async function syncData() {
-  swal.fire({
-    icon: 'warning',
-    text: 'Sync Karyawan?',
-    iconColor: '#1469AE',
-    confirmButtonColor: '#1469AE',
-    showDenyButton: true
-  }).then(async (res) => {
-    if (res.isConfirmed) {
-      try {
-        const dataURL = `${store.server.url_backend}/operation${endpointApi}/syncKary`
-        isRequesting.value = true
-        const response = await fetch(dataURL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `${store.user.token_type} ${store.user.token}`
-          }
-        })
-        if (!response.ok) {
-          const responseJson = await response.json().catch(() => ({}))
-          const msg = responseJson.message || 'Gagal melakukan sync'
-          throw msg
-        }
-        const result = await response.json()
-        swal.fire({
-          icon: 'success',
-          text: result.message || 'Sync berhasil'
-        })
-      } catch (err) {
-        isBadForm.value = true
-        swal.fire({
-          icon: 'error',
-          iconColor: '#1469AE',
-          confirmButtonColor: '#1469AE',
-          text: err.toString()
-        })
-      } finally {
-        isRequesting.value = false
-        apiTable.value.reload()
-      }
-    }
-  })
-}
-
-let data = reactive({
-  respo_id: null,
-  subcomp_id: null,
-  branch_id: null,
-  can_read: false,
-  can_create: false,
-  can_delete: false,
-  can_update: false
-})
-
-const isAccessReady = ref(false)
-
-onBeforeMount(async () => {
-  const rs = localStorage.getItem('respo')
-  if (rs) {
-    const r = JSON.parse(rs)
-    data.respo_id = r.id
-    data.subcomp_id = r.m_subcomp_id
-    data.branch_id = r.m_branch_id
-  }
-
-  if (!data.respo_id) {
-    isAccessReady.value = true
-    return
-  }
-
-  const params = new URLSearchParams({
-    path: route.path,
-    respo_id: data.respo_id
-  })
-
-  const endpoint = `${store.server.url_backend}/operation/m_general/access?${params.toString()}`
-
-  try {
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
-    })
-    const result = await response.json()
-    data.can_read = result.can_read
-    data.can_create = result.can_create
-    data.can_delete = result.can_delete
-    data.can_update = result.can_update
-  } catch (e) { }
-  finally {
-    isAccessReady.value = true
-  }
-})
-
-function filterShowData(params, noBtn) {
-
-  if (activeBtn.value === noBtn) {
-    activeBtn.value = null
-  } else {
-    activeBtn.value = noBtn
-  }
-
-  if (activeBtn.value == null) {
-    // clear params filter
-    landing.api.params.where = null
-  } else if (params) {
-    landing.api.params.where = `this.is_active=true`
-  } else {
-    landing.api.params.where = `this.is_active=false`
-  }
-
-  apiTable.value.reload()
-}
-
-function uploadFile(file) {
-  if (!file) return
-
-  const formData = new FormData()
-  formData.append('file', file)
-
-  const dataURL = `${store.server.url_backend}/operation/t_pelamar/importPelamar`
-
-  fetch(dataURL, {
-    method: 'POST',
-    headers: {
-      Authorization: `${store.user.token_type} ${store.user.token}`
-    },
-    body: formData
-  })
-    .then(res => {
-      if (!res.ok) throw new Error("Upload gagal / Unauthorized")
-      return res.json()
-    })
-    .then(result => {
-
-      swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: 'File berhasil diupload!'
-      })
-
-      apiTable.value.reload()
-      document.getElementById('fileUpload').value = ''
-
-    })
-    .catch(err => {
-
-      swal.fire({
-        icon: 'warning',
-        title: 'Failed',
-        text: 'File gagal diupload!'
-      })
-
-      document.getElementById('fileUpload').value = ''
-
-    })
-}
-
 async function handleCvUpload(file) {
   if (!file) return
 
@@ -1576,6 +1413,169 @@ async function handleCvUpload(file) {
     const el = document.getElementById('fileUploadCv')
     if (el) el.value = ''
   }
+}
+
+//  @else----------------------- LANDING
+
+const activeBtn = ref()
+const page = ref(1)
+
+async function syncData() {
+  swal.fire({
+    icon: 'warning',
+    text: 'Sync Karyawan?',
+    iconColor: '#1469AE',
+    confirmButtonColor: '#1469AE',
+    showDenyButton: true
+  }).then(async (res) => {
+    if (res.isConfirmed) {
+      try {
+        const dataURL = `${store.server.url_backend}/operation${endpointApi}/syncKary`
+        isRequesting.value = true
+        const response = await fetch(dataURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          }
+        })
+        if (!response.ok) {
+          const responseJson = await response.json().catch(() => ({}))
+          const msg = responseJson.message || 'Gagal melakukan sync'
+          throw msg
+        }
+        const result = await response.json()
+        swal.fire({
+          icon: 'success',
+          text: result.message || 'Sync berhasil'
+        })
+      } catch (err) {
+        isBadForm.value = true
+        swal.fire({
+          icon: 'error',
+          iconColor: '#1469AE',
+          confirmButtonColor: '#1469AE',
+          text: err.toString()
+        })
+      } finally {
+        isRequesting.value = false
+        apiTable.value.reload()
+      }
+    }
+  })
+}
+
+let data = reactive({
+  respo_id: null,
+  subcomp_id: null,
+  branch_id: null,
+  can_read: false,
+  can_create: false,
+  can_delete: false,
+  can_update: false
+})
+
+const isAccessReady = ref(false)
+
+onBeforeMount(async () => {
+  const rs = localStorage.getItem('respo')
+  if (rs) {
+    const r = JSON.parse(rs)
+    data.respo_id = r.id
+    data.subcomp_id = r.m_subcomp_id
+    data.branch_id = r.m_branch_id
+  }
+
+  if (!data.respo_id) {
+    isAccessReady.value = true
+    return
+  }
+
+  const params = new URLSearchParams({
+    path: route.path,
+    respo_id: data.respo_id
+  })
+
+  const endpoint = `${store.server.url_backend}/operation/m_general/access?${params.toString()}`
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
+    })
+    const result = await response.json()
+    data.can_read = result.can_read
+    data.can_create = result.can_create
+    data.can_delete = result.can_delete
+    data.can_update = result.can_update
+  } catch (e) { }
+  finally {
+    isAccessReady.value = true
+  }
+})
+
+function filterShowData(params, noBtn) {
+
+  if (activeBtn.value === noBtn) {
+    activeBtn.value = null
+  } else {
+    activeBtn.value = noBtn
+  }
+
+  if (activeBtn.value == null) {
+    // clear params filter
+    landing.api.params.where = null
+  } else if (params) {
+    landing.api.params.where = `this.is_active=true`
+  } else {
+    landing.api.params.where = `this.is_active=false`
+  }
+
+  apiTable.value.reload()
+}
+
+function uploadFile(file) {
+  if (!file) return
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const dataURL = `${store.server.url_backend}/operation/t_pelamar/importPelamar`
+
+  fetch(dataURL, {
+    method: 'POST',
+    headers: {
+      Authorization: `${store.user.token_type} ${store.user.token}`
+    },
+    body: formData
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("Upload gagal / Unauthorized")
+      return res.json()
+    })
+    .then(result => {
+
+      swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'File berhasil diupload!'
+      })
+
+      apiTable.value.reload()
+      document.getElementById('fileUpload').value = ''
+
+    })
+    .catch(err => {
+
+      swal.fire({
+        icon: 'warning',
+        title: 'Failed',
+        text: 'File gagal diupload!'
+      })
+
+      document.getElementById('fileUpload').value = ''
+
+    })
 }
 
 const landing = computed(() => {
