@@ -35,7 +35,6 @@ let tempKTP = ''
 let tempBPJS = ''
 let tempNPWP = ''
 let tempKK = ''
-const activeBtn = ref(null)
 const cvScanModal = reactive({
   open: false,
   fileName: '',
