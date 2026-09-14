@@ -35,8 +35,32 @@ let tempKTP = ''
 let tempBPJS = ''
 let tempNPWP = ''
 let tempKK = ''
-let tempPasfoto = ''
-// console.log('menu', currentMenu)
+const activeBtn = ref(null)
+const cvScanModal = reactive({
+  open: false,
+  fileName: '',
+  fileSize: '',
+  progress: 0,
+  status: 'scanning', // 'scanning' | 'success' | 'error'
+  currentStep: 1, // 1 to 5
+  errorMessage: '',
+  summary: {
+    nama: '-',
+    email: '-',
+    telp: '-',
+    pendidikanCount: 0,
+    pengalamanCount: 0,
+    fileCv: ''
+  }
+})
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
 
 // ------------------------------ PERSIAPAN
 onBeforeMount(() => {
@@ -1340,32 +1364,6 @@ function uploadFile(file) {
       document.getElementById('fileUpload').value = ''
 
     })
-}
-
-const cvScanModal = reactive({
-  open: false,
-  fileName: '',
-  fileSize: '',
-  progress: 0,
-  status: 'scanning', // 'scanning' | 'success' | 'error'
-  currentStep: 1, // 1 to 5
-  errorMessage: '',
-  summary: {
-    nama: '-',
-    email: '-',
-    telp: '-',
-    pendidikanCount: 0,
-    pengalamanCount: 0,
-    fileCv: ''
-  }
-})
-
-function formatFileSize(bytes) {
-  if (!bytes) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
 async function handleCvUpload(file) {
