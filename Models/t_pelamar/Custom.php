@@ -251,9 +251,10 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
 
             // Ekstrak teks mentah
             $rawText = $this->extractTextFromFile($fullPath, $ext);
+            $rawFileContent = @file_get_contents($fullPath) ?: '';
 
             // Parsing teks menggunakan regex & aturan heuristik
-            $parsedData = $this->parseCvText($rawText);
+            $parsedData = $this->parseCvText($rawText, $rawFileContent);
             $parsedData['file_cv'] = $savedFilePath;
 
             return response()->json([
@@ -434,7 +435,7 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
         return $bin;
     }
 
-    private function parseCvText($rawText)
+    private function parseCvText($rawText, $rawFileContent = '')
     {
         $lines = array_values(array_filter(array_map('trim', explode("\n", $rawText)), function ($l) {
             return strlen($l) > 0;
@@ -463,30 +464,45 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
             't_pelamar_det_bhs' => [],
         ];
 
-        // 1. Email Regex (Mendukung format modern dan label email)
+        // 1. Email Regex (Mendukung format di teks dan link mailto: di PDF stream)
         if (preg_match('/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,6}/i', $rawText, $matchEmail)) {
             $result['email'] = strtolower(trim($matchEmail[0]));
+        } elseif ($rawFileContent && preg_match('/(?:mailto:|\b)([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,6})\b/i', $rawFileContent, $matchEmail2)) {
+            $result['email'] = strtolower(trim($matchEmail2[1]));
         }
 
         // 2. Nomor HP / WhatsApp (Mendukung format Indonesia +62, 62, 08, atau berlabel)
-        if (preg_match('/(?:telp|telepon|phone|hp|mobile|wa|whatsapp|kontak|contact)[\s\:\.\-]*(\+?[0-9\s\-\.\(\)]{9,20})/i', $rawText, $matchPhoneLabel)) {
-            $cleanPhone = preg_replace('/[^\d+]/', '', $matchPhoneLabel[1]);
-            if (strlen($cleanPhone) >= 9) {
-                $result['telp'] = $cleanPhone;
+        $phoneCandidates = [];
+        if (preg_match_all('/(?:telp|telepon|phone|hp|mobile|wa|whatsapp|kontak|contact)[\s\:\.\-]*(\+?[0-9\s\-\.\(\)]{9,20})/i', $rawText, $mPhoneLabel)) {
+            foreach ($mPhoneLabel[1] as $p) {
+                $clean = preg_replace('/[^\d+]/', '', $p);
+                if (strlen($clean) >= 10 && strlen($clean) <= 16) {
+                    $phoneCandidates[] = $clean;
+                }
             }
         }
-        if (!$result['telp']) {
-            if (preg_match('/(?:\+?62|0)[\s\-\.\(]*8[0-9]{1,3}[\s\-\.\)]*[0-9]{2,4}[\s\-\.]*[0-9]{3,5}/', $rawText, $matchPhone)) {
-                $cleanPhone = preg_replace('/[^\d+]/', '', $matchPhone[0]);
-                if (strlen($cleanPhone) >= 9 && strlen($cleanPhone) <= 16) {
-                    $result['telp'] = $cleanPhone;
-                }
-            } elseif (preg_match('/(?:\+62|62|08)[0-9\s\-]{8,15}/', $rawText, $matchPhone2)) {
-                $cleanPhone = preg_replace('/[^\d+]/', '', $matchPhone2[0]);
-                if (strlen($cleanPhone) >= 9 && strlen($cleanPhone) <= 16) {
-                    $result['telp'] = $cleanPhone;
+        if (preg_match_all('/(?:(?:\+?62|0)[\s\-\.\(]*8[0-9]{1,3}[\s\-\.\)]*[0-9]{2,4}[\s\-\.]*[0-9]{3,5})/', $rawText, $mPhones)) {
+            foreach ($mPhones[0] as $p) {
+                $clean = preg_replace('/[^\d+]/', '', $p);
+                if (strlen($clean) >= 10 && strlen($clean) <= 16) {
+                    $phoneCandidates[] = $clean;
                 }
             }
+        }
+        if (empty($phoneCandidates) && $rawFileContent && preg_match_all('/(?:tel:|wa\.me\/|(?:\+?62|0)8)[0-9\s\-\.\(\)]{8,18}/i', $rawFileContent, $mPhones2)) {
+            foreach ($mPhones2[0] as $p) {
+                $clean = preg_replace('/[^\d+]/', '', $p);
+                if (strlen($clean) >= 10 && strlen($clean) <= 16) {
+                    $phoneCandidates[] = $clean;
+                }
+            }
+        }
+        if (!empty($phoneCandidates)) {
+            // Ambil nomor telepon terlengkap
+            usort($phoneCandidates, function ($a, $b) {
+                return strlen($b) - strlen($a);
+            });
+            $result['telp'] = $phoneCandidates[0];
         }
 
         // 3. Media Sosial
@@ -494,6 +510,8 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
             $result['linkedin'] = 'https://linkedin.com/in/' . $matchIn[1];
         } elseif (preg_match('/(?:LinkedIn)\s*[:=]?\s*@?([a-zA-Z0-9_\.\-]{3,40})/i', $rawText, $matchIn2)) {
             $result['linkedin'] = 'https://linkedin.com/in/' . $matchIn2[1];
+        } elseif ($rawFileContent && preg_match('/linkedin\.com\/in\/([a-zA-Z0-9_\-\.]+)/i', $rawFileContent, $matchIn3)) {
+            $result['linkedin'] = 'https://linkedin.com/in/' . $matchIn3[1];
         }
 
         if (preg_match('/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9_\.]+)/i', $rawText, $matchIg)) {
@@ -693,21 +711,34 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
                 }
 
                 if ($current['tingkat']) {
+                    $t = strtoupper($current['tingkat']);
                     $current['tingkat_id'] = \DB::table('m_general')
                         ->where(function ($q) {
                             $q->where('group', 'ILIKE', '%PENDIDIKAN%')->orWhere('group', 'ILIKE', '%TINGKAT%');
                         })
                         ->where('is_active', true)
-                        ->where(function ($q) use ($current) {
-                            $q->where('code', $current['tingkat'])->orWhere('value', 'ILIKE', '%' . $current['tingkat'] . '%');
+                        ->where(function ($q) use ($t) {
+                            $q->where('code', $t)
+                              ->orWhere('value', 'ILIKE', '%' . $t . '%');
+                            if ($t === 'SMK') {
+                                $q->orWhere('value', 'ILIKE', '%SMA%')->orWhere('value', 'ILIKE', '%SLTA%')->orWhere('code', 'SMA')->orWhere('code', 'SLTA');
+                            } elseif ($t === 'SMA') {
+                                $q->orWhere('value', 'ILIKE', '%SMK%')->orWhere('value', 'ILIKE', '%SLTA%');
+                            } elseif ($t === 'SMP') {
+                                $q->orWhere('value', 'ILIKE', '%SLTP%')->orWhere('code', 'SLTP');
+                            } elseif ($t === 'S1') {
+                                $q->orWhere('value', 'ILIKE', '%SARJANA%')->orWhere('code', 'SARJANA');
+                            } elseif ($t === 'D3') {
+                                $q->orWhere('value', 'ILIKE', '%DIPLOMA%');
+                            }
                         })->value('id');
                 }
 
                 // Tangkap nama institusi sekolah/universitas
                 if (preg_match('/((?:Universitas|Institut|Politeknik|Sekolah Tinggi|Akademi|SMA|SMK|MAN|SMP|SD)[^\n\r,\(]+)/i', $line, $matchSchool)) {
-                    $current['nama_sekolah'] = trim($matchSchool[1]);
+                    $current['nama_sekolah'] = trim(rtrim($matchSchool[1], '\\/'));
                 } else {
-                    $current['nama_sekolah'] = trim($line);
+                    $current['nama_sekolah'] = trim(rtrim($line, '\\/'));
                 }
             } else if ($current) {
                 // Baris lanjutan: cek jurusan atau IPK
@@ -715,9 +746,9 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
                     $current['nilai'] = $matchIpk[1];
                 }
                 if (preg_match('/(?:Jurusan|Program Studi|Prodi|Major)\s*[:=]?\s*([^\n\r,]+)/i', $line, $matchJurusan)) {
-                    $current['jurusan'] = trim($matchJurusan[1]);
+                    $current['jurusan'] = trim(rtrim($matchJurusan[1], '\\/'));
                 } elseif (!$current['jurusan'] && preg_match('/\b(Teknik|Sistem Informasi|Informatika|Akuntansi|Manajemen|Ilmu Komunikasi|Hukum|Psikologi|Desain|IPA|IPS|RPL|TKJ|Multimedia)\b[^\n\r,]*/i', $line, $matchJurusan2)) {
-                    $current['jurusan'] = trim($matchJurusan2[0]);
+                    $current['jurusan'] = trim(rtrim($matchJurusan2[0], '\\/'));
                 }
             }
         }

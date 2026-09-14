@@ -1306,35 +1306,40 @@ async function handleCvUpload(file) {
     let countPk = 0
 
     // Isi Riwayat Pendidikan
+    const newPend = []
     if (Array.isArray(data.t_pelamar_det_pend) && data.t_pelamar_det_pend.length > 0) {
       countPend = data.t_pelamar_det_pend.length
       data.t_pelamar_det_pend.forEach(pend => {
-        detailPendidikan.value.push({
+        const cleanedJurusan = pend.jurusan ? pend.jurusan.replace(/\\+$/, '').trim() : null
+        newPend.push({
           _id: ++_idPend,
           tingkat_id: pend.tingkat_id ?? null,
           tingkat: pend.tingkat ?? null,
+          pendidikan: pend.tingkat ?? null, // Match TableStatic field name
           nama_sekolah: pend.nama_sekolah ?? null,
-          thn_masuk: pend.thn_masuk ?? null,
-          thn_lulus: pend.thn_lulus ?? null,
+          thn_masuk: pend.thn_masuk ? String(pend.thn_masuk) : null,
+          thn_lulus: pend.thn_lulus ? String(pend.thn_lulus) : (pend.thn_masuk ? String(pend.thn_masuk) : null),
           kota_id: pend.kota_id ?? null,
           nilai: pend.nilai ?? null,
-          jurusan: pend.jurusan ?? null,
+          jurusan: cleanedJurusan,
           is_pend_terakhir: pend.is_pend_terakhir ? 1 : 0,
           desc: pend.desc ?? null,
           ijazah_foto: null
         })
       })
     }
+    detailPendidikan.value = newPend
 
     // Isi Pengalaman Kerja
+    const newPk = []
     if (Array.isArray(data.t_pelamar_det_pk) && data.t_pelamar_det_pk.length > 0) {
       countPk = data.t_pelamar_det_pk.length
       data.t_pelamar_det_pk.forEach(pk => {
-        detailPengalaman.value.push({
+        newPk.push({
           _id: ++_idPk,
           instansi: pk.instansi ?? null,
-          thn_masuk: pk.thn_masuk ?? null,
-          thn_keluar: pk.thn_keluar ?? null,
+          thn_masuk: pk.thn_masuk ? String(pk.thn_masuk) : null,
+          thn_keluar: pk.thn_keluar ? String(pk.thn_keluar) : null,
           kota_id: pk.kota_id ?? null,
           alamat_kantor: pk.alamat_kantor ?? null,
           bidang_usaha: pk.bidang_usaha ?? null,
@@ -1344,39 +1349,48 @@ async function handleCvUpload(file) {
         })
       })
     }
+    detailPengalaman.value = newPk
 
     // Isi Organisasi
+    const newOrg = []
     if (Array.isArray(data.t_pelamar_det_org) && data.t_pelamar_det_org.length > 0) {
       data.t_pelamar_det_org.forEach(org => {
-        detailOrganisasi.value.push({
+        newOrg.push({
           _id: ++_idOrg,
           nama: org.nama ?? null,
-          tahun: org.tahun ?? null,
+          tahun: org.tahun ? String(org.tahun) : null,
           jenis_org_id: org.jenis_org_id ?? null,
+          jenis: org.jenis || org.nama || null,
           kota_id: org.kota_id ?? null,
+          kota: org.kota ?? null,
           posisi: org.posisi ?? null,
           desc: org.desc ?? null
         })
       })
     }
+    detailOrganisasi.value = newOrg
 
     // Isi Pelatihan
+    const newPel = []
     if (Array.isArray(data.t_pelamar_det_pel) && data.t_pelamar_det_pel.length > 0) {
       data.t_pelamar_det_pel.forEach(pel => {
-        detailPelatihan.value.push({
+        newPel.push({
           _id: ++_idPel,
           nama_pel: pel.nama_pel ?? null,
-          tahun: pel.tahun ?? null,
+          tahun: pel.tahun ? String(pel.tahun) : null,
           nama_lem: pel.nama_lem ?? null,
-          kota_id: pel.kota_id ?? null
+          kota_id: pel.kota_id ?? null,
+          kota: pel.kota ?? null
         })
       })
     }
+    detailPelatihan.value = newPel
 
     // Isi Bahasa
+    const newBhs = []
     if (Array.isArray(data.t_pelamar_det_bhs) && data.t_pelamar_det_bhs.length > 0) {
       data.t_pelamar_det_bhs.forEach(bhs => {
-        detailBahasa.value.push({
+        newBhs.push({
           _id: ++_idBhs,
           bhs_dikuasai: bhs.bhs_dikuasai ?? null,
           nilai_lisan: bhs.nilai_lisan ?? null,
@@ -1384,6 +1398,10 @@ async function handleCvUpload(file) {
         })
       })
     }
+    detailBahasa.value = newBhs
+
+    // Trigger reactivity for static tables
+    tableKey.value++
 
     // Sukses & Selesai
     setTimeout(() => {
