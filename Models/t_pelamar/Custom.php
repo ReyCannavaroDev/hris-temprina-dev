@@ -328,7 +328,7 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
 
         $text = '';
 
-        // Ekstrak seluruh stream biner di dalam PDF
+        // 1. Ekstrak seluruh stream biner di dalam PDF
         if (preg_match_all('/stream[\r\n]+([\s\S]*?)[\r\n]+endstream/m', $content, $matches)) {
             foreach ($matches[1] as $stream) {
                 // Dekompresi FlateDecode
@@ -343,45 +343,67 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
                 // Ambil blok teks PDF: BT ... ET
                 if (preg_match_all('/BT[\s\S]*?ET/m', $decompressed, $textBlocks)) {
                     foreach ($textBlocks[0] as $block) {
-                        // Pola string tunggal: (Teks) Tj
-                        if (preg_match_all('/\(([\s\S]*?)\)\s*Tj/s', $block, $tjMatches)) {
-                            foreach ($tjMatches[1] as $t) {
-                                $text .= $this->decodePdfString($t) . ' ';
+                        // Pola Tj tunggal: (Teks) Tj atau <Hex> Tj
+                        if (preg_match_all('/(?:\(([\s\S]*?)\)|<([0-9a-fA-F\s]+)>)\s*Tj/s', $block, $tjMatches, PREG_SET_ORDER)) {
+                            foreach ($tjMatches as $m) {
+                                if (!empty($m[1])) {
+                                    $text .= $this->decodePdfString($m[1]) . ' ';
+                                } elseif (!empty($m[2])) {
+                                    $text .= $this->decodePdfHex($m[2]) . ' ';
+                                }
                             }
                             $text .= "\n";
                         }
-                        // Pola array teks: [(Teks1) 120 (Teks2)] TJ
+                        // Pola TJ array: [(Teks1) 120 <Hex2> (Teks3)] TJ
                         if (preg_match_all('/\[([\s\S]*?)\]\s*TJ/s', $block, $tjArrayMatches)) {
                             foreach ($tjArrayMatches[1] as $arr) {
-                                if (preg_match_all('/\(([\s\S]*?)\)/s', $arr, $innerMatches)) {
-                                    foreach ($innerMatches[1] as $t) {
-                                        $text .= $this->decodePdfString($t);
+                                if (preg_match_all('/(?:\(([\s\S]*?)\)|<([0-9a-fA-F\s]+)>)/s', $arr, $innerMatches, PREG_SET_ORDER)) {
+                                    foreach ($innerMatches as $m) {
+                                        if (!empty($m[1])) {
+                                            $text .= $this->decodePdfString($m[1]);
+                                        } elseif (!empty($m[2])) {
+                                            $text .= $this->decodePdfHex($m[2]);
+                                        }
                                     }
                                 }
                             }
                             $text .= "\n";
                         }
                         // Operator petik: (Teks) ' atau "
-                        if (preg_match_all('/\(([\s\S]*?)\)\s*[\'"]/s', $block, $quoteMatches)) {
-                            foreach ($quoteMatches[1] as $t) {
-                                $text .= $this->decodePdfString($t) . "\n";
+                        if (preg_match_all('/(?:\(([\s\S]*?)\)|<([0-9a-fA-F\s]+)>)\s*[\'"]/s', $block, $quoteMatches, PREG_SET_ORDER)) {
+                            foreach ($quoteMatches as $m) {
+                                if (!empty($m[1])) {
+                                    $text .= $this->decodePdfString($m[1]) . "\n";
+                                } elseif (!empty($m[2])) {
+                                    $text .= $this->decodePdfHex($m[2]) . "\n";
+                                }
                             }
                         }
+                    }
+                } else {
+                    // Fallback scan teks langsung dari stream terdekompresi
+                    if (preg_match_all('/[a-zA-Z0-9._%+\-@:\/\(\)\s,]{4,}/', $decompressed, $rawMatches)) {
+                        $text .= implode(" ", $rawMatches[0]) . "\n";
                     }
                 }
             }
         }
 
-        // Fallback jika tidak terdeteksi via stream (uncompressed PDF biasa)
-        if (trim($text) === '') {
-            if (preg_match_all('/\(([\s\S]*?)\)\s*Tj/s', $content, $tjMatches)) {
-                foreach ($tjMatches[1] as $t) {
-                    $text .= $this->decodePdfString($t) . ' ';
+        // 2. Fallback scan jika tidak terdeteksi via stream (uncompressed PDF biasa)
+        if (trim($text) === '' || strlen(trim($text)) < 50) {
+            if (preg_match_all('/(?:\(([\s\S]*?)\)|<([0-9a-fA-F\s]+)>)\s*Tj/s', $content, $tjMatches, PREG_SET_ORDER)) {
+                foreach ($tjMatches as $m) {
+                    if (!empty($m[1])) {
+                        $text .= $this->decodePdfString($m[1]) . ' ';
+                    } elseif (!empty($m[2])) {
+                        $text .= $this->decodePdfHex($m[2]) . ' ';
+                    }
                 }
             }
         }
 
-        return $text;
+        // Bersihkan whitespace berulang
+        return preg_replace('/[ \t]+/', ' ', $text);
     }
 
     private function decodePdfString($str)
@@ -391,6 +413,25 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
             return chr(octdec($m[1]));
         }, $str);
         return $str;
+    }
+
+    private function decodePdfHex($hex)
+    {
+        $hex = preg_replace('/\s+/', '', $hex);
+        if (strlen($hex) % 2 !== 0) {
+            $hex .= '0';
+        }
+        $bin = @hex2bin($hex);
+        if ($bin === false) return '';
+
+        // Deteksi jika encoded UTF-16BE (banyak dipakai PDF generator modern / Canva)
+        if (strlen($bin) >= 2 && substr($bin, 0, 2) === "\xFE\xFF") {
+            return @mb_convert_encoding(substr($bin, 2), 'UTF-8', 'UTF-16BE') ?: '';
+        } elseif (strlen($bin) >= 2 && ord($bin[0]) === 0 && ord($bin[1]) >= 32 && ord($bin[1]) <= 126) {
+            return @mb_convert_encoding($bin, 'UTF-8', 'UTF-16BE') ?: '';
+        }
+
+        return $bin;
     }
 
     private function parseCvText($rawText)
@@ -422,28 +463,45 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
             't_pelamar_det_bhs' => [],
         ];
 
-        // 1. Email Regex
-        if (preg_match('/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $rawText, $matchEmail)) {
+        // 1. Email Regex (Mendukung format modern dan label email)
+        if (preg_match('/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,6}/i', $rawText, $matchEmail)) {
             $result['email'] = strtolower(trim($matchEmail[0]));
         }
 
-        // 2. Nomor HP / WhatsApp
-        if (preg_match('/(?:\+62|62|08)[0-9\s\-]{8,15}/', $rawText, $matchPhone)) {
-            $cleanPhone = preg_replace('/[^\d+]/', '', $matchPhone[0]);
-            if (strlen($cleanPhone) >= 9 && strlen($cleanPhone) <= 16) {
+        // 2. Nomor HP / WhatsApp (Mendukung format Indonesia +62, 62, 08, atau berlabel)
+        if (preg_match('/(?:telp|telepon|phone|hp|mobile|wa|whatsapp|kontak|contact)[\s\:\.\-]*(\+?[0-9\s\-\.\(\)]{9,20})/i', $rawText, $matchPhoneLabel)) {
+            $cleanPhone = preg_replace('/[^\d+]/', '', $matchPhoneLabel[1]);
+            if (strlen($cleanPhone) >= 9) {
                 $result['telp'] = $cleanPhone;
+            }
+        }
+        if (!$result['telp']) {
+            if (preg_match('/(?:\+?62|0)[\s\-\.\(]*8[0-9]{1,3}[\s\-\.\)]*[0-9]{2,4}[\s\-\.]*[0-9]{3,5}/', $rawText, $matchPhone)) {
+                $cleanPhone = preg_replace('/[^\d+]/', '', $matchPhone[0]);
+                if (strlen($cleanPhone) >= 9 && strlen($cleanPhone) <= 16) {
+                    $result['telp'] = $cleanPhone;
+                }
+            } elseif (preg_match('/(?:\+62|62|08)[0-9\s\-]{8,15}/', $rawText, $matchPhone2)) {
+                $cleanPhone = preg_replace('/[^\d+]/', '', $matchPhone2[0]);
+                if (strlen($cleanPhone) >= 9 && strlen($cleanPhone) <= 16) {
+                    $result['telp'] = $cleanPhone;
+                }
             }
         }
 
         // 3. Media Sosial
         if (preg_match('/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9_\-\.]+)/i', $rawText, $matchIn)) {
             $result['linkedin'] = 'https://linkedin.com/in/' . $matchIn[1];
+        } elseif (preg_match('/(?:LinkedIn)\s*[:=]?\s*@?([a-zA-Z0-9_\.\-]{3,40})/i', $rawText, $matchIn2)) {
+            $result['linkedin'] = 'https://linkedin.com/in/' . $matchIn2[1];
         }
+
         if (preg_match('/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9_\.]+)/i', $rawText, $matchIg)) {
             $result['ig'] = '@' . $matchIg[1];
         } elseif (preg_match('/(?:IG|Instagram)\s*[:=]?\s*@?([a-zA-Z0-9_\.]{3,30})/i', $rawText, $matchIg2)) {
             $result['ig'] = '@' . $matchIg2[1];
         }
+
         if (preg_match('/(?:https?:\/\/)?(?:www\.)?facebook\.com\/([a-zA-Z0-9_\.]+)/i', $rawText, $matchFb)) {
             $result['facebook'] = $matchFb[1];
         }
@@ -452,8 +510,8 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
         }
 
         // 4. Jenis Kelamin (Auto-lookup ke m_general)
-        $isMale = preg_match('/\b(laki[\s-]?laki|pria|male)\b/i', $rawText);
-        $isFemale = preg_match('/\b(perempuan|wanita|female)\b/i', $rawText);
+        $isMale = preg_match('/\b(laki[\s-]?laki|pria|male|man)\b/i', $rawText);
+        $isFemale = preg_match('/\b(perempuan|wanita|female|woman)\b/i', $rawText);
         if ($isMale && !$isFemale) {
             $result['jk_id'] = \DB::table('m_general')
                 ->where('group', 'JENIS KELAMIN')
@@ -471,7 +529,7 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
         }
 
         // 5. Nama Pelamar (Membaca baris awal dokumen sebelum kontak)
-        $headerIgnores = ['curriculum vitae', 'resume', 'biodata', 'data diri', 'cv', 'profile', 'personal profile', 'tentang saya', 'about me'];
+        $headerIgnores = ['curriculum vitae', 'resume', 'biodata', 'data diri', 'cv', 'profile', 'personal profile', 'tentang saya', 'about me', 'kontak', 'contact'];
         foreach ($lines as $line) {
             $cleanLine = trim($line);
             $lowerLine = strtolower($cleanLine);
@@ -481,8 +539,8 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
             if (strpos($cleanLine, '@') !== false || preg_match('/\d{5,}/', $cleanLine) || strpos($lowerLine, 'http') !== false) {
                 continue;
             }
-            // Validasi string nama (hanya huruf, spasi, titik, koma, gelar)
-            if (preg_match('/^[a-zA-Z\s\.,\'\(\)]+$/', $cleanLine) && strlen($cleanLine) <= 70) {
+            // Validasi string nama (hanya huruf, spasi, titik, koma, petik)
+            if (preg_match('/^[a-zA-Z\s\.,\'\(\)]+$/', $cleanLine) && strlen($cleanLine) <= 60 && count(explode(' ', $cleanLine)) <= 6) {
                 $cleanName = ucwords(strtolower($cleanLine));
                 $result['nama_lengkap'] = $cleanName;
                 $parts = explode(' ', $cleanName);
@@ -541,23 +599,23 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
             $upper = strtoupper($trimmed);
 
             // Deteksi judul section
-            if (preg_match('/^(?:RIWAYAT\s+)?PENDIDIKAN|EDUCATION|LATAR\s+BELAKANG\s+PENDIDIKAN$/i', $upper)) {
+            if (preg_match('/^(?:RIWAYAT\s+)?PENDIDIKAN|EDUCATION|LATAR\s+BELAKANG\s+PENDIDIKAN/i', $upper)) {
                 $currentSection = 'pendidikan';
                 continue;
-            } elseif (preg_match('/^(?:RIWAYAT\s+)?PENGALAMAN(?:\s+KERJA)?|WORK\s+EXPERIENCE|PENGALAMAN\s+KERJA|PENGALAMAN\s+PROFESIONAL$/i', $upper)) {
+            } elseif (preg_match('/^(?:RIWAYAT\s+)?PENGALAMAN(?:\s+KERJA)?|WORK\s+EXPERIENCE|PENGALAMAN\s+KERJA|PENGALAMAN\s+PROFESIONAL|EXPERIENCE/i', $upper)) {
                 $currentSection = 'pengalaman';
                 continue;
-            } elseif (preg_match('/^ORGANISASI|PENGALAMAN\s+ORGANISASI|ORGANIZATIONAL\s+EXPERIENCE$/i', $upper)) {
+            } elseif (preg_match('/^ORGANISASI|PENGALAMAN\s+ORGANISASI|ORGANIZATIONAL\s+EXPERIENCE/i', $upper)) {
                 $currentSection = 'organisasi';
                 continue;
-            } elseif (preg_match('/^PELATIHAN|SERTIFIKASI|TRAINING|COURSES|SERTIFIKAT$/i', $upper)) {
+            } elseif (preg_match('/^PELATIHAN|SERTIFIKASI|TRAINING|COURSES|SERTIFIKAT/i', $upper)) {
                 $currentSection = 'pelatihan';
                 continue;
-            } elseif (preg_match('/^BAHASA|KEMAMPUAN\s+BAHASA|LANGUAGES$/i', $upper)) {
+            } elseif (preg_match('/^BAHASA|KEMAMPUAN\s+BAHASA|LANGUAGES/i', $upper)) {
                 $currentSection = 'bahasa';
                 continue;
-            } elseif (preg_match('/^KEAHLIAN|SKILLS|PROYEK|PROJECTS|MINAT|HOBBY$/i', $upper)) {
-                $currentSection = null; // Lewati section yang tidak masuk tabel detail
+            } elseif (preg_match('/^KEAHLIAN|SKILLS|PROYEK|PROJECTS|MINAT|HOBBY|TENTANG\s+SAYA|ABOUT\s+ME/i', $upper)) {
+                $currentSection = null; // Lewati section non-tabel
                 continue;
             }
 
@@ -668,7 +726,6 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
             $items[] = $current;
         }
 
-        // Tandai item pertama/terakhir sebagai pendidikan terakhir
         if (count($items) > 0) {
             $items[0]['is_pend_terakhir'] = 1;
         }
@@ -686,10 +743,11 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
         $current = null;
 
         foreach ($lines as $line) {
+            // Header pengalaman kerja HANYA dipicu oleh adanya rentang tahun / tahun jelas ATAU nama institusi PT/CV
             $hasYear = preg_match('/(?:(20[0-2][0-9]|19[8-9][0-9])\s*[-–]\s*(20[0-2][0-9]|Sekarang|Present|\d{4})|(20[0-2][0-9]|19[8-9][0-9]))/i', $line, $matchYear);
-            $hasPositionOrCompany = preg_match('/\b(PT|CV|Agency|Studio|Software|Developer|Engineer|Staff|Supervisor|Manager|Admin|Operator|Intern|Magang|Lead|Officer|Spesialis|Specialist|Designer|Marketing|Sales)\b/i', $line);
+            $hasCompanyPrefix = preg_match('/^(?:PT|CV|PT\.|CV\.)\s+/i', $line);
 
-            if ($hasYear || $hasPositionOrCompany) {
+            if ($hasYear || $hasCompanyPrefix) {
                 if ($current && (!empty($current['instansi']) || !empty($current['posisi']))) {
                     $items[] = $current;
                 }
@@ -726,12 +784,15 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
                 }
 
                 if (!$current['instansi'] && !$current['posisi']) {
-                    $current['posisi'] = trim($line);
+                    $current['posisi'] = trim(preg_replace('/(?:(20[0-2][0-9]|19[8-9][0-9])\s*[-–]\s*(20[0-2][0-9]|Sekarang|Present|\d{4})|(20[0-2][0-9]|19[8-9][0-9]))/i', '', $line));
                 }
             } elseif ($current) {
+                // Baris detail/deskripsi pendukung
                 if (!$current['instansi'] && preg_match('/((?:PT|CV)\s+[^\n\r,\(]+)/i', $line, $matchComp2)) {
                     $current['instansi'] = trim($matchComp2[1]);
-                } elseif (!$current['instansi'] && strlen($line) < 50 && !strpos($line, '•') && !strpos($line, '-')) {
+                } elseif (!$current['posisi'] && preg_match('/\b((?:Software\s+Engineer|Frontend\s+Developer|Backend\s+Developer|Fullstack\s+Developer|Web\s+Developer|Mobile\s+Developer|Staff|Supervisor|Manager|Admin|Operator|Intern|Magang|Designer|Marketing|Sales|Accountant)[^\n\r,]*)/i', $line, $matchPos2)) {
+                    $current['posisi'] = trim($matchPos2[1]);
+                } elseif (!$current['instansi'] && strlen($line) < 40 && !strpos($line, '•') && !strpos($line, '-')) {
                     $current['instansi'] = trim($line);
                 }
             }

@@ -1793,57 +1793,52 @@
   Simpan
 </button>
       </div>
-      <!-- MODAL PROSES SCAN CV & VALIDASI (HRIS TEMPRINA IDENTITY) -->
+      <!-- MODAL PROSES SCAN CV & VALIDASI (HRIS TEMPRINA WHITE & GREY THEME) -->
       <div v-show="cvScanModal.open" class="fixed inset-0 flex items-center justify-center z-50 p-4">
         <!-- Backdrop Overlay -->
-        <div class="fixed inset-0 bg-black opacity-60" @click="cvScanModal.status !== 'scanning' ? cvScanModal.open = false : null"></div>
+        <div class="fixed inset-0 bg-black bg-opacity-50" @click="cvScanModal.status !== 'scanning' ? cvScanModal.open = false : null"></div>
 
         <!-- Modal Box -->
-        <div class="relative bg-white rounded-lg shadow-2xl w-full max-w-lg overflow-hidden border border-gray-200 z-50">
+        <div class="relative bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden border border-gray-300 z-50">
           
-          <!-- Modal Header (Temprina Gray & Gold Theme) -->
-          <div class="bg-gray-600 text-white px-5 py-3.5 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <div class="w-8 h-8 rounded-full bg-yellow-500 text-white flex items-center justify-center shadow">
-                <i class="fa fa-bolt text-sm font-bold"></i>
-              </div>
-              <div>
-                <h3 class="font-bold text-base leading-tight">Pemindaian & Ekstraksi CV</h3>
-                <p class="text-xs text-gray-200">Auto-fill formulir pelamar HRIS</p>
-              </div>
+          <!-- Modal Header (HRIS Slate Gray Theme) -->
+          <div class="bg-gray-600 text-white px-5 py-3 flex items-center justify-between border-b border-gray-700">
+            <div>
+              <h3 class="font-bold text-sm leading-tight">Pemindaian & Ekstraksi CV</h3>
+              <p class="text-xs text-gray-200">Auto-fill formulir data pelamar</p>
             </div>
             <button 
               v-if="cvScanModal.status !== 'scanning'" 
               type="button"
               @click="cvScanModal.open = false" 
-              class="text-gray-300 hover:text-white text-lg font-bold p-1 leading-none cursor-pointer"
+              class="text-gray-300 hover:text-white text-lg font-bold px-2 py-1 leading-none cursor-pointer"
             >
               &times;
             </button>
           </div>
 
           <!-- Modal Body -->
-          <div class="p-6">
+          <div class="p-5 overflow-y-auto space-y-4">
             
             <!-- Info File -->
-            <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
-              <div class="w-10 h-10 rounded bg-red-100 text-red-600 flex items-center justify-center font-bold text-lg">
+            <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-md border border-gray-200">
+              <div class="w-8 h-8 rounded bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-sm">
                 <i class="fa fa-file-text-o"></i>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-gray-800 truncate" v-text="cvScanModal.fileName || 'Berkas CV'"></p>
-                <p class="text-xs text-gray-500" v-text="cvScanModal.fileSize"></p>
+                <p class="text-xs font-semibold text-gray-800 truncate" v-text="cvScanModal.fileName || 'Berkas CV'"></p>
+                <p class="text-[11px] text-gray-500" v-text="cvScanModal.fileSize"></p>
               </div>
               <div>
-                <span v-if="cvScanModal.status === 'scanning'" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 animate-pulse">
+                <span v-if="cvScanModal.status === 'scanning'" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-200 text-gray-700">
                   <i class="fa fa-spinner fa-spin mr-1"></i>
                   Memproses
                 </span>
-                <span v-else-if="cvScanModal.status === 'success'" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <span v-else-if="cvScanModal.status === 'success'" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-700 text-white">
                   <i class="fa fa-check mr-1"></i>
                   Selesai
                 </span>
-                <span v-else-if="cvScanModal.status === 'error'" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                <span v-else-if="cvScanModal.status === 'error'" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-300 text-gray-800">
                   <i class="fa fa-times mr-1"></i>
                   Gagal
                 </span>
@@ -1851,26 +1846,26 @@
             </div>
 
             <!-- Progress Bar -->
-            <div class="mb-5">
+            <div>
               <div class="flex justify-between text-xs font-semibold text-gray-600 mb-1">
                 <span>Progres Ekstraksi</span>
-                <span class="text-yellow-600 font-bold" v-text="cvScanModal.progress + '%'"></span>
+                <span class="text-gray-800 font-bold" v-text="cvScanModal.progress + '%'"></span>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div 
-                  class="bg-yellow-500 h-2.5 rounded-full transition-all duration-300" 
+                  class="bg-[#E59819] h-2 rounded-full transition-all duration-300" 
                   :style="'width: ' + cvScanModal.progress + '%;'"
                 ></div>
               </div>
             </div>
 
             <!-- Live Steps Tracker -->
-            <div class="space-y-2.5 border-t border-gray-100 pt-4">
+            <div class="space-y-2 border-t border-gray-200 pt-3">
               
               <!-- Step 1 -->
               <div class="flex items-center space-x-3 text-xs" :class="cvScanModal.currentStep >= 1 ? 'text-gray-800' : 'text-gray-400'">
-                <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                  :class="cvScanModal.currentStep > 1 ? 'bg-green-100 text-green-600 font-bold' : (cvScanModal.currentStep === 1 ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400')">
+                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] border"
+                  :class="cvScanModal.currentStep > 1 ? 'bg-gray-700 border-gray-700 text-white font-bold' : (cvScanModal.currentStep === 1 ? 'bg-[#E59819] border-[#E59819] text-white' : 'bg-gray-100 border-gray-300 text-gray-400')">
                   <i v-if="cvScanModal.currentStep > 1" class="fa fa-check"></i>
                   <i v-else-if="cvScanModal.currentStep === 1" class="fa fa-spinner fa-spin"></i>
                   <span v-else>1</span>
@@ -1880,8 +1875,8 @@
 
               <!-- Step 2 -->
               <div class="flex items-center space-x-3 text-xs" :class="cvScanModal.currentStep >= 2 ? 'text-gray-800' : 'text-gray-400'">
-                <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                  :class="cvScanModal.currentStep > 2 ? 'bg-green-100 text-green-600 font-bold' : (cvScanModal.currentStep === 2 ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400')">
+                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] border"
+                  :class="cvScanModal.currentStep > 2 ? 'bg-gray-700 border-gray-700 text-white font-bold' : (cvScanModal.currentStep === 2 ? 'bg-[#E59819] border-[#E59819] text-white' : 'bg-gray-100 border-gray-300 text-gray-400')">
                   <i v-if="cvScanModal.currentStep > 2" class="fa fa-check"></i>
                   <i v-else-if="cvScanModal.currentStep === 2" class="fa fa-spinner fa-spin"></i>
                   <span v-else>2</span>
@@ -1891,8 +1886,8 @@
 
               <!-- Step 3 -->
               <div class="flex items-center space-x-3 text-xs" :class="cvScanModal.currentStep >= 3 ? 'text-gray-800' : 'text-gray-400'">
-                <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                  :class="cvScanModal.currentStep > 3 ? 'bg-green-100 text-green-600 font-bold' : (cvScanModal.currentStep === 3 ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400')">
+                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] border"
+                  :class="cvScanModal.currentStep > 3 ? 'bg-gray-700 border-gray-700 text-white font-bold' : (cvScanModal.currentStep === 3 ? 'bg-[#E59819] border-[#E59819] text-white' : 'bg-gray-100 border-gray-300 text-gray-400')">
                   <i v-if="cvScanModal.currentStep > 3" class="fa fa-check"></i>
                   <i v-else-if="cvScanModal.currentStep === 3" class="fa fa-spinner fa-spin"></i>
                   <span v-else>3</span>
@@ -1902,8 +1897,8 @@
 
               <!-- Step 4 -->
               <div class="flex items-center space-x-3 text-xs" :class="cvScanModal.currentStep >= 4 ? 'text-gray-800' : 'text-gray-400'">
-                <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                  :class="cvScanModal.currentStep > 4 ? 'bg-green-100 text-green-600 font-bold' : (cvScanModal.currentStep === 4 ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400')">
+                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] border"
+                  :class="cvScanModal.currentStep > 4 ? 'bg-gray-700 border-gray-700 text-white font-bold' : (cvScanModal.currentStep === 4 ? 'bg-[#E59819] border-[#E59819] text-white' : 'bg-gray-100 border-gray-300 text-gray-400')">
                   <i v-if="cvScanModal.currentStep > 4" class="fa fa-check"></i>
                   <i v-else-if="cvScanModal.currentStep === 4" class="fa fa-spinner fa-spin"></i>
                   <span v-else>4</span>
@@ -1913,8 +1908,8 @@
 
               <!-- Step 5 -->
               <div class="flex items-center space-x-3 text-xs" :class="cvScanModal.currentStep >= 5 ? 'text-gray-800' : 'text-gray-400'">
-                <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                  :class="cvScanModal.status === 'success' ? 'bg-green-100 text-green-600 font-bold' : (cvScanModal.currentStep === 5 ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400')">
+                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] border"
+                  :class="cvScanModal.status === 'success' ? 'bg-gray-700 border-gray-700 text-white font-bold' : (cvScanModal.currentStep === 5 ? 'bg-[#E59819] border-[#E59819] text-white' : 'bg-gray-100 border-gray-300 text-gray-400')">
                   <i v-if="cvScanModal.status === 'success'" class="fa fa-check"></i>
                   <i v-else-if="cvScanModal.currentStep === 5" class="fa fa-spinner fa-spin"></i>
                   <span v-else>5</span>
@@ -1924,22 +1919,22 @@
 
             </div>
 
-            <!-- Result Summary Box (Saat Selesai) -->
-            <div v-if="cvScanModal.status === 'success'" class="mt-5 p-3.5 bg-green-50 rounded-lg border border-green-200 text-xs space-y-1.5">
-              <div class="flex items-center space-x-1 font-bold text-green-800 text-sm mb-1">
-                <i class="fa fa-check-circle text-green-600"></i>
+            <!-- Result Summary Box (Saat Selesai - White & Grey Theme) -->
+            <div v-if="cvScanModal.status === 'success'" class="mt-4 p-3 bg-gray-50 rounded-md border border-gray-200 text-xs space-y-1">
+              <div class="flex items-center space-x-1.5 font-bold text-gray-800 mb-1.5">
+                <i class="fa fa-check-circle text-gray-700"></i>
                 <span>Hasil Ekstraksi Berhasil:</span>
               </div>
-              <p class="text-gray-700"><strong class="text-gray-900">Nama:</strong> <span v-text="cvScanModal.summary.nama || '-'"></span></p>
-              <p class="text-gray-700"><strong class="text-gray-900">Kontak:</strong> <span v-text="(cvScanModal.summary.email || '-') + ' | ' + (cvScanModal.summary.telp || '-')"></span></p>
-              <p class="text-gray-700"><strong class="text-gray-900">Pendidikan:</strong> <span v-text="cvScanModal.summary.pendidikanCount + ' data terdeteksi'"></span></p>
-              <p class="text-gray-700"><strong class="text-gray-900">Pengalaman:</strong> <span v-text="cvScanModal.summary.pengalamanCount + ' data terdeteksi'"></span></p>
-              <p class="text-gray-700"><strong class="text-gray-900">Lampiran:</strong> Berkas CV tersimpan ke formulir</p>
+              <p class="text-gray-600"><strong class="text-gray-800">Nama:</strong> <span v-text="cvScanModal.summary.nama || '-'"></span></p>
+              <p class="text-gray-600"><strong class="text-gray-800">Kontak:</strong> <span v-text="(cvScanModal.summary.email || '-') + ' | ' + (cvScanModal.summary.telp || '-')"></span></p>
+              <p class="text-gray-600"><strong class="text-gray-800">Pendidikan:</strong> <span v-text="cvScanModal.summary.pendidikanCount + ' data terdeteksi'"></span></p>
+              <p class="text-gray-600"><strong class="text-gray-800">Pengalaman:</strong> <span v-text="cvScanModal.summary.pengalamanCount + ' data terdeteksi'"></span></p>
+              <p class="text-gray-600"><strong class="text-gray-800">Lampiran:</strong> Berkas CV tersimpan ke formulir</p>
             </div>
 
             <!-- Error Box -->
-            <div v-if="cvScanModal.status === 'error'" class="mt-5 p-3.5 bg-red-50 rounded-lg border border-red-200 text-xs text-red-700">
-              <p class="font-bold flex items-center space-x-1 mb-1">
+            <div v-if="cvScanModal.status === 'error'" class="mt-4 p-3 bg-gray-50 rounded-md border border-gray-300 text-xs text-gray-800">
+              <p class="font-bold flex items-center space-x-1 mb-1 text-red-600">
                 <i class="fa fa-exclamation-triangle"></i>
                 <span>Terjadi Kendala:</span>
               </p>
@@ -1949,12 +1944,12 @@
           </div>
 
           <!-- Modal Footer -->
-          <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-end space-x-2">
+          <div class="bg-gray-50 px-5 py-3 border-t border-gray-200 flex justify-end space-x-2">
             <button
               v-if="cvScanModal.status === 'scanning'"
               type="button"
               disabled
-              class="bg-gray-300 text-gray-500 text-xs font-semibold py-2 px-4 rounded cursor-not-allowed flex items-center space-x-2"
+              class="bg-gray-200 text-gray-500 text-xs font-semibold py-1.5 px-3.5 rounded cursor-not-allowed flex items-center space-x-1.5"
             >
               <i class="fa fa-spinner fa-spin"></i>
               <span>Sedang Mengekstrak...</span>
@@ -1963,7 +1958,7 @@
               v-else-if="cvScanModal.status === 'success'"
               type="button"
               @click="cvScanModal.open = false"
-              class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-semibold py-2 px-4 rounded shadow duration-200 flex items-center space-x-1 cursor-pointer"
+              class="bg-[#E59819] hover:bg-[#d48b14] text-white text-xs font-semibold py-1.5 px-3.5 rounded shadow duration-200 flex items-center space-x-1 cursor-pointer"
             >
               <span>Tutup & Periksa Formulir</span>
               <i class="fa fa-arrow-right"></i>
@@ -1972,7 +1967,7 @@
               v-else-if="cvScanModal.status === 'error'"
               type="button"
               @click="cvScanModal.open = false"
-              class="bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold py-2 px-4 rounded shadow duration-200 cursor-pointer"
+              class="bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold py-1.5 px-3.5 rounded shadow duration-200 cursor-pointer"
             >
               Tutup
             </button>
