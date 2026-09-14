@@ -160,7 +160,10 @@ onBeforeMount(async () => {
       // Halaman normal (bukan approval)
       const editedId = route.params.id;
       const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`;
-      const params = { join: true, transform: true, detail: true };
+      // CATATAN: 'detail' dihapus dari params agar generator tidak memuat
+      // t_loker_d_kualifikasi via $details (yang sudah dihandle oleh transformRowData
+      // di t_loker/Custom.php). Memuat dua kali menyebabkan kualifikasi duplikat.
+      const params = { join: true, transform: true };
       const fixedParams = new URLSearchParams(params);
 
       const res = await fetch(`${dataURL}?${fixedParams}`, {
@@ -178,14 +181,39 @@ onBeforeMount(async () => {
 
     // Assign ke reactive values
     for (const key in initialValues) {
-      values[key] = initialValues[key];
+      // Pastikan tgl berformat YYYY-MM-DD agar tampil di elemen <input type="date">
+      if ((key === 'tgl_dibuka' || key === 'tgl_akhir') && initialValues[key]) {
+        let dateVal = String(initialValues[key]);
+        if (/^\d{2}-\d{2}-\d{4}/.test(dateVal)) {
+          const parts = dateVal.split('-');
+          values[key] = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        } else if (dateVal.includes(' ')) {
+          values[key] = dateVal.split(' ')[0];
+        } else {
+          values[key] = dateVal;
+        }
+      } else {
+        values[key] = initialValues[key];
+      }
     }
 
     if (initialValues.t_loker_d_kualifikasi && initialValues.t_loker_d_kualifikasi.length > 0) {
-      values.t_loker_d_kualifikasi = initialValues.t_loker_d_kualifikasi.map(k => ({
+      const seen = new Set();
+      values.t_loker_d_kualifikasi = initialValues.t_loker_d_kualifikasi.filter(k => {
+        const val = (k.value || '').trim();
+        if (val === '') return false; // buang yang kosong
+        if (seen.has(val)) return false; // buang duplikat
+        seen.add(val);
+        return true;
+      }).map(k => ({
         id: k.id,
         value: k.value || ''
       }));
+
+      // Kalau semua kosong/dibuang, sediakan 1 baris
+      if (values.t_loker_d_kualifikasi.length === 0) {
+        values.t_loker_d_kualifikasi = [{ value: '' }];
+      }
     } else {
       values.t_loker_d_kualifikasi = [{ value: '' }];
     }
@@ -710,9 +738,16 @@ const landing = reactive({
   {
     headerName: 'Tanggal Dibuka',
     field: 'tgl_dibuka',
-    filter: true,
-    sortable: true,
+    valueFormatter: (params) => {
+      if (!params.value) return '-';
+      const v = String(params.value).replace(/\//g, '-');
+      if (/^\d{2}-\d{2}-\d{4}/.test(v)) return v;
+      const parts = v.split('-');
+      if (parts.length === 3 && parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      return v;
+    },
     filter: 'ColFilter',
+    sortable: true,
     resizable: true,
     flex: 1,
     cellClass: ['border-r', '!border-gray-200', 'justify-center']
@@ -720,9 +755,16 @@ const landing = reactive({
   {
     headerName: 'Tanggal Akhir',
     field: 'tgl_akhir',
-    filter: true,
-    sortable: true,
+    valueFormatter: (params) => {
+      if (!params.value) return '-';
+      const v = String(params.value).replace(/\//g, '-');
+      if (/^\d{2}-\d{2}-\d{4}/.test(v)) return v;
+      const parts = v.split('-');
+      if (parts.length === 3 && parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      return v;
+    },
     filter: 'ColFilter',
+    sortable: true,
     resizable: true,
     flex: 1,
     cellClass: ['border-r', '!border-gray-200', 'justify-center']

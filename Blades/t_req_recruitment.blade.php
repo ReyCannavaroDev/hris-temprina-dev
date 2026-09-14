@@ -189,26 +189,62 @@
 
         <!-- DIVISI -->
         <div>
-          <FieldSelect :key="actionText ? (values.m_branch_id || 'default') : 'read_mode'" :bind="{ disabled: !actionText || !values.m_branch_id, clearable:true }" class="w-full !mt-1" :value="values.m_divisi_id"
+          <!--
+            FIX BUG FINAL: Divisi kosong saat read/view mode.
+            ROOT CAUSE: FieldSelect yang disabled=true tidak memanggil API, sehingga tidak
+              ada options → label tidak bisa di-resolve dari ID → tampil kosong.
+            SOLUSI v-if/v-else:
+              - READ mode (!actionText): pakai FieldX readonly, tampilkan values.divisi_display
+                yang sudah di-resolve oleh transformRowData (transform:true di JS fetch)
+              - EDIT/CREATE mode (actionText): pakai FieldSelect interaktif seperti biasa
+          -->
+
+          <!-- READ MODE: tampilkan nama divisi langsung dari transformRowData -->
+          <FieldX
+            v-if="!actionText"
+            label="Divisi"
+            :bind="{ readonly: true }"
+            :value="values.divisi_display && values.divisi_display !== '-' ? values.divisi_display : (values['m_divisi.name'] || '')"
+            class="w-full !mt-1"
+            :check="false"
+          />
+
+          <!-- EDIT/CREATE MODE: FieldSelect interaktif -->
+          <FieldSelect
+            v-else
+            :key="values.m_branch_id || 'default'"
+            :bind="{ disabled: !values.m_branch_id, clearable: true }"
+            class="w-full !mt-1"
+            :value="values.m_divisi_id"
             @input="v=>{
-              if (values.m_divisi_id != v && actionText) {
+              if (values.m_divisi_id != v) {
                 values.karyawan_digantikan_id = null;
                 selectedKaryawanName = '';
               }
-              if (!actionText && !v) return;
               values.m_divisi_id = v;
-            }" :errorText="formErrors.m_divisi_id?'failed':''"
-            :hints="formErrors.m_divisi_id" valueField="id" displayField="value" :api="{
-                url: `${store.server.url_backend}/operation/m_divisi`,
-                headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-                params: {
-                  scopes:'Name',
-                  simplest:true,
-                  transform:false,
-                  join:false,
-                  where: (actionText && values.m_branch_id) ? `this.m_branch_id = '${values.m_branch_id}' OR this.m_branch_id = '0'` : undefined
-                }
-            }" placeholder="Pilih Divisi" label="Divisi" fa-icon="sort-desc" :check="false" />
+            }"
+            :errorText="formErrors.m_divisi_id?'failed':''"
+            :hints="formErrors.m_divisi_id"
+            valueField="id"
+            displayField="value"
+            :api="{
+              url: `${store.server.url_backend}/operation/m_divisi`,
+              headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+              params: {
+                scopes: 'Name',
+                simplest: true,
+                transform: false,
+                join: false,
+                where: values.m_branch_id
+                  ? `this.m_branch_id = '${values.m_branch_id}' OR this.m_branch_id = '0'`
+                  : undefined
+              }
+            }"
+            placeholder="Pilih Divisi"
+            label="Divisi"
+            fa-icon="sort-desc"
+            :check="false"
+          />
         </div>
 
         <!-- POSISI -->

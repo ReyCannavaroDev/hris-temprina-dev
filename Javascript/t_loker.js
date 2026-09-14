@@ -744,7 +744,7 @@ const landing = computed(() => {
       }
     ],
 
-       api: {
+    api: {
       url: data?.can_read
         ? `${store.server.url_backend}/operation${endpointApi}`
         : null,
@@ -825,9 +825,19 @@ const landing = computed(() => {
     {
       headerName: 'Tanggal Dibuka',
       field: 'tgl_dibuka',
-      filter: true,
-      sortable: true,
+      valueFormatter: (params) => {
+        if (!params.value) return '-';
+        // Format: bisa Y-m-d atau d-m-Y (dari cast Laravel)
+        const v = String(params.value).replace(/\//g, '-');
+        // Jika sudah format dd-mm-yyyy (dari cast Basic.php)
+        if (/^\d{2}-\d{2}-\d{4}/.test(v)) return v;
+        // Jika format yyyy-mm-dd
+        const parts = v.split('-');
+        if (parts.length === 3 && parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        return v;
+      },
       filter: 'ColFilter',
+      sortable: true,
       resizable: true,
       flex: 1,
       cellClass: ['border-r', '!border-gray-200', 'justify-center']
@@ -835,9 +845,16 @@ const landing = computed(() => {
     {
       headerName: 'Tanggal Akhir',
       field: 'tgl_akhir',
-      filter: true,
-      sortable: true,
+      valueFormatter: (params) => {
+        if (!params.value) return '-';
+        const v = String(params.value).replace(/\//g, '-');
+        if (/^\d{2}-\d{2}-\d{4}/.test(v)) return v;
+        const parts = v.split('-');
+        if (parts.length === 3 && parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        return v;
+      },
       filter: 'ColFilter',
+      sortable: true,
       resizable: true,
       flex: 1,
       cellClass: ['border-r', '!border-gray-200', 'justify-center']

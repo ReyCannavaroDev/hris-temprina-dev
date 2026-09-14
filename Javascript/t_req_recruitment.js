@@ -181,7 +181,8 @@ onBeforeMount(async () => {
         dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
         isRequesting.value = true
 
-        const params = { join: false, transform: false }
+        // transform:true agar transformRowData dijalankan → menghasilkan 'divisi_display' dll
+        const params = { join: false, transform: true }
         const fixedParams = new URLSearchParams(params)
         const res = await fetch(dataURL + '?' + fixedParams, {
           headers: {
@@ -766,22 +767,20 @@ const landing = reactive({
     },
     {
       headerName: "Divisi",
-      field: 'm_divisi.name',
+      field: 'divisi_display',
       valueGetter: (params) => {
-        let name = params.data?.['m_divisi.name'] || params.data?.m_divisi?.name;
+        // Prioritas: baca 'divisi_display' (field alias bersih dari backend transformRowData)
+        // Fallback ke berbagai field yang mungkin ada
+        const name =
+          params.data?.divisi_display ||
+          params.data?.['m_divisi.value'] ||
+          params.data?.['m_divisi.name'] ||
+          params.data?.['m_divisi.nama'] ||
+          params.data?.m_divisi?.value ||
+          params.data?.m_divisi?.name;
+
         if (!name || name === '-') {
-           return params.data?.m_divisi_id ? `ID: ${params.data.m_divisi_id}` : '-';
-        }
-        if (typeof name === 'string' && name.startsWith('{')) {
-          try {
-            name = JSON.parse(name).value || name;
-          } catch(e){}
-        } else if (typeof name === 'object' && name !== null) {
-          name = name.value || name.label || name.name || name;
-        }
-        // Fallback to name or m_divisi_id if name equals the ID
-        if (name == params.data?.m_divisi_id) {
-           return `ID: ${name}`; 
+          return '-';
         }
         return name;
       },

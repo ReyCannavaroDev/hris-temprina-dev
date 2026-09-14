@@ -50,18 +50,24 @@ class t_loker extends \App\Models\BasicModels\t_loker
     public function transformRowData(array $row)
     {
         $data = [];
-        $details = \DB::table('t_loker_d_kualifikasi')
-            ->where('t_loker_id', $row['id'])
-            ->orderBy('id', 'asc')
-            ->get();
-        $detArr = json_decode(json_encode($details), true);
-        $data['t_loker_d_kualifikasi'] = $detArr;
+
+        // Muat t_loker_d_kualifikasi secara manual karena __construct() melakukan
+        // $this->details = [] untuk semua GET request, sehingga generator tidak
+        // otomatis memuat detail. transformRowData adalah satu-satunya sumber data ini.
+        // Cek jika belum ada di $row (mencegah duplikat jika suatu saat detail dimuat oleh generator)
+        if (!isset($row['t_loker_d_kualifikasi']) || !is_array($row['t_loker_d_kualifikasi'])) {
+            $details = \DB::table('t_loker_d_kualifikasi')
+                ->where('t_loker_id', $row['id'])
+                ->orderBy('id', 'asc')
+                ->get();
+            $data['t_loker_d_kualifikasi'] = json_decode(json_encode($details), true);
+        }
 
         $m_divisi = !empty($row['m_divisi_id']) ? \DB::table('m_divisi')->where('id', $row['m_divisi_id'])->first() : null;
         if ($m_divisi) {
             $divisiVal = '';
             if (!empty($m_divisi->name)) {
-                $gen = \DB::table('m_general')->where('id', $m_divisi->name)->first();
+                $gen = \DB::table('m_general')->where('id', (int)$m_divisi->name)->first();
                 if ($gen && !empty($gen->value)) {
                     $divisiVal = $gen->value;
                 }

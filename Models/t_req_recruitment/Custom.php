@@ -18,12 +18,10 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         "m_comp.id=t_req_recruitment.m_comp_id",
         "m_subcomp.id=t_req_recruitment.m_subcomp_id",
         "m_branch.id=t_req_recruitment.m_branch_id",
-        "m_divisi.id=t_req_recruitment.m_divisi_id",
+        // m_divisi TIDAK di-join via $joins karena kolom name-nya adalah bigint FK ke m_general
+        // dan resolve nama-nya sudah dihandle manual di transformRowData
         "m_dept.id=t_req_recruitment.m_dept_id",
         "m_posisi.id=t_req_recruitment.m_posisi_id",
-        "m_general.id=t_req_recruitment.status_kary_id",
-        "m_general.id=t_req_recruitment.jenis_permintaan_id",
-        "m_general.id=t_req_recruitment.prioritas_id",
         "default_users.id=t_req_recruitment.creator_id",
         "default_users.id=t_req_recruitment.last_editor_id"
     ];
@@ -113,40 +111,34 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
             ->orderBy('id', 'desc')
             ->first();
 
+        // Resolve nama divisi:
+        // m_divisi.name adalah bigint FK ke m_general.id (bukan string nama).
+        // Gunakan m_general.value sebagai nama display, fallback ke name_old.
+        $divisiDisplay = '-';
+        if ($m_divisi) {
+            if (!empty($m_divisi->name)) {
+                // name adalah bigint ID yang merujuk ke m_general.id
+                $gen = \DB::table('m_general')->where('id', (int)$m_divisi->name)->first();
+                if ($gen && !empty($gen->value)) {
+                    $divisiDisplay = $gen->value;
+                }
+            }
+            if ($divisiDisplay === '-' && !empty($m_divisi->name_old)) {
+                $divisiDisplay = $m_divisi->name_old;
+            }
+        }
+
         return array_merge($row, [
             'm_kary' => $m_kary ? (array)$m_kary : null,
             'm_kary.nama_lengkap' => $m_kary?->nama_lengkap ?? $creator?->name ?? '-',
             'creator' => $creator ? (array)$creator : null,
             'creator.name' => $creator?->name ?? '-',
+            // m_divisi — semua field nama menggunakan string yang sudah di-resolve
             'm_divisi' => $m_divisi ? (array)$m_divisi : null,
-            'm_divisi.name' => (function() use ($m_divisi) {
-                if (!$m_divisi) return '-';
-                $divisiVal = '';
-                if (!empty($m_divisi->name)) {
-                    $gen = \DB::table('m_general')->where('id', $m_divisi->name)->first();
-                    if ($gen && !empty($gen->value)) {
-                        $divisiVal = $gen->value;
-                    }
-                }
-                if (empty($divisiVal) && !empty($m_divisi->name_old)) {
-                    $divisiVal = $m_divisi->name_old;
-                }
-                return !empty($divisiVal) ? $divisiVal : '-';
-            })(),
-            'm_divisi.nama' => (function() use ($m_divisi) {
-                if (!$m_divisi) return '-';
-                $divisiVal = '';
-                if (!empty($m_divisi->name)) {
-                    $gen = \DB::table('m_general')->where('id', $m_divisi->name)->first();
-                    if ($gen && !empty($gen->value)) {
-                        $divisiVal = $gen->value;
-                    }
-                }
-                if (empty($divisiVal) && !empty($m_divisi->name_old)) {
-                    $divisiVal = $m_divisi->name_old;
-                }
-                return !empty($divisiVal) ? $divisiVal : '-';
-            })(),
+            'm_divisi.name'  => $divisiDisplay,  // override: harus string bukan angka ID
+            'm_divisi.nama'  => $divisiDisplay,
+            'm_divisi.value' => $divisiDisplay,
+            'divisi_display' => $divisiDisplay,  // field alias bersih untuk frontend
             'm_posisi' => $m_posisi ? (array)$m_posisi : null,
             'm_posisi.name' => $m_posisi?->name ?? '-',
             'm_posisi.nama' => $m_posisi?->name ?? '-',
