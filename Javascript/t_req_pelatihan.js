@@ -8,7 +8,7 @@ const swal = inject('swal')
 
 const isRead = route.params.id && route.params.id !== 'create'
 const actionText = ref(route.params.id === 'create' ? 'Tambah' : (route.query.action?.toLowerCase() === 'verifikasi' ? null : route.query.action))
-const isBadForm = ref(false)
+const isBadForm = ref(false) 
 const isRequesting = ref(false)
 const is_approval = route.query.is_approval ? true : false
 const modulPath = route.params.modul

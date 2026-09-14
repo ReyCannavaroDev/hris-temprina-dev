@@ -149,7 +149,7 @@
                 simplest: true,
                 join: true,
                 transform: true,
-                where: `upper(status) != 'CLOSED'`
+                where: `this.status = 'OPEN'`
               }
             }"
             placeholder="Pilih Lowongan Pekerjaan yang Dilamar"
