@@ -21,6 +21,9 @@ class generate_approval extends \App\Models\BasicModels\generate_approval
         if (($row['form_name'] ?? '') === 't_request_pelatihan' || ($row['trx_table'] ?? '') === 't_request_pelatihan') {
             $row['form_name'] = 't_req_pelatihan';
         }
+        if (($row['form_name'] ?? '') === 't_hasil_tes' || ($row['trx_table'] ?? '') === 't_hasil_tes') {
+            $row['form_name'] = 't_hasil_test';
+        }
         return $row;
     }
     
@@ -114,6 +117,9 @@ class generate_approval extends \App\Models\BasicModels\generate_approval
             })->transform(function ($item) {
                 if (($item->form_name ?? '') === 't_request_pelatihan' || ($item->trx_table ?? '') === 't_request_pelatihan') {
                     $item->form_name = 't_req_pelatihan';
+                }
+                if (($item->form_name ?? '') === 't_hasil_tes' || ($item->trx_table ?? '') === 't_hasil_tes') {
+                    $item->form_name = 't_hasil_test';
                 }
                 if (!empty($item->trx_date)) {
                     $item->tanggal_terbuat = Carbon::parse($item->trx_date)->format('d-m-Y');

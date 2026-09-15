@@ -31,10 +31,7 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
     public $joins = [
         "t_pelamar.id=t_hasil_tes.t_pelamar_id",
-        "t_loker.id=t_hasil_tes.t_loker_id",
-        "m_general.id=t_hasil_tes.tahapan_id",
-        "default_users.id=t_hasil_tes.creator_id",
-        "default_users.id=t_hasil_tes.last_editor_id"
+        "t_loker.id=t_hasil_tes.t_loker_id"
     ];
 
     public $createAdditionalData = ["creator_id"=>"auth:id"];
@@ -54,6 +51,36 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             }
         }
         $data['t_hasil_tes_det'] = $detArr;
+
+        if (!empty($row['t_pelamar_id'])) {
+            $pelamar = \DB::table('t_pelamar')->where('id', $row['t_pelamar_id'])->first();
+            if ($pelamar) {
+                $data['t_pelamar'] = $pelamar;
+                $data['nama_pelamar'] = trim(($pelamar->nama_depan ?? '') . ' ' . ($pelamar->nama_belakang ?? ''));
+            }
+        }
+
+        if (!empty($row['t_loker_id'])) {
+            $loker = \DB::table('t_loker')->where('id', $row['t_loker_id'])->first();
+            if ($loker) {
+                $data['t_loker'] = $loker;
+                $data['title_loker'] = $loker->title ?? '';
+            }
+        }
+
+        if (!empty($row['tahapan_id'])) {
+            $tahapan = \DB::table('m_general')->where('id', $row['tahapan_id'])->first();
+            if ($tahapan) {
+                $data['tahapan'] = $tahapan;
+            }
+        }
+
+        if (!empty($row['creator_id'])) {
+            $creator = \DB::table('default_users')->where('id', $row['creator_id'])->value('name');
+            if ($creator) {
+                $data['creator_name'] = $creator;
+            }
+        }
 
         return array_merge($row, $data);
     }
