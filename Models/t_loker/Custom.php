@@ -80,6 +80,28 @@ class t_loker extends \App\Models\BasicModels\t_loker
             $data['m_divisi.nama'] = !empty($divisiVal) ? $divisiVal : '-';
         }
 
+        // Hitung kuota dan pelamar diterima untuk tampilan
+        $kebutuhan = !empty($row['jumlah']) ? (int)$row['jumlah'] : 1;
+        if (!empty($row['t_req_recruitment_id'])) {
+            $fptk = \DB::table('t_req_recruitment')->where('id', $row['t_req_recruitment_id'])->first();
+            if ($fptk && !empty($fptk->jumlah_kebutuhan)) {
+                $kebutuhan = (int)$fptk->jumlah_kebutuhan;
+            }
+        }
+
+        $totalDiterima = \DB::table('t_hasil_tes')
+            ->where('t_loker_id', $row['id'])
+            ->where(function ($q) {
+                $q->whereRaw("upper(status) = 'DITERIMA'")
+                    ->orWhereRaw("upper(status) = 'APPROVED'");
+            })
+            ->count();
+
+        $data['total_kebutuhan'] = $kebutuhan;
+        $data['total_diterima'] = $totalDiterima;
+        $data['sisa_kebutuhan'] = max(0, $kebutuhan - $totalDiterima);
+        $data['kuota_display'] = "{$totalDiterima} / {$kebutuhan}";
+
         return array_merge($row, $data);
     }
 
@@ -144,7 +166,7 @@ class t_loker extends \App\Models\BasicModels\t_loker
 
         $newArrayData = array_merge($arrayData, [
             'nomor' => $this->helper->generateNomor('KODE LOWONGAN PEKERJAAN'),
-            'status' => $arrayData['status'] ?? 'OPEN',
+            'status' => $arrayData['status'] ?? 'DRAFT',
             'tgl_dibuka' => !empty($arrayData['tgl_dibuka']) ? $arrayData['tgl_dibuka'] : date('Y-m-d'),
         ]);
 
@@ -240,8 +262,13 @@ class t_loker extends \App\Models\BasicModels\t_loker
         \DB::beginTransaction();
         try {
             $data = $this->find($req->id);
-            $data->status = 'POSTED';
+            if (!$data) {
+                return $this->helper->customResponse("Data tidak ditemukan", 404);
+            }
+            $data->status = 'OPEN';
             $data->save();
+
+            self::updateStatusLoker($data->id);
 
             \DB::commit();
             return $this->helper->customResponse("Data berhasil diposting");
@@ -298,14 +325,21 @@ class t_loker extends \App\Models\BasicModels\t_loker
         if (!$loker)
             return;
 
+        $currentStatus = strtoupper($loker->status ?? '');
+        // Jangan ubah status jika masih DRAFT atau dalam proses approval awal
+        if (in_array($currentStatus, ['DRAFT', 'IN APPROVAL', 'REVISED', 'REJECTED'])) {
+            return;
+        }
+
         // Ambil kuota kebutuhan personil dari loker atau FPTK
         $kebutuhan = $loker->jumlah ?? 1;
         if (!empty($loker->t_req_recruitment_id)) {
             $fptk = \DB::table('t_req_recruitment')->where('id', $loker->t_req_recruitment_id)->first();
             if ($fptk && !empty($fptk->jumlah_kebutuhan)) {
-                $kebutuhan = $fptk->jumlah_kebutuhan;
+                $kebutuhan = (int)$fptk->jumlah_kebutuhan;
             }
         }
+        $kebutuhan = (int)$kebutuhan;
 
         // Hitung total pelamar yang berstatus Diterima / Approved pada hasil tes
         $totalDiterima = \DB::table('t_hasil_tes')
@@ -324,10 +358,12 @@ class t_loker extends \App\Models\BasicModels\t_loker
             $newStatus = 'PROGRESS';
         }
 
-        \DB::table('t_loker')->where('id', $lokerId)->update([
-            'status' => $newStatus,
-            'updated_at' => Carbon::now()
-        ]);
+        if ($currentStatus !== $newStatus) {
+            \DB::table('t_loker')->where('id', $lokerId)->update([
+                'status' => $newStatus,
+                'updated_at' => Carbon::now()
+            ]);
+        }
     }
 
     private function createAppTicket($id, $target_id = null)

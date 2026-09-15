@@ -50,7 +50,7 @@ const values = reactive({
   jumlah: null,
   tgl_dibuka: new Date().toISOString().slice(0, 10),
   tgl_akhir: null,
-  status: 'OPEN',
+  status: 'DRAFT',
   deskripsi: "",
   t_loker_d_kualifikasi: [
     { value: '' }
@@ -416,6 +416,7 @@ async function onSave() {
 
 //  @else----------------------- LANDING
 const activeBtn = ref()
+const statusFilter = ref(null)
 let data = reactive({})
 
 onBeforeMount(async () => {
@@ -455,22 +456,32 @@ onBeforeMount(async () => {
   }
 })
 
-function filterShowData(params, noBtn) {
-  if (activeBtn.value === noBtn) {
-    activeBtn.value = null
-  } else {
-    activeBtn.value = noBtn
-  }
-  if (params) {
-    landing.api.params.where = `this.is_active=true`
-  } else if (activeBtn.value == null) {
-    // clear params filter
-    landing.api.params.where = null
-  } else {
-    landing.api.params.where = `this.is_active=false`
+function filterShowData(statusLabel = null, noBtn = null) {
+  const statusMap = {
+    1: 'DRAFT',
+    2: 'OPEN',
+    3: 'PROGRESS',
+    4: 'CLOSED'
   }
 
-  apiTable.value.reload()
+  if (noBtn !== null) {
+    if (activeBtn.value === noBtn) {
+      activeBtn.value = null
+      statusFilter.value = null
+    } else {
+      activeBtn.value = noBtn
+      statusFilter.value = statusLabel ? `upper(this.status)='${statusLabel.toUpperCase()}'` : `upper(this.status)='${statusMap[noBtn]}'`
+    }
+  } else if (statusLabel) {
+    const entry = Object.entries(statusMap).find(([k, v]) => v.toUpperCase() === statusLabel.toUpperCase())
+    activeBtn.value = entry ? Number(entry[0]) : null
+    statusFilter.value = `upper(this.status)='${statusLabel.toUpperCase()}'`
+  } else {
+    activeBtn.value = null
+    statusFilter.value = null
+  }
+
+  apiTable.value?.reload()
 }
 
 const landing = reactive({
@@ -676,7 +687,8 @@ const landing = reactive({
         m_branch_id: isAdmin ? null : (data.branch_id || null),
         join: true,
         transform: true,
-        scopes: 'respo'
+        scopes: 'respo',
+        where: statusFilter.value || null
       }
     }),
 
@@ -770,6 +782,16 @@ const landing = reactive({
     cellClass: ['border-r', '!border-gray-200', 'justify-center']
   },
   {
+    headerName: 'Kuota',
+    field: 'kuota_display',
+    filter: true,
+    sortable: true,
+    filter: 'ColFilter',
+    resizable: true,
+    width: 100,
+    cellClass: ['border-r', '!border-gray-200', 'justify-center', 'font-semibold', 'text-gray-700']
+  },
+  {
     field: 'status',
     headerName: 'Status',
     filter: true,
@@ -779,17 +801,25 @@ const landing = reactive({
     flex: 1,
     cellClass: ['border-r', '!border-gray-200', 'justify-center'],
     cellRenderer: ({ value }) => {
-      const v = (value || '').toUpperCase()
-      if (v === 'OPEN') {
-        return `<span class="bg-blue-100 text-blue-700 rounded-md text-xs font-semibold px-3 py-1 inline-block">OPEN</span>`
-      } else if (v === 'PROGRESS') {
-        return `<span class="bg-amber-100 text-amber-800 rounded-md text-xs font-semibold px-3 py-1 inline-block">PROGRESS</span>`
-      } else if (v === 'CLOSED') {
-        return `<span class="bg-gray-200 text-gray-700 rounded-md text-xs font-semibold px-3 py-1 inline-block">CLOSED</span>`
-      } else if (v === 'POSTED') {
-        return `<span class="bg-green-100 text-green-700 rounded-md text-xs font-semibold px-3 py-1 inline-block">POSTED</span>`
+      if (!value) return ''
+      const val = value.toUpperCase()
+      let color = 'gray'
+
+      if (val === 'OPEN') {
+        color = 'blue'
+      } else if (val === 'PROGRESS') {
+        color = 'yellow'
+      } else if (val === 'CLOSED') {
+        color = 'gray'
+      } else if (val === 'POSTED' || val === 'APPROVED' || val === 'AKTIF') {
+        color = 'green'
+      } else if (val === 'REJECTED' || val === 'DITOLAK') {
+        color = 'red'
+      } else if (val === 'DRAFT') {
+        color = 'gray'
       }
-      return `<span class="bg-red-100 text-red-700 rounded-md text-xs font-semibold px-3 py-1 inline-block">${value || 'DRAFT'}</span>`
+
+      return `<span class="text-${color}-500 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">${value}</span>`
     }
   }
   ]

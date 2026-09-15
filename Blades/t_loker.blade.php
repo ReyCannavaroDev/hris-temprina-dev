@@ -3,12 +3,16 @@
 <div class="bg-white p-1 rounded-md min-h-[520px] border-t-10 border-gray-500">
   <div class="flex justify-between items-center px-2.5 py-1">
     <div class="flex items-center gap-x-4">
-      <!-- <p>Filter Status :</p>
+      <p>Filter Status :</p>
       <div class="flex gap-x-2">
-        <button @click="filterShowData(true,1)" :class="activeBtn === 1?'bg-green-600 text-white hover:bg-green-400':'border border-green-600 text-green-600 bg-white  hover:bg-green-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">Active</button>
+        <button @click="filterShowData('DRAFT',1)" :class="activeBtn === 1?'bg-gray-600 text-white hover:bg-gray-400':'border border-gray-600 text-gray-600 bg-white hover:bg-gray-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">DRAFT</button>
         <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
-        <button @click="filterShowData(false,2)" :class="activeBtn === 2?'bg-red-600 text-white hover:bg-red-400':'border border-red-600 text-red-600 bg-white  hover:bg-red-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">Inactive</button>
-      </div> -->
+        <button @click="filterShowData('OPEN',2)" :class="activeBtn === 2?'bg-blue-600 text-white hover:bg-blue-400':'border border-blue-600 text-blue-600 bg-white hover:bg-blue-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">OPEN</button>
+        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
+        <button @click="filterShowData('PROGRESS',3)" :class="activeBtn === 3?'bg-yellow-600 text-white hover:bg-yellow-400':'border border-yellow-600 text-yellow-600 bg-white hover:bg-yellow-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">PROGRESS</button>
+        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
+        <button @click="filterShowData('CLOSED',4)" :class="activeBtn === 4?'bg-gray-600 text-white hover:bg-gray-400':'border border-gray-600 text-gray-600 bg-white hover:bg-gray-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">CLOSED</button>
+      </div>
     </div>
     <div>
       <RouterLink :to="$route.path+'/create?'+(Date.parse(new Date()))"
