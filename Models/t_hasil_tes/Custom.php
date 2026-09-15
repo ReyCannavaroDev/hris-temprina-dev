@@ -136,9 +136,14 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             }
         }
 
+        $inputStatus = strtoupper($arrayData['status'] ?? 'PENDING');
+        if (!in_array($inputStatus, ['PENDING', 'PROSES'])) {
+            $inputStatus = 'PENDING';
+        }
+
         $newArrayData = array_merge($arrayData, [
             'nomor'  => $this->helper->generateNomor('KODE HASIL TES PELAMAR'),
-            'status' => $arrayData['status'] ?? 'PENDING'
+            'status' => $inputStatus
         ]);
 
         return [
@@ -170,6 +175,13 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                         "errors" => ["Data hasil tes dengan status {$st} sudah terkunci dan tidak dapat diedit kembali."]
                     ];
                 }
+            }
+        }
+
+        if (isset($arrayData['status'])) {
+            $inputStatus = strtoupper($arrayData['status']);
+            if (!in_array($inputStatus, ['PENDING', 'PROSES', 'REVISED'])) {
+                unset($arrayData['status']);
             }
         }
 

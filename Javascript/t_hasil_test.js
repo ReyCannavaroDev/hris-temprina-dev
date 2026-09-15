@@ -97,6 +97,21 @@ const values = reactive({
   //direktorat: store.user.data?.direktorat,
 })
 
+const statusOptions = computed(() => {
+  const current = (values.status || 'PENDING').toUpperCase()
+  if (['HALF APPROVED', 'DITERIMA', 'TIDAK DITERIMA', 'REVISED'].includes(current)) {
+    return [
+      { value: current },
+      { value: 'PENDING' },
+      { value: 'PROSES' }
+    ]
+  }
+  return [
+    { value: 'PENDING' },
+    { value: 'PROSES' }
+  ]
+})
+
 onBeforeMount(async () => {
 
   //values.direktorat = store.user.data?.direktorat

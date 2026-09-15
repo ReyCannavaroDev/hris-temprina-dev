@@ -201,14 +201,9 @@
     </div>
 
     <div>
-      <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText, clearable:false }" :value="values.status"
+      <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText || ['HALF APPROVED', 'DITERIMA', 'TIDAK DITERIMA'].includes(values.status), clearable:false }" :value="values.status"
         @input="v=>values.status=v" :errorText="formErrors.status?'failed':''" :hints="formErrors.status"
-        valueField="value" displayField="value" :options="[
-          { value: 'PENDING' },
-          { value: 'PROSES' },
-          { value: 'DITERIMA' },
-          { value: 'TIDAK DITERIMA' }
-        ]" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
+        valueField="value" displayField="value" :options="statusOptions" placeholder="Pilih Status" label="Status" fa-icon="" :check="false" />
     </div>
 
     <!-- END COLUMN -->
