@@ -245,17 +245,49 @@ class generate_approval extends \App\Models\BasicModels\generate_approval
                 $mappedTrx->keterangan = 'Pengisian Evaluasi Pelatihan';
                 $mappedTrx->status = $eval ? $eval->status : 'DRAFT';
             }
+            elseif($data->approval->trx_table === 't_hasil_tes')
+            {
+                $hasil = \DB::table('t_hasil_tes')->where('id', $data->approval->trx_id)->first();
+                $pelamar = $hasil && $hasil->t_pelamar_id ? \DB::table('t_pelamar')->where('id', $hasil->t_pelamar_id)->first() : null;
+                $loker = $hasil && $hasil->t_loker_id ? \DB::table('t_loker')->where('id', $hasil->t_loker_id)->first() : null;
+                $tahapan = $hasil && $hasil->tahapan_id ? \DB::table('m_general')->where('id', $hasil->tahapan_id)->value('value') : '-';
+
+                $mappedTrx->nomor = $hasil ? $hasil->nomor : ($data->trx->nomor ?? '-');
+                $mappedTrx->tanggal = $data->approval->trx_date ?? date('Y-m-d');
+                $mappedTrx->nama_pelamar = $pelamar ? trim(($pelamar->nama_depan ?? '') . ' ' . ($pelamar->nama_belakang ?? '')) : '-';
+                $mappedTrx->loker = $loker ? $loker->title : '-';
+                $mappedTrx->tahapan = $tahapan;
+                $mappedTrx->keterangan = "Hasil Tes Pelamar: " . ($pelamar ? $pelamar->nama_depan : '-') . " (" . ($loker ? $loker->title : '-') . ")";
+                $mappedTrx->status = $hasil ? $hasil->status : 'PROSES';
+                $mappedTrx->details = \DB::table('t_hasil_tes_det')->where('t_hasil_tes_id', $data->approval->trx_id)->get();
+            }
+            elseif($data->approval->trx_table === 't_req_recruitment')
+            {
+                $reqRec = \DB::table('t_req_recruitment')->where('id', $data->approval->trx_id)->first();
+                $mappedTrx->nomor = $reqRec ? $reqRec->nomor : ($data->trx->nomor ?? '-');
+                $mappedTrx->tanggal = $data->approval->trx_date ?? date('Y-m-d');
+                $mappedTrx->keterangan = $reqRec ? ($reqRec->keterangan ?? 'Permintaan Tenaga Kerja') : '-';
+                $mappedTrx->status = $reqRec ? $reqRec->status : 'IN APPROVAL';
+            }
+            elseif($data->approval->trx_table === 't_loker')
+            {
+                $loker = \DB::table('t_loker')->where('id', $data->approval->trx_id)->first();
+                $mappedTrx->nomor = $loker ? $loker->nomor : ($data->trx->nomor ?? '-');
+                $mappedTrx->tanggal = $data->approval->trx_date ?? date('Y-m-d');
+                $mappedTrx->keterangan = $loker ? ($loker->title ?? 'Lowongan Pekerjaan') : '-';
+                $mappedTrx->status = $loker ? $loker->status : 'PROGRESS';
+            }
             else{
-                $mappedTrx->nomor = $data->trx->nomor;
-                $mappedTrx->tanggal = $data->trx->tanggal;
-                $mappedTrx->jam_mulai = $data->trx->jam_mulai;
-                $mappedTrx->jam_selesai = $data->trx->jam_selesai;
-                $mappedTrx->no_doc = $data->trx->no_doc;
-                $mappedTrx->doc = $data->trx->doc;
-                $mappedTrx->keterangan = $data->trx->keterangan;
-                $mappedTrx->status = $data->trx->status;
-                $mappedTrx->nama_pic = default_users::where('id', $data->trx->pic_id)->value('name');
-                $mappedTrx->interval_min = t_lembur::where('id', $data->approval->trx_id)->value('interval_min');
+                $mappedTrx->nomor = $data->trx->nomor ?? '-';
+                $mappedTrx->tanggal = $data->trx->tanggal ?? date('Y-m-d');
+                $mappedTrx->jam_mulai = $data->trx->jam_mulai ?? null;
+                $mappedTrx->jam_selesai = $data->trx->jam_selesai ?? null;
+                $mappedTrx->no_doc = $data->trx->no_doc ?? null;
+                $mappedTrx->doc = $data->trx->doc ?? null;
+                $mappedTrx->keterangan = $data->trx->keterangan ?? '-';
+                $mappedTrx->status = $data->trx->status ?? '-';
+                $mappedTrx->nama_pic = isset($data->trx->pic_id) ? default_users::where('id', $data->trx->pic_id)->value('name') : null;
+                $mappedTrx->interval_min = \DB::table('t_lembur')->where('id', $data->approval->trx_id)->value('interval_min') ?? 0;
             }
             $data->trx = $mappedTrx;
         }

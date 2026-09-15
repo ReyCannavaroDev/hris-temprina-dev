@@ -333,10 +333,24 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
     {
         \DB::beginTransaction();
         try {
+            $note = $req->note;
+            if (empty($note) && $req->type === 'APPROVED') {
+                $note = "Approved by " . (auth()->user()->name ?? 'User');
+            }
+
+            // Lookup app_id dari trx_id jika frontend mengirimkan trx_id
+            $appRecord = \DB::table('generate_approval')
+                ->where('trx_table', $this->getTable())
+                ->where('trx_id', $req->id)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $app_id = $appRecord ? $appRecord->id : $req->id;
+
             $conf = [
-                "app_id"   => $req->id,
+                "app_id"   => $app_id,
                 "app_type" => $req->type, // APPROVED, REVISED, REJECTED
-                "app_note" => $req->note,
+                "app_note" => $note,
             ];
 
             $app = $this->helper->approvalProgress($conf, true);
@@ -390,6 +404,32 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             \DB::rollback();
             return $this->helper->responseCatch($e);
         }
+    }
+
+    public function custom_detail($req)
+    {
+        $id = $req->id ?? 0;
+        
+        // Find app_id from trx_id (or if $id is already app_id)
+        $app = \DB::table('generate_approval')
+            ->where('trx_table', $this->getTable())
+            ->where('trx_id', $id)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $app_id = $app ? $app->id : $id;
+        $data = $this->helper->approvalDetail($app_id);
+        return $this->helper->customResponse("OK", 200, $data);
+    }
+
+    public function custom_log($req)
+    {
+        $conf = [
+            "trx_id"    => $req->id ?? 0,
+            "trx_table" => $this->getTable(),
+        ];
+        $data = $this->helper->approvalLog($conf);
+        return response($data);
     }
 
     public function custom_approveHC()
