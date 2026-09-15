@@ -35,6 +35,7 @@ let tempKTP = ''
 let tempBPJS = ''
 let tempNPWP = ''
 let tempKK = ''
+let tempPasfoto = ''
 const cvScanModal = reactive({
   open: false,
   fileName: '',
