@@ -110,6 +110,7 @@ const values = reactive({
   file_cv: null,
   file_dokumen: null,
   tanggal: formatDateTime(),
+  status: 'DRAFT',
   is_active: true,
   can_outscope: true,
   direktorat: store.user.data?.direktorat,
@@ -1203,6 +1204,51 @@ async function onSave() {
   isRequesting.value = false
 }
 
+async function posted() {
+  swal.fire({
+    icon: 'question',
+    text: 'Posting data pelamar ini?',
+    showDenyButton: true,
+    confirmButtonText: 'Ya, Posting',
+    denyButtonText: 'Batal'
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        const dataURL = `${store.server.url_backend}/operation${endpointApi}/postData`
+        isRequesting.value = true
+        const res = await fetch(dataURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          },
+          body: JSON.stringify({ id: route.params.id })
+        })
+        if (!res.ok) {
+          const responseJson = await res.json().catch(() => ({}))
+          throw (responseJson.message || "Gagal melakukan posting data")
+        }
+        swal.fire({
+          icon: 'success',
+          text: 'Data pelamar berhasil diposting!',
+          timer: 1500,
+          showConfirmButton: false
+        })
+        values.status = 'POSTED'
+        router.replace(`/${modulPath}?reload=${Date.parse(new Date())}`)
+      } catch (err) {
+        isBadForm.value = true
+        swal.fire({
+          icon: 'error',
+          text: err
+        })
+      } finally {
+        isRequesting.value = false
+      }
+    }
+  })
+}
+
 async function handleCvUpload(file) {
   if (!file) return
 
@@ -1437,6 +1483,7 @@ async function handleCvUpload(file) {
 //  @else----------------------- LANDING
 
 const activeBtn = ref()
+const statusFilter = ref(null)
 const page = ref(1)
 
 async function syncData() {
@@ -1533,24 +1580,33 @@ onBeforeMount(async () => {
   }
 })
 
-function filterShowData(params, noBtn) {
+function filterShowData(statusLabel = null, noBtn = null) {
+  const statusMap = {
+    1: 'DRAFT',
+    2: 'POSTED',
+    3: 'PROSES',
+    4: 'DITERIMA',
+    5: 'DITOLAK'
+  }
 
-  if (activeBtn.value === noBtn) {
+  if (noBtn !== null) {
+    if (activeBtn.value === noBtn) {
+      activeBtn.value = null
+      statusFilter.value = null
+    } else {
+      activeBtn.value = noBtn
+      statusFilter.value = statusLabel ? `upper(this.status)='${statusLabel.toUpperCase()}'` : `upper(this.status)='${statusMap[noBtn]}'`
+    }
+  } else if (statusLabel) {
+    const entry = Object.entries(statusMap).find(([k, v]) => v.toUpperCase() === statusLabel.toUpperCase())
+    activeBtn.value = entry ? Number(entry[0]) : null
+    statusFilter.value = `upper(this.status)='${statusLabel.toUpperCase()}'`
+  } else {
     activeBtn.value = null
-  } else {
-    activeBtn.value = noBtn
+    statusFilter.value = null
   }
 
-  if (activeBtn.value == null) {
-    // clear params filter
-    landing.api.params.where = null
-  } else if (params) {
-    landing.api.params.where = `this.is_active=true`
-  } else {
-    landing.api.params.where = `this.is_active=false`
-  }
-
-  apiTable.value.reload()
+  apiTable.value?.reload()
 }
 
 function uploadFile(file) {
@@ -1601,6 +1657,55 @@ const landing = computed(() => {
   if (!isAccessReady.value) return null
   return {
     actions: [
+      {
+        icon: 'check',
+        title: "Posting",
+        class: 'bg-emerald-600 text-light-100',
+        show: (row) => currentMenu?.can_update && (!row.status || row.status.toUpperCase() === 'DRAFT'),
+        click(row) {
+          swal.fire({
+            icon: 'question',
+            text: `Posting data pelamar ${row.nama_depan || row.nama_pelamar || ''}?`,
+            showDenyButton: true,
+            confirmButtonText: 'Ya, Posting',
+            denyButtonText: 'Batal'
+          }).then(async (result) => {
+            if (result.isConfirmed) {
+              try {
+                const dataURL = `${store.server.url_backend}/operation${endpointApi}/postData`
+                isRequesting.value = true
+                const res = await fetch(dataURL, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'Application/json',
+                    Authorization: `${store.user.token_type} ${store.user.token}`
+                  },
+                  body: JSON.stringify({ id: row.id })
+                })
+                if (!res.ok) {
+                  const resultJson = await res.json().catch(() => ({}))
+                  throw (resultJson.message || "Gagal saat posting data")
+                }
+                swal.fire({
+                  icon: 'success',
+                  text: 'Data pelamar berhasil diposting!',
+                  timer: 1500,
+                  showConfirmButton: false
+                })
+                apiTable.value?.reload()
+              } catch (err) {
+                isBadForm.value = true
+                swal.fire({
+                  icon: 'error',
+                  text: err
+                })
+              } finally {
+                isRequesting.value = false
+              }
+            }
+          })
+        }
+      },
       {
         icon: 'trash',
         class: 'bg-red-600 text-light-100',
@@ -1702,8 +1807,8 @@ const landing = computed(() => {
         m_branch_id: data.branch_id,
         join: true,
         transform: true,
-        searchfield: 'this.ktp_no, this.nomor, this.nama_pelamar'
-        // scopes: 'nonos,respo'
+        searchfield: 'this.ktp_no, this.nomor, this.nama_pelamar',
+        where: statusFilter.value || null
       })),
 
       onsuccess(response) {
@@ -1795,17 +1900,33 @@ const landing = computed(() => {
         cellRenderer: ({ value }) => {
           if (!value) return ''
 
-          const val = value.toLowerCase()
+          const val = value.toUpperCase()
 
-          if (val === 'aktif') {
-            return `<span class="text-green-500 rounded-md text-xs font-medium px-4 py-1 inline-block">Aktif</span>`
+          if (val === 'DRAFT') {
+            return `<span class="bg-gray-100 text-gray-700 border border-gray-300 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">DRAFT</span>`
           }
 
-          if (val === 'non aktif') {
-            return `<span class="text-gray-500 rounded-md text-xs font-medium px-4 py-1 inline-block">Non Aktif</span>`
+          if (val === 'POSTED') {
+            return `<span class="bg-blue-100 text-blue-700 border border-blue-300 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">POSTED</span>`
           }
 
-          return value
+          if (val === 'PROSES') {
+            return `<span class="bg-amber-100 text-amber-700 border border-amber-300 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">PROSES</span>`
+          }
+
+          if (val === 'DITERIMA' || val === 'AKTIF') {
+            return `<span class="bg-green-100 text-green-700 border border-green-300 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">DITERIMA</span>`
+          }
+
+          if (val === 'DITOLAK' || val === 'TIDAK DITERIMA' || val === 'NON AKTIF') {
+            return `<span class="bg-red-100 text-red-700 border border-red-300 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">${val}</span>`
+          }
+
+          if (val === 'BLACKLIST') {
+            return `<span class="bg-dark-900 text-white rounded-md text-xs font-semibold px-2.5 py-1 inline-block">BLACKLIST</span>`
+          }
+
+          return `<span class="bg-gray-100 text-gray-700 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">${value}</span>`
         }
       },
     ]

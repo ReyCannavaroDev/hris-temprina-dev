@@ -5,9 +5,15 @@
     <div class="flex items-center gap-x-4">
       <p>Filter Status :</p>
       <div class="flex gap-x-2">
-        <button @click="filterShowData('DRAFT',1)" :class="activeBtn === 1?'bg-red-600 text-white hover:bg-red-400':'border border-red-600 text-red-600 bg-white  hover:bg-red-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">DRAFT</button>
+        <button @click="filterShowData('DRAFT',1)" :class="activeBtn === 1?'bg-gray-600 text-white hover:bg-gray-500':'border border-gray-400 text-gray-700 bg-white hover:bg-gray-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2.5 text-xs font-semibold">DRAFT</button>
         <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
-        <button @click="filterShowData('POSTED',2)" :class="activeBtn === 2?'bg-green-600 text-white hover:bg-green-400':'border border-green-600 text-green-600 bg-white  hover:bg-green-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">POSTED</button>
+        <button @click="filterShowData('POSTED',2)" :class="activeBtn === 2?'bg-blue-600 text-white hover:bg-blue-400':'border border-blue-600 text-blue-600 bg-white hover:bg-blue-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2.5 text-xs font-semibold">POSTED</button>
+        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
+        <button @click="filterShowData('PROSES',3)" :class="activeBtn === 3?'bg-amber-600 text-white hover:bg-amber-400':'border border-amber-600 text-amber-600 bg-white hover:bg-amber-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2.5 text-xs font-semibold">PROSES</button>
+        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
+        <button @click="filterShowData('DITERIMA',4)" :class="activeBtn === 4?'bg-green-600 text-white hover:bg-green-400':'border border-green-600 text-green-600 bg-white hover:bg-green-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2.5 text-xs font-semibold">DITERIMA</button>
+        <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
+        <button @click="filterShowData('DITOLAK',5)" :class="activeBtn === 5?'bg-red-600 text-white hover:bg-red-400':'border border-red-600 text-red-600 bg-white hover:bg-red-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2.5 text-xs font-semibold">DITOLAK</button>
       </div>
     </div>
     <div class="flex gap-2">
@@ -1785,6 +1791,15 @@
         <button @click="onBack" v-show="!isProfile" class="bg-[#EF4444] hover:bg-[#ed3232] text-white px-[36.5px] py-[12px] rounded-[6px] ">
             Batal
           </button>
+        <button
+          v-if="isRead && (!values.status || values.status.toUpperCase() === 'DRAFT') && (currentMenu?.can_update)"
+          @click="posted"
+          type="button"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-[36.5px] py-[12px] rounded-[6px] font-semibold flex items-center space-x-2"
+        >
+          <icon fa="check" />
+          <span>Posting</span>
+        </button>
         <button
   v-show="(actionText || isProfile) && (currentMenu?.can_create || currentMenu?.can_update)"
   @click="onSave"

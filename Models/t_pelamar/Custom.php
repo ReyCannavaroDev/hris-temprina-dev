@@ -147,7 +147,33 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
         $loker_id = request("t_loker_id") ?? null;
         return $model->when($loker_id, function ($q) use ($loker_id) {
             $q->where("t_pelamar.t_loker_id", $loker_id);
+        })->where(function($q) {
+            $q->whereRaw("upper(coalesce(t_pelamar.status, '')) != 'DRAFT'")
+              ->whereRaw("upper(coalesce(t_pelamar.status, '')) != 'DITOLAK'")
+              ->whereRaw("upper(coalesce(t_pelamar.status, '')) != 'TIDAK DITERIMA'");
         });
+    }
+
+    public function custom_postData($req)
+    {
+        $id = $req->id ?? request('id');
+        $data = $this->find($id);
+        if (!$data) {
+            return response()->json(['message' => 'Data pelamar tidak ditemukan.'], 404);
+        }
+
+        $data->update([
+            'status' => 'POSTED'
+        ]);
+
+        return response()->json([
+            'message' => 'Data pelamar berhasil diposting.'
+        ]);
+    }
+
+    public function custom_posted($req)
+    {
+        return $this->custom_postData($req);
     }
 
     public $createAdditionalData = ["creator_id" => "auth:id"];

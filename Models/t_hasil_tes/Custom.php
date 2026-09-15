@@ -151,6 +151,15 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         ];
     }
 
+    public function createAfter($model, $arrayData, $metaData, $id = null)
+    {
+        if (!empty($arrayData['t_pelamar_id'])) {
+            \DB::table('t_pelamar')
+                ->where('id', $arrayData['t_pelamar_id'])
+                ->update(['status' => 'PROSES']);
+        }
+    }
+
     public function updateBefore($model, $arrayData, $metaData, $id = null)
     {
         $this->prepareDetailRequest($id);
@@ -210,6 +219,11 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             $data->update([
                 "status" => "PROSES",
             ]);
+            if ($data->t_pelamar_id) {
+                \DB::table('t_pelamar')
+                    ->where('id', $data->t_pelamar_id)
+                    ->update(['status' => 'PROSES']);
+            }
         }
 
         return $this->helper->customResponse("Permintaan approval hasil tes berhasil dikirim");
@@ -234,6 +248,13 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                         "status" => $finalStatus
                     ]);
 
+                    if ($data->t_pelamar_id) {
+                        $pelamarStatus = ($finalStatus === 'DITERIMA') ? 'DITERIMA' : 'DITOLAK';
+                        \DB::table('t_pelamar')
+                            ->where('id', $data->t_pelamar_id)
+                            ->update(['status' => $pelamarStatus]);
+                    }
+
                     // JIKA DITERIMA: Auto-sync ke Master Karyawan & trigger status loker dinamis
                     if ($finalStatus === 'DITERIMA') {
                         $this->syncPelamarToKaryawan($data);
@@ -243,6 +264,11 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                     $data->update([
                         "status" => "PROSES",
                     ]);
+                    if ($data->t_pelamar_id) {
+                        \DB::table('t_pelamar')
+                            ->where('id', $data->t_pelamar_id)
+                            ->update(['status' => 'PROSES']);
+                    }
                 }
             }
 
