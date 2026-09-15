@@ -69,12 +69,55 @@
         :check="false"
         @update:valueFull="obj => onSelectFptk(obj)"
         :columns="[
-          { headerName: 'No', valueGetter: (params) => params.node.rowIndex + 1, width: 60 },
-          { headerName: 'No. FPTK', field: 'nomor', width: 180 },
-          { headerName: 'Divisi', field: 'm_divisi.name', width: 160 },
-          { headerName: 'Posisi', field: 'm_posisi.name', width: 160 },
-          { headerName: 'Jml Kebutuhan', field: 'jumlah_kebutuhan', width: 120 },
-          { headerName: 'Status', field: 'status', width: 100 }
+          {
+            headerName: 'No',
+            valueGetter: (params) => params.node.rowIndex + 1,
+            width: 60,
+            sortable: false,
+            resizable: false,
+            filter: false,
+            cellClass: ['justify-center', 'bg-gray-50']
+          },
+          {
+            headerName: 'No. FPTK',
+            field: 'nomor',
+            minWidth: 160,
+            flex: 1,
+            sortable: false,
+            resizable: true,
+            filter: 'ColFilter',
+            cellClass: ['border-r', '!border-gray-200', 'justify-center']
+          },
+          {
+            headerName: 'Divisi',
+            field: 'm_divisi.name',
+            minWidth: 150,
+            flex: 1,
+            sortable: false,
+            resizable: true,
+            filter: 'ColFilter',
+            cellClass: ['border-r', '!border-gray-200']
+          },
+          {
+            headerName: 'Posisi',
+            field: 'm_posisi.name',
+            minWidth: 160,
+            flex: 1,
+            sortable: false,
+            resizable: true,
+            filter: 'ColFilter',
+            cellClass: ['border-r', '!border-gray-200']
+          },
+          {
+            headerName: 'Jml Kebutuhan',
+            field: 'jumlah_kebutuhan',
+            minWidth: 120,
+            flex: 1,
+            sortable: false,
+            resizable: true,
+            filter: 'ColFilter',
+            cellClass: ['border-r', '!border-gray-200', 'justify-center']
+          }
         ]"
       />
       
