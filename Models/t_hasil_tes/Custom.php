@@ -449,6 +449,27 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         return $this->helper->customResponse("OK", 200, $data);
     }
 
+    public function custom_saved($model)
+    {
+        if ($model->t_pelamar_id) {
+            if ($model->status === 'DITERIMA') {
+                \DB::table('t_pelamar')
+                    ->where('id', $model->t_pelamar_id)
+                    ->update(['status' => 'DITERIMA']);
+                $this->syncPelamarToKaryawan($model);
+                \App\Models\CustomModels\t_loker::updateStatusLoker($model->t_loker_id);
+            } elseif ($model->status === 'TIDAK DITERIMA' || $model->status === 'DITOLAK') {
+                \DB::table('t_pelamar')
+                    ->where('id', $model->t_pelamar_id)
+                    ->update(['status' => 'DITOLAK']);
+            } elseif ($model->status === 'HALF APPROVED' || $model->status === 'PROSES') {
+                \DB::table('t_pelamar')
+                    ->where('id', $model->t_pelamar_id)
+                    ->update(['status' => 'PROSES']);
+            }
+        }
+    }
+
     public function custom_log($req)
     {
         $conf = [
@@ -521,7 +542,7 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 'trx_name'                 => $app->trx_name,
                 'trx_nomor'                => $app->trx_nomor,
                 'trx_date'                 => $app->trx_date,
-                'form_name'                => $app->form_name,
+
                 'trx_creator_id'           => $app->trx_creator_id,
                 'action_type'              => 'APPROVED',
                 'action_user_id'           => auth()->user()?->id ?? 1,

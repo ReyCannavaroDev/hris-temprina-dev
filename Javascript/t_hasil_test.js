@@ -14,12 +14,14 @@ const modulPath = route.params.modul
 const currentMenu = store.currentMenu
 const apiTable = ref(null)
 const formErrors = ref({})
-const tsId = `ts=` + (Date.parse(new Date()))
+const isApproved = ref(false)
+const isFinish = ref(false)
+const is_approval = route.query.is_approval ? true : false
 
 // ------------------------------ PERSIAPAN
 const endpointApi = '/t_hasil_tes'
 onBeforeMount(() => {
-  document.title = 'Transaksi Hasil Test'
+  document.title = is_approval ? 'Approval Hasil Tes' : 'Transaksi Hasil Test'
 })
 
 function onPrint(id = null) {
@@ -92,6 +94,7 @@ const values = reactive({
   t_loker_id: null,
   t_pelamar_id: null,
   tahapan_id: null,
+  catatan: null,
   is_active: true,
   status: 'PENDING',
   //direktorat: store.user.data?.direktorat,
@@ -120,20 +123,54 @@ onBeforeMount(async () => {
     //  READ DATA
     try {
       const editedId = route.params.id
-      const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
       isRequesting.value = true
 
-      const params = { join: false, transform: true }
-      const fixedParams = new URLSearchParams(params)
-      const res = await fetch(dataURL + '?' + fixedParams, {
-        headers: {
-          'Content-Type': 'Application/json',
-          Authorization: `${store.user.token_type} ${store.user.token}`
-        },
-      })
-      if (!res.ok) throw new Error("Failed when trying to read data")
-      const resultJson = await res.json()
-      initialValues = resultJson.data
+      if (route.query.is_approval) {
+        const dataURLAprv = `${store.server.url_backend}/operation${endpointApi}/detail?id=${editedId}`
+        const apiApp = await fetch(dataURLAprv, {
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          },
+        })
+        if (!apiApp.ok) throw new Error("Failed when trying to read data")
+        const resultJson = await apiApp.json()
+
+        const trxId = resultJson.data?.approval?.trx_id || resultJson.data?.trx?.id || resultJson.data?.id
+        
+        if (!trxId) throw new Error("Failed when trying to read data")
+
+        const apiTrx = await fetch(`${store.server.url_backend}/operation${endpointApi}/${trxId}?join=false&transform=true`, {
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          },
+        })
+        if (!apiTrx.ok) throw new Error("Failed when trying to read data")
+        const resultTrxJson = await apiTrx.json()
+
+        values.interval = resultJson.data.approval
+        values.approval = resultJson.data.approval
+        values.trx = resultJson.data.trx
+        values.datalog = resultJson.data.approval_log
+
+        initialValues = resultTrxJson.data
+        isApproved.value = initialValues.status === 'APPROVED' || initialValues.status === 'DITERIMA' || initialValues.status === 'HALF APPROVED'
+        isFinish.value = resultJson.data.approval?.tahap_saat_ini === resultJson.data.approval?.tahap_total
+      } else {
+        const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
+        const params = { join: false, transform: true }
+        const fixedParams = new URLSearchParams(params)
+        const res = await fetch(dataURL + '?' + fixedParams, {
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          },
+        })
+        if (!res.ok) throw new Error("Failed when trying to read data")
+        const resultJson = await res.json()
+        initialValues = resultJson.data
+      }
       detailArr.value = (initialValues.t_hasil_tes_det || []).map((items) => ({
         ...items,
         nilai_tes: items.nilai_tes !== null && items.nilai_tes !== undefined && items.nilai_tes !== '' ? Number(items.nilai_tes) : null,
@@ -275,6 +312,62 @@ async function onSave() {
     })
   }
   isRequesting.value = false
+}
+
+function onProcess(typePar) {
+  const payload = {
+    id: route.params.id,
+    type: typePar === 'revise' ? 'REVISED' : (typePar === 'reject' ? 'REJECTED' : 'APPROVED'),
+    note: values.catatan || values.note_approval || values.note,
+  };
+
+  swal.fire({
+    icon: 'warning',
+    text: typePar === 'revise' ? 'Revised data?' : (typePar === 'reject' ? 'Rejected data?' : 'Approved data?'),
+    showDenyButton: true,
+  }).then(async (res) => {
+    if (res.isConfirmed) {
+      try {
+        const dataURL = `${store.server.url_backend}/operation${endpointApi}/progress`;
+        isRequesting.value = true;
+        const res = await fetch(dataURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const responseJson = await res.json();
+          if ([400, 422, 500].includes(res.status)) {
+            formErrors.value = responseJson.errors || {};
+            if (res.status === 422) {
+              throw new Error(responseJson.message + " Pastikan anda sudah mengisi semua kolom dengan tanda bintang merah");
+            }
+            throw new Error(responseJson.message || "Failed when trying to post data");
+          } else {
+            throw new Error("Failed when trying to post data");
+          }
+        } else {
+          swal.fire({
+            icon: 'success',
+            text: 'Proses berhasil',
+          });
+          router.replace('/notifikasi');
+        }
+      } catch (err) {
+        isBadForm.value = true;
+        swal.fire({
+          icon: 'error',
+          text: err || 'Failed when trying to post data',
+        });
+      } finally {
+        isRequesting.value = false;
+      }
+    }
+  });
 }
 
 //  @else----------------------- LANDING
@@ -465,7 +558,11 @@ const landing = computed(() => {
         class: 'bg-rose-700 rounded-lg text-white',
         show: row => {
           const status = (row.status || '').toUpperCase()
-          const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1 || ['developer', 'admin', 'danvers'].includes(store.user.data?.username?.toLowerCase())
+          const isHc = store.user?.data?.username?.toLowerCase().includes('hc') || 
+                       store.user?.data?.name?.toLowerCase().includes('hc') || 
+                       store.user?.data?.username?.toLowerCase().includes('turikan') || 
+                       store.user?.data?.username?.toLowerCase().includes('hrd');
+          const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1 || ['developer', 'admin', 'danvers'].includes(store.user.data?.username?.toLowerCase()) || isHc;
           const isStatusValid = status === 'HALF APPROVED'
           return isUserHC && isStatusValid && data.can_update
         },
