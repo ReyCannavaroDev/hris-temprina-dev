@@ -226,9 +226,11 @@
                     params: {
                       scopes:'Name',
                       simplest:true,
-                      transform:false,
+                      transform:true,
                       join:false,
-                      where: `this.is_active = 'true'` + (values.m_branch_id ? ` AND this.m_branch_id = '${values.m_branch_id}'` : '')
+                      where: values.m_branch_id
+                        ? `(this.m_branch_id = '${values.m_branch_id}' OR this.m_branch_id = '0' OR this.m_branch_id IS NULL) AND this.is_active = true`
+                        : `this.is_active = true`
                     }
                 }" valueField="id" displayField="value" :check="false" />
 
