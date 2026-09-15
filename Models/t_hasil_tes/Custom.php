@@ -240,7 +240,12 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 ->first();
 
             $other_app = \DB::table('m_approval')->whereNotNull('m_menu_id')->first();
-            $menu_id = \DB::table('m_menu')->where('url', 'ILIKE', '%hasil_tes%')->orWhere('url', 'ILIKE', '%hasil_test%')->value('id') ?? ($other_app ? $other_app->m_menu_id : 1);
+            $menu = \DB::table('m_menu')
+                ->where('endpoint', 'ILIKE', '%hasil_tes%')
+                ->orWhere('path', 'ILIKE', '%hasil_tes%')
+                ->orWhere('menu', 'ILIKE', '%hasil%tes%')
+                ->first();
+            $menu_id = $menu ? $menu->id : ($other_app ? $other_app->m_menu_id : 1);
 
             if (!$master_app) {
                 $m_approval_id = \DB::table('m_approval')->insertGetId([
