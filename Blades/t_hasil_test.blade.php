@@ -116,7 +116,7 @@
             simplest: true,
             join: true,
             transform: true,
-            where: `upper(this.status) != 'CLOSED'`
+            scopes: 'notclosed'
           }
         }"
         placeholder="Pilih Lowongan Kerja"

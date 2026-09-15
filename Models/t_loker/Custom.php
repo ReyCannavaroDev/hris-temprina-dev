@@ -251,6 +251,11 @@ class t_loker extends \App\Models\BasicModels\t_loker
         }
     }
 
+    public function scopenotclosed($model)
+    {
+        return $model->whereRaw("upper(coalesce(t_loker.status, '')) != 'CLOSED'");
+    }
+
     public function scoperespo($model)
     {
         $user = auth()->user();
