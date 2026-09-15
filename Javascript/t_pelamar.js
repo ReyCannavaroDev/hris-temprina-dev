@@ -1901,32 +1901,19 @@ const landing = computed(() => {
           if (!value) return ''
 
           const val = value.toUpperCase()
+          let color = 'gray'
 
-          if (val === 'DRAFT') {
-            return `<span class="bg-gray-100 text-gray-700 border border-gray-300 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">DRAFT</span>`
+          if (val === 'POSTED' || val === 'DITERIMA' || val === 'AKTIF') {
+            color = 'green'
+          } else if (val === 'PROSES') {
+            color = 'blue'
+          } else if (val === 'DITOLAK' || val === 'TIDAK DITERIMA' || val === 'NON AKTIF') {
+            color = 'red'
+          } else if (val === 'DRAFT') {
+            color = 'gray'
           }
 
-          if (val === 'POSTED') {
-            return `<span class="bg-blue-100 text-blue-700 border border-blue-300 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">POSTED</span>`
-          }
-
-          if (val === 'PROSES') {
-            return `<span class="bg-amber-100 text-amber-700 border border-amber-300 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">PROSES</span>`
-          }
-
-          if (val === 'DITERIMA' || val === 'AKTIF') {
-            return `<span class="bg-green-100 text-green-700 border border-green-300 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">DITERIMA</span>`
-          }
-
-          if (val === 'DITOLAK' || val === 'TIDAK DITERIMA' || val === 'NON AKTIF') {
-            return `<span class="bg-red-100 text-red-700 border border-red-300 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">${val}</span>`
-          }
-
-          if (val === 'BLACKLIST') {
-            return `<span class="bg-dark-900 text-white rounded-md text-xs font-semibold px-2.5 py-1 inline-block">BLACKLIST</span>`
-          }
-
-          return `<span class="bg-gray-100 text-gray-700 rounded-md text-xs font-semibold px-2.5 py-1 inline-block">${value}</span>`
+          return `<span class="text-${color}-500 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">${value}</span>`
         }
       },
     ]
