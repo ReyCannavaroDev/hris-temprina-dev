@@ -232,7 +232,7 @@
                         ? `(this.m_branch_id = '${values.m_branch_id}' OR this.m_branch_id = '0' OR this.m_branch_id IS NULL) AND this.is_active = true`
                         : `this.is_active = true`
                     }
-                }" valueField="id" displayField="value" :check="false" />
+                }" valueField="id" displayField="name_old" :check="false" />
 
           </div>
 

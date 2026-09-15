@@ -37,6 +37,7 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
         $data['value'] = $divisiVal;
         $data['name'] = $divisiVal;
         $data['nama'] = $divisiVal;
+        $data['name_old'] = $divisiVal;
 
         if(app()->request->concat_branch){
             $getData = $this->where('m_divisi.id',$row['id'])
