@@ -151,7 +151,8 @@
             transform: true,
             join: true,
             scopes: 'loker',
-            t_loker_id: values.t_loker_id || 0
+            t_loker_id: values.t_loker_id || 0,
+            current_pelamar_id: values.t_pelamar_id || 0
           }
         }"
         :placeholder="values.t_loker_id ? 'Pilih Pelamar' : 'Pilih Lowongan Kerja Terlebih Dahulu'"

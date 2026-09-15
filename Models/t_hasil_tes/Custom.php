@@ -121,21 +121,17 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         $t_pelamar_id = $arrayData['t_pelamar_id'] ?? null;
         $tahapan_id = $arrayData['tahapan_id'] ?? null;
 
-        // Proteksi Duplikasi: Pelamar tidak boleh diinput ulang untuk loker yang sama
-        if ($t_loker_id && $t_pelamar_id) {
+        // Proteksi Duplikasi: 1 Pelamar hanya boleh memiliki 1 data transaksi hasil tes
+        if (!empty($t_pelamar_id)) {
             $isDuplicate = \DB::table('t_hasil_tes')
-                ->where('t_loker_id', $t_loker_id)
                 ->where('t_pelamar_id', $t_pelamar_id)
-                ->when($tahapan_id, function($q) use ($tahapan_id) {
-                    $q->where('tahapan_id', $tahapan_id);
-                })
                 ->exists();
 
             if ($isDuplicate) {
                 return [
                     "model"  => $model,
                     "data"   => $arrayData,
-                    "errors" => ["Pelamar ini sudah memiliki penilaian pada lowongan kerja tersebut."]
+                    "errors" => ["Pelamar ini sudah memiliki data transaksi hasil tes."]
                 ];
             }
         }

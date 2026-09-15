@@ -145,12 +145,17 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
     public function scopeloker($model)
     {
         $loker_id = request("t_loker_id") ?? null;
+        $current_pelamar_id = request("current_pelamar_id") ?? null;
+
         return $model->when($loker_id, function ($q) use ($loker_id) {
             $q->where("t_pelamar.t_loker_id", $loker_id);
         })->where(function($q) {
-            $q->whereRaw("upper(coalesce(t_pelamar.status, '')) != 'DRAFT'")
-              ->whereRaw("upper(coalesce(t_pelamar.status, '')) != 'DITOLAK'")
-              ->whereRaw("upper(coalesce(t_pelamar.status, '')) != 'TIDAK DITERIMA'");
+            $q->whereRaw("upper(coalesce(t_pelamar.status, '')) = 'POSTED'");
+        })->where(function($q) use ($current_pelamar_id) {
+            $q->whereRaw("NOT EXISTS (SELECT 1 FROM t_hasil_tes WHERE t_hasil_tes.t_pelamar_id = t_pelamar.id)")
+              ->when($current_pelamar_id, function ($sq) use ($current_pelamar_id) {
+                  $sq->orWhere("t_pelamar.id", $current_pelamar_id);
+              });
         });
     }
 
