@@ -141,6 +141,21 @@ onBeforeMount(async () => {
   for (const key in initialValues) {
     values[key] = initialValues[key]
   }
+
+  // Proteksi Edit Lock jika status sudah diproses atau selesai
+  if (isRead) {
+    const currentStatus = (initialValues.status || '').toUpperCase()
+    if (['PROSES', 'HALF APPROVED', 'DITERIMA', 'TIDAK DITERIMA'].includes(currentStatus)) {
+      if (actionText.value === 'Edit') {
+        actionText.value = null
+        swal.fire({
+          icon: 'info',
+          title: 'Dokumen Terkunci',
+          text: `Data hasil tes dengan status ${initialValues.status} sudah terkunci dan tidak dapat diedit.`
+        })
+      }
+    }
+  }
 })
 
 let _id = 0
@@ -255,8 +270,9 @@ function filterShowData(statusLabel = null, noBtn = null) {
   const statusMap = {
     1: 'PENDING',
     2: 'PROSES',
-    3: 'DITERIMA',
-    4: 'TIDAK DITERIMA',
+    3: 'HALF APPROVED',
+    4: 'DITERIMA',
+    5: 'TIDAK DITERIMA',
   }
 
   if (noBtn !== null) {
@@ -276,7 +292,7 @@ function filterShowData(statusLabel = null, noBtn = null) {
   const filters = []
 
   if (statusLabel) {
-    filters.push(`this.status='${statusLabel?.toUpperCase()}'`)
+    filters.push(`upper(this.status)='${statusLabel?.toUpperCase()}'`)
   }
 
   landing.value.api.params.where = filters.length ? filters.join(' AND ') : null
@@ -352,7 +368,7 @@ const landing = computed(() => {
         icon: 'trash',
         class: 'bg-red-600 text-light-100',
         title: "Hapus",
-        show: () => data.can_delete,
+        show: (row) => data.can_delete && ['PENDING', 'DRAFT', 'REVISED'].includes((row.status || '').toUpperCase()),
         // show: () => store.user.data.username==='developer',
         click(row) {
           swal.fire({
@@ -404,7 +420,7 @@ const landing = computed(() => {
         icon: 'edit',
         title: "Edit",
         class: 'bg-blue-600 text-light-100',
-        show: () => data.can_update,
+        show: (row) => data.can_update && ['PENDING', 'DRAFT', 'REVISED'].includes((row.status || '').toUpperCase()),
         // show: (row) => (currentMenu?.can_update)||store.user.data.username==='developer',
         click(row) {
           router.push(`${route.path}/${row.id}?action=Edit&` + tsId)
@@ -423,9 +439,69 @@ const landing = computed(() => {
         icon: 'paper-plane',
         title: "Kirim Approval",
         class: 'bg-indigo-600 text-light-100',
-        show: (row) => ['PENDING', 'DRAFT'].includes(row.status?.toUpperCase()) && data.can_update,
+        show: (row) => ['PENDING', 'DRAFT', 'REVISED'].includes(row.status?.toUpperCase()) && data.can_update,
         click(row) {
           onSendApproval(row.id)
+        }
+      },
+      {
+        icon: 'location-arrow',
+        title: "Approve HC",
+        class: 'bg-rose-700 rounded-lg text-white',
+        show: row => {
+          const status = (row.status || '').toUpperCase()
+          const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1 || ['developer', 'admin', 'danvers'].includes(store.user.data?.username?.toLowerCase())
+          const isStatusValid = status === 'HALF APPROVED'
+          return isUserHC && isStatusValid && data.can_update
+        },
+        async click(row) {
+          swal.fire({
+            icon: 'warning',
+            text: 'Full Approve Hasil Tes Pelamar?',
+            iconColor: '#1469AE',
+            confirmButtonColor: '#1469AE',
+            showDenyButton: true,
+            confirmButtonText: 'Ya, Approve',
+            denyButtonText: 'Batal'
+          }).then(async (res) => {
+            if (res.isConfirmed) {
+              try {
+                const dataURL = `${store.server.url_backend}/operation${endpointApi}/approveHC`
+                isRequesting.value = true
+
+                const res = await fetch(dataURL, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'Application/json',
+                    Authorization: `${store.user.token_type} ${store.user.token}`
+                  },
+                  body: JSON.stringify({ id: row.id })
+                })
+
+                if (!res.ok) {
+                  const responseJson = await res.json().catch(() => ({}))
+                  throw (responseJson.message || "Failed when trying to approve data")
+                }
+
+                const responseJson = await res.json()
+                swal.fire({
+                  icon: 'success',
+                  text: responseJson.message || 'Approval HC berhasil'
+                })
+              } catch (err) {
+                isBadForm.value = true
+                swal.fire({
+                  icon: 'error',
+                  iconColor: '#1469AE',
+                  confirmButtonColor: '#1469AE',
+                  text: err.toString()
+                })
+              } finally {
+                isRequesting.value = false
+                apiTable.value?.reload()
+              }
+            }
+          })
         }
       },
       {
@@ -567,24 +643,18 @@ const landing = computed(() => {
       filter: "ColFilter",
       resizable: true,
       flex: 1,
-      cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+      cellClass: ['border-r', '!border-gray-200', 'justify-center'],
       cellRenderer: (params) => {
-        const status = (params.value || '').toUpperCase()
+        if (!params.value) return ''
+        const val = (params.value || '').toUpperCase()
+        let color = 'gray'
+        if (val === 'PROSES') color = 'blue'
+        else if (val === 'HALF APPROVED') color = 'yellow'
+        else if (val === 'REVISED') color = 'orange'
+        else if (val === 'DITERIMA' || val === 'APPROVED') color = 'green'
+        else if (val === 'TIDAK DITERIMA' || val === 'REJECTED' || val === 'DITOLAK') color = 'red'
 
-        const colorMap = {
-          'PENDING': 'text-gray-700 bg-gray-100',
-          'PROSES': 'text-blue-700 bg-blue-100',
-          'DITERIMA': 'text-green-700 bg-green-100',
-          'TIDAK DITERIMA': 'text-red-700 bg-red-100'
-        }
-
-        const colorClass = colorMap[status] || 'text-gray-700 bg-gray-100'
-
-        return `
-      <span class="px-2 py-1 rounded-md text-xs font-semibold ${colorClass}">
-        ${params.value || '-'}
-      </span>
-    `
+        return `<span class="text-${color}-500 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">${params.value}</span>`
       }
     }
     ]

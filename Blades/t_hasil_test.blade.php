@@ -14,8 +14,9 @@
           <option value="">Pilih Status</option>
           <option value="1">Pending</option>
           <option value="2">Proses</option>
-          <option value="3">Diterima</option>
-          <option value="4">Tidak Diterima</option>
+          <option value="3">Half Approved</option>
+          <option value="4">Diterima</option>
+          <option value="5">Tidak Diterima</option>
         </select>
       </div>
 
@@ -41,8 +42,17 @@
         </button>
 
         <button
-          @click="filterShowData('Diterima',3)"
+          @click="filterShowData('Half Approved',3)"
           :class="activeBtn === 3 
+            ? 'bg-yellow-600 text-white' 
+            : 'border border-yellow-600 text-yellow-600 bg-white hover:bg-yellow-600 hover:text-white'"
+          class="rounded-md text-sm py-1 px-3 transition-all duration-300">
+          Half Approved
+        </button>
+
+        <button
+          @click="filterShowData('Diterima',4)"
+          :class="activeBtn === 4 
             ? 'bg-green-600 text-white' 
             : 'border border-green-600 text-green-600 bg-white hover:bg-green-600 hover:text-white'"
           class="rounded-md text-sm py-1 px-3 transition-all duration-300">
@@ -50,8 +60,8 @@
         </button>
 
         <button
-          @click="filterShowData('Tidak Diterima',4)"
-          :class="activeBtn === 4 
+          @click="filterShowData('Tidak Diterima',5)"
+          :class="activeBtn === 5 
             ? 'bg-red-600 text-white' 
             : 'border border-red-600 text-red-600 bg-white hover:bg-red-600 hover:text-white'"
           class="rounded-md text-sm py-1 px-3 transition-all duration-300">
@@ -208,7 +218,7 @@
   <div class="grid grid-cols-8 md:grid-cols-12 text-[14px] gap-x-[29px] gap-y-[26px] mx-4">
 
     <div class="col-span-8 md:col-span-12">
-      <button :disabled="!actionText" @click="addDetail" type="button" class="bg-[#005FBF] hover:bg-[#0055ab] text-white py-[12px] px-[19.5px] flex items-center justify-center space-x-2 rounded">
+      <button v-if="actionText" @click="addDetail" type="button" class="bg-[#005FBF] hover:bg-[#0055ab] text-white py-[12px] px-[19.5px] flex items-center justify-center space-x-2 rounded">
               <icon fa="plus" /> <span>Add to List</span></button>
       <div class="mx-1 mt-4">
         <table class="w-full overflow-x-auto table-auto border border-[#CACACA]">
@@ -314,7 +324,7 @@
 
               <td class="p-2 border border-[#CACACA]">
                 <div class="flex justify-center">
-                  <button type="button" @click="removeDetail(item)" :disabled="!actionText">
+                  <button type="button" @click="removeDetail(item)" v-if="actionText">
                     <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path id="Vector" d="M14 1H10.5L9.5 0H4.5L3.5 1H0V3H14M1 16C1 16.5304 1.21071 17.0391 1.58579 17.4142C1.96086 17.7893 2.46957 18 3 18H11C11.5304 18 12.0391 17.7893 12.4142 17.4142C12.7893 17.0391 13 16.5304 13 16V4H1V16Z" fill="#F24E1E"/>
                     </svg>

@@ -158,12 +158,55 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
     public function updateBefore($model, $arrayData, $metaData, $id = null)
     {
+        $targetId = $id ?? $model->id ?? null;
+        if ($targetId) {
+            $existing = \DB::table('t_hasil_tes')->where('id', $targetId)->first();
+            if ($existing) {
+                $st = strtoupper($existing->status ?? '');
+                if (!in_array($st, ['PENDING', 'DRAFT', 'REVISED', ''])) {
+                    return [
+                        "model"  => $model,
+                        "data"   => $arrayData,
+                        "errors" => ["Data hasil tes dengan status {$st} sudah terkunci dan tidak dapat diedit kembali."]
+                    ];
+                }
+            }
+        }
+
         $this->prepareDetailRequest($id);
 
         return [
             "model" => $model,
             "data"  => $arrayData,
         ];
+    }
+
+    public function deleteBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $targetId = $id ?? $model->id ?? null;
+        if ($targetId) {
+            $existing = \DB::table('t_hasil_tes')->where('id', $targetId)->first();
+            if ($existing) {
+                $st = strtoupper($existing->status ?? '');
+                if (in_array($st, ['HALF APPROVED', 'DITERIMA'])) {
+                    throw new \Exception("Data hasil tes dengan status {$st} sudah diproses dan tidak dapat dihapus.");
+                }
+
+                // Kembalikan status pelamar menjadi POSTED
+                if (!empty($existing->t_pelamar_id)) {
+                    \DB::table('t_pelamar')
+                        ->where('id', $existing->t_pelamar_id)
+                        ->update(['status' => 'POSTED']);
+                }
+            }
+
+            // Hapus tiket approval jika ada
+            $app = \DB::table('generate_approval')->where('trx_table', $this->getTable())->where('trx_id', $targetId)->first();
+            if ($app) {
+                \DB::table('generate_approval_d')->where('generate_approval_id', $app->id)->delete();
+                \DB::table('generate_approval')->where('id', $app->id)->delete();
+            }
+        }
     }
 
     private function createAppTicket($id, $target_id = null)
@@ -239,22 +282,34 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             if ($app->status) {
                 $data = $this->find($app->trx_id);
                 if ($app->finish) {
-                    $finalStatus = ($req->type === 'APPROVED') ? 'DITERIMA' : 'TIDAK DITERIMA';
-                    $data->update([
-                        "status" => $finalStatus
-                    ]);
-
-                    if ($data->t_pelamar_id) {
-                        $pelamarStatus = ($finalStatus === 'DITERIMA') ? 'DITERIMA' : 'DITOLAK';
-                        \DB::table('t_pelamar')
-                            ->where('id', $data->t_pelamar_id)
-                            ->update(['status' => $pelamarStatus]);
-                    }
-
-                    // JIKA DITERIMA: Auto-sync ke Master Karyawan & trigger status loker dinamis
-                    if ($finalStatus === 'DITERIMA') {
-                        $this->syncPelamarToKaryawan($data);
-                        \App\Models\CustomModels\t_loker::updateStatusLoker($data->t_loker_id);
+                    if ($req->type === 'APPROVED') {
+                        // Persetujuan Tahap 1 oleh User / Manager Pemohon FPTK -> status HALF APPROVED
+                        $data->update([
+                            "status" => "HALF APPROVED"
+                        ]);
+                        if ($data->t_pelamar_id) {
+                            \DB::table('t_pelamar')
+                                ->where('id', $data->t_pelamar_id)
+                                ->update(['status' => 'PROSES']);
+                        }
+                    } elseif ($req->type === 'REJECTED') {
+                        $data->update([
+                            "status" => "TIDAK DITERIMA"
+                        ]);
+                        if ($data->t_pelamar_id) {
+                            \DB::table('t_pelamar')
+                                ->where('id', $data->t_pelamar_id)
+                                ->update(['status' => 'DITOLAK']);
+                        }
+                    } elseif ($req->type === 'REVISED') {
+                        $data->update([
+                            "status" => "REVISED"
+                        ]);
+                        if ($data->t_pelamar_id) {
+                            \DB::table('t_pelamar')
+                                ->where('id', $data->t_pelamar_id)
+                                ->update(['status' => 'PROSES']);
+                        }
                     }
                 } else {
                     $data->update([
@@ -273,6 +328,76 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         } catch (\Exception $e) {
             \DB::rollback();
             return $this->helper->responseCatch($e);
+        }
+    }
+
+    public function custom_approveHC()
+    {
+        $req = app()->request;
+
+        try {
+            \DB::beginTransaction();
+
+            $data = $this->find($req->id);
+
+            if (!$data) {
+                return $this->helper->customResponse("Data tidak ditemukan", 404);
+            }
+
+            // Update status menjadi DITERIMA (Final Approval oleh Head of HC)
+            $data->update([
+                'status' => 'DITERIMA'
+            ]);
+
+            if ($data->t_pelamar_id) {
+                \DB::table('t_pelamar')
+                    ->where('id', $data->t_pelamar_id)
+                    ->update(['status' => 'DITERIMA']);
+            }
+
+            // Auto-sync pelamar ke Master Karyawan & trigger update kuota loker dinamis
+            $this->syncPelamarToKaryawan($data);
+            \App\Models\CustomModels\t_loker::updateStatusLoker($data->t_loker_id);
+
+            $this->logHc($data->id);
+
+            \DB::commit();
+            return $this->helper->customResponse("Approval HC berhasil. Data pelamar resmi diterima dan disinkronkan ke Master Karyawan.", 200);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+
+            \Log::error("Error Approve HC Hasil Tes: " . $e->getMessage());
+
+            return $this->helper->customResponse(
+                "Terjadi kesalahan sistem: " . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    public function logHc($trxId)
+    {
+        $prevLog = \App\Models\BasicModels\generate_approval_log::where('trx_id', $trxId)->where('action_type', 'HALF APPROVED');
+        if ($prevLog->exists()) {
+            $prev = $prevLog->first();
+            \App\Models\BasicModels\generate_approval_log::create([
+                'nomor'                    => $prev->nomor,
+                'generate_approval_id'     => $prev->id,
+                'generate_approval_det_id' => null,
+                'trx_id'                   => $prev->trx_id,
+                'trx_table'                => $prev->trx_table,
+                'trx_name'                 => $prev->trx_name,
+                'trx_nomor'                => $prev->trx_nomor,
+                'trx_date'                 => $prev->trx_date,
+                'form_name'                => $prev->form_name,
+                'trx_creator_id'           => $prev->trx_creator_id,
+                'action_type'              => 'APPROVED',
+                'action_user_id'           => auth()->user()?->id ?? 1,
+                'creator_id'               => auth()->user()?->id ?? 1,
+                'action_at'                => Carbon::now(),
+                'action_note'              => 'DIKETAHUI & DISETUJUI OLEH HEAD OF HC'
+            ]);
         }
     }
 
