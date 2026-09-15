@@ -295,7 +295,7 @@ onBeforeMount(async () => {
         assignDetails('t_pelamar_det_pk', detailPengalaman, { value: _idPk })
         assignDetails('t_pelamar_det_kel', detailKeluarga, { value: _idKel })
 
-        inDetailArr.value = initialValues.t_pelamar_det_dokumen.map((jabatan) => {
+        inDetailArr.value = (initialValues.t_pelamar_det_dokumen || []).map((jabatan) => {
           return {
             ...jabatan
           }
@@ -307,6 +307,12 @@ onBeforeMount(async () => {
         if (primaryIndex > 0) {
           const primaryItem = inDetailArr.value.splice(primaryIndex, 1)[0]
           inDetailArr.value.unshift(primaryItem)
+        }
+
+        if (initialValues.status && initialValues.status.toUpperCase() !== 'DRAFT') {
+          if (actionText.value === 'Edit') {
+            actionText.value = null
+          }
         }
 
         // if (initialValues['tipe_jam_kerja.value'] == 'OFFICE') getJadwalKerjaOffice()
@@ -998,7 +1004,15 @@ function onReset() {
 }
 
 async function onSave() {
-  const detail_filter = inDetailArr.value
+  if (isRead && values.status && values.status.toUpperCase() !== 'DRAFT') {
+    swal.fire({
+      icon: 'warning',
+      text: 'Data pelamar yang sudah diposting tidak dapat diubah!'
+    })
+    return
+  }
+
+  const detail_filter = inDetailArr.value || []
 
   const requiredFields = [
     { key: 'nama_depan', psn: 'Nama Pelamar wajib diisi' },
@@ -1766,7 +1780,7 @@ const landing = computed(() => {
         title: "Edit",
         class: 'bg-blue-600 text-light-100',
         show: (row) =>
-          currentMenu?.can_update === true,
+          currentMenu?.can_update === true && (!row.status || row.status.toUpperCase() === 'DRAFT'),
         click(row) {
           router.push(`${route.path}/${row.id}?action=Edit&` + tsId)
         }

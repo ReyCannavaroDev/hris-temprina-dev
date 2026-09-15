@@ -1800,7 +1800,7 @@
           Posting
         </button>
         <button
-  v-show="(actionText || isProfile) && (currentMenu?.can_create || currentMenu?.can_update)"
+  v-show="(actionText || isProfile) && (currentMenu?.can_create || currentMenu?.can_update) && (!isRead || !values.status || values.status.toUpperCase() === 'DRAFT')"
   @click="onSave"
   class="bg-[#10B981] hover:bg-[#0ea774] text-white px-[36.5px] py-[12px] rounded-[6px]"
 >

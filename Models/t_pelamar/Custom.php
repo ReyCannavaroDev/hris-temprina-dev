@@ -192,6 +192,21 @@ class t_pelamar extends \App\Models\BasicModels\t_pelamar
         ];
     }
 
+    public function updateBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $existing = $this->find($id);
+        if ($existing && strtoupper($existing->status ?? 'DRAFT') !== 'DRAFT') {
+            return [
+                "errors" => ["Data pelamar yang sudah diposting tidak dapat diedit."]
+            ];
+        }
+
+        return [
+            "model" => $model,
+            "data" => $arrayData,
+        ];
+    }
+
     public function custom_destroy($req)
     {
         \DB::beginTransaction();
