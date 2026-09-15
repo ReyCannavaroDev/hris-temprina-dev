@@ -226,6 +226,50 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         $trx = $this->find($id);
         if (!$trx) return false;
 
+        $user = auth()->user();
+
+        // AUTO-INJECT MASTER APPROVAL JIKA BELUM ADA DI DATABASE
+        $hasApprovalConfig = \DB::table('m_approval_det as d')
+            ->join('m_approval as a', 'a.id', '=', 'd.m_approval_id')
+            ->where('a.name', 'APPROVAL HASIL TES PELAMAR')
+            ->exists();
+
+        if (!$hasApprovalConfig) {
+            $master_app = \DB::table('m_approval')
+                ->where('name', 'APPROVAL HASIL TES PELAMAR')
+                ->first();
+
+            $other_app = \DB::table('m_approval')->whereNotNull('m_menu_id')->first();
+            $menu_id = \DB::table('m_menu')->where('url', 'ILIKE', '%hasil_tes%')->orWhere('url', 'ILIKE', '%hasil_test%')->value('id') ?? ($other_app ? $other_app->m_menu_id : 1);
+
+            if (!$master_app) {
+                $m_approval_id = \DB::table('m_approval')->insertGetId([
+                    'm_comp_id'  => $user->m_comp_id ?? 1,
+                    'm_dir_id'   => $user->m_dir_id ?? 1,
+                    'm_menu_id'  => $menu_id,
+                    'name'       => 'APPROVAL HASIL TES PELAMAR',
+                    'is_active'  => 1,
+                    'creator_id' => $user->id ?? 1,
+                    'created_at' => \Carbon\Carbon::now(),
+                ]);
+            } else {
+                $m_approval_id = $master_app->id;
+            }
+
+            $hasDet = \DB::table('m_approval_det')->where('m_approval_id', $m_approval_id)->exists();
+            if (!$hasDet) {
+                \DB::table('m_approval_det')->insert([
+                    'm_approval_id' => $m_approval_id,
+                    'm_role_id'     => 1,
+                    'level'         => 1,
+                    'type'          => 'MENYETUJUI',
+                    'name'          => 'USER APPROVAL',
+                    'creator_id'    => $user->id ?? 1,
+                    'created_at'    => \Carbon\Carbon::now(),
+                ]);
+            }
+        }
+
         // Cari pemohon FPTK dari loker terkait
         $loker = \DB::table('t_loker')->where('id', $trx->t_loker_id)->first();
         $targetUserId = null;
@@ -390,25 +434,28 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
     public function logHc($trxId)
     {
-        $prevLog = \App\Models\BasicModels\generate_approval_log::where('trx_id', $trxId)->where('action_type', 'HALF APPROVED');
-        if ($prevLog->exists()) {
-            $prev = $prevLog->first();
-            \App\Models\BasicModels\generate_approval_log::create([
-                'nomor'                    => $prev->nomor,
-                'generate_approval_id'     => $prev->id,
+        $app = \DB::table('generate_approval')
+            ->where('trx_id', $trxId)
+            ->where('trx_table', $this->getTable())
+            ->first();
+
+        if ($app) {
+            \DB::table('generate_approval_log')->insert([
+                'nomor'                    => $app->nomor,
+                'generate_approval_id'     => $app->id,
                 'generate_approval_det_id' => null,
-                'trx_id'                   => $prev->trx_id,
-                'trx_table'                => $prev->trx_table,
-                'trx_name'                 => $prev->trx_name,
-                'trx_nomor'                => $prev->trx_nomor,
-                'trx_date'                 => $prev->trx_date,
-                'form_name'                => $prev->form_name,
-                'trx_creator_id'           => $prev->trx_creator_id,
+                'trx_id'                   => $app->trx_id,
+                'trx_table'                => $app->trx_table,
+                'trx_name'                 => $app->trx_name,
+                'trx_nomor'                => $app->trx_nomor,
+                'trx_date'                 => $app->trx_date,
+                'form_name'                => $app->form_name,
+                'trx_creator_id'           => $app->trx_creator_id,
                 'action_type'              => 'APPROVED',
                 'action_user_id'           => auth()->user()?->id ?? 1,
                 'creator_id'               => auth()->user()?->id ?? 1,
-                'action_at'                => Carbon::now(),
-                'action_note'              => 'DIKETAHUI & DISETUJUI OLEH HEAD OF HC'
+                'action_at'                => \Carbon\Carbon::now(),
+                'action_note'              => 'DIKETAHUI & DISETUJUI OLEH HC'
             ]);
         }
     }
