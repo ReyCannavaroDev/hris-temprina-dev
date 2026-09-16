@@ -43,6 +43,14 @@ onBeforeMount(() => {
   document.title = 'Master Karyawan'
 })
 
+const onBack = () => {
+  if (route.query.pelamar_id || route.query.hasil_tes_id) {
+    router.back()
+  } else {
+    router.push(`/${modulPath}?reload=${Date.parse(new Date())}`)
+  }
+}
+
 //  @if( $id )------------------- VALUES FORM ! PENTING JANGAN DIHAPUS
 
 const setStandartGaji = async () => {
@@ -194,6 +202,51 @@ onBeforeMount(async () => {
 
     await loadPosisiLevel()
 
+    const assignDetails = (key, target, idRef) => {
+      initialValues[key]?.forEach(async (item) => {
+        if (key === 'm_kary_det_org' || key === 'm_kary_det_pres' || key === 'm_kary_det_pel' || key === 'm_kary_det_kel' || key === 'm_kary_det_pend') {
+          const fetchGeneral = async (id) => {
+            if (!id) return { value: '' }
+            const res = await fetch(`${baseURL}/${id}`, { headers })
+            if (!res.ok) throw new Error('Failed when trying to read data')
+            const json = await res.json()
+            return json.data
+          }
+          if (key === 'm_kary_det_kel') {
+            const [kel, pend, jk, pek] = await Promise.all([
+              item.keluarga_id ? fetchGeneral(item.keluarga_id) : { value: '' },
+              item.pend_terakhir_id ? fetchGeneral(item.pend_terakhir_id) : { value: '' },
+              item.jk_id ? fetchGeneral(item.jk_id) : { value: '' },
+              item.pekerjaan_id ? fetchGeneral(item.pekerjaan_id) : { value: '' }
+            ])
+            item.keluarga = kel?.value || ''
+            item.pendidikan = pend?.value || ''
+            item.jk = jk?.value || ''
+            item.pekerjaan = pek?.value || ''
+          } else if (key === 'm_kary_det_org') {
+            const [jenis, kota] = await Promise.all([
+              item.jenis_org_id ? fetchGeneral(item.jenis_org_id) : { value: '' },
+              item.kota_id ? fetchGeneral(item.kota_id) : { value: '' }
+            ])
+            item.jenis = jenis?.value || ''
+            item.kota = kota?.value || ''
+          } else if (key === 'm_kary_det_pres') {
+            const tingkat = item.tingkat_pres_id ? await fetchGeneral(item.tingkat_pres_id) : { value: '' }
+            item.tingkat = tingkat?.value || ''
+          } else if (key === 'm_kary_det_pel') {
+            const kota = item.kota_id ? await fetchGeneral(item.kota_id) : { value: '' }
+            item.kota = kota?.value || ''
+          } else if (key === 'm_kary_det_pend') {
+            const tingkat = item.tingkat_id ? await fetchGeneral(item.tingkat_id) : { value: '' }
+            item.tingkat = tingkat?.value || ''
+            item.is_pend_terakhir = item.is_pend_terakhir ? 1 : 0
+          }
+        }
+        item._id = ++idRef.value
+        target.value.push(item)
+      })
+    }
+
     if (isRead && currentMenu?.can_read) {
       try {
         const editedId = route.params.id
@@ -206,50 +259,6 @@ onBeforeMount(async () => {
         const resultJson = await res.json()
         initialValues = resultJson.data
 
-        const assignDetails = (key, target, idRef) => {
-          initialValues[key]?.forEach(async (item) => {
-            if (key === 'm_kary_det_org' || key === 'm_kary_det_pres' || key === 'm_kary_det_pel' || key === 'm_kary_det_kel' || key === 'm_kary_det_pend') {
-              const fetchGeneral = async (id) => {
-                const res = await fetch(`${baseURL}/${id}`, { headers })
-                if (!res.ok) throw new Error('Failed when trying to read data')
-                const json = await res.json()
-                return json.data
-              }
-              if (key === 'm_kary_det_kel') {
-                const [kel, pend, jk, pek] = await Promise.all([
-                  fetchGeneral(item.keluarga_id),
-                  fetchGeneral(item.pend_terakhir_id),
-                  fetchGeneral(item.jk_id),
-                  fetchGeneral(item.pekerjaan_id)
-                ])
-                item.keluarga = kel.value
-                item.pendidikan = pend.value
-                item.jk = jk.value
-                item.pekerjaan = pek.value
-              } else if (key === 'm_kary_det_org') {
-                const [jenis, kota] = await Promise.all([
-                  fetchGeneral(item.jenis_org_id),
-                  fetchGeneral(item.kota_id)
-                ])
-                item.jenis = jenis.value
-                item.kota = kota.value
-              } else if (key === 'm_kary_det_pres') {
-                const tingkat = await fetchGeneral(item.tingkat_pres_id)
-                item.tingkat = tingkat.value
-              } else if (key === 'm_kary_det_pel') {
-                const kota = await fetchGeneral(item.kota_id)
-                item.kota = kota.value
-              } else if (key === 'm_kary_det_pend') {
-                const tingkat = await fetchGeneral(item.tingkat_id)
-                item.tingkat = tingkat.value
-                item.is_pend_terakhir = item.is_pend_terakhir ? 1 : 0
-              }
-            }
-            item._id = ++idRef.value
-            target.value.push(item)
-          })
-        }
-
         assignDetails('m_kary_d_lokasi', detail_lokasi, { value: 0 })
         assignDetails('m_kary_det_pend', detailPendidikan, { value: _idPend })
         assignDetails('m_kary_det_pel', detailPelatihan, { value: _idPel })
@@ -259,8 +268,8 @@ onBeforeMount(async () => {
         assignDetails('m_kary_det_pk', detailPengalaman, { value: _idPk })
         assignDetails('m_kary_det_kel', detailKeluarga, { value: _idKel })
 
-        inDetailArr.value = initialValues.m_kary_det_jabatan.map((jabatan) => {
-          const subDetails = initialValues.m_kary_det_jobdesc.filter(
+        inDetailArr.value = (initialValues.m_kary_det_jabatan || []).map((jabatan) => {
+          const subDetails = (initialValues.m_kary_det_jobdesc || []).filter(
             (jobdesc) => jobdesc.m_posisi_id === jabatan.m_posisi_id
           )
           return {
@@ -273,7 +282,7 @@ onBeforeMount(async () => {
                 : [
                   {
                     m_posisi_id: jabatan.m_posisi_id,
-                    m_divisi_id: jabatan['m_divisi.name'],
+                    m_divisi_id: jabatan['m_divisi.name'] ?? jabatan.m_divisi_id,
                     jobdesc: '',
                     is_active: true
                   }
@@ -311,6 +320,69 @@ onBeforeMount(async () => {
           allowOutsideClick: false,
           confirmButtonText: 'Kembali'
         }).then(() => router.back())
+      } finally {
+        isRequesting.value = false
+      }
+    } else if (!isRead && (route.query.pelamar_id || route.query.hasil_tes_id)) {
+      try {
+        isRequesting.value = true
+        const prefillURL = `${store.server.url_backend}/operation${endpointApi}/prefillFromPelamar`
+        const params = new URLSearchParams({
+          pelamar_id: route.query.pelamar_id || '',
+          hasil_tes_id: route.query.hasil_tes_id || ''
+        })
+        const res = await fetch(`${prefillURL}?${params}`, { headers })
+        if (res.ok) {
+          const resultJson = await res.json()
+          initialValues = resultJson.data || {}
+
+          assignDetails('m_kary_d_lokasi', detail_lokasi, { value: 0 })
+          assignDetails('m_kary_det_pend', detailPendidikan, { value: _idPend })
+          assignDetails('m_kary_det_pel', detailPelatihan, { value: _idPel })
+          assignDetails('m_kary_det_pres', detailPrestasi, { value: _idPres })
+          assignDetails('m_kary_det_org', detailOrganisasi, { value: _idOrg })
+          assignDetails('m_kary_det_bhs', detailBahasa, { value: _idBhs })
+          assignDetails('m_kary_det_pk', detailPengalaman, { value: _idPk })
+          assignDetails('m_kary_det_kel', detailKeluarga, { value: _idKel })
+
+          if (initialValues.m_kary_det_jabatan?.length > 0) {
+            inDetailArr.value = initialValues.m_kary_det_jabatan.map((jabatan) => {
+              const subDetails = (initialValues.m_kary_det_jobdesc || []).filter(
+                (jobdesc) => jobdesc.m_posisi_id === jabatan.m_posisi_id
+              )
+              return {
+                ...jabatan,
+                m_company_id: jabatan.m_company_id ?? jabatan['m_company.id'] ?? jabatan['m_subcomp.m_company_id'] ?? null,
+                level_name: jabatan.level_name ?? posisiLevelMap.value[jabatan.m_posisi_id] ?? jabatan['m_level_posisi.level_name'] ?? jabatan['lp.level_name'] ?? null,
+                subDetails:
+                  subDetails.length > 0
+                    ? subDetails
+                    : [
+                      {
+                        m_posisi_id: jabatan.m_posisi_id,
+                        m_divisi_id: jabatan['m_divisi.name'] ?? jabatan.m_divisi_id,
+                        jobdesc: '',
+                        is_active: true
+                      }
+                    ]
+              }
+            })
+          }
+
+          if (initialValues.m_divisi_id) {
+            fetchAtasanByDivisi(initialValues.m_divisi_id, null, initialValues.m_posisi_id)
+          }
+
+          swal.fire({
+            icon: 'info',
+            title: 'Data Pelamar Dimuat',
+            text: 'Data profil kandidat pelamar berhasil dimuat ke formulir karyawan baru. Silakan tinjau dan lengkapi data kepegawaian yang masih kosong sebelum menyimpan.',
+            timer: 4000,
+            showConfirmButton: true
+          })
+        }
+      } catch (err) {
+        console.error('Error prefilling from pelamar:', err)
       } finally {
         isRequesting.value = false
       }

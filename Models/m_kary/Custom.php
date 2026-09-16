@@ -111,6 +111,22 @@ class m_kary extends \App\Models\BasicModels\m_kary
         $karyId = $id ?? $model->id ?? null;
         $this->syncKaryawanJabatan($karyId);
 
+        $refId = $model->ref_id ?? $arrayData['ref_id'] ?? null;
+        if ($refId) {
+            try {
+                \DB::table('t_pelamar')->where('id', $refId)->update(['status' => 'DITERIMA']);
+                $hasilTesList = \DB::table('t_hasil_tes')->where('t_pelamar_id', $refId)->get();
+                foreach ($hasilTesList as $ht) {
+                    \DB::table('t_hasil_tes')->where('id', $ht->id)->update(['status' => 'DITERIMA']);
+                    if (!empty($ht->t_loker_id)) {
+                        \App\Models\CustomModels\t_loker::updateStatusLoker($ht->t_loker_id);
+                    }
+                }
+            } catch (\Throwable $e) {
+                \Log::error("Error sync status pelamar/hasil_tes in createAfter: " . $e->getMessage());
+            }
+        }
+
         return [
             "model" => $model,
             "data" => $arrayData,
@@ -596,6 +612,226 @@ class m_kary extends \App\Models\BasicModels\m_kary
             return response()->json([
                 "errors" => $e->getMessage(),
             ]);
+        }
+    }
+
+    public function custom_prefillFromPelamar($request)
+    {
+        try {
+            $pelamarId = $request->pelamar_id ?? $request->id ?? null;
+            $hasilTesId = $request->hasil_tes_id ?? null;
+
+            if ($hasilTesId && !$pelamarId) {
+                $hasil = \DB::table('t_hasil_tes')->where('id', $hasilTesId)->first();
+                if ($hasil) {
+                    $pelamarId = $hasil->t_pelamar_id;
+                }
+            }
+
+            if (!$pelamarId) {
+                return response()->json(['error' => 'Pelamar ID tidak ditemukan.'], 404);
+            }
+
+            $pelamar = \App\Models\BasicModels\t_pelamar::find($pelamarId);
+            if (!$pelamar) {
+                return response()->json(['error' => 'Data pelamar tidak ditemukan.'], 404);
+            }
+
+            $lokerId = $pelamar->t_loker_id;
+            if (!$lokerId && $hasilTesId) {
+                $hasil = \DB::table('t_hasil_tes')->where('id', $hasilTesId)->first();
+                $lokerId = $hasil->t_loker_id ?? null;
+            }
+
+            $loker = $lokerId ? \App\Models\BasicModels\t_loker::find($lokerId) : null;
+
+            $kode = $this->helper->generateNomor("KODE KARYAWAN");
+
+            $posisiName = '';
+            if ($loker && $loker->m_posisi_id) {
+                $posisi = \DB::table('m_posisi')->where('id', $loker->m_posisi_id)->first();
+                $posisiName = $posisi ? $posisi->name : '';
+            }
+
+            $pPend = \DB::table('t_pelamar_det_pend')->where('t_pelamar_id', $pelamar->id)->get();
+            $pPel  = \DB::table('t_pelamar_det_pel')->where('t_pelamar_id', $pelamar->id)->get();
+            $pOrg  = \DB::table('t_pelamar_det_org')->where('t_pelamar_id', $pelamar->id)->get();
+            $pPk   = \DB::table('t_pelamar_det_pk')->where('t_pelamar_id', $pelamar->id)->get();
+            $pPres = \DB::table('t_pelamar_det_pres')->where('t_pelamar_id', $pelamar->id)->get();
+            $pBhs  = \DB::table('t_pelamar_det_bhs')->where('t_pelamar_id', $pelamar->id)->get();
+            $pKartu = \DB::table('t_pelamar_det_kartu')->where('t_pelamar_id', $pelamar->id)->get();
+
+            $detailPend = [];
+            foreach ($pPend as $row) {
+                $detailPend[] = [
+                    'tingkat_id'       => $row->tingkat_id ?? null,
+                    'nama_sekolah'     => $row->nama_sekolah ?? null,
+                    'thn_masuk'        => $row->tahun_masuk ?? null,
+                    'thn_lulus'        => $row->tahun_lulus ?? null,
+                    'tahun_masuk'      => $row->tahun_masuk ?? null,
+                    'tahun_lulus'      => $row->tahun_lulus ?? null,
+                    'kota_id'          => $row->kota_id ?? null,
+                    'nilai'            => $row->nilai ?? null,
+                    'jurusan'          => $row->jurusan ?? null,
+                    'is_pend_terakhir' => $row->is_pend_terakhir ? 1 : 0,
+                    'ijazah_no'        => $row->ijazah_no ?? null,
+                    'ijazah_foto'      => $row->ijazah_foto ?? null,
+                ];
+            }
+
+            $detailPel = [];
+            foreach ($pPel as $row) {
+                $detailPel[] = [
+                    'nama_pel'   => $row->nama_pel ?? null,
+                    'tahun'      => $row->tahun ?? null,
+                    'nama_lem'   => $row->nama_lem ?? null,
+                    'kota_id'    => $row->kota_id ?? null,
+                ];
+            }
+
+            $detailOrg = [];
+            foreach ($pOrg as $row) {
+                $detailOrg[] = [
+                    'nama'         => $row->nama ?? null,
+                    'tahun'        => $row->tahun ?? null,
+                    'jenis_org_id' => $row->jenis_org_id ?? null,
+                    'kota_id'      => $row->kota_id ?? null,
+                    'posisi'       => $row->posisi ?? null,
+                    'desc'         => $row->desc ?? null,
+                ];
+            }
+
+            $detailPk = [];
+            foreach ($pPk as $row) {
+                $detailPk[] = [
+                    'instansi'        => $row->instansi ?? null,
+                    'bidang_usaha'    => $row->bidang_usaha ?? null,
+                    'no_tlp'          => $row->no_tlp ?? null,
+                    'posisi'          => $row->posisi ?? null,
+                    'thn_masuk'       => $row->thn_masuk ?? null,
+                    'thn_keluar'      => $row->thn_keluar ?? null,
+                    'alamat_kantor'   => $row->alamat_kantor ?? null,
+                    'kota_id'         => $row->kota_id ?? null,
+                    'surat_referensi' => $row->surat_referensi ?? null,
+                ];
+            }
+
+            $detailPres = [];
+            foreach ($pPres as $row) {
+                $detailPres[] = [
+                    'nama_pres'       => $row->nama_pres ?? null,
+                    'tahun'           => $row->tahun ?? null,
+                    'tingkat_pres_id' => $row->tingkat_pres_id ?? null,
+                    'desc'            => $row->desc ?? null,
+                ];
+            }
+
+            $detailBhs = [];
+            foreach ($pBhs as $row) {
+                $detailBhs[] = [
+                    'bhs_dikuasai'   => $row->bhs_dikuasai ?? null,
+                    'nilai_lisan'    => $row->nilai_lisan ?? null,
+                    'level_lisan'    => $row->level_lisan ?? null,
+                    'nilai_tertulis' => $row->nilai_tertulis ?? null,
+                    'level_tertulis' => $row->level_tertulis ?? null,
+                    'desc'           => $row->desc ?? null,
+                ];
+            }
+
+            $detailKartu = [];
+            foreach ($pKartu as $row) {
+                $detailKartu[] = [
+                    'ktp_no'                  => $row->ktp_no ?? $pelamar->ktp_no,
+                    'ktp_foto'                => $row->ktp_foto ?? null,
+                    'pas_foto'                => $row->pas_foto ?? null,
+                    'kk_no'                   => $row->kk_no ?? null,
+                    'kk_foto'                 => $row->kk_foto ?? null,
+                    'npwp_no'                 => $row->npwp_no ?? null,
+                    'npwp_foto'               => $row->npwp_foto ?? null,
+                    'npwp_tgl_berlaku'        => $row->npwp_tgl_berlaku ?? null,
+                    'bpjs_tipe_id'            => $row->bpjs_tipe_id ?? null,
+                    'bpjs_no'                 => $row->bpjs_no ?? null,
+                    'bpjs_no_kesehatan'       => $row->bpjs_no ?? null,
+                    'bpjs_no_ketenagakerjaan' => null,
+                    'bpjs_foto'               => $row->bpjs_foto ?? null,
+                    'berkas_lain'             => $row->berkas_lain ?? null,
+                    'desc_file'               => $row->desc_file ?? null,
+                ];
+            }
+
+            $jabatanItem = [
+                'm_comp_id'    => $loker->m_comp_id ?? null,
+                'm_company_id' => $loker->m_comp_id ?? null,
+                'm_subcomp_id' => $loker->m_subcomp_id ?? null,
+                'm_branch_id'  => $loker->m_branch_id ?? null,
+                'm_divisi_id'  => $loker->m_divisi_id ?? null,
+                'm_posisi_id'  => $loker->m_posisi_id ?? null,
+                'posisi_name'  => $posisiName,
+                'desc'         => 'Jabatan awal dari seleksi loker: ' . ($loker->nomor ?? ($loker->title ?? '')),
+                'is_primary'   => true,
+                'is_active'    => true,
+                'primary'      => true,
+                'subDetails'   => [
+                    [
+                        'm_posisi_id' => $loker->m_posisi_id ?? null,
+                        'm_divisi_id' => $loker->m_divisi_id ?? null,
+                        'jobdesc'     => '',
+                        'is_active'   => true
+                    ]
+                ]
+            ];
+
+            $prefill = [
+                'ref_id'             => $pelamar->id,
+                'kode'               => $kode,
+                'nik'                => $pelamar->ktp_no,
+                'ktp_no'             => $pelamar->ktp_no,
+                'nama_depan'         => $pelamar->nama_depan,
+                'nama_belakang'      => $pelamar->nama_belakang,
+                'nama_lengkap'       => $pelamar->nama_lengkap ?? trim(($pelamar->nama_depan ?? '') . ' ' . ($pelamar->nama_belakang ?? '')),
+                'nama_panggilan'     => $pelamar->nama_panggilan ?? $pelamar->nama_depan,
+                'jk_id'              => $pelamar->jk_id,
+                'tempat_lahir'       => $pelamar->tempat_lahir,
+                'tgl_lahir'          => $pelamar->tgl_lahir,
+                'email'              => $pelamar->email,
+                'no_tlp'             => $pelamar->telp,
+                'telp'               => $pelamar->telp,
+                'ig'                 => $pelamar->ig,
+                'x'                  => $pelamar->x,
+                'facebook'           => $pelamar->facebook,
+                'linkedin'           => $pelamar->linkedin,
+                'tgl_masuk'          => date('Y-m-d'),
+                'is_active'          => true,
+                'can_outscope'       => true,
+                'status_kary_id'     => $loker->status_kary_id ?? null,
+                'm_comp_id'          => $loker->m_comp_id ?? null,
+                'm_company_id'       => $loker->m_comp_id ?? null,
+                'm_subcomp_id'       => $loker->m_subcomp_id ?? null,
+                'm_branch_id'        => $loker->m_branch_id ?? null,
+                'm_divisi_id'        => $loker->m_divisi_id ?? null,
+                'm_posisi_id'        => $loker->m_posisi_id ?? null,
+                'm_kary_det_jabatan' => [$jabatanItem],
+                'm_kary_det_jobdesc' => [],
+                'm_kary_d_lokasi'    => [],
+                'm_kary_det_pend'    => $detailPend,
+                'm_kary_det_pel'     => $detailPel,
+                'm_kary_det_org'     => $detailOrg,
+                'm_kary_det_pk'      => $detailPk,
+                'm_kary_det_pres'    => $detailPres,
+                'm_kary_det_bhs'     => $detailBhs,
+                'm_kary_det_kel'     => [],
+                'm_kary_det_kartu'   => $detailKartu,
+            ];
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data pelamar berhasil dimuat',
+                'data'    => $prefill
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Log::error("Error custom_prefillFromPelamar: " . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 

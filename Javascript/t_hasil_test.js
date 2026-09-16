@@ -621,37 +621,27 @@ const landing = computed(() => {
         class: 'bg-rose-700 rounded-lg text-white',
         title: "Register Karyawan",
         show: (row) => ['DITERIMA', 'HIRED', 'OFFERING / TIDAK'].includes(row.status?.toUpperCase()),
-        // show: () => store.user.data.username==='developer',
         click(row) {
+          const pelamarId = row.t_pelamar_id || row['t_pelamar.id']
+          if (!pelamarId) {
+            swal.fire({
+              icon: 'warning',
+              text: 'Data pelamar tidak ditemukan pada hasil tes ini.'
+            })
+            return
+          }
+
+          const namaPelamar = row.nama_pelamar || row['t_pelamar.nama_depan'] || row['t_pelamar.nama_pelamar'] || 'pelamar ini'
           swal.fire({
-            icon: 'warning',
-            text: 'Register Karyawan?',
-            confirmButtonText: 'Yes',
-            showDenyButton: true,
-          }).then(async (result) => {
+            icon: 'question',
+            title: 'Register Karyawan Baru',
+            text: `Buka formulir pendaftaran karyawan untuk ${namaPelamar}? Data pelamar akan otomatis dimuat ke formulir Master Karyawan.`,
+            confirmButtonText: 'Buka Form Tambah Karyawan',
+            showCancelButton: true,
+            cancelButtonText: 'Batal'
+          }).then((result) => {
             if (result.isConfirmed) {
-              try {
-                const dataURL = `${store.server.url_backend}/operation${endpointApi}/registerKary`
-                isRequesting.value = true
-                const res = await fetch(dataURL, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'Application/json',
-                    Authorization: `${store.user.token_type} ${store.user.token}`
-                  },
-                  body: JSON.stringify({ id: row.id })
-                })
-                if (!res.ok) throw new Error("Failed when trying to post data")
-                apiTable.value.reload()
-                // const resultJson = await res.json()
-              } catch (err) {
-                isBadForm.value = true
-                swal.fire({
-                  icon: 'error',
-                  text: err
-                })
-              }
-              isRequesting.value = false
+              router.push(`/m_karyawan/create?pelamar_id=${pelamarId}&hasil_tes_id=${row.id}&${tsId}`)
             }
           })
         }

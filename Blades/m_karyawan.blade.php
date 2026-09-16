@@ -50,6 +50,12 @@
             </div>
           </div>
           <!-- HEADER END -->
+          <div v-if="$route.query.pelamar_id || $route.query.hasil_tes_id" class="mx-6 mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center gap-2 text-blue-800 text-sm">
+            <Icon fa="info-circle" class="text-blue-600 text-base flex-shrink-0" />
+            <div>
+              <span class="font-semibold">Pendaftaran Karyawan dari Pelamar:</span> Data profil dan penempatan kandidat telah terisi otomatis. Silakan tinjau dan lengkapi data kepegawaian yang masih kosong (seperti jam kerja, atasan langsung, nomor rekening, dll) sebelum menyimpan data.
+            </div>
+          </div>
           <div class="flex px-6 items-stretch w-full text-sm overflow-x-auto">
             <button
               class="block w-full flex items-center justify-center border-b-2 border-gray-100 p-3 hover:text-yellow-500 hover:text-yellow-500 duration-300"
