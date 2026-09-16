@@ -458,6 +458,18 @@ const isAccessReady = ref(false)
 onBeforeMount(async () => {
 
   try {
+    const user = store.user?.data
+    const userType = (user?.user_type || '').toLowerCase()
+    const isHc = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1'
+    const userIsAdmin = userType === 'admin' || userType === 'superadmin' || isHc
+
+    if (userIsAdmin) {
+      data.can_read = true
+      data.can_create = true
+      data.can_update = true
+      data.can_delete = true
+      isAccessReady.value = true
+    }
 
     const respo = localStorage.getItem('respo')
 
@@ -468,7 +480,10 @@ onBeforeMount(async () => {
       data.branch_id = v.m_branch_id
     }
 
-    if (!data.respo_id) return
+    if (!data.respo_id) {
+      if (userIsAdmin) isAccessReady.value = true
+      return
+    }
 
     const params = new URLSearchParams({
       path: route.path,
@@ -489,10 +504,10 @@ onBeforeMount(async () => {
     const r = await res.json()
 
     // masuk ke tampungan dulu
-    data.can_read = r.can_read
-    data.can_create = r.can_create
-    data.can_update = r.can_update
-    data.can_delete = r.can_delete
+    data.can_read = userIsAdmin || r.can_read
+    data.can_create = userIsAdmin || r.can_create
+    data.can_update = userIsAdmin || r.can_update
+    data.can_delete = userIsAdmin || r.can_delete
 
     console.log("DATA TAMPUNGAN", data)
 
@@ -613,7 +628,7 @@ const landing = computed(() => {
         class: 'bg-rose-700 rounded-lg text-white',
         show: row => {
           const status = row.status?.toUpperCase()
-          const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1
+          const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1 || store.user.data?.is_hc === '1' || (store.user.data?.user_type || '').toLowerCase() === 'admin' || (store.user.data?.user_type || '').toLowerCase() === 'superadmin'
           const isStatusValid = status === 'HALF APPROVED'
           return isUserHC && isStatusValid && data.can_update
         },
@@ -766,7 +781,9 @@ const landing = computed(() => {
 
       params: computed(() => {
         const user = store.user?.data
-        const isAdmin = user?.user_type?.toLowerCase() === 'admin' || user?.is_hc || ['developer', 'admin', 'danvers'].includes(user?.username?.toLowerCase())
+        const userType = (user?.user_type || '').toLowerCase()
+        const isHc = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1'
+        const isAdmin = userType === 'admin' || userType === 'superadmin' || isHc
         return {
           paginate: 25,
           m_subcomp_id: isAdmin ? null : (data.subcomp_id || null),

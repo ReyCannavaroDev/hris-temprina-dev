@@ -609,10 +609,9 @@ const landing = reactive({
       title: "Send In Approval",
       class: 'bg-green-700 text-white rounded-lg',
       show: (row) => {
-        const isHc = store.user?.data?.username?.toLowerCase().includes('hc') || 
-                     store.user?.data?.name?.toLowerCase().includes('hc') || 
-                     store.user?.data?.username?.toLowerCase().includes('turikan') || 
-                     store.user?.data?.username?.toLowerCase().includes('hrd');
+        const user = store.user?.data;
+        const userType = (user?.user_type || '').toLowerCase();
+        const isHc = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin';
         return data.can_update && !isHc && ['POSTED'].includes(row.status?.toUpperCase());
       },
       click(row) {
@@ -624,10 +623,9 @@ const landing = reactive({
       title: "Approval",
       class: 'bg-emerald-600 text-white rounded-lg',
       show: (row) => {
-        const isHc = store.user?.data?.username?.toLowerCase().includes('hc') || 
-                     store.user?.data?.name?.toLowerCase().includes('hc') || 
-                     store.user?.data?.username?.toLowerCase().includes('turikan') || 
-                     store.user?.data?.username?.toLowerCase().includes('hrd');
+        const user = store.user?.data;
+        const userType = (user?.user_type || '').toLowerCase();
+        const isHc = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin';
         return data.can_update && isHc && ['IN APPROVAL'].includes(row.status?.toUpperCase());
       },
       click(row) {
@@ -639,10 +637,9 @@ const landing = reactive({
       title: "Approve Langsung (HC)",
       class: 'bg-teal-600 text-white rounded-lg',
       show: (row) => {
-        const isHc = store.user?.data?.username?.toLowerCase().includes('hc') || 
-                     store.user?.data?.name?.toLowerCase().includes('hc') || 
-                     store.user?.data?.username?.toLowerCase().includes('turikan') || 
-                     store.user?.data?.username?.toLowerCase().includes('hrd');
+        const user = store.user?.data;
+        const userType = (user?.user_type || '').toLowerCase();
+        const isHc = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin';
         return data.can_update && isHc && ['DRAFT', 'POSTED'].includes(row.status?.toUpperCase());
       },
       async click(row) {

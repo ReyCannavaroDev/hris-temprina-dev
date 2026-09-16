@@ -49,12 +49,24 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         $user = auth()->user();
         $is_hc = false;
         if ($user) {
-            $is_hc = str_contains(strtolower($user->username), 'hc') || 
-                     str_contains(strtolower($user->name), 'hc') || 
-                     str_contains(strtolower($user->username), 'turikan') || 
-                     str_contains(strtolower($user->name), 'turikan') ||
-                     str_contains(strtolower($user->username), 'hrd') || 
-                     str_contains(strtolower($user->name), 'hrd');
+            $userType = strtolower($user->user_type ?? '');
+            $is_hc = !empty($user->is_hc) || $userType === 'admin' || $userType === 'superadmin';
+            if (!$is_hc && !empty($user->id)) {
+                try {
+                    $user_respo = \DB::table('default_users_respo')->where('default_users_id', $user->id)->where('is_primary', true)->first();
+                    if ($user_respo && !empty($user_respo->m_respo_id)) {
+                        $roles = \DB::table('m_respo_d')->join('m_role', 'm_role.id', '=', 'm_respo_d.m_role_id')->where('m_respo_d.m_respo_id', $user_respo->m_respo_id)->pluck('m_role.name');
+                        foreach ($roles as $rName) {
+                            $rLower = strtolower($rName);
+                            if (str_contains($rLower, 'admin') || str_contains($rLower, 'hc') || str_contains($rLower, 'hrd') || str_contains($rLower, 'super')) {
+                                $is_hc = true;
+                                break;
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
         }
 
         $status = $arrayData['status'] ?? 'DRAFT';
@@ -78,18 +90,27 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         ];
     }
 
+    public function createAfter($model, $arrayData, $metaData, $id=null)
+    {
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
+        ];
+    }
+
     public function updateBefore( $model, $arrayData, $metaData, $id=null )
     {
-        if ($id) {
-            $oldData = $this->find($id);
-            if ($oldData && $oldData->status === 'REVISED') {
-                $arrayData['status'] = 'DRAFT';
-            }
-        }
-        
         return [
             "model"  => $model,
             "data"   => $arrayData,
+        ];
+    }
+
+    public function updateAfter($model, $arrayData, $metaData, $id=null)
+    {
+        return [
+            "model" => $model,
+            "data"  => $arrayData,
         ];
     }
 
@@ -97,55 +118,57 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
     {
         $m_kary = !empty($row['m_kary_id']) ? \DB::table('m_kary')->where('id', $row['m_kary_id'])->first() : null;
         $creator = !empty($row['creator_id']) ? \DB::table('default_users')->where('id', $row['creator_id'])->first() : null;
-        $m_divisi = !empty($row['m_divisi_id']) ? \DB::table('m_divisi')->where('id', $row['m_divisi_id'])->first() : null;
-        $m_posisi = !empty($row['m_posisi_id']) ? \DB::table('m_posisi')->where('id', $row['m_posisi_id'])->first() : null;
+        $posisi = !empty($row['m_posisi_id']) ? \DB::table('m_posisi')->where('id', $row['m_posisi_id'])->first() : null;
+        $divisi = !empty($row['m_divisi_id']) ? \DB::table('m_divisi')->where('id', $row['m_divisi_id'])->first() : null;
+        $branch = !empty($row['m_branch_id']) ? \DB::table('m_branch')->where('id', $row['m_branch_id'])->first() : null;
         $status_kary = !empty($row['status_kary_id']) ? \DB::table('m_general')->where('id', $row['status_kary_id'])->first() : null;
-        $jenis_permintaan = !empty($row['jenis_permintaan_id']) ? \DB::table('m_general')->where('id', $row['jenis_permintaan_id'])->first() : null;
+        $pendidikan = !empty($row['pendidikan_id']) ? \DB::table('m_general')->where('id', $row['pendidikan_id'])->first() : null;
+        $jurusan = !empty($row['jurusan_id']) ? \DB::table('m_general')->where('id', $row['jurusan_id'])->first() : null;
         $prioritas = !empty($row['prioritas_id']) ? \DB::table('m_general')->where('id', $row['prioritas_id'])->first() : null;
         $karyawan_digantikan = !empty($row['karyawan_digantikan_id']) ? \DB::table('m_kary')->where('id', $row['karyawan_digantikan_id'])->first() : null;
 
-        $last_log = \DB::table('generate_approval_log')
-            ->where('trx_table', $this->getTable())
-            ->where('trx_id', $row['id'])
-            ->whereNotNull('action_note')
-            ->orderBy('id', 'desc')
-            ->first();
-
         // Resolve nama divisi:
-        // m_divisi.name adalah bigint FK ke m_general.id (bukan string nama).
-        // Gunakan m_general.value sebagai nama display, fallback ke name_old.
         $divisiDisplay = '-';
-        if ($m_divisi) {
-            if (!empty($m_divisi->name)) {
-                // name adalah bigint ID yang merujuk ke m_general.id
-                $gen = \DB::table('m_general')->where('id', (int)$m_divisi->name)->first();
+        if ($divisi) {
+            if (!empty($divisi->name)) {
+                $gen = \DB::table('m_general')->where('id', (int)$divisi->name)->first();
                 if ($gen && !empty($gen->value)) {
                     $divisiDisplay = $gen->value;
                 }
             }
-            if ($divisiDisplay === '-' && !empty($m_divisi->name_old)) {
-                $divisiDisplay = $m_divisi->name_old;
+            if ($divisiDisplay === '-' && !empty($divisi->name_old)) {
+                $divisiDisplay = $divisi->name_old;
             }
         }
+
+        // Ambil catatan log terakhir (approval_log)
+        $last_log = \DB::table('generate_approval_log')
+            ->where('trx_id', $row['id'])
+            ->where('modul', 'like', '%req_recruitment%')
+            ->orderBy('id', 'desc')
+            ->first();
 
         return array_merge($row, [
             'm_kary' => $m_kary ? (array)$m_kary : null,
             'm_kary.nama_lengkap' => $m_kary?->nama_lengkap ?? $creator?->name ?? '-',
             'creator' => $creator ? (array)$creator : null,
             'creator.name' => $creator?->name ?? '-',
-            // m_divisi — semua field nama menggunakan string yang sudah di-resolve
-            'm_divisi' => $m_divisi ? (array)$m_divisi : null,
-            'm_divisi.name'  => $divisiDisplay,  // override: harus string bukan angka ID
+            'm_divisi' => $divisi ? (array)$divisi : null,
+            'm_divisi.name'  => $divisiDisplay,
             'm_divisi.nama'  => $divisiDisplay,
             'm_divisi.value' => $divisiDisplay,
-            'divisi_display' => $divisiDisplay,  // field alias bersih untuk frontend
-            'm_posisi' => $m_posisi ? (array)$m_posisi : null,
-            'm_posisi.name' => $m_posisi?->name ?? '-',
-            'm_posisi.nama' => $m_posisi?->name ?? '-',
+            'divisi_display' => $divisiDisplay,
+            'm_posisi' => $posisi ? (array)$posisi : null,
+            'm_posisi.name' => $posisi?->name ?? $posisi?->nama ?? '-',
+            'm_posisi.nama' => $posisi?->name ?? $posisi?->nama ?? '-',
+            'm_branch' => $branch ? (array)$branch : null,
+            'm_branch.name' => $branch?->name ?? '-',
             'status_kary' => $status_kary ? (array)$status_kary : null,
             'status_kary.value' => $status_kary?->value ?? '-',
-            'jenis_permintaan' => $jenis_permintaan ? (array)$jenis_permintaan : null,
-            'jenis_permintaan.value' => $jenis_permintaan?->value ?? '-',
+            'pendidikan' => $pendidikan ? (array)$pendidikan : null,
+            'pendidikan.value' => $pendidikan?->value ?? '-',
+            'jurusan' => $jurusan ? (array)$jurusan : null,
+            'jurusan.value' => $jurusan?->value ?? '-',
             'prioritas' => $prioritas ? (array)$prioritas : null,
             'prioritas.value' => $prioritas?->value ?? '-',
             'karyawan_digantikan' => $karyawan_digantikan ? (array)$karyawan_digantikan : null,
@@ -158,14 +181,26 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
     {
         $user = auth()->user();
         if ($user) {
-            $is_hc = str_contains(strtolower($user->username), 'hc') || 
-                     str_contains(strtolower($user->name), 'hc') || 
-                     str_contains(strtolower($user->username), 'turikan') || 
-                     str_contains(strtolower($user->name), 'turikan') ||
-                     str_contains(strtolower($user->username), 'hrd') || 
-                     str_contains(strtolower($user->name), 'hrd');
+            $userType = strtolower($user->user_type ?? '');
+            $is_hc = !empty($user->is_hc) || $userType === 'admin' || $userType === 'superadmin';
+            if (!$is_hc && !empty($user->id)) {
+                try {
+                    $user_respo = \DB::table('default_users_respo')->where('default_users_id', $user->id)->where('is_primary', true)->first();
+                    if ($user_respo && !empty($user_respo->m_respo_id)) {
+                        $roles = \DB::table('m_respo_d')->join('m_role', 'm_role.id', '=', 'm_respo_d.m_role_id')->where('m_respo_d.m_respo_id', $user_respo->m_respo_id)->pluck('m_role.name');
+                        foreach ($roles as $rName) {
+                            $rLower = strtolower($rName);
+                            if (str_contains($rLower, 'admin') || str_contains($rLower, 'hc') || str_contains($rLower, 'hrd') || str_contains($rLower, 'super')) {
+                                $is_hc = true;
+                                break;
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
                      
-            // Jika user adalah HC, bebaskan filter cabang agar bisa melihat semua pengajuan FPTK
+            // Jika user adalah HC / Admin, bebaskan filter cabang agar bisa melihat semua pengajuan FPTK
             if ($is_hc) {
                 return $model;
             }
@@ -263,18 +298,15 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
 
     public function custom_get_hc()
     {
-        // Ambil semua user yang berbau HC atau HRD
+        // Ambil user yang berstatus is_hc atau bertipe admin/HRD
         $users = \DB::table('default_users')
-            ->where('username', 'ILIKE', '%hc%')
-            ->orWhere('name', 'ILIKE', '%hc%')
-            ->orWhere('username', 'ILIKE', '%turikan%') // Hardcode for testing since we know Turikan is HC
-            ->orWhere('name', 'ILIKE', '%turikan%')
+            ->where('is_hc', true)
+            ->orWhereRaw("lower(user_type) in ('admin', 'superadmin')")
+            ->orWhere('username', 'ILIKE', '%hc%')
             ->orWhere('username', 'ILIKE', '%hrd%')
-            ->orWhere('name', 'ILIKE', '%hrd%')
             ->select('m_kary_id', 'name', 'username')
             ->get();
             
-        // Jika tidak ketemu dengan pencarian teks, ambil semua user saja supaya user bisa pilih
         if ($users->isEmpty()) {
             $users = \DB::table('default_users')
                 ->whereNotNull('m_kary_id')

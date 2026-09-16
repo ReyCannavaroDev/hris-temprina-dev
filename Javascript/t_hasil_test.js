@@ -559,11 +559,9 @@ const landing = computed(() => {
         class: 'bg-rose-700 rounded-lg text-white',
         show: row => {
           const status = (row.status || '').toUpperCase()
-          const isHc = store.user?.data?.username?.toLowerCase().includes('hc') || 
-                       store.user?.data?.name?.toLowerCase().includes('hc') || 
-                       store.user?.data?.username?.toLowerCase().includes('turikan') || 
-                       store.user?.data?.username?.toLowerCase().includes('hrd');
-          const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1 || ['developer', 'admin', 'danvers'].includes(store.user.data?.username?.toLowerCase()) || isHc;
+          const user = store.user?.data
+          const userType = (user?.user_type || '').toLowerCase()
+          const isUserHC = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin'
           const isStatusValid = status === 'HALF APPROVED'
           return isUserHC && isStatusValid && data.can_update
         },

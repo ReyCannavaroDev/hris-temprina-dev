@@ -420,6 +420,18 @@ const statusFilter = ref(null)
 let data = reactive({})
 
 onBeforeMount(async () => {
+  const user = store.user?.data
+  const userType = (user?.user_type || '').toLowerCase()
+  const isHc = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1'
+  const isAdmin = userType === 'admin' || userType === 'superadmin' || isHc
+
+  if (isAdmin) {
+    data.can_read = true
+    data.can_create = true
+    data.can_delete = true
+    data.can_update = true
+  }
+
   if (localStorage.getItem('respo')) {
     const respoValues = await JSON.parse(localStorage.getItem('respo'))
     // console.log('ini respo coi', respoValues)
@@ -445,10 +457,10 @@ onBeforeMount(async () => {
       })
       const result = await response.json()
       console.log('x', result)
-      data.can_read = result.can_read
-      data.can_create = result.can_create
-      data.can_delete = result.can_delete
-      data.can_update = result.can_update
+      data.can_read = isAdmin || result.can_read
+      data.can_create = isAdmin || result.can_create
+      data.can_delete = isAdmin || result.can_delete
+      data.can_update = isAdmin || result.can_update
       data.rows = result.data
     } catch (err) {
       console.error(err)
@@ -551,7 +563,7 @@ const landing = reactive({
       class: 'bg-rose-700 rounded-lg text-white',
       show: row => {
         const status = row.status?.toUpperCase()
-        const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1
+        const isUserHC = store.user.data?.is_hc === true || store.user.data?.is_hc === 1 || store.user.data?.is_hc === '1' || (store.user.data?.user_type || '').toLowerCase() === 'admin' || (store.user.data?.user_type || '').toLowerCase() === 'superadmin'
         const isStatusValid = status === 'HALF APPROVED'
         return isUserHC && isStatusValid && data.can_update
       },
@@ -680,7 +692,9 @@ const landing = reactive({
     // },
     params: computed(() => {
       const user = store.user?.data
-      const isAdmin = user?.user_type?.toLowerCase() === 'admin' || user?.is_hc || ['developer', 'admin', 'danvers'].includes(user?.username?.toLowerCase())
+      const userType = (user?.user_type || '').toLowerCase()
+      const isHc = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1'
+      const isAdmin = userType === 'admin' || userType === 'superadmin' || isHc
       return {
         paginate: 25,
         m_subcomp_id: isAdmin ? null : (data.subcomp_id || null),

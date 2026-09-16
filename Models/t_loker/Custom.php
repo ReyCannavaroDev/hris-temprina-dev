@@ -288,11 +288,37 @@ class t_loker extends \App\Models\BasicModels\t_loker
         $user = auth()->user();
         $is_admin = false;
         if ($user) {
-            $is_admin = $user->is_hc ||
-                strtolower($user->user_type ?? '') === 'admin' ||
-                in_array(strtolower($user->username ?? ''), ['developer', 'admin', 'danvers']);
+            $userType = strtolower($user->user_type ?? '');
+            $is_admin = !empty($user->is_hc) ||
+                $userType === 'admin' ||
+                $userType === 'superadmin';
+
+            // Cek role dinamis via relasi respo bila user_type bukan admin
+            if (!$is_admin && !empty($user->id)) {
+                try {
+                    $user_respo = \DB::table('default_users_respo')
+                        ->where('default_users_id', $user->id)
+                        ->where('is_primary', true)
+                        ->first();
+                    if ($user_respo && !empty($user_respo->m_respo_id)) {
+                        $roles = \DB::table('m_respo_d')
+                            ->join('m_role', 'm_role.id', '=', 'm_respo_d.m_role_id')
+                            ->where('m_respo_d.m_respo_id', $user_respo->m_respo_id)
+                            ->pluck('m_role.name');
+                        foreach ($roles as $rName) {
+                            $rLower = strtolower($rName);
+                            if (str_contains($rLower, 'admin') || str_contains($rLower, 'hc') || str_contains($rLower, 'hrd') || str_contains($rLower, 'super')) {
+                                $is_admin = true;
+                                break;
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
         }
 
+        // Jika Administrator / HC, bebaskan seluruh filter cabang/subcomp
         if ($is_admin) {
             return $model;
         }
