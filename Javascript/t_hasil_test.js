@@ -17,6 +17,7 @@ const formErrors = ref({})
 const isApproved = ref(false)
 const isFinish = ref(false)
 const is_approval = route.query.is_approval ? true : false
+const tsId = 'ts=' + Date.now()
 
 // ------------------------------ PERSIAPAN
 const endpointApi = '/t_hasil_tes'
