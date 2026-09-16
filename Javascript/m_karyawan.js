@@ -43,14 +43,6 @@ onBeforeMount(() => {
   document.title = 'Master Karyawan'
 })
 
-const onBack = () => {
-  if (route.query.pelamar_id || route.query.hasil_tes_id) {
-    router.back()
-  } else {
-    router.push(`/${modulPath}?reload=${Date.parse(new Date())}`)
-  }
-}
-
 //  @if( $id )------------------- VALUES FORM ! PENTING JANGAN DIHAPUS
 
 const setStandartGaji = async () => {
@@ -1325,19 +1317,10 @@ const addPengalaman = async () => {
 }
 
 function onBack() {
-  let isChanged = false
-  for (const key in initialValues) {
-    if (values[key] !== initialValues[key]) {
-      isChanged = true
-      break;
-    }
-  }
-
-  if (!isChanged) {
-    router.replace('/' + modulPath)
+  if (route.query.pelamar_id || route.query.hasil_tes_id) {
+    router.back()
     return
   }
-
   router.replace('/' + modulPath)
 }
 
