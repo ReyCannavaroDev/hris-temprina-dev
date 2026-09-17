@@ -93,6 +93,12 @@ const isHC = computed(() => {
   return user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin'
 })
 
+const canShowApprovalActions = computed(() => {
+  if (route.query.is_approval) return true
+  const st = (values.status || '').toUpperCase()
+  return (st === 'PROSES' || st === 'PENDING') && (values.can_approve === true || values.can_approve === 1)
+})
+
 async function onApproveHC(id = null) {
   const targetId = id || route.params.id
   if (!targetId || targetId === 'create') return
@@ -435,53 +441,61 @@ async function onSave() {
 }
 
 function onProcess(typePar) {
+  const targetId = values.active_approval_id || route.params.id;
   const payload = {
-    id: route.params.id,
+    id: targetId,
     type: typePar === 'revise' ? 'REVISED' : (typePar === 'reject' ? 'REJECTED' : 'APPROVED'),
-    note: values.catatan || values.note_approval || values.note,
+    note: values.catatan || values.note_approval || values.note || '',
   };
 
   swal.fire({
     icon: 'warning',
-    text: typePar === 'revise' ? 'Revised data?' : (typePar === 'reject' ? 'Rejected data?' : 'Approved data?'),
-    showDenyButton: true,
+    title: typePar === 'revise' ? 'Revise Hasil Tes?' : (typePar === 'reject' ? 'Reject Hasil Tes?' : 'Approve Hasil Tes?'),
+    text: typePar === 'revise' ? 'Kembalikan data ke HC untuk revisi?' : (typePar === 'reject' ? 'Tolak hasil tes pelamar ini?' : 'Setujui hasil tes ini? Status akan menjadi Half Approved untuk diproses lebih lanjut oleh HC.'),
+    input: typePar !== 'approve' ? 'text' : undefined,
+    inputPlaceholder: typePar !== 'approve' ? 'Masukkan catatan / alasan...' : undefined,
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Proses',
+    cancelButtonText: 'Batal',
   }).then(async (res) => {
     if (res.isConfirmed) {
+      if (typePar !== 'approve' && res.value) {
+        payload.note = res.value;
+      }
       try {
         const dataURL = `${store.server.url_backend}/operation${endpointApi}/progress`;
         isRequesting.value = true;
-        const res = await fetch(dataURL, {
+        const resp = await fetch(dataURL, {
           method: 'POST',
           headers: {
-            'Content-Type': 'Application/json',
+            'Content-Type': 'application/json',
             Authorization: `${store.user.token_type} ${store.user.token}`,
           },
           body: JSON.stringify(payload),
         });
 
-        if (!res.ok) {
-          const responseJson = await res.json();
-          if ([400, 422, 500].includes(res.status)) {
-            formErrors.value = responseJson.errors || {};
-            if (res.status === 422) {
-              throw new Error(responseJson.message + " Pastikan anda sudah mengisi semua kolom dengan tanda bintang merah");
-            }
-            throw new Error(responseJson.message || "Failed when trying to post data");
-          } else {
-            throw new Error("Failed when trying to post data");
-          }
-        } else {
-          swal.fire({
-            icon: 'success',
-            text: 'Proses berhasil',
-          });
-          router.replace('/notifikasi');
+        const responseJson = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          throw new Error(responseJson.message || "Gagal memproses approval");
         }
+
+        swal.fire({
+          icon: 'success',
+          title: 'Berhasil',
+          text: responseJson.message || 'Persetujuan berhasil diproses',
+        }).then(() => {
+          if (route.query.is_approval) {
+            router.replace('/notifikasi');
+          } else {
+            router.replace('/' + modulPath + '?reload=' + Date.now());
+          }
+        });
       } catch (err) {
         isBadForm.value = true;
         swal.fire({
           icon: 'error',
-          text: err || 'Failed when trying to post data',
+          title: 'Gagal',
+          text: err.message || err,
         });
       } finally {
         isRequesting.value = false;
@@ -661,6 +675,15 @@ const landing = computed(() => {
         show: () => data.can_create,
         click(row) {
           router.push(`${route.path}/${row.id}?action=Copy&` + tsId)
+        }
+      },
+      {
+        icon: 'check-circle',
+        title: "Review & Approval",
+        class: 'bg-amber-600 text-white rounded-lg',
+        show: (row) => (row.can_approve === true || row.can_approve === 1) && ['PROSES', 'PENDING'].includes((row.status || '').toUpperCase()),
+        click(row) {
+          router.push(`${route.path}/${row.id}?is_approval=true&${tsId}`)
         }
       },
       {

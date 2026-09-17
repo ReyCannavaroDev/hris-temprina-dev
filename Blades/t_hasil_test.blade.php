@@ -86,6 +86,21 @@
         </div>
       </div>
 
+      <!-- Banner Peninjauan & Persetujuan Pengaju Recruitment -->
+      <div v-if="canShowApprovalActions" class="bg-amber-50 border-l-4 border-amber-500 p-3 mx-4 mt-4 rounded-r shadow-sm">
+        <div class="flex items-center">
+          <icon fa="info-circle" class="text-amber-600 mr-2 text-xl" />
+          <div>
+            <p class="text-sm text-amber-900 font-bold">
+              Menunggu Persetujuan Anda (Pengaju Recruitment / Manager)
+            </p>
+            <p class="text-xs text-amber-700 mt-0.5">
+              Silakan periksa data hasil dan nilai seleksi pelamar di bawah ini. Klik tombol <b>Approve</b>, <b>Reject</b>, atau <b>Revise</b> di bagian bawah untuk memproses persetujuan.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div class="p-4 grid <md:grid-cols-1 grid-cols-2 gap-2">
         <!-- START COLUMN -->
         <div>
@@ -303,18 +318,24 @@
 
       <div class="flex flex-row items-center justify-end space-x-2 p-2">
         <i class="text-gray-500 text-[12px]">Tekan CTRL + S untuk shortcut Save Data</i>
-        <button v-show="route.query.is_approval"
-          class="mx-1 bg-green-500 text-white hover:bg-green-600 rounded-lg py-[8px] px-[24px]"
+        
+        <!-- Tombol Approval untuk Pengaju Recruitment / Manager (Muncul saat is_approval atau can_approve) -->
+        <button v-show="canShowApprovalActions"
+          class="mx-1 bg-green-600 text-white hover:bg-green-700 font-semibold rounded-lg py-[8px] px-[24px] transition-transform duration-300 transform hover:-translate-y-0.5"
           @click="onProcess('approve')">
+          <icon fa="check" class="mr-1" />
           Approve
         </button>
-        <button v-show="route.query.is_approval"
-          class="mx-1 bg-rose-500 text-white hover:bg-rose-600 rounded-lg py-[8px] px-[24px]" @click="onProcess('reject')">
+        <button v-show="canShowApprovalActions"
+          class="mx-1 bg-rose-600 text-white hover:bg-rose-700 font-semibold rounded-lg py-[8px] px-[24px] transition-transform duration-300 transform hover:-translate-y-0.5"
+          @click="onProcess('reject')">
+          <icon fa="times" class="mr-1" />
           Reject
         </button>
-        <button v-show="route.query.is_approval"
-          class="mx-1 bg-amber-500 text-white hover:bg-amber-600 rounded-lg py-[8px] px-[24px]"
+        <button v-show="canShowApprovalActions"
+          class="mx-1 bg-amber-500 text-white hover:bg-amber-600 font-semibold rounded-lg py-[8px] px-[24px] transition-transform duration-300 transform hover:-translate-y-0.5"
           @click="onProcess('revise')">
+          <icon fa="undo" class="mr-1" />
           Revise
         </button>
         <!-- Keputusan Final HC saat status HALF APPROVED -->

@@ -82,6 +82,32 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             }
         }
 
+        // Cek apakah user saat ini adalah approver aktif untuk hasil tes ini
+        $currUser = auth()->user();
+        $currUserId = $currUser ? $currUser->id : null;
+        $canApprove = false;
+        $activeAppId = null;
+
+        if ($currUserId && in_array(strtoupper($row['status'] ?? ''), ['PROSES', 'PENDING'])) {
+            $activeApp = \DB::table('generate_approval as a')
+                ->join('generate_approval_d as d', 'd.id', '=', 'a.next_approve_det_id')
+                ->where('a.trx_table', 't_hasil_tes')
+                ->where('a.trx_id', $row['id'])
+                ->where('a.status', 'PROGRESS')
+                ->where('d.default_users_id', $currUserId)
+                ->where('d.is_done', false)
+                ->select('a.id as approval_id')
+                ->first();
+
+            if ($activeApp) {
+                $canApprove = true;
+                $activeAppId = $activeApp->approval_id;
+            }
+        }
+
+        $data['can_approve'] = $canApprove;
+        $data['active_approval_id'] = $activeAppId;
+
         return array_merge($row, $data);
     }
 
@@ -181,6 +207,16 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
     public function createAfter($model, $arrayData, $metaData, $id = null)
     {
+        $targetId = $id ?? $model->id ?? null;
+        if ($targetId) {
+            // Otomatis buat tiket approval ke pengaju FPTK saat data hasil tes baru disimpan
+            $this->createAppTicket($targetId);
+
+            $this->where('id', $targetId)->update([
+                'status' => 'PROSES'
+            ]);
+        }
+
         if (!empty($arrayData['t_pelamar_id'])) {
             \DB::table('t_pelamar')
                 ->where('id', $arrayData['t_pelamar_id'])
@@ -265,90 +301,191 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         }
     }
 
-    private function createAppTicket($id, $target_id = null)
+    public function createAppTicket($id, $target_id = null)
     {
         $trx = $this->find($id);
         if (!$trx) return false;
 
         $user = auth()->user();
 
-        // AUTO-INJECT MASTER APPROVAL JIKA BELUM ADA DI DATABASE
-        $hasApprovalConfig = \DB::table('m_approval_det as d')
-            ->join('m_approval as a', 'a.id', '=', 'd.m_approval_id')
-            ->where('a.name', 'APPROVAL HASIL TES PELAMAR')
-            ->exists();
-
-        if (!$hasApprovalConfig) {
-            $master_app = \DB::table('m_approval')
-                ->where('name', 'APPROVAL HASIL TES PELAMAR')
-                ->first();
-
-            $other_app = \DB::table('m_approval')->whereNotNull('m_menu_id')->first();
-            $menu = \DB::table('m_menu')
-                ->where('endpoint', 'ILIKE', '%hasil_tes%')
-                ->orWhere('path', 'ILIKE', '%hasil_tes%')
-                ->orWhere('menu', 'ILIKE', '%hasil%tes%')
-                ->first();
-            $menu_id = $menu ? $menu->id : ($other_app ? $other_app->m_menu_id : 1);
-
-            if (!$master_app) {
-                $m_approval_id = \DB::table('m_approval')->insertGetId([
-                    'm_comp_id'  => $user->m_comp_id ?? 1,
-                    'm_dir_id'   => $user->m_dir_id ?? 1,
-                    'm_menu_id'  => $menu_id,
-                    'name'       => 'APPROVAL HASIL TES PELAMAR',
-                    'is_active'  => 1,
-                    'creator_id' => $user->id ?? 1,
-                    'created_at' => \Carbon\Carbon::now(),
-                ]);
-            } else {
-                $m_approval_id = $master_app->id;
-            }
-
-            $hasDet = \DB::table('m_approval_det')->where('m_approval_id', $m_approval_id)->exists();
-            if (!$hasDet) {
-                \DB::table('m_approval_det')->insert([
-                    'm_approval_id' => $m_approval_id,
-                    'm_role_id'     => 1,
-                    'level'         => 1,
-                    'type'          => 'MENYETUJUI',
-                    'name'          => 'USER APPROVAL',
-                    'creator_id'    => $user->id ?? 1,
-                    'created_at'    => \Carbon\Carbon::now(),
-                ]);
-            }
-        }
-
-        // Cari pemohon FPTK dari loker terkait
+        // 1. Cari pemohon FPTK dari loker terkait
         $loker = \DB::table('t_loker')->where('id', $trx->t_loker_id)->first();
         $targetUserId = null;
+
         if ($target_id) {
             $targetUserId = $target_id;
         } elseif ($loker && !empty($loker->t_req_recruitment_id)) {
             $fptk = \DB::table('t_req_recruitment')->where('id', $loker->t_req_recruitment_id)->first();
-            if ($fptk && !empty($fptk->creator_id)) {
-                $targetUserId = $fptk->creator_id;
-            } elseif ($fptk && !empty($fptk->m_kary_id)) {
-                $targetUserId = \DB::table('default_users')->where('m_kary_id', $fptk->m_kary_id)->value('id');
+            if ($fptk) {
+                if (!empty($fptk->creator_id)) {
+                    $targetUserId = $fptk->creator_id;
+                } elseif (!empty($fptk->m_kary_id)) {
+                    $targetUserId = \DB::table('default_users')->where('m_kary_id', $fptk->m_kary_id)->value('id');
+                }
             }
         }
+
         if (!$targetUserId && $loker && !empty($loker->creator_id)) {
             $targetUserId = $loker->creator_id;
         }
 
-        $conf = [
-            "app_name"       => "APPROVAL HASIL TES PELAMAR",
-            "trx_id"         => $trx->id,
-            "trx_table"      => $this->getTable(),
-            "trx_name"       => "Hasil Test Lamaran Kerja",
-            "form_name"      => "t_hasil_test",
-            "trx_nomor"      => $trx->nomor,
-            "trx_date"       => date("Y-m-d"),
-            "trx_creator_id" => $trx->creator_id,
-            "target_id"      => $targetUserId,
-        ];
+        // Fallback: cari user atasan / creator
+        if (!$targetUserId && !empty($trx->creator_id)) {
+            $creatorKary = \DB::table('default_users')->where('id', $trx->creator_id)->value('m_kary_id');
+            if ($creatorKary) {
+                $atasanId = \DB::table('m_kary')->where('id', $creatorKary)->value('atasan_id');
+                if ($atasanId) {
+                    $targetUserId = \DB::table('default_users')->where('m_kary_id', $atasanId)->value('id');
+                }
+            }
+        }
 
-        return $this->helper->approvalCreateTicket($conf);
+        if (!$targetUserId) {
+            $targetUserId = $user ? $user->id : 1;
+        }
+
+        // 2. Cek apakah sudah ada tiket approval aktif untuk transaksi ini
+        $existingApp = \DB::table('generate_approval')
+            ->where('trx_table', $this->getTable())
+            ->where('trx_id', $trx->id)
+            ->first();
+
+        if ($existingApp) {
+            \DB::table('generate_approval')->where('id', $existingApp->id)->update([
+                'status'    => 'PROGRESS',
+                'form_name' => 't_hasil_test',
+                'trx_nomor' => $trx->nomor,
+                'trx_date'  => date('Y-m-d'),
+                'updated_at'=> Carbon::now(),
+            ]);
+
+            $det = \DB::table('generate_approval_d')
+                ->where('generate_approval_id', $existingApp->id)
+                ->where('type', 'MENYETUJUI')
+                ->orderBy('id', 'asc')
+                ->first();
+
+            if ($det) {
+                \DB::table('generate_approval_d')->where('id', $det->id)->update([
+                    'default_users_id' => $targetUserId,
+                    'is_done'          => false,
+                    'action_type'      => null,
+                    'action_at'        => null,
+                ]);
+                \DB::table('generate_approval')->where('id', $existingApp->id)->update([
+                    'next_approve_det_id' => $det->id,
+                    'last_editor_id'      => $det->id,
+                ]);
+            } else {
+                $detId = \DB::table('generate_approval_d')->insertGetId([
+                    'generate_approval_id' => $existingApp->id,
+                    'level'                => 1,
+                    'urutan_level'         => 1,
+                    'type'                 => 'MENYETUJUI',
+                    'default_users_id'     => $targetUserId,
+                    'is_done'              => false,
+                    'assigned_at'          => Carbon::now(),
+                    'creator_id'           => $user ? $user->id : 1,
+                    'created_at'           => Carbon::now(),
+                    'updated_at'           => Carbon::now(),
+                ]);
+                \DB::table('generate_approval')->where('id', $existingApp->id)->update([
+                    'next_approve_det_id' => $detId,
+                    'last_editor_id'      => $detId,
+                ]);
+            }
+
+            return $existingApp;
+        }
+
+        // 3. Buat Master Approval jika belum ada
+        $master_app = \DB::table('m_approval')->where('name', 'APPROVAL HASIL TES PELAMAR')->first();
+        $menu = \DB::table('m_menu')
+            ->where('endpoint', 'ILIKE', '%hasil_tes%')
+            ->orWhere('path', 'ILIKE', '%hasil_test%')
+            ->orWhere('path', 'ILIKE', '%hasil_tes%')
+            ->first();
+        $menu_id = $menu ? $menu->id : 1;
+
+        if (!$master_app) {
+            $m_approval_id = \DB::table('m_approval')->insertGetId([
+                'm_comp_id'  => $user->m_comp_id ?? 1,
+                'm_dir_id'   => $user->m_dir_id ?? 1,
+                'm_menu_id'  => $menu_id,
+                'name'       => 'APPROVAL HASIL TES PELAMAR',
+                'is_active'  => 1,
+                'creator_id' => $user->id ?? 1,
+                'created_at' => Carbon::now(),
+            ]);
+            \DB::table('m_approval_det')->insert([
+                'm_approval_id' => $m_approval_id,
+                'm_role_id'     => 1,
+                'level'         => 1,
+                'type'          => 'MENYETUJUI',
+                'name'          => 'PENGAJU RECRUITMENT',
+                'creator_id'    => $user->id ?? 1,
+                'created_at'    => Carbon::now(),
+            ]);
+        } else {
+            $m_approval_id = $master_app->id;
+        }
+
+        // 4. Buat Tiket Header di generate_approval
+        $appNomor = $this->helper->generateNomor('KODE APPROVAL');
+        $appId = \DB::table('generate_approval')->insertGetId([
+            'nomor'               => $appNomor,
+            'm_approval_id'       => $m_approval_id,
+            'trx_id'              => $trx->id,
+            'trx_table'           => $this->getTable(),
+            'trx_name'            => 'Hasil Test Lamaran Kerja',
+            'form_name'           => 't_hasil_test',
+            'trx_nomor'           => $trx->nomor,
+            'trx_date'            => date('Y-m-d'),
+            'trx_creator_id'      => $trx->creator_id ?? ($user ? $user->id : 1),
+            'creator_id'          => $user ? $user->id : 1,
+            'status'              => 'PROGRESS',
+            'created_at'          => Carbon::now(),
+            'updated_at'          => Carbon::now(),
+        ]);
+
+        // 5. Buat Detail Approver (Target User Pengaju Recruitment)
+        $detId = \DB::table('generate_approval_d')->insertGetId([
+            'generate_approval_id' => $appId,
+            'level'                => 1,
+            'urutan_level'         => 1,
+            'type'                 => 'MENYETUJUI',
+            'default_users_id'     => $targetUserId,
+            'is_done'              => false,
+            'assigned_at'          => Carbon::now(),
+            'creator_id'           => $user ? $user->id : 1,
+            'created_at'           => Carbon::now(),
+            'updated_at'           => Carbon::now(),
+        ]);
+
+        \DB::table('generate_approval')->where('id', $appId)->update([
+            'next_approve_det_id' => $detId,
+            'last_editor_id'      => $detId,
+        ]);
+
+        // 6. Catat Log Pengajuan Awal
+        \DB::table('generate_approval_log')->insert([
+            'nomor'                    => $appNomor,
+            'generate_approval_id'     => $appId,
+            'generate_approval_det_id' => null,
+            'trx_id'                   => $trx->id,
+            'trx_table'                => $this->getTable(),
+            'trx_name'                 => 'Hasil Test Lamaran Kerja',
+            'trx_nomor'                => $trx->nomor,
+            'trx_date'                 => date('Y-m-d'),
+            'trx_creator_id'           => $trx->creator_id ?? ($user ? $user->id : 1),
+            'action_type'              => 'MENGAJUKAN',
+            'action_user_id'           => $user ? $user->id : 1,
+            'creator_id'               => $user ? $user->id : 1,
+            'action_at'                => Carbon::now(),
+            'action_note'              => 'Pengajuan Hasil Tes Pelamar'
+        ]);
+
+        return (object)['id' => $appId, 'nomor' => $appNomor];
     }
 
     public function custom_send_approval()
