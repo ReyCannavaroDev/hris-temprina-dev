@@ -69,10 +69,8 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
             }
         }
 
-        $status = $arrayData['status'] ?? 'DRAFT';
-        if ($is_hc) {
-            $status = 'APPROVED';
-        }
+        // Status awal selalu DRAFT, approval dilakukan melalui flow manual
+        $status = 'DRAFT';
 
         $newArrayData = array_merge( $arrayData, [
             'nomor'        => $this->helper->generateNomor('KODE PERMINTAAN KARYAWAN'),
@@ -98,8 +96,16 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         ];
     }
 
+
     public function updateBefore( $model, $arrayData, $metaData, $id=null )
     {
+        // Jika status REVISED, otomatis kembalikan ke DRAFT saat disimpan ulang oleh Manager
+        if ($id) {
+            $existing = $this->find($id);
+            if ($existing && strtoupper($existing->status) === 'REVISED') {
+                $arrayData['status'] = 'DRAFT';
+            }
+        }
         return [
             "model"  => $model,
             "data"   => $arrayData,
@@ -268,6 +274,40 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         $trx = $this->find($id);
         if (!$trx) return false;
 
+        $user = auth()->user();
+        
+        // AUTO-INJECT MASTER APPROVAL JIKA BELUM ADA
+        $master_app = \DB::table('m_approval')
+                        ->where('name', 'APPROVAL PERMINTAAN KARYAWAN')
+                        ->where('m_comp_id', $user->m_comp_id ?? 1)
+                        ->first();
+                        
+        if (!$master_app) {
+            $other_app = \DB::table('m_approval')->whereNotNull('m_menu_id')->first();
+            $m_approval_id = \DB::table('m_approval')->insertGetId([
+                'm_comp_id' => $user->m_comp_id ?? 1,
+                'm_dir_id'  => $user->m_dir_id ?? 1,
+                'm_menu_id' => $other_app ? $other_app->m_menu_id : 1,
+                'name'      => 'APPROVAL PERMINTAAN KARYAWAN',
+                'is_active' => 1,
+                'creator_id'=> $user->id ?? 1,
+                'created_at'=> \Carbon\Carbon::now(),
+            ]);
+
+            $hc_role = \DB::table('m_role')->where('name', 'ILIKE', '%HC%')->orWhere('name', 'ILIKE', '%Human%')->first();
+            $hc_role_id = $hc_role ? $hc_role->id : 1;
+
+            \DB::table('m_approval_det')->insert([
+                'm_approval_id' => $m_approval_id,
+                'm_role_id'     => $hc_role_id,
+                'level'         => 1,
+                'type'          => 'MENYETUJUI',
+                'name'          => 'HC APPROVAL',
+                'creator_id'    => $user->id ?? 1,
+                'created_at'    => \Carbon\Carbon::now(),
+            ]);
+        }
+
         $conf = [
             "app_name"       => "APPROVAL PERMINTAAN KARYAWAN",
             "trx_id"         => $trx->id,
@@ -416,10 +456,15 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
             $app = $this->helper->approvalProgress($conf, true);
             if ($app->status) {
                 $data = $this->find($app->trx_id);
+                $updateData = ["status" => $req->type];
+                
+                // Simpan catatan HC untuk REVISED dan REJECTED agar Manager bisa membacanya
+                if (in_array($req->type, ['REVISED', 'REJECTED']) && !empty($note)) {
+                    $updateData['catatan_hc'] = $note;
+                }
+                
                 if ($app->finish) {
-                    $data->update([
-                        "status" => $req->type
-                    ]);
+                    $data->update($updateData);
                 } else {
                     $data->update([
                         "status" => "IN APPROVAL",
@@ -439,12 +484,20 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
     {
         $id = $req->id ?? 0;
         
-        // Find app_id from trx_id
+        // Coba cari sebagai app_id (jika dari notifikasi)
         $app = \DB::table('generate_approval')
+            ->where('id', $id)
             ->where('trx_table', $this->getTable())
-            ->where('trx_id', $id)
-            ->orderBy('id', 'desc')
             ->first();
+            
+        // Jika tidak ketemu, cari sebagai trx_id (jika dari tabel langsung)
+        if (!$app) {
+            $app = \DB::table('generate_approval')
+                ->where('trx_table', $this->getTable())
+                ->where('trx_id', $id)
+                ->orderBy('id', 'desc')
+                ->first();
+        }
         
         // Jika belum ada tiket approval, auto-create untuk HC
         if (!$app) {

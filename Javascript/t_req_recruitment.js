@@ -353,6 +353,23 @@ async function onSendApproval() {
 }
 
 async function onProcess(type) {
+  // REVISED wajib catatan
+  if (type === 'REVISED') {
+    const { value: catatan } = await swal.fire({
+      title: 'Revised - Catatan Perbaikan',
+      input: 'textarea',
+      inputLabel: 'Tuliskan apa yang perlu diperbaiki (WAJIB)',
+      inputPlaceholder: 'Masukkan catatan revisi...',
+      inputValidator: (value) => {
+        if (!value || !value.trim()) return 'Catatan revisi wajib diisi!'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Kirim Revisi'
+    })
+    if (!catatan) return
+    values.catatan_approval = catatan
+  }
+
   swal.fire({
     icon: 'warning',
     text: `Yakin ingin memproses status: ${type}?`,
@@ -608,50 +625,33 @@ const landing = reactive({
       icon: 'location-arrow',
       title: "Send In Approval",
       class: 'bg-green-700 text-white rounded-lg',
-      show: (row) => {
-        const user = store.user?.data;
-        const userType = (user?.user_type || '').toLowerCase();
-        const isHc = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin';
-        return data.can_update && !isHc && ['POSTED'].includes(row.status?.toUpperCase());
-      },
+      show: (row) => data.can_update && ['POSTED'].includes(row.status?.toUpperCase()),
       click(row) {
         router.push(`${route.path}/${row.id}?action=Verifikasi&` + tsId)
       }
     },
     {
       icon: 'check',
-      title: "Approval",
-      class: 'bg-emerald-600 text-white rounded-lg',
+      title: "Approve (HC)",
+      class: 'bg-green-600 text-white rounded-lg',
       show: (row) => {
         const user = store.user?.data;
         const userType = (user?.user_type || '').toLowerCase();
-        const isHc = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin';
+        const isManager = (user?.name || '').toLowerCase().includes('manager') || userType.includes('manager') || (user?.role_name || '').toLowerCase().includes('manager');
+        const isCreator = row.creator_id == user?.id;
+        const isHc = (user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin') && !isManager && !isCreator;
         return data.can_update && isHc && ['IN APPROVAL'].includes(row.status?.toUpperCase());
-      },
-      click(row) {
-        router.push(`${route.path}/${row.id}?is_approval=true&` + tsId)
-      }
-    },
-    {
-      icon: 'check-circle',
-      title: "Approve Langsung (HC)",
-      class: 'bg-teal-600 text-white rounded-lg',
-      show: (row) => {
-        const user = store.user?.data;
-        const userType = (user?.user_type || '').toLowerCase();
-        const isHc = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin';
-        return data.can_update && isHc && ['DRAFT', 'POSTED'].includes(row.status?.toUpperCase());
       },
       async click(row) {
         swal.fire({
           icon: 'warning',
-          text: 'Langsung Approve data ini?',
+          text: 'Approve pengajuan ini?',
           showDenyButton: true,
           confirmButtonText: 'Ya, Approve'
         }).then(async (res) => {
           if (res.isConfirmed) {
             try {
-              const dataURL = `${store.server.url_backend}/operation${endpointApi}/approve_hc`
+              const dataURL = `${store.server.url_backend}/operation${endpointApi}/progress`
               isRequesting.value = true
               const resHttp = await fetch(dataURL, {
                 method: 'POST',
@@ -659,7 +659,7 @@ const landing = reactive({
                   'Content-Type': 'Application/json',
                   Authorization: `${store.user.token_type} ${store.user.token}`
                 },
-                body: JSON.stringify({ id: row.id })
+                body: JSON.stringify({ id: row.id, type: 'APPROVED', note: 'Approved by HC' })
               })
               const responseJson = await resHttp.json()
               if (!resHttp.ok) throw new Error(responseJson.message)
@@ -672,6 +672,99 @@ const landing = reactive({
             }
           }
         })
+      }
+    },
+    {
+      icon: 'undo',
+      title: "Revised (HC)",
+      class: 'bg-amber-500 text-white rounded-lg',
+      show: (row) => {
+        const user = store.user?.data;
+        const userType = (user?.user_type || '').toLowerCase();
+        const isManager = (user?.name || '').toLowerCase().includes('manager') || userType.includes('manager') || (user?.role_name || '').toLowerCase().includes('manager');
+        const isCreator = row.creator_id == user?.id;
+        const isHc = (user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin') && !isManager && !isCreator;
+        return data.can_update && isHc && ['IN APPROVAL'].includes(row.status?.toUpperCase());
+      },
+      async click(row) {
+        const { value: note } = await swal.fire({
+          title: 'Revised - Catatan Perbaikan',
+          input: 'textarea',
+          inputLabel: 'Tuliskan apa yang perlu diperbaiki (WAJIB)',
+          inputPlaceholder: 'Masukkan catatan revisi...',
+          inputValidator: (value) => {
+            if (!value || !value.trim()) return 'Catatan revisi wajib diisi!'
+          },
+          showCancelButton: true,
+          confirmButtonText: 'Kirim Revisi'
+        });
+        if (note) {
+          try {
+            const dataURL = `${store.server.url_backend}/operation${endpointApi}/progress`
+            isRequesting.value = true
+            const resHttp = await fetch(dataURL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'Application/json',
+                Authorization: `${store.user.token_type} ${store.user.token}`
+              },
+              body: JSON.stringify({ id: row.id, type: 'REVISED', note: note })
+            })
+            const responseJson = await resHttp.json()
+            if (!resHttp.ok) throw new Error(responseJson.message)
+            swal.fire({ icon: 'success', text: responseJson.message || 'Berhasil di-Revised!' })
+          } catch (err) {
+            swal.fire({ icon: 'error', text: err.message || err })
+          } finally {
+            isRequesting.value = false
+            apiTable.value?.reload()
+          }
+        }
+      }
+    },
+    {
+      icon: 'times',
+      title: "Reject (HC)",
+      class: 'bg-rose-600 text-white rounded-lg',
+      show: (row) => {
+        const user = store.user?.data;
+        const userType = (user?.user_type || '').toLowerCase();
+        const isManager = (user?.name || '').toLowerCase().includes('manager') || userType.includes('manager') || (user?.role_name || '').toLowerCase().includes('manager');
+        const isCreator = row.creator_id == user?.id;
+        const isHc = (user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin') && !isManager && !isCreator;
+        return data.can_update && isHc && ['IN APPROVAL'].includes(row.status?.toUpperCase());
+      },
+      async click(row) {
+        const { value: note } = await swal.fire({
+          title: 'Reject pengajuan ini?',
+          input: 'textarea',
+          inputLabel: 'Alasan Penolakan',
+          inputPlaceholder: 'Masukkan alasan...',
+          showCancelButton: true,
+          confirmButtonText: 'Reject'
+        });
+        if (note !== undefined) {
+          try {
+            const dataURL = `${store.server.url_backend}/operation${endpointApi}/progress`
+            isRequesting.value = true
+            const resHttp = await fetch(dataURL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'Application/json',
+                Authorization: `${store.user.token_type} ${store.user.token}`
+              },
+              body: JSON.stringify({ id: row.id, type: 'REJECTED', note: note || 'Rejected by HC' })
+            })
+            const responseJson = await resHttp.json()
+            if (!resHttp.ok) throw new Error(responseJson.message)
+            swal.fire({ icon: 'success', text: responseJson.message || 'Berhasil di-Reject!' })
+          } catch (err) {
+            swal.fire({ icon: 'error', text: err.message || err })
+          } finally {
+            isRequesting.value = false
+            apiTable.value?.reload()
+          }
+        }
       }
     },
     {
