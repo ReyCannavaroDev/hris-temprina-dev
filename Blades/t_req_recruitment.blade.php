@@ -457,8 +457,7 @@
          }"
          class="p-5 border rounded-xl">
       <div v-if="route.query.is_approval" class="max-w-2xl">
-        <label class="font-bold text-gray-800 block mb-2">Catatan Feedback / Approval <span class="text-sm font-normal text-gray-500">(Wajib jika Revisi / Reject)</span></label>
-        <FieldX type="textarea" :bind="{ readonly: false }" class="w-full !mt-0" :value="values.catatan_approval" :errorText="formErrors.catatan_approval?'failed':''" @input="v=>values.catatan_approval=v" :hints="formErrors.catatan_approval" placeholder="Berikan alasan jika Revisi atau Reject..." :check="false" />
+        <FieldX type="textarea" label="Catatan Feedback / Approval (Wajib jika Revisi / Reject)" :bind="{ readonly: false }" class="w-full !mt-1" :value="values.catatan_approval" :errorText="formErrors.catatan_approval?'failed':''" @input="v=>values.catatan_approval=v" :hints="formErrors.catatan_approval" placeholder="Berikan alasan jika Revisi atau Reject..." :check="false" />
       </div>
       <div v-else class="flex flex-col gap-3">
         <div class="flex gap-4 items-center">
