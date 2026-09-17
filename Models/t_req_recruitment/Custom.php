@@ -144,10 +144,7 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         // Ambil catatan log terakhir (approval_log)
         $last_log = \DB::table('generate_approval_log')
             ->where('trx_id', $row['id'])
-            ->where(function($q) {
-                $q->where('trx_table', 't_req_recruitment')
-                  ->orWhere('form_name', 't_req_recruitment');
-            })
+            ->where('trx_table', 't_req_recruitment')
             ->orderBy('id', 'desc')
             ->first();
 
@@ -549,7 +546,6 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
                     'trx_name'                  => "Permintaan Karyawan",
                     'trx_nomor'                 => $data->nomor,
                     'trx_date'                  => $data->tanggal,
-                    'form_name'                 => "t_req_recruitment",
                     'trx_creator_id'            => $data->creator_id,
                     'action_type'               => 'APPROVED',
                     'action_user_id'            => $user->id,
