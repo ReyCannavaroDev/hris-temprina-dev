@@ -31,6 +31,26 @@ class t_req_recruitment extends \App\Models\BasicModels\t_req_recruitment
         return $model->whereRaw("upper(t_req_recruitment.status) = 'APPROVED'");
     }
 
+    public function scopeunassignedloker($model)
+    {
+        $lokerId = request()->get('loker_id');
+        return $model->where(function($q) use ($lokerId) {
+            $q->whereNotExists(function ($query) {
+                $query->select(\DB::raw(1))
+                      ->from('t_loker')
+                      ->whereColumn('t_loker.t_req_recruitment_id', 't_req_recruitment.id');
+            });
+            if (!empty($lokerId) && is_numeric($lokerId)) {
+                $q->orWhereExists(function ($query) use ($lokerId) {
+                    $query->select(\DB::raw(1))
+                          ->from('t_loker')
+                          ->whereColumn('t_loker.t_req_recruitment_id', 't_req_recruitment.id')
+                          ->where('t_loker.id', $lokerId);
+                });
+            }
+        });
+    }
+
     public $createAdditionalData = ["creator_id"=>"auth:id"];
     public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
 

@@ -65,7 +65,8 @@
             simplest: true,
             join: false,
             transform: true,
-            scopes: 'approved'
+            scopes: 'approved,unassignedloker',
+            loker_id: route?.params?.id || ''
           }
         }"
         placeholder="Pilih Pengajuan Rekrutmen (FPTK)"
