@@ -195,19 +195,25 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             $existing = \DB::table('t_hasil_tes')->where('id', $targetId)->first();
             if ($existing) {
                 $st = strtoupper($existing->status ?? '');
+                $user = auth()->user();
+                $userType = strtolower($user->user_type ?? '');
+                $is_hc = !empty($user->is_hc) || $userType === 'admin' || $userType === 'superadmin';
+
                 if (!in_array($st, ['PENDING', 'DRAFT', 'REVISED', ''])) {
-                    return [
-                        "model"  => $model,
-                        "data"   => $arrayData,
-                        "errors" => ["Data hasil tes dengan status {$st} sudah terkunci dan tidak dapat diedit kembali."]
-                    ];
+                    if (!($is_hc && $st === 'HALF APPROVED')) {
+                        return [
+                            "model"  => $model,
+                            "data"   => $arrayData,
+                            "errors" => ["Data hasil tes dengan status {$st} sudah terkunci dan tidak dapat diedit kembali."]
+                        ];
+                    }
                 }
             }
         }
 
         if (isset($arrayData['status'])) {
             $inputStatus = strtoupper($arrayData['status']);
-            if (!in_array($inputStatus, ['PENDING', 'PROSES', 'REVISED'])) {
+            if (!in_array($inputStatus, ['PENDING', 'PROSES', 'REVISED', 'HALF APPROVED', 'DITERIMA', 'TIDAK DITERIMA'])) {
                 unset($arrayData['status']);
             }
         }
@@ -218,6 +224,17 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             "model" => $model,
             "data"  => $arrayData,
         ];
+    }
+
+    public function updateAfter($model, $arrayData, $metaData, $id = null)
+    {
+        $targetId = $id ?? $model->id ?? null;
+        if ($targetId) {
+            $data = $this->find($targetId);
+            if ($data) {
+                $this->custom_saved($data);
+            }
+        }
     }
 
     public function deleteBefore($model, $arrayData, $metaData, $id = null)
@@ -315,6 +332,9 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 $targetUserId = \DB::table('default_users')->where('m_kary_id', $fptk->m_kary_id)->value('id');
             }
         }
+        if (!$targetUserId && $loker && !empty($loker->creator_id)) {
+            $targetUserId = $loker->creator_id;
+        }
 
         $conf = [
             "app_name"       => "APPROVAL HASIL TES PELAMAR",
@@ -334,11 +354,15 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
     public function custom_send_approval()
     {
         $target_id = req("target_id");
-        $user_target = $target_id ? \App\Models\BasicModels\default_users::where('m_kary_id', $target_id)->first()?->id : null;
+        $user_target = null;
+        if ($target_id) {
+            $user_target = \App\Models\BasicModels\default_users::where('id', $target_id)->value('id')
+                ?? \App\Models\BasicModels\default_users::where('m_kary_id', $target_id)->value('id');
+        }
 
         $app = $this->createAppTicket(req("id"), $user_target);
         if (!$app) {
-            return $this->helper->customResponse("Terjadi kesalahan, coba kembali nanti", 400);
+            return $this->helper->customResponse("Terjadi kesalahan saat membuat tiket approval, coba kembali nanti", 400);
         }
 
         $data = $this->find(req("id"));
@@ -353,7 +377,7 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             }
         }
 
-        return $this->helper->customResponse("Permintaan approval hasil tes berhasil dikirim");
+        return $this->helper->customResponse("Permintaan approval hasil tes berhasil dikirim ke pengaju recruitment");
     }
 
     public function custom_progress($req)
@@ -549,6 +573,75 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 'creator_id'               => auth()->user()?->id ?? 1,
                 'action_at'                => \Carbon\Carbon::now(),
                 'action_note'              => 'DIKETAHUI & DISETUJUI OLEH HC'
+            ]);
+        }
+    }
+
+    public function custom_rejectHC()
+    {
+        $req = app()->request;
+
+        try {
+            \DB::beginTransaction();
+
+            $data = $this->find($req->id);
+
+            if (!$data) {
+                return $this->helper->customResponse("Data tidak ditemukan", 404);
+            }
+
+            // Update status menjadi TIDAK DITERIMA
+            $data->update([
+                'status' => 'TIDAK DITERIMA'
+            ]);
+
+            if ($data->t_pelamar_id) {
+                \DB::table('t_pelamar')
+                    ->where('id', $data->t_pelamar_id)
+                    ->update(['status' => 'DITOLAK']);
+            }
+
+            $this->logHcReject($data->id, $req->note ?? 'Kandidat Tidak Diterima oleh HC');
+
+            \DB::commit();
+            return $this->helper->customResponse("Hasil tes berhasil ditandai Tidak Diterima oleh HC.", 200);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+
+            \Log::error("Error Reject HC Hasil Tes: " . $e->getMessage());
+
+            return $this->helper->customResponse(
+                "Terjadi kesalahan sistem: " . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    public function logHcReject($trxId, $note = 'Kandidat Tidak Diterima oleh HC')
+    {
+        $app = \DB::table('generate_approval')
+            ->where('trx_id', $trxId)
+            ->where('trx_table', $this->getTable())
+            ->first();
+
+        if ($app) {
+            \DB::table('generate_approval_log')->insert([
+                'nomor'                    => $app->nomor,
+                'generate_approval_id'     => $app->id,
+                'generate_approval_det_id' => null,
+                'trx_id'                   => $app->trx_id,
+                'trx_table'                => $app->trx_table,
+                'trx_name'                 => $app->trx_name,
+                'trx_nomor'                => $app->trx_nomor,
+                'trx_date'                 => $app->trx_date,
+
+                'trx_creator_id'           => $app->trx_creator_id,
+                'action_type'              => 'REJECTED',
+                'action_user_id'           => auth()->user()?->id ?? 1,
+                'creator_id'               => auth()->user()?->id ?? 1,
+                'action_at'                => \Carbon\Carbon::now(),
+                'action_note'              => $note
             ]);
         }
     }

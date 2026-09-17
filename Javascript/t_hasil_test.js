@@ -87,6 +87,118 @@ async function onSendApproval(id = null) {
   })
 }
 
+const isHC = computed(() => {
+  const user = store.user?.data
+  const userType = (user?.user_type || '').toLowerCase()
+  return user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin'
+})
+
+async function onApproveHC(id = null) {
+  const targetId = id || route.params.id
+  if (!targetId || targetId === 'create') return
+
+  swal.fire({
+    icon: 'question',
+    title: 'Penerimaan Karyawan (HC)',
+    text: 'Apakah Anda yakin ingin menyetujui dan menerima pelamar ini? Data pelamar akan otomatis disinkronkan ke Master Karyawan.',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Terima',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#16a34a'
+  }).then(async (res) => {
+    if (res.isConfirmed) {
+      try {
+        isRequesting.value = true
+        const dataURL = `${store.server.url_backend}/operation${endpointApi}/approveHC`
+        const resp = await fetch(dataURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          },
+          body: JSON.stringify({ id: targetId })
+        })
+        const resJson = await resp.json()
+        if (!resp.ok) throw new Error(resJson.message || 'Gagal memproses approval HC')
+
+        swal.fire({
+          icon: 'success',
+          title: 'Berhasil',
+          text: resJson.message || 'Pelamar resmi diterima'
+        }).then(() => {
+          if (isRead) {
+            router.replace('/' + modulPath + '?reload=' + Date.now())
+          } else if (apiTable.value) {
+            apiTable.value.reload()
+          }
+        })
+      } catch (err) {
+        swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: err.message || err
+        })
+      } finally {
+        isRequesting.value = false
+      }
+    }
+  })
+}
+
+async function onRejectHC(id = null) {
+  const targetId = id || route.params.id
+  if (!targetId || targetId === 'create') return
+
+  swal.fire({
+    icon: 'warning',
+    title: 'Tolak Hasil Tes (HC)',
+    text: 'Apakah Anda yakin ingin menandai pelamar ini TIDAK DITERIMA?',
+    input: 'text',
+    inputPlaceholder: 'Alasan penolakan (opsional)...',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Tidak Diterima',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#dc2626'
+  }).then(async (res) => {
+    if (res.isConfirmed) {
+      try {
+        isRequesting.value = true
+        const dataURL = `${store.server.url_backend}/operation${endpointApi}/rejectHC`
+        const resp = await fetch(dataURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          },
+          body: JSON.stringify({ id: targetId, note: res.value || 'Kandidat Tidak Diterima oleh HC' })
+        })
+        const resJson = await resp.json()
+        if (!resp.ok) throw new Error(resJson.message || 'Gagal memproses penolakan HC')
+
+        swal.fire({
+          icon: 'success',
+          title: 'Berhasil',
+          text: resJson.message || 'Hasil tes berhasil ditandai Tidak Diterima'
+        }).then(() => {
+          if (isRead) {
+            router.replace('/' + modulPath + '?reload=' + Date.now())
+          } else if (apiTable.value) {
+            apiTable.value.reload()
+          }
+        })
+      } catch (err) {
+        swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: err.message || err
+        })
+      } finally {
+        isRequesting.value = false
+      }
+    }
+  })
+}
+
 //  @if( $id )------------------- VALUES FORM ! PENTING JANGAN DIHAPUS
 let initialValues = {}
 const changedValues = []
@@ -103,6 +215,13 @@ const values = reactive({
 
 const statusOptions = computed(() => {
   const current = (values.status || 'PENDING').toUpperCase()
+  if (current === 'HALF APPROVED' && isHC.value) {
+    return [
+      { value: 'HALF APPROVED' },
+      { value: 'DITERIMA' },
+      { value: 'TIDAK DITERIMA' }
+    ]
+  }
   if (['HALF APPROVED', 'DITERIMA', 'TIDAK DITERIMA', 'REVISED'].includes(current)) {
     return [
       { value: current },
@@ -554,65 +673,27 @@ const landing = computed(() => {
         }
       },
       {
-        icon: 'location-arrow',
-        title: "Approve HC",
-        class: 'bg-rose-700 rounded-lg text-white',
+        icon: 'check',
+        title: "Diterima (Approve HC)",
+        class: 'bg-green-600 rounded-lg text-white',
         show: row => {
           const status = (row.status || '').toUpperCase()
-          const user = store.user?.data
-          const userType = (user?.user_type || '').toLowerCase()
-          const isUserHC = user?.is_hc === true || user?.is_hc === 1 || user?.is_hc === '1' || userType === 'admin' || userType === 'superadmin'
-          const isStatusValid = status === 'HALF APPROVED'
-          return isUserHC && isStatusValid && data.can_update
+          return isHC.value && status === 'HALF APPROVED' && data.can_update
         },
-        async click(row) {
-          swal.fire({
-            icon: 'warning',
-            text: 'Full Approve Hasil Tes Pelamar?',
-            iconColor: '#1469AE',
-            confirmButtonColor: '#1469AE',
-            showDenyButton: true,
-            confirmButtonText: 'Ya, Approve',
-            denyButtonText: 'Batal'
-          }).then(async (res) => {
-            if (res.isConfirmed) {
-              try {
-                const dataURL = `${store.server.url_backend}/operation${endpointApi}/approveHC`
-                isRequesting.value = true
-
-                const res = await fetch(dataURL, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'Application/json',
-                    Authorization: `${store.user.token_type} ${store.user.token}`
-                  },
-                  body: JSON.stringify({ id: row.id })
-                })
-
-                if (!res.ok) {
-                  const responseJson = await res.json().catch(() => ({}))
-                  throw (responseJson.message || "Failed when trying to approve data")
-                }
-
-                const responseJson = await res.json()
-                swal.fire({
-                  icon: 'success',
-                  text: responseJson.message || 'Approval HC berhasil'
-                })
-              } catch (err) {
-                isBadForm.value = true
-                swal.fire({
-                  icon: 'error',
-                  iconColor: '#1469AE',
-                  confirmButtonColor: '#1469AE',
-                  text: err.toString()
-                })
-              } finally {
-                isRequesting.value = false
-                apiTable.value?.reload()
-              }
-            }
-          })
+        click(row) {
+          onApproveHC(row.id)
+        }
+      },
+      {
+        icon: 'times',
+        title: "Tidak Diterima (Reject HC)",
+        class: 'bg-rose-600 rounded-lg text-white',
+        show: row => {
+          const status = (row.status || '').toUpperCase()
+          return isHC.value && status === 'HALF APPROVED' && data.can_update
+        },
+        click(row) {
+          onRejectHC(row.id)
         }
       },
       {

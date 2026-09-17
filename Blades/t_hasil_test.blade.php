@@ -317,9 +317,23 @@
           @click="onProcess('revise')">
           Revise
         </button>
+        <!-- Keputusan Final HC saat status HALF APPROVED -->
+        <button
+          class="bg-green-600 text-white font-semibold hover:bg-green-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
+          v-show="isRead && values.status === 'HALF APPROVED' && isHC" @click="onApproveHC()">
+          <icon fa="check" />
+          Diterima (Approve HC)
+        </button>
+        <button
+          class="bg-rose-600 text-white font-semibold hover:bg-rose-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
+          v-show="isRead && values.status === 'HALF APPROVED' && isHC" @click="onRejectHC()">
+          <icon fa="times" />
+          Tidak Diterima (Reject HC)
+        </button>
+
         <button
           class="bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
-          v-show="isRead && (values.status === 'PENDING' || values.status === 'DRAFT')" @click="onSendApproval()">
+          v-show="isRead && (values.status === 'PENDING' || values.status === 'DRAFT' || values.status === 'REVISED')" @click="onSendApproval()">
           <icon fa="paper-plane" />
           Kirim Approval
         </button>
