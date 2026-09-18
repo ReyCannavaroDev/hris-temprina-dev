@@ -1609,18 +1609,20 @@ function filterShowData(statusLabel = null, noBtn = null) {
       statusFilter.value = null
     } else {
       activeBtn.value = noBtn
-      statusFilter.value = statusLabel ? `upper(this.status)='${statusLabel.toUpperCase()}'` : `upper(this.status)='${statusMap[noBtn]}'`
+      statusFilter.value = statusLabel ? `this.status ilike '${statusLabel.toUpperCase()}'` : `this.status ilike '${statusMap[noBtn]}'`
     }
   } else if (statusLabel) {
     const entry = Object.entries(statusMap).find(([k, v]) => v.toUpperCase() === statusLabel.toUpperCase())
     activeBtn.value = entry ? Number(entry[0]) : null
-    statusFilter.value = `upper(this.status)='${statusLabel.toUpperCase()}'`
+    statusFilter.value = `this.status ilike '${statusLabel.toUpperCase()}'`
   } else {
     activeBtn.value = null
     statusFilter.value = null
   }
 
-  apiTable.value?.reload()
+  setTimeout(() => {
+    apiTable.value?.reload()
+  }, 50)
 }
 
 function uploadFile(file) {
@@ -1813,7 +1815,7 @@ const landing = computed(() => {
         'Content-Type': 'Application/json',
         authorization: `${store.user.token_type} ${store.user.token}`
       },
-      params: computed(() => ({
+      params: {
         page: page.value,
         paginate: 25,
         kary_id: store.user.data.t_pelamar_id ?? 0,
@@ -1823,7 +1825,7 @@ const landing = computed(() => {
         transform: true,
         searchfield: 'this.ktp_no, this.nomor, this.nama_pelamar',
         where: statusFilter.value || null
-      })),
+      },
 
       onsuccess(response) {
         response.page = response.current_page
