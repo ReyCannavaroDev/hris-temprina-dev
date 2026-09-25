@@ -55,6 +55,37 @@ onBeforeMount(async () => {
       if (!res.ok) throw new Error("Failed when trying to read data")
       const resultJson = await res.json()
       initialValues = resultJson.data
+
+      // FIX: Ekstrak data dari t_hasil_tes_det ke parent agar form bisa membaca nilainya
+      if (initialValues && initialValues.t_hasil_tes_det && Array.isArray(initialValues.t_hasil_tes_det)) {
+        if (initialValues.t_hasil_tes_det.length > 0) {
+          initialValues.tanggal = initialValues.t_hasil_tes_det[0].tanggal;
+          initialValues.deskripsi = initialValues.t_hasil_tes_det[0].deskripsi;
+        }
+        
+        initialValues.t_hasil_tes_det.forEach(det => {
+          const nm = (det.nama_tes || det.jenis_tes || '').toLowerCase();
+          if (nm.includes('struktur')) initialValues.nilai_struktural = det.nilai_tes;
+          else if (nm.includes('analitik')) initialValues.nilai_analitikal = det.nilai_tes;
+          else if (nm.includes('sosial')) initialValues.nilai_sosial = det.nilai_tes;
+          else if (nm.includes('konsep')) initialValues.nilai_konseptual = det.nilai_tes;
+          else {
+            initialValues.jenis_tes = det.nama_tes || det.jenis_tes;
+            initialValues.nilai_tes = det.nilai_tes;
+          }
+        });
+      }
+      
+      // Bantu FieldPopup menampilkan nama pelamar dengan fetch manual
+      if (initialValues && initialValues.t_pelamar_id && !initialValues.nama_pelamar) {
+        try {
+          const pRes = await fetch(`${store.server.url_backend}/operation/t_pelamar/${initialValues.t_pelamar_id}?join=false&transform=false`, {
+            headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
+          });
+          const pJson = await pRes.json();
+          if (pJson && pJson.data) initialValues.nama_pelamar = pJson.data.nama_pelamar || pJson.data.nama;
+        } catch (e) {}
+      }
     } catch (err) {
       isBadForm.value = true
       swal.fire({

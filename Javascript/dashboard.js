@@ -201,7 +201,7 @@ const closePopup = () => {
 
 const goToApplicant = (id) => {
   const tsId = `ts=` + Date.now();
-  router.push(`/t_hasil_tes/${id}?action=View&${tsId}`);
+  router.push(`/t_hasil_test/${id}?action=View&${tsId}`);
 }
 
 onMounted(() => {

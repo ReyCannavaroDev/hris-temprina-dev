@@ -46,7 +46,7 @@
         @input="v=>values.nomor=v" :check="false" placeholder="Masukan Nomor" label="Nomor" />
     </div>
     <div>
-      <FieldPopup :value="values.t_pelamar_id" @input="v=>values.t_pelamar_id=v" class="w-full mt-3"
+      <FieldPopup :value="values.t_pelamar_id" :initialText="values.nama_pelamar" @input="v=>values.t_pelamar_id=v" class="w-full mt-3"
         :errorText="formErrors.t_pelamar_id?'failed':''" label="Pelamar" placeholder="Pilih Pelamar" @update:valueFull="(objVal)=>{
                 
               }" valueField="id" displayField="nama_pelamar" :api="{
