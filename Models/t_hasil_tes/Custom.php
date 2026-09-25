@@ -5,7 +5,7 @@ use Carbon\Carbon;
 use DB;
 
 class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
-{    
+{
     private $helper;
     public function __construct()
     {
@@ -26,16 +26,16 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
     }
 
     public $details = ['t_hasil_tes_det'];
-    
-    public $fileColumns    = [ /*file_column*/ ];
+
+    public $fileColumns = [ /*file_column*/];
 
     public $joins = [
         "t_pelamar.id=t_hasil_tes.t_pelamar_id",
         "t_loker.id=t_hasil_tes.t_loker_id"
     ];
 
-    public $createAdditionalData = ["creator_id"=>"auth:id"];
-    public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
+    public $createAdditionalData = ["creator_id" => "auth:id"];
+    public $updateAdditionalData = ["last_editor_id" => "auth:id"];
 
     public function transformRowData(array $row)
     {
@@ -133,10 +133,10 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         foreach ($details as $det) {
             $det = is_array($det) ? $det : (array) $det;
             $cleanRow = [
-                'tanggal'   => !empty($det['tanggal']) ? $det['tanggal'] : date('Y-m-d'),
-                'nama_tes'  => $det['nama_tes'] ?? null,
+                'tanggal' => !empty($det['tanggal']) ? $det['tanggal'] : date('Y-m-d'),
+                'nama_tes' => $det['nama_tes'] ?? null,
                 'nilai_tes' => isset($det['nilai_tes']) && $det['nilai_tes'] !== '' && is_numeric($det['nilai_tes']) ? floatval($det['nilai_tes']) : null,
-                'dokumen'   => $det['dokumen'] ?? null,
+                'dokumen' => $det['dokumen'] ?? null,
             ];
 
             if ($id && !empty($det['id'])) {
@@ -182,8 +182,8 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
             if ($isDuplicate) {
                 return [
-                    "model"  => $model,
-                    "data"   => $arrayData,
+                    "model" => $model,
+                    "data" => $arrayData,
                     "errors" => ["Pelamar ini sudah memiliki data transaksi hasil tes."]
                 ];
             }
@@ -195,13 +195,13 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         }
 
         $newArrayData = array_merge($arrayData, [
-            'nomor'  => $this->helper->generateNomor('KODE HASIL TES PELAMAR'),
+            'nomor' => $this->helper->generateNomor('KODE HASIL TES PELAMAR'),
             'status' => $inputStatus
         ]);
 
         return [
             "model" => $model,
-            "data"  => $newArrayData,
+            "data" => $newArrayData,
         ];
     }
 
@@ -238,8 +238,8 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 if (!in_array($st, ['PENDING', 'DRAFT', 'REVISED', ''])) {
                     if (!($is_hc && $st === 'HALF APPROVED')) {
                         return [
-                            "model"  => $model,
-                            "data"   => $arrayData,
+                            "model" => $model,
+                            "data" => $arrayData,
                             "errors" => ["Data hasil tes dengan status {$st} sudah terkunci dan tidak dapat diedit kembali."]
                         ];
                     }
@@ -258,7 +258,7 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
         return [
             "model" => $model,
-            "data"  => $arrayData,
+            "data" => $arrayData,
         ];
     }
 
@@ -304,7 +304,8 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
     public function createAppTicket($id, $target_id = null)
     {
         $trx = $this->find($id);
-        if (!$trx) return false;
+        if (!$trx)
+            return false;
 
         $user = auth()->user();
 
@@ -352,11 +353,11 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
         if ($existingApp) {
             \DB::table('generate_approval')->where('id', $existingApp->id)->update([
-                'status'    => 'PROGRESS',
+                'status' => 'PROGRESS',
                 'form_name' => 't_hasil_test',
                 'trx_nomor' => $trx->nomor,
-                'trx_date'  => date('Y-m-d'),
-                'updated_at'=> Carbon::now(),
+                'trx_date' => date('Y-m-d'),
+                'updated_at' => Carbon::now(),
             ]);
 
             $det = \DB::table('generate_approval_d')
@@ -368,30 +369,30 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             if ($det) {
                 \DB::table('generate_approval_d')->where('id', $det->id)->update([
                     'default_users_id' => $targetUserId,
-                    'is_done'          => false,
-                    'action_type'      => null,
-                    'action_at'        => null,
+                    'is_done' => false,
+                    'action_type' => null,
+                    'action_at' => null,
                 ]);
                 \DB::table('generate_approval')->where('id', $existingApp->id)->update([
                     'next_approve_det_id' => $det->id,
-                    'last_editor_id'      => $det->id,
+                    'last_editor_id' => $det->id,
                 ]);
             } else {
                 $detId = \DB::table('generate_approval_d')->insertGetId([
                     'generate_approval_id' => $existingApp->id,
-                    'level'                => 1,
-                    'urutan_level'         => 1,
-                    'type'                 => 'MENYETUJUI',
-                    'default_users_id'     => $targetUserId,
-                    'is_done'              => false,
-                    'assigned_at'          => Carbon::now(),
-                    'creator_id'           => $user ? $user->id : 1,
-                    'created_at'           => Carbon::now(),
-                    'updated_at'           => Carbon::now(),
+                    'level' => 1,
+                    'urutan_level' => 1,
+                    'type' => 'MENYETUJUI',
+                    'default_users_id' => $targetUserId,
+                    'is_done' => false,
+                    'assigned_at' => Carbon::now(),
+                    'creator_id' => $user ? $user->id : 1,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
                 ]);
                 \DB::table('generate_approval')->where('id', $existingApp->id)->update([
                     'next_approve_det_id' => $detId,
-                    'last_editor_id'      => $detId,
+                    'last_editor_id' => $detId,
                 ]);
             }
 
@@ -409,22 +410,22 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
         if (!$master_app) {
             $m_approval_id = \DB::table('m_approval')->insertGetId([
-                'm_comp_id'  => $user->m_comp_id ?? 1,
-                'm_dir_id'   => $user->m_dir_id ?? 1,
-                'm_menu_id'  => $menu_id,
-                'name'       => 'APPROVAL HASIL TES PELAMAR',
-                'is_active'  => 1,
+                'm_comp_id' => $user->m_comp_id ?? 1,
+                'm_dir_id' => $user->m_dir_id ?? 1,
+                'm_menu_id' => $menu_id,
+                'name' => 'APPROVAL HASIL TES PELAMAR',
+                'is_active' => 1,
                 'creator_id' => $user->id ?? 1,
                 'created_at' => Carbon::now(),
             ]);
             \DB::table('m_approval_det')->insert([
                 'm_approval_id' => $m_approval_id,
-                'm_role_id'     => 1,
-                'level'         => 1,
-                'type'          => 'MENYETUJUI',
-                'name'          => 'PENGAJU RECRUITMENT',
-                'creator_id'    => $user->id ?? 1,
-                'created_at'    => Carbon::now(),
+                'm_role_id' => 1,
+                'level' => 1,
+                'type' => 'MENYETUJUI',
+                'name' => 'PENGAJU RECRUITMENT',
+                'creator_id' => $user->id ?? 1,
+                'created_at' => Carbon::now(),
             ]);
         } else {
             $m_approval_id = $master_app->id;
@@ -433,59 +434,59 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
         // 4. Buat Tiket Header di generate_approval
         $appNomor = $this->helper->generateNomor('KODE APPROVAL');
         $appId = \DB::table('generate_approval')->insertGetId([
-            'nomor'               => $appNomor,
-            'm_approval_id'       => $m_approval_id,
-            'trx_id'              => $trx->id,
-            'trx_table'           => $this->getTable(),
-            'trx_name'            => 'Hasil Test Lamaran Kerja',
-            'form_name'           => 't_hasil_test',
-            'trx_nomor'           => $trx->nomor,
-            'trx_date'            => date('Y-m-d'),
-            'trx_creator_id'      => $trx->creator_id ?? ($user ? $user->id : 1),
-            'creator_id'          => $user ? $user->id : 1,
-            'status'              => 'PROGRESS',
-            'created_at'          => Carbon::now(),
-            'updated_at'          => Carbon::now(),
+            'nomor' => $appNomor,
+            'm_approval_id' => $m_approval_id,
+            'trx_id' => $trx->id,
+            'trx_table' => $this->getTable(),
+            'trx_name' => 'Hasil Test Lamaran Kerja',
+            'form_name' => 't_hasil_test',
+            'trx_nomor' => $trx->nomor,
+            'trx_date' => date('Y-m-d'),
+            'trx_creator_id' => $trx->creator_id ?? ($user ? $user->id : 1),
+            'creator_id' => $user ? $user->id : 1,
+            'status' => 'PROGRESS',
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
         ]);
 
         // 5. Buat Detail Approver (Target User Pengaju Recruitment)
         $detId = \DB::table('generate_approval_d')->insertGetId([
             'generate_approval_id' => $appId,
-            'level'                => 1,
-            'urutan_level'         => 1,
-            'type'                 => 'MENYETUJUI',
-            'default_users_id'     => $targetUserId,
-            'is_done'              => false,
-            'assigned_at'          => Carbon::now(),
-            'creator_id'           => $user ? $user->id : 1,
-            'created_at'           => Carbon::now(),
-            'updated_at'           => Carbon::now(),
+            'level' => 1,
+            'urutan_level' => 1,
+            'type' => 'MENYETUJUI',
+            'default_users_id' => $targetUserId,
+            'is_done' => false,
+            'assigned_at' => Carbon::now(),
+            'creator_id' => $user ? $user->id : 1,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
         ]);
 
         \DB::table('generate_approval')->where('id', $appId)->update([
             'next_approve_det_id' => $detId,
-            'last_editor_id'      => $detId,
+            'last_editor_id' => $detId,
         ]);
 
         // 6. Catat Log Pengajuan Awal
         \DB::table('generate_approval_log')->insert([
-            'nomor'                    => $appNomor,
-            'generate_approval_id'     => $appId,
+            'nomor' => $appNomor,
+            'generate_approval_id' => $appId,
             'generate_approval_det_id' => null,
-            'trx_id'                   => $trx->id,
-            'trx_table'                => $this->getTable(),
-            'trx_name'                 => 'Hasil Test Lamaran Kerja',
-            'trx_nomor'                => $trx->nomor,
-            'trx_date'                 => date('Y-m-d'),
-            'trx_creator_id'           => $trx->creator_id ?? ($user ? $user->id : 1),
-            'action_type'              => 'MENGAJUKAN',
-            'action_user_id'           => $user ? $user->id : 1,
-            'creator_id'               => $user ? $user->id : 1,
-            'action_at'                => Carbon::now(),
-            'action_note'              => 'Pengajuan Hasil Tes Pelamar'
+            'trx_id' => $trx->id,
+            'trx_table' => $this->getTable(),
+            'trx_name' => 'Hasil Test Lamaran Kerja',
+            'trx_nomor' => $trx->nomor,
+            'trx_date' => date('Y-m-d'),
+            'trx_creator_id' => $trx->creator_id ?? ($user ? $user->id : 1),
+            'action_type' => 'MENGAJUKAN',
+            'action_user_id' => $user ? $user->id : 1,
+            'creator_id' => $user ? $user->id : 1,
+            'action_at' => Carbon::now(),
+            'action_note' => 'Pengajuan Hasil Tes Pelamar'
         ]);
 
-        return (object)['id' => $appId, 'nomor' => $appNomor];
+        return (object) ['id' => $appId, 'nomor' => $appNomor];
     }
 
     public function custom_send_approval()
@@ -536,7 +537,7 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             $app_id = $appRecord ? $appRecord->id : $req->id;
 
             $conf = [
-                "app_id"   => $app_id,
+                "app_id" => $app_id,
                 "app_type" => $req->type, // APPROVED, REVISED, REJECTED
                 "app_note" => $note,
             ];
@@ -597,7 +598,7 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
     public function custom_detail($req)
     {
         $id = $req->id ?? 0;
-        
+
         // Find app_id from trx_id (or if $id is already app_id)
         $app = \DB::table('generate_approval')
             ->where('trx_table', $this->getTable())
@@ -634,7 +635,7 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
     public function custom_log($req)
     {
         $conf = [
-            "trx_id"    => $req->id ?? 0,
+            "trx_id" => $req->id ?? 0,
             "trx_table" => $this->getTable(),
         ];
         $data = $this->helper->approvalLog($conf);
@@ -695,21 +696,21 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
         if ($app) {
             \DB::table('generate_approval_log')->insert([
-                'nomor'                    => $app->nomor,
-                'generate_approval_id'     => $app->id,
+                'nomor' => $app->nomor,
+                'generate_approval_id' => $app->id,
                 'generate_approval_det_id' => null,
-                'trx_id'                   => $app->trx_id,
-                'trx_table'                => $app->trx_table,
-                'trx_name'                 => $app->trx_name,
-                'trx_nomor'                => $app->trx_nomor,
-                'trx_date'                 => $app->trx_date,
+                'trx_id' => $app->trx_id,
+                'trx_table' => $app->trx_table,
+                'trx_name' => $app->trx_name,
+                'trx_nomor' => $app->trx_nomor,
+                'trx_date' => $app->trx_date,
 
-                'trx_creator_id'           => $app->trx_creator_id,
-                'action_type'              => 'APPROVED',
-                'action_user_id'           => auth()->user()?->id ?? 1,
-                'creator_id'               => auth()->user()?->id ?? 1,
-                'action_at'                => \Carbon\Carbon::now(),
-                'action_note'              => 'DIKETAHUI & DISETUJUI OLEH HC'
+                'trx_creator_id' => $app->trx_creator_id,
+                'action_type' => 'APPROVED',
+                'action_user_id' => auth()->user()?->id ?? 1,
+                'creator_id' => auth()->user()?->id ?? 1,
+                'action_at' => \Carbon\Carbon::now(),
+                'action_note' => 'DIKETAHUI & DISETUJUI OLEH HC'
             ]);
         }
     }
@@ -764,21 +765,21 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
 
         if ($app) {
             \DB::table('generate_approval_log')->insert([
-                'nomor'                    => $app->nomor,
-                'generate_approval_id'     => $app->id,
+                'nomor' => $app->nomor,
+                'generate_approval_id' => $app->id,
                 'generate_approval_det_id' => null,
-                'trx_id'                   => $app->trx_id,
-                'trx_table'                => $app->trx_table,
-                'trx_name'                 => $app->trx_name,
-                'trx_nomor'                => $app->trx_nomor,
-                'trx_date'                 => $app->trx_date,
+                'trx_id' => $app->trx_id,
+                'trx_table' => $app->trx_table,
+                'trx_name' => $app->trx_name,
+                'trx_nomor' => $app->trx_nomor,
+                'trx_date' => $app->trx_date,
 
-                'trx_creator_id'           => $app->trx_creator_id,
-                'action_type'              => 'REJECTED',
-                'action_user_id'           => auth()->user()?->id ?? 1,
-                'creator_id'               => auth()->user()?->id ?? 1,
-                'action_at'                => \Carbon\Carbon::now(),
-                'action_note'              => $note
+                'trx_creator_id' => $app->trx_creator_id,
+                'action_type' => 'REJECTED',
+                'action_user_id' => auth()->user()?->id ?? 1,
+                'creator_id' => auth()->user()?->id ?? 1,
+                'action_at' => \Carbon\Carbon::now(),
+                'action_note' => $note
             ]);
         }
     }
@@ -812,38 +813,39 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             $pelamar = \App\Models\BasicModels\t_pelamar::find($data->t_pelamar_id);
             $loker = \App\Models\BasicModels\t_loker::find($data->t_loker_id);
 
-            if (!$pelamar) return false;
+            if (!$pelamar)
+                return false;
 
             $kode = $this->helper->generateNomor("KODE KARYAWAN");
 
             $kary = \App\Models\BasicModels\m_kary::updateOrCreate(
                 ['nik' => $pelamar->ktp_no],
                 [
-                    'm_comp_id'       => $loker->m_comp_id ?? null,
-                    'm_subcomp_id'    => $loker->m_subcomp_id ?? null,
-                    'm_branch_id'     => $loker->m_branch_id ?? null,
-                    'm_divisi_id'     => $loker->m_divisi_id ?? null,
-                    'm_posisi_id'     => $loker->m_posisi_id ?? null,
-                    'kode'            => $kode,
-                    'nik'             => $pelamar->ktp_no,
-                    'nama_depan'      => $pelamar->nama_depan,
-                    'nama_belakang'   => $pelamar->nama_belakang,
-                    'nama_lengkap'    => $pelamar->nama_lengkap ?? ($pelamar->nama_depan . ' ' . $pelamar->nama_belakang),
-                    'nama_panggilan'  => $pelamar->nama_panggilan ?? $pelamar->nama_depan,
-                    'jk_id'           => $pelamar->jk_id,
-                    'tempat_lahir'    => $pelamar->tempat_lahir,
-                    'tgl_lahir'       => $pelamar->tgl_lahir,
-                    'email'           => $pelamar->email,
-                    'no_tlp'          => $pelamar->telp,
-                    'ig'              => $pelamar->ig,
-                    'x'               => $pelamar->x,
-                    'facebook'        => $pelamar->facebook,
-                    'linkedin'        => $pelamar->linkedin,
-                    'tgl_masuk'       => Carbon::now()->toDateString(),
-                    'is_active'       => true,
-                    'status_kary_id'  => $loker->status_kary_id ?? null,
-                    'creator_id'      => auth()->id() ?? $data->creator_id,
-                    'last_editor_id'  => auth()->id() ?? $data->last_editor_id,
+                    'm_comp_id' => $loker->m_comp_id ?? null,
+                    'm_subcomp_id' => $loker->m_subcomp_id ?? null,
+                    'm_branch_id' => $loker->m_branch_id ?? null,
+                    'm_divisi_id' => $loker->m_divisi_id ?? null,
+                    'm_posisi_id' => $loker->m_posisi_id ?? null,
+                    'kode' => $kode,
+                    'nik' => $pelamar->ktp_no,
+                    'nama_depan' => $pelamar->nama_depan,
+                    'nama_belakang' => $pelamar->nama_belakang,
+                    'nama_lengkap' => $pelamar->nama_lengkap ?? ($pelamar->nama_depan . ' ' . $pelamar->nama_belakang),
+                    'nama_panggilan' => $pelamar->nama_panggilan ?? $pelamar->nama_depan,
+                    'jk_id' => $pelamar->jk_id,
+                    'tempat_lahir' => $pelamar->tempat_lahir,
+                    'tgl_lahir' => $pelamar->tgl_lahir,
+                    'email' => $pelamar->email,
+                    'no_tlp' => $pelamar->telp,
+                    'ig' => $pelamar->ig,
+                    'x' => $pelamar->x,
+                    'facebook' => $pelamar->facebook,
+                    'linkedin' => $pelamar->linkedin,
+                    'tgl_masuk' => Carbon::now()->toDateString(),
+                    'is_active' => true,
+                    'status_kary_id' => $loker->status_kary_id ?? null,
+                    'creator_id' => auth()->id() ?? $data->creator_id,
+                    'last_editor_id' => auth()->id() ?? $data->last_editor_id,
                 ]
             );
 
@@ -853,17 +855,17 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 ->delete();
 
             \DB::table('m_kary_det_jabatan')->insert([
-                'm_kary_id'      => $kary->id,
-                'm_comp_id'      => $loker->m_comp_id ?? null,
-                'm_subcomp_id'   => $loker->m_subcomp_id ?? null,
-                'm_branch_id'    => $loker->m_branch_id ?? null,
-                'm_divisi_id'    => $loker->m_divisi_id ?? null,
-                'm_posisi_id'    => $loker->m_posisi_id ?? null,
-                'desc'           => 'Jabatan awal dari seleksi loker: ' . ($loker->nomor ?? ''),
-                'is_primary'     => true,
-                'is_active'      => true,
-                'creator_id'     => auth()->id() ?? $data->creator_id,
-                'created_at'     => Carbon::now(),
+                'm_kary_id' => $kary->id,
+                'm_comp_id' => $loker->m_comp_id ?? null,
+                'm_subcomp_id' => $loker->m_subcomp_id ?? null,
+                'm_branch_id' => $loker->m_branch_id ?? null,
+                'm_divisi_id' => $loker->m_divisi_id ?? null,
+                'm_posisi_id' => $loker->m_posisi_id ?? null,
+                'desc' => 'Jabatan awal dari seleksi loker: ' . ($loker->nomor ?? ''),
+                'is_primary' => true,
+                'is_active' => true,
+                'creator_id' => auth()->id() ?? $data->creator_id,
+                'created_at' => Carbon::now(),
             ]);
 
             // 2. Detail Organisasi
@@ -872,14 +874,14 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 \DB::table('m_kary_det_org')->where('m_kary_id', $kary->id)->delete();
                 foreach ($pOrg as $row) {
                     \DB::table('m_kary_det_org')->insert([
-                        'm_kary_id'     => $kary->id,
-                        'nama'          => $row->nama ?? null,
-                        'tahun'         => $row->tahun ?? null,
-                        'jenis_org_id'  => $row->jenis_org_id ?? null,
-                        'kota_id'       => $row->kota_id ?? null,
-                        'posisi'        => $row->posisi ?? null,
-                        'desc'          => $row->desc ?? null,
-                        'created_at'    => Carbon::now()
+                        'm_kary_id' => $kary->id,
+                        'nama' => $row->nama ?? null,
+                        'tahun' => $row->tahun ?? null,
+                        'jenis_org_id' => $row->jenis_org_id ?? null,
+                        'kota_id' => $row->kota_id ?? null,
+                        'posisi' => $row->posisi ?? null,
+                        'desc' => $row->desc ?? null,
+                        'created_at' => Carbon::now()
                     ]);
                 }
             }
@@ -890,11 +892,11 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 \DB::table('m_kary_det_pel')->where('m_kary_id', $kary->id)->delete();
                 foreach ($pPel as $row) {
                     \DB::table('m_kary_det_pel')->insert([
-                        'm_kary_id'  => $kary->id,
-                        'nama_pel'   => $row->nama_pel ?? null,
-                        'tahun'      => $row->tahun ?? null,
-                        'nama_lem'   => $row->nama_lem ?? null,
-                        'kota_id'    => $row->kota_id ?? null,
+                        'm_kary_id' => $kary->id,
+                        'nama_pel' => $row->nama_pel ?? null,
+                        'tahun' => $row->tahun ?? null,
+                        'nama_lem' => $row->nama_lem ?? null,
+                        'kota_id' => $row->kota_id ?? null,
                         'created_at' => Carbon::now()
                     ]);
                 }
@@ -906,18 +908,18 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 \DB::table('m_kary_det_pend')->where('m_kary_id', $kary->id)->delete();
                 foreach ($pPend as $row) {
                     \DB::table('m_kary_det_pend')->insert([
-                        'm_kary_id'         => $kary->id,
-                        'tingkat_id'        => $row->tingkat_id ?? null,
-                        'nama_sekolah'      => $row->nama_sekolah ?? null,
-                        'tahun_masuk'       => $row->tahun_masuk ?? null,
-                        'tahun_lulus'       => $row->tahun_lulus ?? null,
-                        'kota_id'           => $row->kota_id ?? null,
-                        'nilai'             => $row->nilai ?? null,
-                        'jurusan'           => $row->jurusan ?? null,
-                        'is_pend_terakhir'  => $row->is_pend_terakhir ?? 0,
-                        'ijazah_no'         => $row->ijazah_no ?? null,
-                        'ijazah_foto'       => $row->ijazah_foto ?? null,
-                        'created_at'        => Carbon::now()
+                        'm_kary_id' => $kary->id,
+                        'tingkat_id' => $row->tingkat_id ?? null,
+                        'nama_sekolah' => $row->nama_sekolah ?? null,
+                        'tahun_masuk' => $row->tahun_masuk ?? null,
+                        'tahun_lulus' => $row->tahun_lulus ?? null,
+                        'kota_id' => $row->kota_id ?? null,
+                        'nilai' => $row->nilai ?? null,
+                        'jurusan' => $row->jurusan ?? null,
+                        'is_pend_terakhir' => $row->is_pend_terakhir ?? 0,
+                        'ijazah_no' => $row->ijazah_no ?? null,
+                        'ijazah_foto' => $row->ijazah_foto ?? null,
+                        'created_at' => Carbon::now()
                     ]);
                 }
             }
@@ -928,17 +930,17 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 \DB::table('m_kary_det_pk')->where('m_kary_id', $kary->id)->delete();
                 foreach ($pPk as $row) {
                     \DB::table('m_kary_det_pk')->insert([
-                        'm_kary_id'        => $kary->id,
-                        'instansi'         => $row->instansi ?? null,
-                        'bidang_usaha'     => $row->bidang_usaha ?? null,
-                        'no_tlp'           => $row->no_tlp ?? null,
-                        'posisi'           => $row->posisi ?? null,
-                        'thn_masuk'        => $row->thn_masuk ?? null,
-                        'thn_keluar'       => $row->thn_keluar ?? null,
-                        'alamat_kantor'    => $row->alamat_kantor ?? null,
-                        'kota_id'          => $row->kota_id ?? null,
-                        'surat_referensi'  => $row->surat_referensi ?? null,
-                        'created_at'       => Carbon::now()
+                        'm_kary_id' => $kary->id,
+                        'instansi' => $row->instansi ?? null,
+                        'bidang_usaha' => $row->bidang_usaha ?? null,
+                        'no_tlp' => $row->no_tlp ?? null,
+                        'posisi' => $row->posisi ?? null,
+                        'thn_masuk' => $row->thn_masuk ?? null,
+                        'thn_keluar' => $row->thn_keluar ?? null,
+                        'alamat_kantor' => $row->alamat_kantor ?? null,
+                        'kota_id' => $row->kota_id ?? null,
+                        'surat_referensi' => $row->surat_referensi ?? null,
+                        'created_at' => Carbon::now()
                     ]);
                 }
             }
@@ -949,12 +951,12 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 \DB::table('m_kary_det_pres')->where('m_kary_id', $kary->id)->delete();
                 foreach ($pPres as $row) {
                     \DB::table('m_kary_det_pres')->insert([
-                        'm_kary_id'        => $kary->id,
-                        'nama_pres'        => $row->nama_pres ?? null,
-                        'tahun'            => $row->tahun ?? null,
-                        'tingkat_pres_id'  => $row->tingkat_pres_id ?? null,
-                        'desc'             => $row->desc ?? null,
-                        'created_at'       => Carbon::now()
+                        'm_kary_id' => $kary->id,
+                        'nama_pres' => $row->nama_pres ?? null,
+                        'tahun' => $row->tahun ?? null,
+                        'tingkat_pres_id' => $row->tingkat_pres_id ?? null,
+                        'desc' => $row->desc ?? null,
+                        'created_at' => Carbon::now()
                     ]);
                 }
             }
@@ -965,14 +967,14 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
                 \DB::table('m_kary_det_bhs')->where('m_kary_id', $kary->id)->delete();
                 foreach ($pBhs as $row) {
                     \DB::table('m_kary_det_bhs')->insert([
-                        'm_kary_id'       => $kary->id,
-                        'bhs_dikuasai'    => $row->bhs_dikuasai ?? null,
-                        'nilai_lisan'     => $row->nilai_lisan ?? null,
-                        'level_lisan'     => $row->level_lisan ?? null,
-                        'nilai_tertulis'  => $row->nilai_tertulis ?? null,
-                        'level_tertulis'  => $row->level_tertulis ?? null,
-                        'desc'            => $row->desc ?? null,
-                        'created_at'      => Carbon::now()
+                        'm_kary_id' => $kary->id,
+                        'bhs_dikuasai' => $row->bhs_dikuasai ?? null,
+                        'nilai_lisan' => $row->nilai_lisan ?? null,
+                        'level_lisan' => $row->level_lisan ?? null,
+                        'nilai_tertulis' => $row->nilai_tertulis ?? null,
+                        'level_tertulis' => $row->level_tertulis ?? null,
+                        'desc' => $row->desc ?? null,
+                        'created_at' => Carbon::now()
                     ]);
                 }
             }
@@ -999,7 +1001,7 @@ class t_hasil_tes extends \App\Models\BasicModels\t_hasil_tes
             return response()->json([
                 'success' => true,
                 'message' => 'Registrasi karyawan berhasil.',
-                'data'    => $res
+                'data' => $res
             ]);
         }
 
