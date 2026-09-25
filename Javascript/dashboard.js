@@ -147,6 +147,63 @@ const goToDetail = (id) => {
   router.push(`/t_lowongan_kerja/${id}?${tsId}`);
 }
 
+const isLokerModalOpen = ref(false)
+const selectedLoker = ref(null)
+const lokerApplicants = ref([])
+const isFetchingLokerApp = ref(false)
+
+const openJobPopup = async (job) => {
+  console.log('Membuka modal untuk lowongan:', job)
+  selectedLoker.value = job
+  isLokerModalOpen.value = true
+  isFetchingLokerApp.value = true
+  lokerApplicants.value = []
+
+  try {
+    const params = new URLSearchParams({
+      paginate: 100,
+      join: true,
+      transform: true,
+      where: `this.t_loker_id=${job.id}`
+    })
+    
+    const response = await fetch(`${store.server.url_backend}/operation/t_hasil_tes?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'Application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    })
+    
+    const res = await response.json()
+    
+    // API backend mengembalikan array of t_hasil_tes (tiap record = 1 pelamar)
+    let extractedData = []
+    if (res && res.data && Array.isArray(res.data)) {
+      extractedData = res.data
+    } else if (Array.isArray(res)) {
+      extractedData = res
+    }
+    
+    lokerApplicants.value = extractedData
+    console.log('Data pelamar berhasil ditarik:', lokerApplicants.value)
+  } catch (error) {
+    console.error('Gagal memuat pelamar:', error)
+  } finally {
+    isFetchingLokerApp.value = false
+  }
+}
+
+const closePopup = () => {
+  isLokerModalOpen.value = false
+  selectedLoker.value = null
+}
+
+const goToApplicant = (id) => {
+  const tsId = `ts=` + Date.now();
+  router.push(`/t_hasil_tes/${id}?action=View&${tsId}`);
+}
+
 onMounted(() => {
   fetchLokerData()
 })
