@@ -175,7 +175,7 @@
     <div class="bg-white bg-opacity-80 hover:!bg-opacity-95 shadow-lg rounded-lg w-full p-5">
       <div class="flex items-center justify-between mb-4 border-b pb-2">
         <h2 class="text-lg font-bold text-gray-700 flex items-center gap-2">
-          <Icon fa="bullhorn" class="text-green-600" /> Lowongan Pekerjaan Aktif
+          <Icon fa="bullhorn" class="text-green-600" /> Lowongan Pekerjaan
         </h2>
         <button @click="fetchLokerData" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 px-3 py-1.5 text-sm font-semibold rounded-md shadow-sm flex items-center gap-2 transition-all duration-300">
           <Icon fa="sync" :class="{'animate-spin': isRequestingJobs}" /> Segarkan Data
