@@ -253,9 +253,10 @@ let data = reactive({})
 onBeforeMount(async () => {
   if (localStorage.getItem('respo')) {
     const respoValues = await JSON.parse(localStorage.getItem('respo'))
-    //console.log('ini respo coi', respoValues.id)
-    data.subcomp_id = respoValues.m_subcomp_id
-    data.branch_id = respoValues.m_branch_id
+    let sub = respoValues.m_subcomp_id ?? null
+    let branch = respoValues.m_branch_id ?? null
+    data.subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
+    data.branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
     data.respo_id = respoValues.id
   }
   console.log('jarwok', data.subcomp_id)
@@ -429,18 +430,14 @@ const landing = reactive({
         kary_id: store.user.data.m_kary_id ?? 0,
         join: true,
         transform: true,
-        scopes: 'os',
+        searchfield: 'start_date,status',
+        order_by: 'id'
       }
 
       const where = []
 
-      if (data.subcomp_id != null) {
-        where.push(`m_kary.m_subcomp_id  = ${data.subcomp_id}`)
-      }
-
-      if (data.branch_id != null) {
-        where.push(`m_kary.m_branch_id = ${data.branch_id}`)
-      }
+      // If needed, filtering can be done here, but currently detail tables might have empty subcomp columns
+      // so we let it fetch all for now.
 
       if (where.length) {
         params.where = where.join(' AND ')
@@ -451,6 +448,37 @@ const landing = reactive({
     onsuccess(response) {
       response.page = response.current_page
       response.hasNext = response.has_next
+
+      // Backend API doesn't eager load m_kary, so we fetch names manually in the background
+      try {
+        if (response.data && response.data.length > 0) {
+          const ids = [...new Set(response.data.map(d => d.m_kary_id).filter(Boolean))]
+          if (ids.length > 0) {
+             const promises = ids.map(id => 
+               fetch(`${store.server.url_backend}/operation/m_kary/${id}?simplest=true`, {
+                 headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
+               }).then(r => r.json())
+             )
+             
+             Promise.all(promises).then(results => {
+               const karyMap = {}
+               results.forEach(res => {
+                 if (res && res.data) {
+                   karyMap[res.data.id] = res.data.nama_lengkap || res.data.nama_depan || '-'
+                 }
+               })
+               
+               // Mutating these objects triggers Vue's reactivity in the grid
+               response.data.forEach(d => {
+                 d.nama_lengkap = karyMap[d.m_kary_id] || '-'
+               })
+             }).catch(e => console.error('Fetch names error:', e))
+          }
+        }
+      } catch (e) {
+        console.error('Manual kary fetch error:', e)
+      }
+
       return response
     }
   },
@@ -476,7 +504,7 @@ const landing = reactive({
   // },
   {
     headerName: 'Nama',
-    field: 'm_kary.nama_lengkap',
+    valueGetter: (p) => p.data?.['m_kary.nama_lengkap'] || p.data?.m_kary?.nama_lengkap || p.data?.nama_lengkap || p.data?.['karyawan.nama_lengkap'] || '-',
     filter: true,
     sortable: true,
     flex: 1,
@@ -487,7 +515,7 @@ const landing = reactive({
   },
   {
     headerName: 'Tanggal',
-    field: 'start_date',
+    valueGetter: (p) => p.data?.start_date || p.data?.t_jadwal_kerja_n?.start_date || p.data?.['t_jadwal_kerja_n.start_date'] || p.data?.tanggal || '-',
     filter: true,
     sortable: true,
     flex: 1,

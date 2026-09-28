@@ -22,7 +22,7 @@
       //respo_id : `${data.respo_id}`,
       m_subcomp_id : `${data.subcomp_id}`,
       m_branch_id : `${data.branch_id}`,
-      scopes : 'os,respo',
+      scopes : 'os',
       searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name'
     }
   }" :bind="{ readonly: false }" valueField="id" placeholder="SO" :check="true" @add="multiCreate" :columns="[
