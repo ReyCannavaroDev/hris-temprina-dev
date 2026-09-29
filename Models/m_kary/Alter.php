@@ -42,5 +42,9 @@ class mkary extends Migration
             // $table->bigInteger('m_jam_kerja_id')->nullable()->change();
 
         });
+
+        // FIX: Set DEFAULT true untuk is_active agar PostgreSQL tidak error NOT NULL
+        // ketika frontend tidak mengirimkan nilai boolean-nya secara eksplisit
+        \DB::statement("ALTER TABLE m_kary ALTER COLUMN is_active SET DEFAULT true");
     }
 }

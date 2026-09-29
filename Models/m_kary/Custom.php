@@ -157,13 +157,32 @@ class m_kary extends \App\Models\BasicModels\m_kary
         }
 
         // FIX: Pastikan is_active tidak pernah null (mencegah NOT NULL violation di PostgreSQL)
-        if (!isset($arrayData['is_active']) || $arrayData['is_active'] === null) {
-            $existing = \DB::table('m_kary')->where('id', $id)->value('is_active');
-            $arrayData['is_active'] = $existing ?? true;
-        }
-        // Konversi string "false"/"true" ke boolean jika perlu
-        if (is_string($arrayData['is_active'])) {
-            $arrayData['is_active'] = filter_var($arrayData['is_active'], FILTER_VALIDATE_BOOLEAN);
+        $karyIdForFix = $id ?? $arrayData['id'] ?? null;
+        if (array_key_exists('is_active', $arrayData)) {
+            $rawIsActive = $arrayData['is_active'];
+            $finalIsActive = true;
+            
+            if ($rawIsActive === null || $rawIsActive === '') {
+                // Jika null/kosong, ambil nilai lama dari DB
+                if ($karyIdForFix) {
+                    $existing = \DB::table('m_kary')->where('id', $karyIdForFix)->value('is_active');
+                    $finalIsActive = ($existing !== null) ? (bool) $existing : true;
+                }
+            } else {
+                // Konversi apapun ke boolean murni
+                if (is_string($rawIsActive)) {
+                    $finalIsActive = filter_var($rawIsActive, FILTER_VALIDATE_BOOLEAN);
+                } else {
+                    $finalIsActive = (bool) $rawIsActive;
+                }
+            }
+
+            // HACK: Update manual ke DB dan HAPUS dari arrayData
+            // Ini untuk mencegah generator core me-reset false menjadi null!
+            if ($karyIdForFix) {
+                \DB::table('m_kary')->where('id', $karyIdForFix)->update(['is_active' => $finalIsActive]);
+            }
+            unset($arrayData['is_active']);
         }
 
         return [
