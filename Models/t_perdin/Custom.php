@@ -268,7 +268,12 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     {
         $dateFrom = $this->normalizeDate($arrayData['date_from'] ?? null) ?? Carbon::now()->format('Y-m-d');
 
-        $resolved = $this->getCompanyAndKotaCode($arrayData['m_kary_id'] ?? null);
+        $user_id = auth()->id() ?? ($arrayData['creator_id'] ?? null);
+        $creator_m_kary_id = auth()->user()?->m_kary_id ?? \App\Models\CustomModels\m_kary::whereHas('default_users', function($q) use ($user_id){
+            $q->where('id', $user_id);
+        })->first()?->id;
+
+        $resolved = $this->getCompanyAndKotaCode($creator_m_kary_id);
         $compCode = $resolved['company'];
         $kotaCode = $resolved['kota'];
 
@@ -306,9 +311,12 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
             ?? $this->normalizeDate($existing?->date_from ?? null) 
             ?? Carbon::now()->format('Y-m-d');
 
-        $karyId = $arrayData['m_kary_id'] ?? $existing?->m_kary_id ?? null;
+        $user_id = auth()->id() ?? ($arrayData['creator_id'] ?? $existing?->creator_id ?? null);
+        $creator_m_kary_id = auth()->user()?->m_kary_id ?? \App\Models\CustomModels\m_kary::whereHas('default_users', function($q) use ($user_id){
+            $q->where('id', $user_id);
+        })->first()?->id;
 
-        $resolved = $this->getCompanyAndKotaCode($karyId);
+        $resolved = $this->getCompanyAndKotaCode($creator_m_kary_id);
         $compCode = $resolved['company'];
         $kotaCode = $resolved['kota'];
 
@@ -370,7 +378,7 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     {
         $user = auth()->user();
         $user_id = $user->id ?? 0;
-        $m_kary_id = $user->m_kary_id ?? \App\Models\BasicModels\m_kary::whereHas('default_users', function($q) use ($user_id){
+        $m_kary_id = $user->m_kary_id ?? \App\Models\CustomModels\m_kary::whereHas('default_users', function($q) use ($user_id){
             $q->where('id', $user_id);
         })->first()?->id;
 
@@ -390,7 +398,7 @@ class t_perdin extends \App\Models\BasicModels\t_perdin
     {
         $user = auth()->user();
         $user_id = $user->id ?? 0;
-        $m_kary_id = $user->m_kary_id ?? \App\Models\BasicModels\m_kary::whereHas('default_users', function($q) use ($user_id){
+        $m_kary_id = $user->m_kary_id ?? \App\Models\CustomModels\m_kary::whereHas('default_users', function($q) use ($user_id){
             $q->where('id', $user_id);
         })->first()?->id;
 

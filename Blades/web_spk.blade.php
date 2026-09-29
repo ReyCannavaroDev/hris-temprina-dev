@@ -8,6 +8,26 @@
     $id = $req->id;
     $t_perdin = t_perdin::find($id);
 
+    $creator_kary = \App\Models\CustomModels\m_kary::whereHas('default_users', function ($q) use ($t_perdin) {
+        $q->where('id', $t_perdin->creator_id);
+    })->first();
+    
+    $signature_city = $creator_kary?->m_subcomp?->city?->value 
+                   ?? $creator_kary?->m_branch?->city?->value 
+                   ?? $creator_kary?->m_branch?->kota
+                   ?? $creator_kary?->m_company?->kota
+                   ?? null;
+
+    if (!$signature_city) {
+        $creator_user = \DB::table('users')->where('id', $t_perdin->creator_id)->first();
+        if ($creator_user && $creator_user->m_company_id) {
+            $company = \DB::table('m_company')->where('id', $creator_user->m_company_id)->first();
+            $signature_city = $company->kota ?? $company->city ?? '-';
+        } else {
+            $signature_city = '-';
+        }
+    }
+
     $carbonDate = Carbon::parse($t_perdin->tgl);
     $tanggalIndo = $carbonDate->translatedFormat('l, d F Y');
 
@@ -230,7 +250,7 @@
 <table style="width:100%; border-collapse:collapse; margin-top:20px;">
     <tr>
         <td style="text-align:left; width:40%;">
-            {{ trim(str_ireplace(['Kabupaten ', 'Kab. ', 'Kota '], '', $t_perdin->m_kary?->m_subcomp?->city?->value ?? '-')) }},
+            {{ trim(str_ireplace(['Kabupaten ', 'Kab. ', 'Kota '], '', $signature_city)) }},
             {{$tanggalTerbit}}<br>
             Pemberi Tugas,<br><br><br><br>
             <b><u>{{$t_perdin?->m_atasan?->nama_lengkap ?? '-'}}</u></b><br>
