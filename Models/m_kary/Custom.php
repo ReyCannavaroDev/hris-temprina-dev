@@ -156,6 +156,16 @@ class m_kary extends \App\Models\BasicModels\m_kary
             }
         }
 
+        // FIX: Pastikan is_active tidak pernah null (mencegah NOT NULL violation di PostgreSQL)
+        if (!isset($arrayData['is_active']) || $arrayData['is_active'] === null) {
+            $existing = \DB::table('m_kary')->where('id', $id)->value('is_active');
+            $arrayData['is_active'] = $existing ?? true;
+        }
+        // Konversi string "false"/"true" ke boolean jika perlu
+        if (is_string($arrayData['is_active'])) {
+            $arrayData['is_active'] = filter_var($arrayData['is_active'], FILTER_VALIDATE_BOOLEAN);
+        }
+
         return [
             "model" => $model,
             "data" => $arrayData,
