@@ -380,7 +380,7 @@
                     checked:after:rounded-full checked:after:border-none checked:after:bg-primary
                     checked:after:shadow-[0_3px_1px_-2px_rgba(0,0,0,0.2),_0_2px_2px_0_rgba(0,0,0,0.14),_0_1px_5px_0_rgba(0,0,0,0.12)]
                     hover:cursor-pointer focus:outline-none focus:ring-0" type="checkbox"
-                      :class="{'after:bg-gray-500': values.is_active === false}" role="switch" id="is_active_for_click"
+                      :class="{'after:bg-red-500 bg-red-200': !values.is_active}" role="switch" id="is_active_for_click"
                       :disabled="!actionText" v-model="values.is_active" />
                   </div>
                   <div class="flex-auto">

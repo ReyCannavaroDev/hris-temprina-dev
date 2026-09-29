@@ -619,7 +619,7 @@ const getPosisiRank = (posisiId, posisiName = '') => {
   }
 
   const name = String(posisiName || posisiLevelMap.value[posisiId] || '').toLowerCase();
-  
+
   if (/direktur|director|president/i.test(name)) return 6;
   if (/general manager|gm\b|wadir/i.test(name)) return 5;
   if (/manager|asmen|operational manager|\bom\b/i.test(name)) return 4;
@@ -961,7 +961,7 @@ const currentEmployeeLevel = computed(() => {
   const rank = getPosisiRank(targetPosId);
   const rawLevel = posisiLevelMap.value[targetPosId];
   const levelName = rawLevel && rawLevel !== '-' ? rawLevel : getLevelLabel(rank);
-  
+
   const primaryJabatan = inDetailArr.value?.find(i => i.is_primary) || inDetailArr.value?.[0];
   const posisiName = primaryJabatan?.['m_posisi.name'] ?? primaryJabatan?.posisi_name ?? '';
 
@@ -998,7 +998,7 @@ const fetchAtasanByDivisi = async (divisiId, currentKaryId = null, currentPosisi
     if (res.ok) {
       const json = await res.json();
       let data = json.data ?? [];
-      
+
       const currentId = currentKaryId ?? route.params.id;
       if (currentId && currentId !== 'create') {
         data = data.filter(k => String(k.id) !== String(currentId));
@@ -1618,7 +1618,7 @@ onBeforeMount(async () => {
       respo_id: data.respo_id
     })
     const endpoint = `${store.server.url_backend}/operation/m_general/access?${params.toString()}`
-    
+
     try {
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -1627,7 +1627,7 @@ onBeforeMount(async () => {
         }
       })
       const result = await response.json()
-      console.log('x',result)
+      console.log('x', result)
       data.can_read = result.can_read
       data.can_create = result.can_create
       data.can_delete = result.can_delete
@@ -1840,21 +1840,51 @@ const landing = reactive({
     sortable: true,
     flex: 1,
     resizable: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+    cellStyle: (params) => {
+      let val = params.value;
+      if (!val && params.data) {
+        val = params.data['status_kary.value'] || (params.data.status_kary && params.data.status_kary.value);
+      }
+      let strVal = typeof val === 'object' && val !== null ? (val.value || val.name || JSON.stringify(val)) : String(val || '');
+      if (strVal.toLowerCase().includes('inactive')) {
+        return { color: 'red', fontWeight: 'bold' };
+      }
+      return null;
+    },
+    cellRenderer: (params) => {
+      let val = params.value;
+      if (!val && params.data) {
+        val = params.data['status_kary.value'] || (params.data.status_kary && params.data.status_kary.value);
+      }
+      let strVal = typeof val === 'object' && val !== null ? (val.value || val.name || JSON.stringify(val)) : String(val || '');
+      if (strVal.toLowerCase().includes('inactive')) {
+        return `<span class="text-red-600 font-bold" style="color: red;">${strVal}</span>`;
+      }
+      return strVal || '-';
+    }
   },
   {
     headerName: 'Status',
     field: 'is_active',
     filter: true,
-    // resizable: true,
-    // valueGetter: (p) => p.node.data['status'].toLowerCase()==='active'? 'Aktif':'Tidak Aktif',
     sortable: true,
     flex: 1,
     cellClass: ['border-r', '!border-gray-200', 'justify-center'],
+    cellStyle: (params) => {
+      const val = params.value;
+      const isActive = val === true || val === 'true' || val === 1 || val === '1';
+      if (!isActive) {
+
+        return { color: 'red', fontWeight: 'bold' };
+      }
+      return null;
+    },
     cellRenderer: ({ value }) => {
-      return value === true
-        ? `<span class="text-green-500 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">Active</span>`
-        : `<span class="text-red-500 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">Inactive</span>`
+      const isActive = value === true || value === 'true' || value === 1 || value === '1';
+      return isActive
+        ? `<span class="text-green-500 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize" style="color: green;">Active</span>`
+        : `<span class="text-red-600 font-bold rounded-md text-xs px-4 py-1 inline-block capitalize" style="color: red;">Inactive</span>`
     }
   },
   ]
