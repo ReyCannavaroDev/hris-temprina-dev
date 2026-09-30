@@ -19,9 +19,141 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
     public $createAdditionalData = ["creator_id" => "auth:id"];
     public $updateAdditionalData = ["last_editor_id" => "auth:id"];
 
+    public function ensureGenerateNumSuratTugas()
+    {
+        try {
+            $formatName = "SURAT TUGAS PELATIHAN";
+            $existing = \App\Models\CustomModels\generate_num::where("nama", $formatName)->first();
+            if ($existing) {
+                return $existing;
+            }
+
+            // 1. Siapkan/ambil elemen di generate_num_type
+            $getOrMakeType = function($nama, $refType, $value) {
+                $type = \App\Models\CustomModels\generate_num_type::where('ref_type', $refType)
+                    ->where('value', $value)
+                    ->first();
+                if (!$type) {
+                    $type = \App\Models\CustomModels\generate_num_type::create([
+                        'nama' => $nama,
+                        'ref_type' => $refType,
+                        'value' => $value,
+                        'is_active' => true,
+                    ]);
+                }
+                return $type;
+            };
+
+            $tSeq3     = $getOrMakeType('SEQUENCE xxx1 (3 Digit)', 'seq', '3');
+            $tSlash    = $getOrMakeType('Separator (/)', 'text', '/');
+            $tDayIndo  = $getOrMakeType('DAY INDO Title (Sn, Jm, dll)', 'day', 'hari_indo_title');
+            $tDot      = $getOrMakeType('Separator (.)', 'text', '.');
+            $tDateDmy  = $getOrMakeType('DATE dmy (6 Digit)', 'day', 'dmy');
+            $tTmg      = $getOrMakeType('PREFIX /TMG/', 'text', '/TMG/');
+            $tCabang   = $getOrMakeType('BRANCH [CABANG]/', 'text', '[CABANG]/');
+            $tHrdTr    = $getOrMakeType('SUFFIX HRD/TR', 'text', 'HRD/TR');
+
+            // 2. Buat header generate_num
+            $genNum = \App\Models\CustomModels\generate_num::create([
+                'nama' => $formatName,
+                'comp_id' => 1,
+                'is_active' => true,
+            ]);
+
+            // 3. Pasang susunan generate_num_det (seq 1..8)
+            $details = [
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tSeq3->id, 'seq' => 1],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tSlash->id, 'seq' => 2],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tDayIndo->id, 'seq' => 3],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tDot->id, 'seq' => 4],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tDateDmy->id, 'seq' => 5],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tTmg->id, 'seq' => 6],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tCabang->id, 'seq' => 7],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tHrdTr->id, 'seq' => 8],
+            ];
+
+            foreach ($details as $det) {
+                \App\Models\CustomModels\generate_num_det::create($det);
+            }
+
+            return $genNum;
+        } catch (\Throwable $th) {
+            \Log::warning("Gagal auto-init generate_num: " . $th->getMessage());
+            return null;
+        }
+    }
+
+    public function resolveBranchCode($mKaryId, $mBranchId = null)
+    {
+        $cityMap = [
+            'SURABAYA'    => 'SBY',
+            'GRESIK'      => 'SBY',
+            'WRINGINANOM' => 'SBY',
+            'BEKASI'      => 'BKS',
+            'JAKARTA'     => 'CGK',
+            'CENGKARENG'  => 'CGK',
+            'TANGERANG'   => 'CGK',
+            'SEMARANG'    => 'SMG',
+            'SOLO'        => 'SLO',
+            'SURAKARTA'   => 'SLO',
+            'MALANG'      => 'MLG',
+            'NGANJUK'     => 'NGN',
+            'JEMBER'      => 'JBR',
+            'BALI'        => 'DPS',
+            'DENPASAR'    => 'DPS',
+            'BAWEN'       => 'BWN',
+            'SUMEDANG'    => 'SMD',
+            'MAKASSAR'    => 'MKS',
+            'PALEMBANG'   => 'PLB',
+        ];
+
+        $candidates = [];
+        if ($mBranchId) {
+            $branch = \DB::table('m_branch')->where('id', $mBranchId)->first();
+            if ($branch) {
+                if (!empty($branch->kode)) $candidates[] = $branch->kode;
+                if (!empty($branch->name)) $candidates[] = $branch->name;
+                if (!empty($branch->kota)) $candidates[] = $branch->kota;
+            }
+        }
+
+        if ($mKaryId) {
+            $kary = \DB::table('m_kary')->where('id', $mKaryId)->first();
+            if ($kary && !empty($kary->m_branch_id)) {
+                $branchKary = \DB::table('m_branch')->where('id', $kary->m_branch_id)->first();
+                if ($branchKary) {
+                    if (!empty($branchKary->kode)) $candidates[] = $branchKary->kode;
+                    if (!empty($branchKary->name)) $candidates[] = $branchKary->name;
+                    if (!empty($branchKary->kota)) $candidates[] = $branchKary->kota;
+                }
+            }
+        }
+
+        foreach ($candidates as $cand) {
+            $clean = strtoupper(trim((string)$cand));
+            $clean = preg_replace('/^(KOTA|KABUPATEN|KAB\.?)\s+/i', '', $clean);
+            $clean = trim($clean);
+
+            if (isset($cityMap[$clean])) {
+                return $cityMap[$clean];
+            }
+
+            foreach ($cityMap as $cityName => $abbr) {
+                if (str_contains($clean, $cityName)) {
+                    return $abbr;
+                }
+            }
+
+            if (strlen($clean) >= 2 && strlen($clean) <= 4 && !in_array($clean, ['HLD', 'HO', 'PST'])) {
+                return $clean;
+            }
+        }
+
+        return 'SBY';
+    }
+
     public function createBefore($model, $arrayData, $metaData, $id = null)
     {
-        $nomor = $arrayData['nomor'] ?? $this->helper->generateNomor("KODE MUTASI");
         $tipeMutasi = $arrayData['tipe_mutasi'] ?? null;
         if (empty($tipeMutasi)) {
             $tipeMutasi = 'Non-Mutasi / Persuratan';
@@ -31,6 +163,43 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
                     $tipeMutasi = $js->value ?? 'Non-Mutasi / Persuratan';
                 }
             }
+        }
+
+        $isSuratTugas = str_contains(strtoupper($tipeMutasi ?? ''), 'TUGAS') || 
+                        str_contains(strtoupper($tipeMutasi ?? ''), 'PELATIHAN');
+
+        if (empty($arrayData['nomor'])) {
+            if ($isSuratTugas) {
+                $this->ensureGenerateNumSuratTugas();
+                $tglSurat = $arrayData['tgl'] ?? date('Y-m-d');
+                $branchCode = $this->resolveBranchCode($arrayData['m_kary_id'] ?? null, $arrayData['m_branch_lama_id'] ?? null);
+
+                try {
+                    $nomor = $this->helper->generateNomor(
+                        "SURAT TUGAS PELATIHAN", 
+                        true, 
+                        null, 
+                        $tglSurat, 
+                        [
+                            '[CABANG]' => $branchCode,
+                            '{branch}' => $branchCode,
+                            '{cabang}' => $branchCode,
+                            'SBY' => $branchCode,
+                        ]
+                    );
+                } catch (\Throwable $th) {
+                    $hariMap = [0 => 'Mg', 1 => 'Sn', 2 => 'Sl', 3 => 'Rb', 4 => 'Km', 5 => 'Jm', 6 => 'Sb'];
+                    $tStamp = strtotime(str_replace('/', '-', $tglSurat)) ?: time();
+                    $hari = $hariMap[(int)date('w', $tStamp)] ?? 'Sn';
+                    $dmy = date('dmy', $tStamp);
+                    $seq = sprintf("%03d", \DB::table('t_mutasi')->count() + 1);
+                    $nomor = "{$seq}/{$hari}.{$dmy}/TMG/{$branchCode}/HRD/TR";
+                }
+            } else {
+                $nomor = $this->helper->generateNomor("KODE MUTASI");
+            }
+        } else {
+            $nomor = $arrayData['nomor'];
         }
 
         $newArrayData = array_merge($arrayData, [
@@ -43,7 +212,6 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
         return [
             "model" => $model,
             "data" => $newArrayData,
-            // "errors" => ['error1']
         ];
     }
 

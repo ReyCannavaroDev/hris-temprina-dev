@@ -111,6 +111,13 @@ class Helper
                             ];
                             $dayOfWeek = (int) date('w', $timestamp);
                             $temporaryCode .= $map[$dayOfWeek] ?? 'SN';
+                        } elseif ($val === 'hari_indo_title') {
+                            $map = [
+                                0 => 'Mg', 1 => 'Sn', 2 => 'Sl', 3 => 'Rb',
+                                4 => 'Km', 5 => 'Jm', 6 => 'Sb',
+                            ];
+                            $dayOfWeek = (int) date('w', $timestamp);
+                            $temporaryCode .= $map[$dayOfWeek] ?? 'Sn';
                         } else {
                             $temporaryCode .= date($trx_type->value, $timestamp);
                         }

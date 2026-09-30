@@ -18,8 +18,19 @@ $tanggalTerbit = $terbitDate->translatedFormat('d F Y');
 $tembusan = $t_mutasi?->t_mutasi_d_tembusan ?? null;
 $memperhatikan = $t_mutasi?->t_mutasi_d_memperhatikan ?? null;
 
+// Parse data pelatihan dari keterangan (JSON)
+$meta = null;
+if (!empty($t_mutasi?->keterangan)) {
+    try {
+        $meta = json_decode($t_mutasi->keterangan, true);
+    } catch (\Throwable $th) {}
+}
+
 $materiPelatihan = $t_mutasi?->deskripsi ?? 'Training & Sertifikasi';
-$keteranganDetail = $t_mutasi?->keterangan ?? '-';
+$pemateri = (!empty($meta['pemateri'])) ? $meta['pemateri'] : '-';
+$hariTgl = (!empty($meta['hari_tgl'])) ? $meta['hari_tgl'] : $tanggalIndo;
+$jam = (!empty($meta['jam'])) ? $meta['jam'] : '-';
+$tempat = (!empty($meta['tempat'])) ? $meta['tempat'] : (!is_array($meta) && !empty($t_mutasi?->keterangan) ? $t_mutasi->keterangan : '-');
 
 $sbuCode = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
 $sbuName = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
@@ -35,19 +46,19 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
             ?? 'Surabaya';
 @endphp
 
-<div style="font-family:'Times New Roman',serif;width:90%;margin:auto;font-size:12px;line-height:1.5;">
+<div style="font-family:'Times New Roman',serif;width:92%;margin:auto;font-size:11.5px;line-height:1.45;">
 
   @include('projects.web_sk_kop')
 
-  <!-- JUDUL -->
-  <table style="width:100%;margin-top:15px;">
+  <!-- JUDUL SURAT (SESUAI DOKUMEN ACUAN & RIIL) -->
+  <table style="width:100%;margin-top:18px;">
     <tr>
-      <td style="width:30%;"></td>
+      <td style="width:25%;"></td>
       <td
-        style="width:40%;text-align:center;font-weight:bold;font-size:16px;border-bottom:2px solid black;height:28px;">
-        SURAT TUGAS
+        style="width:50%;text-align:center;font-weight:bold;font-size:14px;border-bottom:1.5px solid black;height:24px;letter-spacing:5px;">
+        S U R A T &nbsp; T U G A S
       </td>
-      <td style="width:30%;"></td>
+      <td style="width:25%;"></td>
     </tr>
     <tr>
       <td></td>
@@ -63,7 +74,7 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
   <!-- MEMPERHATIKAN -->
   <table style="width:100%; margin-top:20px; border-collapse:collapse; font-size:11px;">
     <tr>
-      <td style="width:23%; vertical-align:top; text-align:left">MEMPERHATIKAN</td>
+      <td style="width:23%; vertical-align:top; text-align:left;">MEMPERHATIKAN</td>
       <td style="width:2%; vertical-align:top;">:</td>
       <td style="width:75%; vertical-align:top;">
         @if($memperhatikan && count($memperhatikan) > 0)
@@ -100,37 +111,42 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
   <div></div>
 
   <!-- MEMUTUSKAN SERTA MENETAPKAN -->
-  <table style="width:100%;margin-top:16px; font-size:11px;">
+  <table style="width:100%; margin-top:16px; font-size:11px;">
     <tr>
-      <td style="width:23%;vertical-align:top; text-align:left">MEMUTUSKAN<br>SERTA MENETAPKAN</td>
-      <td style="width:2%;vertical-align:top;">:</td>
+      <td style="width:23%; vertical-align:top; text-align:left;">MEMUTUSKAN<br>SERTA<br>MENETAPKAN</td>
+      <td style="width:2%; vertical-align:top;">:</td>
       <td style="width:75%;">
 
-        <table style="width:100%;border-collapse:collapse;">
+        <table style="width:100%; border-collapse:collapse;">
           <tr>
-            <td style="width:30%;">• Nama</td>
-            <td style="width:3%;">:</td>
-            <td style="width:67%; font-weight:bold;">{{$t_mutasi?->m_kary?->nama_lengkap ?? '-'}}</td>
+            <td style="width:18%; vertical-align:top;">• Nama</td>
+            <td style="width:3%; vertical-align:top;">:</td>
+            <td style="width:79%; font-weight:bold;">{{$t_mutasi?->m_kary?->nama_lengkap ?? '-'}}</td>
           </tr>
           <tr>
-            <td>• Tugas</td>
-            <td>:</td>
-            <td>{{$materiPelatihan}}</td>
+            <td style="vertical-align:top;">• Tugas</td>
+            <td style="vertical-align:top;">:</td>
+            <td style="vertical-align:top; text-align:justify;">{{$materiPelatihan}}</td>
           </tr>
           <tr>
-            <td>• Keterangan / Jadwal</td>
-            <td>:</td>
-            <td>{{$keteranganDetail}}</td>
+            <td style="vertical-align:top;">• Pemateri</td>
+            <td style="vertical-align:top;">:</td>
+            <td style="vertical-align:top;">{{$pemateri}}</td>
           </tr>
           <tr>
-            <td>• Tanggal Tugas</td>
-            <td>:</td>
-            <td>{{$tanggalIndo}}</td>
+            <td style="vertical-align:top;">• Hari/Tgl</td>
+            <td style="vertical-align:top;">:</td>
+            <td style="vertical-align:top;">{{$hariTgl}}</td>
           </tr>
           <tr>
-            <td>• Penempatan</td>
-            <td>:</td>
-            <td>{{$t_mutasi?->m_posisi_lama?->name ?? '-'}} - {{$t_mutasi?->m_sub_lama?->name ?? '-'}}</td>
+            <td style="vertical-align:top;">• Jam</td>
+            <td style="vertical-align:top;">:</td>
+            <td style="vertical-align:top;">{{$jam}}</td>
+          </tr>
+          <tr>
+            <td style="vertical-align:top;">• Tempat</td>
+            <td style="vertical-align:top;">:</td>
+            <td style="vertical-align:top; text-align:justify;">{!! nl2br(e($tempat)) !!}</td>
           </tr>
         </table>
 
@@ -138,49 +154,50 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
     </tr>
   </table>
 
+  <!-- PARAGRAF PENUTUP -->
   <p style="text-align:justify; margin-top:20px; font-size:11px;">
     Demikian surat tugas ini kami sampaikan guna diperhatikan serta dilaksanakan dengan penuh tanggung jawab.
   </p>
 
-  <!-- PENUTUP -->
-  <table style="width:100%;margin-top:20px; font-size: 11px;">
+  <!-- BLOK TANDA TANGAN (SESUAI DOKUMEN 2 & 3) -->
+  <table style="width:100%; margin-top:18px; font-size: 11px;">
     <tr>
-      <td style="width:60%;"></td>
-      <td style="width:40%;">
+      <td style="width:58%;"></td>
+      <td style="width:42%;">
         Dikeluarkan di&nbsp;&nbsp;: {{$kotaTerbit}}<br>
         Pada Tanggal&nbsp;&nbsp;: {{$tanggalTerbit}}
-        <div style="margin-top:14px;font-weight:bold;">
-          {{$companyName}}
-        </div>
-        <div></div>
-        <div style="margin-top:50px;font-weight:bold;text-decoration:underline;">
+        <div style="height:55px;"></div>
+        <div style="font-weight:bold; text-decoration:underline;">
           {{$t_mutasi?->signature?->nama_lengkap ?? 'DEVI NOVARIA PURNAMASARI'}}
         </div>
-        <div>
+        <div style="font-style:italic;">
           {{$t_mutasi?->signature?->m_posisi?->name ?? 'Asst. Manager Human Capital'}}
         </div>
       </td>
     </tr>
   </table>
 
-  <!-- TEMBUSAN -->
-  <table style="width:100%; margin-top:20px; font-size: 10px; border-collapse: collapse;">
-    <tr>
-      <td style="width:15%; vertical-align:top;">Tembusan</td>
-      <td style="width:2%; vertical-align:top;">:</td>
-      <td style="width:83%; vertical-align:top;">
-        @if($tembusan && count($tembusan) > 0)
-          @foreach($tembusan as $index => $t)
-            {{ $index + 1 }}. {{ $t->value ?? $t['value'] }}<br>
-          @endforeach
-        @else
-          1. Direksi<br>
-          2. Keuangan
-        @endif
-      </td>
-    </tr>
-  </table>
+  <!-- TEMBUSAN (SESUAI DOKUMEN 2 & 3) -->
+  <div style="margin-top:16px; font-size:10px;">
+    <b>Tembusan :</b><br>
+    <div style="margin-left:8px; line-height:1.4;">
+      @if($tembusan && count($tembusan) > 0)
+        @foreach($tembusan as $index => $t)
+          {{ $index + 1 }}. {{ $t->value ?? $t['value'] }}<br>
+        @endforeach
+      @else
+        1. Direksi<br>
+        2. Keuangan
+      @endif
+    </div>
+  </div>
 
-  @include('projects.web_sk_footer')
+  <!-- FOOTER CABANG TEMPRINA (SESUAI DOKUMEN RIIL TEMPRINA) -->
+  <div style="margin-top:35px; border-top:0.5px solid #bbb; padding-top:4px; font-size:6.8px; line-height:1.35; color:#333; text-align:justify;">
+    <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
+    <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
+    <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
+    <b>Jember :</b> 0331-320300 Fax : 0331-320190, E-mail : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, E-mail : Bali@temprina.com
+  </div>
 
 </div>

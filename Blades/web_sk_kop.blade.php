@@ -67,23 +67,35 @@
     </table>
 @else
     <!-- KOP TEMPRINA -->
-    <table style="width:100%; border-collapse:collapse; margin-bottom:12px; border-bottom:1px solid #777; padding-bottom:6px;">
+    <table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
         <tr>
-            <td style="width:38%; vertical-align:top;">
-                @if($logoTmgSrc)
-                    <img src="{{ $logoTmgSrc }}" style="max-height:50px; max-width:190px;" alt="Temprina">
-                @else
-                    <div style="font-size:24px; font-weight:bold; color:#0055aa; letter-spacing:0.5px;">temprina</div>
-                    <div style="font-size:10px; color:#555; margin-top:-2px;">Jawa Pos Group</div>
-                @endif
+            <td style="width:62%; vertical-align:middle;">
+                <table style="border-collapse:collapse;">
+                    <tr>
+                        <td style="vertical-align:middle; padding-right:8px;">
+                            @if($logoTmgSrc)
+                                <img src="{{ $logoTmgSrc }}" width="145" alt="Temprina">
+                            @else
+                                <div style="font-size:22px; font-weight:bold; color:#0055aa; letter-spacing:0.5px;">temprina</div>
+                                <div style="font-size:9px; color:#555; margin-top:-2px;">Jawa Pos Group</div>
+                            @endif
+                        </td>
+                        <td style="vertical-align:middle;">
+                            @if($bannerIsoSrc)
+                                <img src="{{ $bannerIsoSrc }}" width="185" alt="ISO Certifications">
+                            @endif
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td style="width:62%; text-align:right; vertical-align:top;">
-                @if($bannerIsoSrc)
-                    <img src="{{ $bannerIsoSrc }}" style="max-height:36px; max-width:270px;" alt="ISO Certifications"><br>
-                @endif
-                <div style="font-size:7.5px; line-height:1.2; color:#333; margin-top:3px;">
-                    <b>Head Office:</b> Jl. Raya Sumengko KM 30-31 Wringin Anom Gresik Telp: 031 898 2999, Fax: Office 031-898 2065<br>
-                    Marketing: 031-898 1777, Purchasing: 031-898 2066 HRD: 031-898 3622, Email: temprina@temprina.com
+            <td style="width:38%; text-align:right; vertical-align:top;">
+                <div style="font-size:7px; line-height:1.2; color:#222;">
+                    <b>Head Office:</b><br>
+                    Jl. Raya Sumengko KM 30-31 Wringin Anom Gresik<br>
+                    Telp: 031 898 2999, Fax: Office 031-898 2065<br>
+                    Marketing: 031-898 1777, Purchasing: 031-898 2066<br>
+                    HRD: 031-898 3622<br>
+                    www.temprina.com E-mail: temprina@temprina.com
                 </div>
             </td>
         </tr>

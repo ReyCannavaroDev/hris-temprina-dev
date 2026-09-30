@@ -43,10 +43,22 @@ const isCareerMutation = computed(() => {
          name.includes('TUNJANGAN JABATAN')
 })
 
+const isSuratTugas = computed(() => {
+  const name = currentJenisSuratName.value
+  return name.includes('SURAT TUGAS') || name.includes('PELATIHAN')
+})
+
+const detailPelatihan = reactive({
+  pemateri: '',
+  hari_tgl: '',
+  jam: '',
+  tempat: ''
+})
+
 const labelDeskripsi = computed(() => {
   const name = currentJenisSuratName.value
   if (name.includes('KETERANGAN KERJA')) return 'Keperluan Surat'
-  if (name.includes('SURAT TUGAS')) return 'Materi Pelatihan / Sertifikasi'
+  if (name.includes('SURAT TUGAS')) return 'Tugas / Materi Pelatihan'
   if (name.includes('PKWT') || name.includes('PERJANJIAN')) return 'Rincian / Catatan Kontrak'
   return 'Deskripsi'
 })
@@ -152,6 +164,20 @@ onBeforeMount(async () => {
   for (const key in initialValues) {
     values[key] = initialValues[key]
   }
+
+  if (initialValues.keterangan) {
+    try {
+      const parsed = JSON.parse(initialValues.keterangan)
+      if (parsed && typeof parsed === 'object') {
+        detailPelatihan.pemateri = parsed.pemateri || ''
+        detailPelatihan.hari_tgl = parsed.hari_tgl || ''
+        detailPelatihan.jam = parsed.jam || ''
+        detailPelatihan.tempat = parsed.tempat || ''
+      }
+    } catch (e) {
+      detailPelatihan.tempat = initialValues.keterangan || ''
+    }
+  }
 })
 
 function onBack() {
@@ -221,10 +247,27 @@ const onReset = async (alert = false) => {
           for (const key in initialValues) {
             values[key] = initialValues[key]
           }
+          if (initialValues.keterangan) {
+            try {
+              const parsed = JSON.parse(initialValues.keterangan)
+              if (parsed && typeof parsed === 'object') {
+                detailPelatihan.pemateri = parsed.pemateri || ''
+                detailPelatihan.hari_tgl = parsed.hari_tgl || ''
+                detailPelatihan.jam = parsed.jam || ''
+                detailPelatihan.tempat = parsed.tempat || ''
+              }
+            } catch (e) {
+              detailPelatihan.tempat = initialValues.keterangan || ''
+            }
+          }
         } else {
           for (const key in values) {
             delete values[key]
           }
+          detailPelatihan.pemateri = ''
+          detailPelatihan.hari_tgl = ''
+          detailPelatihan.jam = ''
+          detailPelatihan.tempat = ''
           defaultValues()
         }
       }
@@ -250,6 +293,14 @@ function onSave() {
     }
     if (!payload.deskripsi) {
       payload.deskripsi = '-';
+    }
+    if (isSuratTugas.value) {
+      payload.keterangan = JSON.stringify({
+        pemateri: detailPelatihan.pemateri || '',
+        hari_tgl: detailPelatihan.hari_tgl || '',
+        jam: detailPelatihan.jam || '',
+        tempat: detailPelatihan.tempat || ''
+      });
     }
     payload.t_mutasi_d_tembusan = (values.t_mutasi_d_tembusan || []).filter(i => i && i.value);
     payload.t_mutasi_d_memperhatikan = (values.t_mutasi_d_memperhatikan || []).filter(i => i && i.value);

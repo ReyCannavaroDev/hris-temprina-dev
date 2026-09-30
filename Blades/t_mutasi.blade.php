@@ -542,7 +542,27 @@
         :hints="formErrors.deskripsi" :label="labelDeskripsi" :placeholder="placeholderDeskripsi" :check="false" />
     </div>
 
-    <div>
+    <!-- DETAIL KHUSUS SURAT TUGAS PELATIHAN -->
+    <template v-if="isSuratTugas">
+      <div>
+        <FieldX class="w-full !mt0" :bind="{ readonly: !actionText }" :value="detailPelatihan.pemateri"
+          @input="v=>detailPelatihan.pemateri=v" label="Pemateri / Penyelenggara" placeholder="Contoh: Lembaga Pengembangan Kajian Nasional (LPKN)" :check="false" />
+      </div>
+      <div>
+        <FieldX class="w-full !mt0" :bind="{ readonly: !actionText }" :value="detailPelatihan.hari_tgl"
+          @input="v=>detailPelatihan.hari_tgl=v" label="Hari / Tanggal Pelaksanaan" placeholder="Contoh: Rabu - Kamis / 20 - 21 November 2024" :check="false" />
+      </div>
+      <div>
+        <FieldX class="w-full !mt0" :bind="{ readonly: !actionText }" :value="detailPelatihan.jam"
+          @input="v=>detailPelatihan.jam=v" label="Jam Pelaksanaan" placeholder="Contoh: 08.45 - 15.30" :check="false" />
+      </div>
+      <div class="col-span-full">
+        <FieldX class="w-full !mt0" :bind="{ readonly: !actionText }" :value="detailPelatihan.tempat"
+          @input="v=>detailPelatihan.tempat=v" type="textarea" label="Tempat Pelatihan & Alamat" placeholder="Contoh: Hotel Asyana Kemayoran, Jl. Bungur Besar Raya No. 79 – 81 Jakarta Pusat" :check="false" />
+      </div>
+    </template>
+
+    <div v-if="!isSuratTugas">
       <FieldX class="w-full !mt0 " :bind="{ readonly: !actionText }" :value="values.keterangan"
         :errorText="formErrors.keterangan?'failed':''" @input="v=>values.keterangan=v" type="textarea"
         :hints="formErrors.keterangan" :label="labelKeterangan" :placeholder="placeholderKeterangan" :check="false" />
