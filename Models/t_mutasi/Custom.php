@@ -30,7 +30,7 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
             // "errors" => ['error1']
         ];
     }
-    
+
     public function scopelanding($model)
     {
         return $model->join('m_general', 'm_general.id', 't_mutasi.jenis_surat');
@@ -42,22 +42,24 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
             \DB::beginTransaction();
 
             $data = t_mutasi::find($request->id);
-            if (!$data) return response()->json(["error" => "Data tidak ditemukan."], 404);
+            if (!$data)
+                return response()->json(["error" => "Data tidak ditemukan."], 404);
 
             $karyawan = m_kary::find($data["m_kary_id"]);
-            if (!$karyawan) return response()->json(["error" => "Data karyawan tidak ditemukan."], 404);
+            if (!$karyawan)
+                return response()->json(["error" => "Data karyawan tidak ditemukan."], 404);
 
             // Ambil Kode Tipe Surat dari m_general
             $tipeSurat = m_general::where('group', 'JENIS SURAT')->where('id', $data['jenis_surat'])->first();
             $kodeSurat = $tipeSurat ? $tipeSurat->code : '';
 
             // 1. Logika Update Jabatan
-            if (in_array($kodeSurat, ['J12', 'J09', 'J02'])) { 
+            if (in_array($kodeSurat, ['J12', 'J09', 'J02'])) {
                 // DEMOSI (J12), PROMOSI (J09), MUTASI (J02) -> Non-aktifkan jabatan lama
-                m_kary_det_jabatan::where(function($q) use ($karyawan) {
-                        $q->where('m_karyawan_id', $karyawan->id)
-                          ->orWhere('m_kary_id', $karyawan->id);
-                    })
+                m_kary_det_jabatan::where(function ($q) use ($karyawan) {
+                    $q->where('m_karyawan_id', $karyawan->id)
+                        ->orWhere('m_kary_id', $karyawan->id);
+                })
                     ->where('is_active', true)
                     ->where('is_primary', true)
                     ->update([
@@ -65,33 +67,33 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
                         'is_primary' => false,
                         'is_active' => false,
                     ]);
-            } 
-            
+            }
+
             // 2. Tambah Jabatan Baru
             $isPrimaryNew = ($kodeSurat === 'J05') ? false : true;
             // dd($isPrimaryNew, $kodeSurat, $tipeSurat);
             $newJabatan = m_kary_det_jabatan::create([
-                'm_kary_id'     => $karyawan->id,
+                'm_kary_id' => $karyawan->id,
                 'm_karyawan_id' => $karyawan->id,
-                'm_comp_id'     => $data["m_sbu_baru_id"],
-                'm_subcomp_id'  => $data["m_sub_baru_id"],
-                'm_branch_id'   => $data["m_branch_baru_id"],
-                'm_divisi_id'   => $data["m_divisi_baru_id"],
-                'm_posisi_id'   => $data["m_posisi_baru_id"],
-                'start_time'    => $data['tgl'],
-                'is_primary'    => $isPrimaryNew,
-                'is_active'     => true,
+                'm_comp_id' => $data["m_sbu_baru_id"],
+                'm_subcomp_id' => $data["m_sub_baru_id"],
+                'm_branch_id' => $data["m_branch_baru_id"],
+                'm_divisi_id' => $data["m_divisi_baru_id"],
+                'm_posisi_id' => $data["m_posisi_baru_id"],
+                'start_time' => $data['tgl'],
+                'is_primary' => $isPrimaryNew,
+                'is_active' => true,
             ]);
 
             // 3. Logika Update Data Utama Karyawan
             // Jika Penambahan Tugas, data profil utama karyawan (m_posisi_id, dll) biasanya tidak berubah
             if ($kodeSurat !== 'J05') {
                 $updateDataKary = [
-                    "m_comp_id"      => $data["m_sbu_baru_id"],
-                    "m_subcomp_id"   => $data["m_sub_baru_id"],
-                    "m_divisi_id"    => $data["m_divisi_baru_id"],
-                    "m_posisi_id"    => $data["m_posisi_baru_id"],
-                    "m_branch_id"    => $data["m_branch_baru_id"],
+                    "m_comp_id" => $data["m_sbu_baru_id"],
+                    "m_subcomp_id" => $data["m_sub_baru_id"],
+                    "m_divisi_id" => $data["m_divisi_baru_id"],
+                    "m_posisi_id" => $data["m_posisi_baru_id"],
+                    "m_branch_id" => $data["m_branch_baru_id"],
                 ];
 
                 // Khusus J07 (PENGANGKATAN) -> Update status karyawan
@@ -104,26 +106,26 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
             }
 
             // 4. Update Jadwal Kerja (Biasanya mengikuti jadwal baru meskipun penambahan tugas)
-            if(isset($data['t_jadwal_kerja_baru_id'])){
+            if (isset($data['t_jadwal_kerja_baru_id'])) {
                 t_jadwal_kerja_d_n::where('m_kary_id', $karyawan->id)
-                ->where('status', 'AKTIF')
-                ->update(['status' => 'NON AKTIF']);
+                    ->where('status', 'AKTIF')
+                    ->update(['status' => 'NON AKTIF']);
 
                 t_jadwal_kerja_d_n::create([
                     't_jadwal_kerja_n_id' => $data['t_jadwal_kerja_baru_id'],
-                    'm_subcomp_id'        => $data["m_sub_baru_id"],
-                    'm_branch_id'         => $data["m_branch_baru_id"],
-                    'm_divisi_id'         => $data["m_divisi_baru_id"],
-                    'm_kary_id'           => $data['m_kary_id'],
-                    'start_date'          => $data['tgl'],
-                    'desc'                => 'AUTO GENERATE FROM ' . ($tipeSurat->value ?? 'MUTASI'),
-                    'status'              => 'AKTIF'
+                    'm_subcomp_id' => $data["m_sub_baru_id"],
+                    'm_branch_id' => $data["m_branch_baru_id"],
+                    'm_divisi_id' => $data["m_divisi_baru_id"],
+                    'm_kary_id' => $data['m_kary_id'],
+                    'start_date' => $data['tgl'],
+                    'desc' => 'AUTO GENERATE FROM ' . ($tipeSurat->value ?? 'MUTASI'),
+                    'status' => 'AKTIF'
                 ]);
             }
 
             // Finalize
             $data->update(["status" => "POSTED"]);
-            
+
             \DB::commit();
             return response()->json(["message" => "Proses " . ($tipeSurat->value ?? 'Mutasi') . " berhasil diposting."]);
 
