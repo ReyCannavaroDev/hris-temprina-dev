@@ -23,6 +23,9 @@ const selectedJenisSurat = ref(null)
 
 function onSelectJenisSurat(obj) {
   selectedJenisSurat.value = obj
+  if (!isCareerMutation.value) {
+    values.tipe_mutasi = obj?.value || 'Non-Mutasi / Persuratan'
+  }
 }
 
 const currentJenisSuratName = computed(() => {
@@ -238,11 +241,18 @@ function onSave() {
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
     const dataURL = `${store.server.url_backend}/operation${endpointApi}${isCreating ? '' : ('/' + route.params.id)}`
     isRequesting.value = true
-    // values.t_mutasi_d_tembusan = form.t_mutasi_d_tembusan;
-    // values.t_mutasi_d_memperhatikan = form.t_mutasi_d_memperhatikan;
     const payload = { ...values };
-    payload.t_mutasi_d_tembusan = values.t_mutasi_d_tembusan.filter(i => i.value);
-    payload.t_mutasi_d_memperhatikan = values.t_mutasi_d_memperhatikan.filter(i => i.value);
+    if (!payload.tipe_mutasi) {
+      payload.tipe_mutasi = selectedJenisSurat.value?.value || initialValues['jenis_surat.value'] || 'Non-Mutasi / Persuratan';
+    }
+    if (!payload.no_dokumen) {
+      payload.no_dokumen = payload.nomor || '-';
+    }
+    if (!payload.deskripsi) {
+      payload.deskripsi = '-';
+    }
+    payload.t_mutasi_d_tembusan = (values.t_mutasi_d_tembusan || []).filter(i => i && i.value);
+    payload.t_mutasi_d_memperhatikan = (values.t_mutasi_d_memperhatikan || []).filter(i => i && i.value);
     fetch(dataURL, {
       method: isCreating ? 'POST' : 'PUT',
       headers: {
@@ -255,7 +265,8 @@ function onSave() {
         if ([400, 422].includes(res.status)) {
           const responseJson = await res.json()
           formErrors.value = responseJson.errors || {}
-          throw new Error(responseJson.message || "Failed when trying to post data")
+          const errorMsg = responseJson.message || Object.values(responseJson.errors || {})[0]?.[0] || "Failed when trying to post data";
+          throw new Error(errorMsg)
         } else {
           throw new Error("Failed when trying to post data")
         }
@@ -265,7 +276,7 @@ function onSave() {
       isBadForm.value = true
       swal.fire({
         icon: 'error',
-        text: 'Harap Lengkapi Data'
+        text: err.message || 'Harap Lengkapi Data'
       })
     }).finally(() => {
       isRequesting.value = false

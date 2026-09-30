@@ -9,6 +9,7 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
     {
         parent::__construct();
         $this->helper = getCore("Helper");
+        $this->required = ["m_kary_id", "tgl", "status_kary_lama_id"];
     }
 
     public $fileColumns = [
@@ -20,14 +21,52 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
 
     public function createBefore($model, $arrayData, $metaData, $id = null)
     {
+        $nomor = $arrayData['nomor'] ?? $this->helper->generateNomor("KODE MUTASI");
+        $tipeMutasi = $arrayData['tipe_mutasi'] ?? null;
+        if (empty($tipeMutasi)) {
+            $tipeMutasi = 'Non-Mutasi / Persuratan';
+            if (!empty($arrayData['jenis_surat'])) {
+                $js = m_general::find($arrayData['jenis_surat']);
+                if ($js) {
+                    $tipeMutasi = $js->value ?? 'Non-Mutasi / Persuratan';
+                }
+            }
+        }
+
         $newArrayData = array_merge($arrayData, [
-            "nomor" => $arrayData['nomor'] ?? $this->helper->generateNomor("KODE MUTASI"),
+            "nomor" => $nomor,
+            "tipe_mutasi" => $tipeMutasi,
+            "no_dokumen" => $arrayData['no_dokumen'] ?? $nomor,
+            "deskripsi" => $arrayData['deskripsi'] ?? '-',
         ]);
 
         return [
             "model" => $model,
             "data" => $newArrayData,
             // "errors" => ['error1']
+        ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $newArrayData = $arrayData;
+        if (empty($newArrayData['tipe_mutasi'])) {
+            $newArrayData['tipe_mutasi'] = 'Non-Mutasi / Persuratan';
+            if (!empty($newArrayData['jenis_surat'])) {
+                $js = m_general::find($newArrayData['jenis_surat']);
+                if ($js) {
+                    $newArrayData['tipe_mutasi'] = $js->value ?? 'Non-Mutasi / Persuratan';
+                }
+            }
+        }
+
+        if (empty($newArrayData['no_dokumen']) && !empty($newArrayData['nomor'])) {
+            $newArrayData['no_dokumen'] = $newArrayData['nomor'];
+        }
+
+        return [
+            "model" => $model,
+            "data" => $newArrayData,
         ];
     }
 
