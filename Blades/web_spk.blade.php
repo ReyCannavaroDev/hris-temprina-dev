@@ -8,23 +8,46 @@
     $id = $req->id;
     $t_perdin = t_perdin::find($id);
 
-    $creator_kary = \App\Models\CustomModels\m_kary::whereHas('default_users', function ($q) use ($t_perdin) {
-        $q->where('id', $t_perdin->creator_id);
-    })->first();
+    $nomorParts = explode('/', $t_perdin->nomor ?? '');
     
-    $signature_city = $creator_kary?->m_subcomp?->city?->value 
-                   ?? $creator_kary?->m_branch?->city?->value 
-                   ?? $creator_kary?->m_branch?->kota
-                   ?? $creator_kary?->m_company?->kota
-                   ?? null;
+    $cityMap = [
+        'SBY' => 'Surabaya', 'SDA' => 'Sidoarjo', 'MLG' => 'Malang',
+        'JBR' => 'Jember', 'TNG' => 'Tangerang', 'SKT' => 'Surakarta',
+        'SLO' => 'Solo', 'NGK' => 'Nganjuk', 'GSK' => 'Gresik',
+        'SMG' => 'Semarang', 'DPS' => 'Denpasar', 'JKT' => 'Jakarta',
+        'BKS' => 'Bekasi', 'BDG' => 'Bandung', 'BWI' => 'Banyuwangi',
+        'PBG' => 'Probolinggo', 'PSR' => 'Pasuruan', 'KDR' => 'Kediri',
+        'MDN' => 'Madiun', 'YOG' => 'Yogyakarta', 'JOG' => 'Jogja',
+        'KLT' => 'Klaten', 'BGR' => 'Bogor', 'DPK' => 'Depok',
+    ];
+
+    $signature_city = null;
+    if (count($nomorParts) >= 4) {
+        $code = trim(strtoupper($nomorParts[count($nomorParts) - 2]));
+        if (isset($cityMap[$code])) {
+            $signature_city = $cityMap[$code];
+        }
+    }
 
     if (!$signature_city) {
-        $creator_user = \DB::table('users')->where('id', $t_perdin->creator_id)->first();
-        if ($creator_user && $creator_user->m_company_id) {
-            $company = \DB::table('m_company')->where('id', $creator_user->m_company_id)->first();
-            $signature_city = $company->kota ?? $company->city ?? '-';
-        } else {
-            $signature_city = '-';
+        $creator_kary = \App\Models\CustomModels\m_kary::whereHas('default_users', function ($q) use ($t_perdin) {
+            $q->where('id', $t_perdin->creator_id);
+        })->first();
+        
+        $signature_city = $creator_kary?->m_subcomp?->city?->value 
+                       ?? $creator_kary?->m_branch?->city?->value 
+                       ?? $creator_kary?->m_branch?->kota
+                       ?? $creator_kary?->m_company?->kota
+                       ?? null;
+
+        if (!$signature_city) {
+            $creator_user = \DB::table('users')->where('id', $t_perdin->creator_id)->first();
+            if ($creator_user && $creator_user->m_company_id) {
+                $company = \DB::table('m_company')->where('id', $creator_user->m_company_id)->first();
+                $signature_city = $company->kota ?? $company->city ?? '-';
+            } else {
+                $signature_city = '-';
+            }
         }
     }
 
