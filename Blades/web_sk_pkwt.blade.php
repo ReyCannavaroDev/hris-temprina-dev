@@ -64,7 +64,11 @@ $sbuCode = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->kode ?? $t_mutasi?->m_kar
 $sbuName = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
 $isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
 
-$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : ($t_mutasi?->m_sub_lama?->m_company?->name ?? 'PT Temprina Media Grafika');
+$compRaw = $t_mutasi?->m_sub_lama?->m_company?->name ?? 'PT Temprina Media Grafika';
+if (!str_starts_with(strtoupper(trim($compRaw)), 'PT')) {
+    $compRaw = 'PT ' . $compRaw;
+}
+$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : $compRaw;
 $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota 
             ?? $t_mutasi?->m_kary?->m_branch?->kota 
             ?? 'Surabaya';

@@ -53,7 +53,7 @@
         <tr>
             <td style="width:88%; vertical-align:middle;">
                 @if($footerTmgSrc)
-                    <img src="{{ $footerTmgSrc }}" style="width:100%; max-height:30px;" alt="Cabang Temprina">
+                    <img src="{{ $footerTmgSrc }}" width="450" alt="Cabang Temprina">
                 @else
                     <div style="font-size:7px; line-height:1.2; color:#555;">
                         Bekasi: 021-8815222 | Cengkareng: 021-5553472 | Semarang: 024-7462136 | Solo: 0271-783001 | Malang: 0341-396700 | Nganjuk: 0358-773500 | Jember: 0331-320300 | Bali: 0361-421384
@@ -62,7 +62,7 @@
             </td>
             <td style="width:12%; text-align:right; vertical-align:middle;">
                 @if($qrSrc)
-                    <img src="{{ $qrSrc }}" style="max-height:35px; max-width:35px;" alt="QR Code">
+                    <img src="{{ $qrSrc }}" width="40" height="40" alt="QR Code">
                 @endif
             </td>
         </tr>
