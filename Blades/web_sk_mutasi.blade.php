@@ -32,10 +32,21 @@ $jadwalBaru = t_jadwal_kerja_d_hari_n::whereHas('t_jadwal_kerja_n', function($q)
   $q->where('id', $t_mutasi?->jadwal_kerja_baru_id);
 })->first();
 
+$sbuCode = strtoupper($t_mutasi?->m_sbu_baru?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
+$sbuName = strtoupper($t_mutasi?->m_sbu_baru?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
+$isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
+
+$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : 'PT Temprina Media Grafika';
+$kotaTerbit = $t_mutasi?->m_branch_baru?->kota 
+            ?? $t_mutasi?->m_branch_lama?->kota 
+            ?? $t_mutasi?->m_kary?->m_branch?->kota 
+            ?? 'Surabaya';
 
 @endphp
 
 <div style="font-family:'Times New Roman',serif;width:90%;margin:auto;font-size:12px;line-height:1.5;">
+
+  @include('projects.web_sk_kop')
 
   <!-- JUDUL -->
   <table style="width:100%;margin-top:20px;">
@@ -217,10 +228,10 @@ $jadwalBaru = t_jadwal_kerja_d_hari_n::whereHas('t_jadwal_kerja_n', function($q)
     <tr>
       <td style="width:60%;"></td>
       <td style="width:40%;">
-        Dikeluarkan di&nbsp;&nbsp;: Surabaya<br>
+        Dikeluarkan di&nbsp;&nbsp;: {{$kotaTerbit}}<br>
         Pada Tanggal&nbsp;&nbsp;: {{$tanggalTerbit}}
         <div style="margin-top:18px;font-weight:bold;">
-          PT Temprina Media Grafika
+          {{$companyName}}
         </div>
         <div></div>
         <div style="margin-top:50px;font-weight:bold;text-decoration:underline;">
@@ -245,11 +256,11 @@ $jadwalBaru = t_jadwal_kerja_d_hari_n::whereHas('t_jadwal_kerja_n', function($q)
         @foreach($tembusan as $index => $t)
           {{ $index + 1 }}. {{ $t->value ?? $t['value'] }}<br>
         @endforeach
-      @else
-        -
       @endif
     </td>
   </tr>
 </table>
+
+  @include('projects.web_sk_footer')
 
 </div>

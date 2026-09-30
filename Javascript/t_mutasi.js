@@ -1,7 +1,7 @@
      //   javascript
 
 import { useRouter, useRoute, RouterLink } from 'vue-router'
-import { ref, readonly, reactive, inject, onMounted, onBeforeMount, watchEffect, onActivated } from 'vue'
+import { ref, readonly, reactive, inject, onMounted, onBeforeMount, watchEffect, onActivated, computed } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -18,10 +18,83 @@ const apiTable = ref(null)
 const formErrors = ref({})
 const tsId = `ts=` + (Date.parse(new Date()))
 
+// ------------------------------ REAKTIVITAS FORM DINAMIS PERSURATAN
+const selectedJenisSurat = ref(null)
+
+function onSelectJenisSurat(obj) {
+  selectedJenisSurat.value = obj
+}
+
+const currentJenisSuratName = computed(() => {
+  return (selectedJenisSurat.value?.value || initialValues['jenis_surat.value'] || '').toUpperCase()
+})
+
+const isCareerMutation = computed(() => {
+  const name = currentJenisSuratName.value
+  if (!name) return true // default tampil sebelum user memilih
+  return name.includes('MUTASI') ||
+         name.includes('PROMOSI') ||
+         name.includes('DEMOSI') ||
+         name.includes('PENAMBAHAN TUGAS') ||
+         name.includes('PENGANGKATAN') ||
+         name.includes('TUNJANGAN JABATAN')
+})
+
+const labelDeskripsi = computed(() => {
+  const name = currentJenisSuratName.value
+  if (name.includes('KETERANGAN KERJA')) return 'Keperluan Surat'
+  if (name.includes('SURAT TUGAS')) return 'Materi Pelatihan / Sertifikasi'
+  if (name.includes('PKWT') || name.includes('PERJANJIAN')) return 'Rincian / Catatan Kontrak'
+  return 'Deskripsi'
+})
+
+const placeholderDeskripsi = computed(() => {
+  const name = currentJenisSuratName.value
+  if (name.includes('KETERANGAN KERJA')) return 'Contoh: Pengajuan KPR / Pencairan BPJS / Visa'
+  if (name.includes('SURAT TUGAS')) return 'Contoh: Pelatihan & Sertifikasi Ahli K3 Umum'
+  return 'Tuliskan Deskripsi'
+})
+
+const labelKeterangan = computed(() => {
+  const name = currentJenisSuratName.value
+  if (name.includes('PENGALAMAN KERJA')) return 'Alasan Berakhir Kerja'
+  if (name.includes('SURAT TUGAS')) return 'Penyelenggara / Jadwal & Tempat'
+  return 'Keterangan'
+})
+
+const placeholderKeterangan = computed(() => {
+  const name = currentJenisSuratName.value
+  if (name.includes('PENGALAMAN KERJA')) return 'Contoh: Resign / Pensiun Dini / Selesai Masa Kontrak'
+  if (name.includes('SURAT TUGAS')) return 'Contoh: PT. Trust Bimo Indonesia, 22 April - 06 Mei 2026, Via Zoom'
+  return 'Tuliskan Keterangan'
+})
+
+function onPrintSurat() {
+  const targetId = route.params.id
+  if (!targetId || targetId === 'create') return
+  const name = currentJenisSuratName.value
+  let endpoint = 'sk_mutasi'
+  if (name.includes('PROMOSI') || name.includes('TUNJANGAN')) endpoint = 'sk_promosi'
+  else if (name.includes('DEMOSI')) endpoint = 'sk_demosi'
+  else if (name.includes('PENGANGKATAN') || name.includes('PKWTT') || name.includes('TETAP')) endpoint = 'sk_tetap'
+  else if (name.includes('PENAMBAHAN TUGAS')) endpoint = 'sk_penambahan_tugas'
+  else if (name.includes('PENGALAMAN KERJA')) endpoint = 'sk_pengalaman_kerja'
+  else if (name.includes('KETERANGAN KERJA') || name.includes('SKK')) endpoint = 'sk_kerja'
+  else if (name.includes('SURAT TUGAS') || name.includes('PELATIHAN')) endpoint = 'sk_tugas_pelatihan'
+  else if (name.includes('PERJANJIAN BERSAMA') || name.includes('BERAKHIR') || name.includes('PEMBERHENTIAN')) endpoint = 'sk_phk'
+  else if (name.includes('FREELANCE') || name.includes('HARIAN LEPAS') || name.includes('PHL')) endpoint = 'sk_freelance'
+  else if (name.includes('PKWT')) endpoint = 'sk_pkwt'
+  else if (name.includes('PERINGATAN') || name.includes('SP')) endpoint = 'sk_sp'
+  else if (name.includes('MAGANG') || name.includes('PKL') || name.includes('PENERIMAAN')) endpoint = 'sk_penerimaan'
+
+  const url = `${store.server.url_backend}/web/${endpoint}?export=pdf&orientation=potrait&id=${targetId}`
+  window.open(url, '_blank')
+}
+
 // ------------------------------ PERSIAPAN
 const endpointApi = '/t_mutasi'
 onBeforeMount(() => {
-  document.title = 'Transaksi Mutasi'
+  document.title = 'Mutasi & Persuratan Karyawan'
 })
 
 //  @if( $id )------------------- VALUES FORM ! PENTING JANGAN DIHAPUS
@@ -413,91 +486,26 @@ const landing = reactive({
     },
     {
       icon: 'print',
-      title: "Print",
+      title: "Print Surat",
       class: 'bg-purple-600 text-light-100',
-      show: (row) => row['jenis_surat.value'] === 'PROMOSI JABATAN' && data.can_create,
+      show: (row) => data.can_create || data.can_read,
       click(row) {
-        const url = `${store.server.url_backend}/web/sk_promosi?export=pdf&orientation=potrait&id=${row.id}`;
-        window.open(url, '_blank');
-      }
-    },
-    {
-      icon: 'print',
-      title: "Print",
-      class: 'bg-purple-600 text-light-100',
-      show: (row) => row['jenis_surat.value'] === 'MUTASI' && data.can_create,
-      click(row) {
-        const url = `${store.server.url_backend}/web/sk_mutasi?export=pdf&orientation=potrait&id=${row.id}`;
-        window.open(url, '_blank');
-      }
-    },
-    {
-      icon: 'print',
-      title: "Print",
-      class: 'bg-purple-600 text-light-100',
-      show: (row) => row['jenis_surat.value'] === 'DEMOSI JABATAN' && data.can_create,
-      click(row) {
-        const url = `${store.server.url_backend}/web/sk_demosi?export=pdf&orientation=potrait&id=${row.id}`;
-        window.open(url, '_blank');
-      }
-    },
-    {
-      icon: 'print',
-      title: "Print",
-      class: 'bg-purple-600 text-light-100',
-      show: (row) => row['jenis_surat.value'] === 'SK PENGANGKATAN' && data.can_create,
-      click(row) {
-        const url = `${store.server.url_backend}/web/sk_tetap?export=pdf&orientation=potrait&id=${row.id}`;
-        window.open(url, '_blank');
-      }
-    },
-    {
-      icon: 'print',
-      title: "Print",
-      class: 'bg-purple-600 text-light-100',
-      show: (row) => row['jenis_surat.value'] === 'PENAMBAHAN TUGAS' && data.can_create,
-      click(row) {
-        const url = `${store.server.url_backend}/web/sk_penambahan_tugas?export=pdf&orientation=potrait&id=${row.id}`;
-        window.open(url, '_blank');
-      }
-    },
-    {
-      icon: 'print',
-      title: "Print",
-      class: 'bg-purple-600 text-light-100',
-      show: (row) => row['jenis_surat.value'] === 'PENGALAMAN KERJA' && data.can_create,
-      click(row) {
-        const url = `${store.server.url_backend}/web/sk_pengalaman_kerja?export=pdf&orientation=potrait&id=${row.id}`;
-        window.open(url, '_blank');
-      }
-    },
-    {
-      icon: 'print',
-      title: "Print",
-      class: 'bg-purple-600 text-light-100',
-      show: (row) => row['jenis_surat.value'] === 'KETERANGAN KERJA' && data.can_create,
-      click(row) {
-        const url = `${store.server.url_backend}/web/sk_kerja?export=pdf&orientation=potrait&id=${row.id}`;
-        window.open(url, '_blank');
-      }
-    },
-    {
-      icon: 'print',
-      title: "Print",
-      class: 'bg-purple-600 text-light-100',
-      show: (row) => row['jenis_surat.value'] === 'PERJANJIAN BERSAMA' && data.can_create,
-      click(row) {
-        const url = `${store.server.url_backend}/web/sk_phk?export=pdf&orientation=potrait&id=${row.id}`;
-        window.open(url, '_blank');
-      }
-    },
-    {
-      icon: 'print',
-      title: "Print",
-      class: 'bg-purple-600 text-light-100',
-      show: (row) => row['jenis_surat.value'] === 'PKWT' && data.can_create,
-      click(row) {
-        const url = `${store.server.url_backend}/web/sk_pkwt?export=pdf&orientation=potrait&id=${row.id}`;
+        const name = (row['jenis_surat.value'] || '').toUpperCase();
+        let endpoint = 'sk_mutasi';
+        if (name.includes('PROMOSI') || name.includes('TUNJANGAN')) endpoint = 'sk_promosi';
+        else if (name.includes('DEMOSI')) endpoint = 'sk_demosi';
+        else if (name.includes('PENGANGKATAN') || name.includes('PKWTT') || name.includes('TETAP')) endpoint = 'sk_tetap';
+        else if (name.includes('PENAMBAHAN TUGAS')) endpoint = 'sk_penambahan_tugas';
+        else if (name.includes('PENGALAMAN KERJA')) endpoint = 'sk_pengalaman_kerja';
+        else if (name.includes('KETERANGAN KERJA') || name.includes('SKK')) endpoint = 'sk_kerja';
+        else if (name.includes('SURAT TUGAS') || name.includes('PELATIHAN')) endpoint = 'sk_tugas_pelatihan';
+        else if (name.includes('PERJANJIAN BERSAMA') || name.includes('BERAKHIR') || name.includes('PEMBERHENTIAN')) endpoint = 'sk_phk';
+        else if (name.includes('FREELANCE') || name.includes('HARIAN LEPAS') || name.includes('PHL')) endpoint = 'sk_freelance';
+        else if (name.includes('PKWT')) endpoint = 'sk_pkwt';
+        else if (name.includes('PERINGATAN') || name.includes('SP')) endpoint = 'sk_sp';
+        else if (name.includes('MAGANG') || name.includes('PKL') || name.includes('PENERIMAAN')) endpoint = 'sk_penerimaan';
+
+        const url = `${store.server.url_backend}/web/${endpoint}?export=pdf&orientation=potrait&id=${row.id}`;
         window.open(url, '_blank');
       }
     },

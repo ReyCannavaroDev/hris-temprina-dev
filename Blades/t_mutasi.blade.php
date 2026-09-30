@@ -34,8 +34,8 @@
       <Icon fa="arrow-left" class="cursor-pointer mr-2 font-bold hover:text-yellow-500" title="Kembali"
         @click="onBack" />
       <div>
-        <h1 class="text-20px font-bold">Form Mutasi</h1>
-        <p class="text-gray-100">Mutasi</p>
+        <h1 class="text-20px font-bold">Form Mutasi & Persuratan Karyawan</h1>
+        <p class="text-gray-100">Mutasi & Persuratan Karyawan</p>
       </div>
     </div>
   </div>
@@ -173,7 +173,7 @@
     </div>
 
     <!-- TIPE MUTASI -->
-    <div>
+    <div v-show="isCareerMutation">
       <FieldSelect class="w-full !mt0 " :value="values.tipe_mutasi" @input="v => values.tipe_mutasi=v"
         placeholder="Pilih Tipe Mutasi" label="Tipe Mutasi" :check="false"
         :options="['Antar SBU', 'Antar SUB', 'Antar Branch / Cabang' , 'Antar Divisi' ]" />
@@ -188,6 +188,7 @@
                 values.jenis_surat=null
               }
             }" @update:valueFull="obj => {
+                onSelectJenisSurat(obj);
                 if (obj) {
                   values.jenis_surat = obj.id; 
                 } else {
@@ -331,7 +332,7 @@
 
 
     <!-- STATUS KARY BARU -->
-    <div>
+    <div v-show="isCareerMutation">
       <FieldSelect :bind="{ disabled: !actionText, clearable: true }" class="w-full !mt0" :value="values.status_kary_baru_id"
         @input="v=>{
           if(v){
@@ -360,7 +361,7 @@
   }" :check="false" />
     </div>
 
-    <div>
+    <div v-show="isCareerMutation">
       <FieldSelect :bind="{ disabled: !actionText, clearable:true }" :value="values.jadwal_kerja_baru_id"
         @input="v=>values.jadwal_kerja_baru_id=v" :errorText="formErrors.jadwal_kerja_baru_id?'failed':''"
         :hints="formErrors.jadwal_kerja_baru_id" valueField="id" displayField="keterangan" :api="{
@@ -375,122 +376,129 @@
     </div>
 
     <!-- SBU BARU -->
-    <FieldSelect :bind="{ disabled: !actionText }" class="w-full !mt0 " :value="values.m_sbu_baru_id" @input="v => {
-    if (v) {
-      values.m_sbu_baru_id = v;
-    } else {
-      values.m_sbu_baru_id = null;
-      values.m_sub_baru_id = null;
-      values.m_branch_baru_id = null;
-      values.m_divisi_baru_id = null;
-    }
-  }" @update:valueFull="obj => {
-    if (obj) {
-      values.m_sbu_baru_id = obj.id;
-      values.m_sub_baru_id = null;
-      values.m_branch_baru_id = null;
-      values.m_divisi_baru_id = null;
-    } else {
-      values.m_sbu_baru_id = null;
-    }
-  }" :errorText="formErrors.m_sbu_baru_id ? 'failed' : ''" :hints="formErrors.m_sbu_baru_id" :check="false"
-      label="SBU Baru" placeholder="Pilih SBU Baru" valueField="id" displayField="name" :api="{
-    url: `${store.server.url_backend}/operation/m_comp`,
-    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-    params: {
-      simplest:true,
-      single:true,
-      where:`this.is_active='true'`,
-      transform:false,
-    }
-  }" />
+    <div v-show="isCareerMutation">
+      <FieldSelect :bind="{ disabled: !actionText }" class="w-full !mt0 " :value="values.m_sbu_baru_id" @input="v => {
+      if (v) {
+        values.m_sbu_baru_id = v;
+      } else {
+        values.m_sbu_baru_id = null;
+        values.m_sub_baru_id = null;
+        values.m_branch_baru_id = null;
+        values.m_divisi_baru_id = null;
+      }
+    }" @update:valueFull="obj => {
+      if (obj) {
+        values.m_sbu_baru_id = obj.id;
+        values.m_sub_baru_id = null;
+        values.m_branch_baru_id = null;
+        values.m_divisi_baru_id = null;
+      } else {
+        values.m_sbu_baru_id = null;
+      }
+    }" :errorText="formErrors.m_sbu_baru_id ? 'failed' : ''" :hints="formErrors.m_sbu_baru_id" :check="false"
+        label="SBU Baru" placeholder="Pilih SBU Baru" valueField="id" displayField="name" :api="{
+      url: `${store.server.url_backend}/operation/m_comp`,
+      headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+      params: {
+        simplest:true,
+        single:true,
+        where:`this.is_active='true'`,
+        transform:false,
+      }
+    }" :check="false" />
+    </div>
 
     <!-- SUB BARU -->
-    <FieldSelect :bind="{ disabled: !actionText || !values.m_sbu_baru_id }" class="w-full !mt0 "
-      :value="values.m_sub_baru_id" @input="v => {
-    if (v) {
-      values.m_sub_baru_id = v;
-    } else {
-      values.m_sub_baru_id = null;
-      values.m_branch_baru_id = null;
-      values.m_divisi_baru_id = null;
-    }
-  }" @update:valueFull="obj => {
-    if (obj) {
-      values.m_sub_baru_id = obj.id;
-      values.m_branch_baru_id = null;
-      values.m_divisi_baru_id = null;
-    } else {
-      values.m_sub_baru_id = null;
-    }
-  }" :errorText="formErrors.m_sub_baru_id ? 'failed' : ''" :hints="formErrors.m_sub_baru_id" :check="false"
-      label="SUB Baru" placeholder="Pilih SUB Baru" valueField="id" displayField="name" :api="{
-    url: `${store.server.url_backend}/operation/m_subcomp`,
-    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-    params: {
-      simplest:true,
-      single:true,
-      where:`this.is_active='true' AND this.m_comp_id='${values.m_sbu_baru_id}'`,
-      transform:false,
-    }
-  }" />
+    <div v-show="isCareerMutation">
+      <FieldSelect :bind="{ disabled: !actionText || !values.m_sbu_baru_id }" class="w-full !mt0 "
+        :value="values.m_sub_baru_id" @input="v => {
+      if (v) {
+        values.m_sub_baru_id = v;
+      } else {
+        values.m_sub_baru_id = null;
+        values.m_branch_baru_id = null;
+        values.m_divisi_baru_id = null;
+      }
+    }" @update:valueFull="obj => {
+      if (obj) {
+        values.m_sub_baru_id = obj.id;
+        values.m_branch_baru_id = null;
+        values.m_divisi_baru_id = null;
+      } else {
+        values.m_sub_baru_id = null;
+      }
+    }" :errorText="formErrors.m_sub_baru_id ? 'failed' : ''" :hints="formErrors.m_sub_baru_id" :check="false"
+        label="SUB Baru" placeholder="Pilih SUB Baru" valueField="id" displayField="name" :api="{
+      url: `${store.server.url_backend}/operation/m_subcomp`,
+      headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+      params: {
+        simplest:true,
+        single:true,
+        where:`this.is_active='true' AND this.m_comp_id='${values.m_sbu_baru_id}'`,
+        transform:false,
+      }
+    }" :check="false" />
+    </div>
 
     <!-- CABANG BARU -->
-    <FieldSelect :bind="{ disabled: !actionText || !values.m_sub_baru_id }" class="w-full !mt0 "
-      :value="values.m_branch_baru_id" @input="v => {
-    if (v) {
-      values.m_branch_baru_id = v;
-    } else {
-      values.m_branch_baru_id = null;
-      values.m_divisi_baru_id = null;
-    }
-  }" @update:valueFull="obj => {
-    if (obj) {
-      values.m_branch_baru_id = obj.id;
-      values.m_divisi_baru_id = null;
-    } else {
-      values.m_branch_baru_id = null;
-    }
-  }" :errorText="formErrors.m_branch_baru_id ? 'failed' : ''" :hints="formErrors.m_branch_baru_id" :check="false"
-      label="Cabang Baru" placeholder="Pilih Cabang Baru" valueField="id" displayField="name" :api="{
-    url: `${store.server.url_backend}/operation/m_branch`,
-    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-    params: {
-      simplest:true,
-      single:true,
-      where:`this.is_active='true' AND this.m_subcomp_id='${values.m_sub_baru_id}'`,
-      transform:false,
-    }
-  }" />
+    <div v-show="isCareerMutation">
+      <FieldSelect :bind="{ disabled: !actionText || !values.m_sub_baru_id }" class="w-full !mt0 "
+        :value="values.m_branch_baru_id" @input="v => {
+      if (v) {
+        values.m_branch_baru_id = v;
+      } else {
+        values.m_branch_baru_id = null;
+        values.m_divisi_baru_id = null;
+      }
+    }" @update:valueFull="obj => {
+      if (obj) {
+        values.m_branch_baru_id = obj.id;
+        values.m_divisi_baru_id = null;
+      } else {
+        values.m_branch_baru_id = null;
+      }
+    }" :errorText="formErrors.m_branch_baru_id ? 'failed' : ''" :hints="formErrors.m_branch_baru_id" :check="false"
+        label="Cabang Baru" placeholder="Pilih Cabang Baru" valueField="id" displayField="name" :api="{
+      url: `${store.server.url_backend}/operation/m_branch`,
+      headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+      params: {
+        simplest:true,
+        single:true,
+        where:`this.is_active='true' AND this.m_subcomp_id='${values.m_sub_baru_id}'`,
+        transform:false,
+      }
+    }" :check="false" />
+    </div>
 
     <!-- DIVISI BARU -->
-    <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_baru_id }" class="w-full !mt0 "
-      :value="values.m_divisi_baru_id" @input="v => {
-    if (v) {
-      values.m_divisi_baru_id = v;
-    } else {
-      values.m_divisi_baru_id = null;
-    }
-  }" @update:valueFull="obj => {
-    if (obj) {
-      values.m_divisi_baru_id = obj.id;
-    } else {
-      values.m_divisi_baru_id = null;
-    }
-  }" :errorText="formErrors.m_divisi_baru_id ? 'failed' : ''" :hints="formErrors.m_divisi_baru_id" :check="false"
-      label="Divisi Baru" placeholder="Pilih Divisi Baru" valueField="id" displayField="name.value" :api="{
-    url: `${store.server.url_backend}/operation/m_divisi`,
-    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-    params: {
-      scopes: 'Name',
-      where:`this.is_active='true' AND this.m_branch_id='${values.m_branch_baru_id}'`,
-      transform:false,
-    }
-  }" />
-
+    <div v-show="isCareerMutation">
+      <FieldSelect :bind="{ disabled: !actionText || !values.m_branch_baru_id }" class="w-full !mt0 "
+        :value="values.m_divisi_baru_id" @input="v => {
+      if (v) {
+        values.m_divisi_baru_id = v;
+      } else {
+        values.m_divisi_baru_id = null;
+      }
+    }" @update:valueFull="obj => {
+      if (obj) {
+        values.m_divisi_baru_id = obj.id;
+      } else {
+        values.m_divisi_baru_id = null;
+      }
+    }" :errorText="formErrors.m_divisi_baru_id ? 'failed' : ''" :hints="formErrors.m_divisi_baru_id" :check="false"
+        label="Divisi Baru" placeholder="Pilih Divisi Baru" valueField="id" displayField="name.value" :api="{
+      url: `${store.server.url_backend}/operation/m_divisi`,
+      headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+      params: {
+        scopes: 'Name',
+        where:`this.is_active='true' AND this.m_branch_id='${values.m_branch_baru_id}'`,
+        transform:false,
+      }
+    }" :check="false" />
+    </div>
 
     <!-- POSISI BARU -->
-    <div>
+    <div v-show="isCareerMutation">
       <FieldSelect :bind="{ disabled: !actionText }" class="w-full !mt0 " :value="values.m_posisi_baru_id"
         :errorText="formErrors.m_posisi_baru_id?'failed':''" @input="v=>values.m_posisi_baru_id=v"
         :hints="formErrors.m_posisi_baru_id" :check="false" label="Jabatan Baru" placeholder="Pilih Jabatan Baru"
@@ -531,14 +539,13 @@
     <div>
       <FieldX class="w-full !mt0 " :bind="{ readonly: !actionText }" :value="values.deskripsi"
         :errorText="formErrors.deskripsi?'failed':''" @input="v=>values.deskripsi=v" type="textarea"
-        :hints="formErrors.deskripsi" label="Deskripsi" placeholder="Tuliskan Deskripsi" :check="false" />
+        :hints="formErrors.deskripsi" :label="labelDeskripsi" :placeholder="placeholderDeskripsi" :check="false" />
     </div>
-
 
     <div>
       <FieldX class="w-full !mt0 " :bind="{ readonly: !actionText }" :value="values.keterangan"
         :errorText="formErrors.keterangan?'failed':''" @input="v=>values.keterangan=v" type="textarea"
-        :hints="formErrors.keterangan" label="Keterangan" placeholder="Tuliskan Keterangan" :check="false" />
+        :hints="formErrors.keterangan" :label="labelKeterangan" :placeholder="placeholderKeterangan" :check="false" />
     </div>
 
 
@@ -772,6 +779,15 @@
   <hr>
   <div class="flex flex-row items-center justify-end space-x-2 p-2">
     <i class="text-gray-500 text-[12px]">Tekan CTRL + S untuk shortcut Save Data</i>
+    <button
+        class="bg-purple-600 text-white font-semibold hover:bg-purple-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2 flex items-center gap-x-1"
+        v-show="$route.params.id && $route.params.id !== 'create'"
+        @click="onPrintSurat"
+        type="button"
+      >
+        <icon fa="print" />
+        Cetak Surat
+      </button>
     <button
         class="bg-red-600 text-white font-semibold hover:bg-red-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
         v-show="actionText"

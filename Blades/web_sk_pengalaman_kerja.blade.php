@@ -30,11 +30,22 @@ $akhirKerja = $karyawan_jabatan && $karyawan_jabatan->tgl_selesai
               ? Carbon::parse($karyawan_jabatan->tgl_selesai)->translatedFormat('d F Y') 
               : 'Sekarang';
 
+$sbuCode = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
+$sbuName = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
+$isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
+
+$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : ($t_mutasi?->m_sub_lama?->m_company?->name ?? 'PT Temprina Media Grafika');
+$kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota 
+            ?? $t_mutasi?->m_kary?->m_branch?->kota 
+            ?? 'Surabaya';
+
 @endphp
 
-  <div style="font-family:'Times New Roman',serif;margin:auto;font-size:12px;line-height:1.2;">
+  <div style="font-family:'Times New Roman',serif;width:90%;margin:auto;font-size:12px;line-height:1.4;">
     
-    <div style="text-align:center; margin-bottom:40px;">
+    @include('projects.web_sk_kop')
+
+    <div style="text-align:center; margin-bottom:30px; margin-top:15px;">
       <h3 style="text-decoration:underline; margin:0; font-size:18px;">SURAT PENGALAMAN KERJA</h3>
       <p style="margin:0;">No. {{$t_mutasi?->nomor}}</p>
     </div>
@@ -81,38 +92,26 @@ $akhirKerja = $karyawan_jabatan && $karyawan_jabatan->tgl_selesai
       <tr>
         <td style="vertical-align:top;">-</td>
         <td style="vertical-align:top;">Keterangan</td>
-        <td style="vertical-align:top; width:100%">: {{$t_mutasi->Keterangan ?? '-'}}</td>
+        <td style="vertical-align:top; width:100%">: {{$t_mutasi->keterangan ?? $t_mutasi->deskripsi ?? '-'}}</td>
       </tr>
     </table>
-
     <p style="text-align:justify; margin-bottom:20px;">
       Selama bekerja yang bersangkutan telah menunjukkan dedikasi serta kinerja yang baik untuk perusahaan. Untuk itu
-      atas nama manajemen PT Temprina Media Grafika menyampaikan terima kasih atas kerjasamanya selama ini.
+      atas nama manajemen {{$companyName}} menyampaikan terima kasih atas kerjasamanya selama ini.
     </p>
 
     <p style="text-align:justify; margin-bottom:40px;">
       Demikian surat pengalaman kerja ini kami buat agar dapat dipergunakan sebagaimana mestinya.
     </p>
 
-   <!-- <div>
-      <div >
-        <p>Surabaya, 31 Desember 2025</p>
-        <p style="font-weight: bold;">PT TEMPRINA MEDIA GRAFIKA</p>
-      </div>
-      
-      <div>
-        <p style="font-weight: bold; text-decoration:underline">NAMA YANG TTD</p>
-        <p style="font-weight: bold;">JABATAN TTD</p>
-      </div>
-    </div> -->
     <table style="width:100%;margin-top:26px; font-size: 11px;">
     <tr>
       <td style="width:60%;"></td>
       <td style="width:40%;">
-        Dikeluarkan di&nbsp;&nbsp;: Surabaya<br>
+        Dikeluarkan di&nbsp;&nbsp;: {{$kotaTerbit}}<br>
         Pada Tanggal&nbsp;&nbsp;: {{$tanggalTerbit}}
         <div style="margin-top:18px;font-weight:bold;">
-          {{$t_mutasi->m_sub_lama?->m_company?->name ?? '-'}}
+          {{$companyName}}
         </div>
         <div></div>
         <div style="margin-top:50px;font-weight:bold;text-decoration:underline;">
@@ -124,5 +123,7 @@ $akhirKerja = $karyawan_jabatan && $karyawan_jabatan->tgl_selesai
       </td>
     </tr>
   </table>
+
+  @include('projects.web_sk_footer')
 
   </div>

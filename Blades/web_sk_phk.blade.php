@@ -34,15 +34,20 @@ $akhirKerja = $karyawan_jabatan && $karyawan_jabatan->tgl_selesai
 $kompensasiRaw = $t_mutasi?->kompensasi ?? 0;
 $kompensasi = number_format($kompensasiRaw, 0, ',', '.');
 
+$sbuCode = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
+$sbuName = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
+$isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
+
+$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : ($t_mutasi?->m_sub_lama?->m_company?->name ?? 'PT Temprina Media Grafika');
+$kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota 
+            ?? $t_mutasi?->m_kary?->m_branch?->kota 
+            ?? 'Surabaya';
+
 @endphp
 
 <div style="font-family:'Times New Roman',serif;width:90%;margin:auto;font-size:10.8px;line-height:1.5;">
 
-  <table>
-    <tr>
-      <td></td>
-    </tr>
-  </table>
+  @include('projects.web_sk_kop')
 
   <!-- JUDUL -->
   <table style="width:100%;margin-top:20px;">
@@ -186,31 +191,34 @@ $kompensasi = number_format($kompensasiRaw, 0, ',', '.');
       <td></td>
     </tr>
     <tr>
-      <td>Demikainlah PB ini dibuat dan disepakati PARA PIHAK di PT {{$t_mutasi->m_sub_lama?->m_company?->name ?? '-'}} Jl. {{$t_mutasi->m_sub_lama?->m_company?->address ?? '-'}}
-        {{$t_mutasi->m_sub_lama?->m_company?->city?->value ?? '-'}} pada tanggal {{$tanggal}} .</td>
+      <td>Demikianlah Perjanjian Bersama ini dibuat dan disepakati PARA PIHAK di {{$companyName}} Jl. {{$t_mutasi->m_sub_lama?->address ?? $t_mutasi->m_kary?->m_branch?->address ?? '-'}}
+        pada tanggal {{$tanggalIndo}} .</td>
     </tr>
     <tr>
       <td></td>
     </tr>
   </table>
 
-  <table>
+  <table style="width:100%; margin-top:20px;">
     <tr>
-      <td style="width:33%">PEMBERI KERJA<br>PT {{$t_mutasi->m_sub_lama?->m_company?->name ?? '-'}}</td>
-      <td style="width:33%"></td>
-      <td style="width:33%">PENERIMA KERJA</td>
+      <td style="width:50%; text-align:left;">PEMBERI KERJA<br><strong>{{$companyName}}</strong></td>
+      <td style="width:50%; text-align:right;">PENERIMA KERJA</td>
     </tr>
     <tr>
-      <td></td>
+      <td colspan="2"><div style="height:55px;"></div></td>
     </tr>
-    <tr>
-      <td></td>
-    </tr>
-    <tr style="font-size: 10px;">
-      <td style="width:33%">{{$t_mutasi->signature?->nama_lengkap ?? '-'}}<br>{{$t_mutasi->signature?->m_posisi?->name}}</td>
-      <td style="width:33%"></td>
-      <td style="width:33%">{{$t_mutasi?->m_kary?->nama_lengkap ?? '-'}}</td>
+    <tr style="font-size: 11px;">
+      <td style="width:50%; text-align:left;">
+        <b><u>{{$t_mutasi->signature?->nama_lengkap ?? '-'}}</u></b><br>
+        {{$t_mutasi->signature?->m_posisi?->name ?? ''}}
+      </td>
+      <td style="width:50%; text-align:right;">
+        <b><u>{{$t_mutasi?->m_kary?->nama_lengkap ?? '-'}}</u></b><br>
+        {{$t_mutasi?->m_posisi_lama?->name ?? 'Karyawan'}}
+      </td>
     </tr>
   </table>
+
+  @include('projects.web_sk_footer')
 
 </div>

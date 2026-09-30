@@ -29,9 +29,21 @@ $awalKerja = $karyawan_jabatan ? Carbon::parse($karyawan_jabatan->tgl_mulai)->tr
 $akhirKerja = $karyawan_jabatan && $karyawan_jabatan->tgl_selesai 
               ? Carbon::parse($karyawan_jabatan->tgl_selesai)->translatedFormat('d F Y') 
               : 'Sekarang';
+
+$sbuCode = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
+$sbuName = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
+$isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
+
+$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : ($t_mutasi?->m_sub_lama?->m_company?->name ?? 'PT Temprina Media Grafika');
+$kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota 
+            ?? $t_mutasi?->m_kary?->m_branch?->kota 
+            ?? 'Surabaya';
 @endphp
 
-<div></div>
+<div style="font-family:'Times New Roman',serif;width:90%;margin:auto;font-size:12px;line-height:1.5;">
+
+@include('projects.web_sk_kop')
+
 <table style="width:100%; margin-top:20px; font-family:'Times New Roman', serif;">
   <tr>
     <td style="width:20%;"></td>
@@ -118,7 +130,7 @@ $akhirKerja = $karyawan_jabatan && $karyawan_jabatan->tgl_selesai
   <tr>
     <td style="width: 25%;">Keperluan</td>
     <td style="width: 3%;">:</td>
-    <td>{{$t_mutasi->keterangan ?? '-'}}</td>
+    <td>{{$t_mutasi->deskripsi ?? $t_mutasi->keterangan ?? '-'}}</td>
   </tr>
     <tr>
     <td></td>
@@ -131,18 +143,15 @@ $akhirKerja = $karyawan_jabatan && $karyawan_jabatan->tgl_selesai
 </table>
 <div></div>
 <div></div>
-<table style="font-family:Times New Roman; font-size:14px;">
+<table style="font-family:Times New Roman; font-size:14px; margin-top:20px;">
   <tr>
-    <td>{{$t_mutasi->m_kary?->m_subcomp?->city?->value ?? '-'}}, {{$tanggalTerbit}}</td>
+    <td>{{$kotaTerbit}}, {{$tanggalTerbit}}</td>
   </tr>
   <tr>
-    <td>PT. {{$t_mutasi->m_sub_lama?->m_company?->name ?? '-'}}</td>
+    <td><strong>{{$companyName}}</strong></td>
   </tr>
   <tr>
-    <td></td>
-  </tr>
-  <tr>
-    <td></td>
+    <td><div style="height:55px;"></div></td>
   </tr>
   <tr>
     <td>
@@ -159,3 +168,7 @@ $akhirKerja = $karyawan_jabatan && $karyawan_jabatan->tgl_selesai
   </tr>
 
 </table>
+
+@include('projects.web_sk_footer')
+
+</div>

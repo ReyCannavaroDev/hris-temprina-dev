@@ -24,58 +24,63 @@ $memperhatikan = $t_mutasi->t_mutasi_d_memperhatikan ?? null;
 //dd($t_mutasi);
 
 
+$sbuCode = strtoupper($t_mutasi?->m_sbu_baru?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
+$sbuName = strtoupper($t_mutasi?->m_sbu_baru?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
+$isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
+
+$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : 'PT Temprina Media Grafika';
+$kotaTerbit = $t_mutasi?->m_branch_baru?->kota 
+            ?? $t_mutasi?->m_branch_lama?->kota 
+            ?? $t_mutasi?->m_kary?->m_branch?->kota 
+            ?? 'Surabaya';
+
 @endphp
 
 <div style="font-family:'Times New Roman',serif;width:90%;margin:auto;font-size:12px;line-height:1.5;">
 
+  @include('projects.web_sk_kop')
+
   <!-- JUDUL -->
   <table style="width:100%;margin-top:20px;">
     <tr>
-      <td style="width:30%;"></td>
+      <td style="width:25%;"></td>
       <td
-        style="width:40%;text-align:center;font-weight:bold;font-size:15px;border-bottom:2px solid black;height:28px;">
-        S U R A T K E P U T U S A N
+        style="width:50%;text-align:center;font-weight:bold;font-size:15px;border-bottom:2px solid black;height:28px;letter-spacing:1px;">
+        S U R A T   K E P U T U S A N
       </td>
-      <td style="width:30%;"></td>
+      <td style="width:25%;"></td>
     </tr>
     <tr>
       <td></td>
-      <td style="text-align:center;font-weight:bold;font-size:11px;padding-top:4px;">
-        Direksi PT Temprina Media Grafika
+      <td style="text-align:center;font-size:11px;padding-top:4px;">
+        No. {{$t_mutasi->nomor ?? '-'}}
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td style="text-align:center;font-weight:bold;font-size:11px;padding-top:2px;">
+        Direksi {{$companyName}}
       </td>
       <td></td>
     </tr>
   </table>
-
-  <div></div>
 
   <!-- SUB JUDUL -->
-  <table style="width:100%;margin-top:18px;">
+  <table style="width:100%;margin-top:16px;">
     <tr>
-      <td style="width:44%;"></td>
-      <td style="width:12%;text-align:center;font-size:11px;">
-        TENTANG
+      <td style="width:40%;"></td>
+      <td style="width:20%;text-align:center;font-size:11px;">
+        Tentang
       </td>
-      <td style="width:44%;"></td>
+      <td style="width:40%;"></td>
     </tr>
-  </table>
-
-  <table style="width:100%;margin-top:18px;">
     <tr>
-      <td style="width:25%;"></td>
-      <td style="width:50%;text-align:center;font-size:11px;">
-        PENGANGKATAN KARYAWAN TETAP Th.{{$carbonDate->year}}
+      <td style="width:20%;"></td>
+      <td style="width:60%;text-align:center;font-size:11px;font-weight:bold;padding-top:4px;">
+        PENGANGKATAN KARYAWAN TETAP Th. {{$carbonDate->year}}
       </td>
-      <td style="width:25%;"></td>
-    </tr>
-  </table>
-  <table style="width:100%;margin-top:18px;">
-    <tr>
-      <td style="width:25%;"></td>
-      <td style="width:50%;text-align:center;font-size:11px;">
-        {{$t_mutasi->nomor ?? '-'}}
-      </td>
-      <td style="width:25%;"></td>
+      <td style="width:20%;"></td>
     </tr>
   </table>
 
@@ -223,10 +228,10 @@ $memperhatikan = $t_mutasi->t_mutasi_d_memperhatikan ?? null;
     <tr>
       <td style="width:60%;"></td>
       <td style="width:40%;">
-        Ditetapkan di&nbsp;&nbsp;: Surabaya<br>
+        Ditetapkan di&nbsp;&nbsp;: {{$kotaTerbit}}<br>
         Pada Tanggal&nbsp;&nbsp;: {{$tanggalTerbit}}
         <div style="margin-top:18px;font-weight:bold;">
-          PT Temprina Media Grafika
+          {{$companyName}}
         </div>
         <div></div>
         <div style="margin-top:50px;font-weight:bold;text-decoration:underline;">
@@ -238,5 +243,7 @@ $memperhatikan = $t_mutasi->t_mutasi_d_memperhatikan ?? null;
       </td>
     </tr>
   </table>
+
+  @include('projects.web_sk_footer')
 
 </div>

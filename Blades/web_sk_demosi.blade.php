@@ -29,26 +29,28 @@ $jadwalBaru = t_jadwal_kerja_d_hari_n::whereHas('t_jadwal_kerja_n', function($q)
 $q->where('id', $t_mutasi?->jadwal_kerja_baru_id);
 })->first();
 
+$sbuCode = strtoupper($t_mutasi?->m_sbu_baru?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
+$sbuName = strtoupper($t_mutasi?->m_sbu_baru?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
+$isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
+
+$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : 'PT Temprina Media Grafika';
+$kotaTerbit = $t_mutasi?->m_branch_baru?->kota 
+            ?? $t_mutasi?->m_branch_lama?->kota 
+            ?? $t_mutasi?->m_kary?->m_branch?->kota 
+            ?? 'Surabaya';
+
 @endphp
 
 <div style="font-family:'Times New Roman',serif;width:85%;margin:auto;font-size:12px;line-height:1.6;">
 
-  <!-- HEADER -->
-  <!-- <div style="text-align:center;margin-top:20px;">
-    <div style="font-weight:bold;font-size:16px;">SURAT KEPUTUSAN</div>
-    <div style="font-size:12px;margin-top:4px;">
-      001/Jkt/09/2022/TMG/SBY/HRD/DM
-    </div>
-    <div style="margin-top:14px;font-weight:bold;">TENTANG</div>
-    <div style="font-weight:bold;">DEMOSI JABATAN</div>
-  </div> -->
+  @include('projects.web_sk_kop')
 
   <table style="width:100%;margin-top:20px;">
     <tr>
       <td style="width:30%;"></td>
       <td
         style="width:40%;text-align:center;font-weight:bold;font-size:15px;border-bottom:2px solid black;height:28px;">
-        SURAT KETERANGAN
+        SURAT KEPUTUSAN
       </td>
       <td style="width:30%;"></td>
     </tr>
@@ -223,13 +225,13 @@ $q->where('id', $t_mutasi?->jadwal_kerja_baru_id);
     <tr>
       <td rowspan="7" style="width:60%;margin-top:40px;"></td>
       <td rowspan="7" style="width:2%;margin-top:40px;"></td>
-      <td style="width:auto;">Dikeluarkan di : Surabaya</td>
+      <td style="width:auto;">Dikeluarkan di : {{$kotaTerbit}}</td>
     </tr>
     <tr>
       <td> Pada Tanggal : {{$tanggalTerbit}}</td>
     </tr>
     <tr>
-      <td>PT. Temprina Media Grafika</td>
+      <td><strong>{{$companyName}}</strong></td>
     </tr>
     <tr>
       <td></td>
@@ -263,5 +265,7 @@ $q->where('id', $t_mutasi?->jadwal_kerja_baru_id);
       </td>
     </tr>
   </table>
+
+  @include('projects.web_sk_footer')
 
 </div>

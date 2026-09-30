@@ -51,83 +51,128 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
 
             // Ambil Kode Tipe Surat dari m_general
             $tipeSurat = m_general::where('group', 'JENIS SURAT')->where('id', $data['jenis_surat'])->first();
-            $kodeSurat = $tipeSurat ? $tipeSurat->code : '';
+            $kodeSurat = strtoupper(trim($tipeSurat ? ($tipeSurat->code ?? '') : ''));
+            $namaSurat = strtoupper(trim($tipeSurat ? ($tipeSurat->value ?? '') : ''));
 
-            // 1. Logika Update Jabatan
-            if (in_array($kodeSurat, ['J12', 'J09', 'J02'])) {
-                // DEMOSI (J12), PROMOSI (J09), MUTASI (J02) -> Non-aktifkan jabatan lama
+            // Pengelompokan Kategori Surat
+            $isCareerMovement = in_array($kodeSurat, ['J02', 'J09', 'J12', 'J05', 'J07']) ||
+                               str_contains($namaSurat, 'MUTASI') ||
+                               str_contains($namaSurat, 'PROMOSI') ||
+                               str_contains($namaSurat, 'DEMOSI') ||
+                               str_contains($namaSurat, 'PENGANGKATAN') ||
+                               str_contains($namaSurat, 'PENAMBAHAN TUGAS') ||
+                               str_contains($namaSurat, 'TUNJANGAN JABATAN');
+
+            $isTermination = str_contains($namaSurat, 'BERAKHIR') ||
+                             str_contains($namaSurat, 'PEMBERHENTIAN') ||
+                             (str_contains($namaSurat, 'PERJANJIAN BERSAMA') && !empty($data['kompensasi']));
+
+            if ($isCareerMovement) {
+                // 1. Logika Update Jabatan
+                if (in_array($kodeSurat, ['J12', 'J09', 'J02']) ||
+                    str_contains($namaSurat, 'MUTASI') ||
+                    str_contains($namaSurat, 'PROMOSI') ||
+                    str_contains($namaSurat, 'DEMOSI')) {
+                    // DEMOSI (J12), PROMOSI (J09), MUTASI (J02) -> Non-aktifkan jabatan lama
+                    m_kary_det_jabatan::where(function ($q) use ($karyawan) {
+                        $q->where('m_karyawan_id', $karyawan->id)
+                            ->orWhere('m_kary_id', $karyawan->id);
+                    })
+                        ->where('is_active', true)
+                        ->where('is_primary', true)
+                        ->update([
+                            'end_time' => date('Y-m-d'),
+                            'is_primary' => false,
+                            'is_active' => false,
+                        ]);
+                }
+
+                // 2. Tambah Jabatan Baru (Hanya jika posisi/SBU baru diisi)
+                if (!empty($data["m_posisi_baru_id"]) || !empty($data["m_sbu_baru_id"])) {
+                    $isPrimaryNew = ($kodeSurat === 'J05' || str_contains($namaSurat, 'PENAMBAHAN TUGAS')) ? false : true;
+                    $newJabatan = m_kary_det_jabatan::create([
+                        'm_kary_id' => $karyawan->id,
+                        'm_karyawan_id' => $karyawan->id,
+                        'm_comp_id' => $data["m_sbu_baru_id"],
+                        'm_subcomp_id' => $data["m_sub_baru_id"],
+                        'm_branch_id' => $data["m_branch_baru_id"],
+                        'm_divisi_id' => $data["m_divisi_baru_id"],
+                        'm_posisi_id' => $data["m_posisi_baru_id"],
+                        'start_time' => $data['tgl'],
+                        'is_primary' => $isPrimaryNew,
+                        'is_active' => true,
+                    ]);
+                }
+
+                // 3. Logika Update Data Utama Karyawan
+                if ($kodeSurat !== 'J05' && !str_contains($namaSurat, 'PENAMBAHAN TUGAS')) {
+                    $updateDataKary = [];
+                    if (!empty($data["m_sbu_baru_id"])) $updateDataKary["m_comp_id"] = $data["m_sbu_baru_id"];
+                    if (!empty($data["m_sub_baru_id"])) $updateDataKary["m_subcomp_id"] = $data["m_sub_baru_id"];
+                    if (!empty($data["m_divisi_baru_id"])) $updateDataKary["m_divisi_id"] = $data["m_divisi_baru_id"];
+                    if (!empty($data["m_posisi_baru_id"])) $updateDataKary["m_posisi_id"] = $data["m_posisi_baru_id"];
+                    if (!empty($data["m_branch_baru_id"])) $updateDataKary["m_branch_baru_id"] = $data["m_branch_baru_id"];
+
+                    // Khusus J07 (PENGANGKATAN) -> Update status karyawan
+                    if ($kodeSurat === 'J07' || str_contains($namaSurat, 'PENGANGKATAN')) {
+                        if (!empty($data['status_kary_baru_id'])) {
+                            $updateDataKary["status_kary_id"] = $data['status_kary_baru_id'];
+                        }
+                        $updateDataKary["tgl_pengangkatan"] = $data['tgl'];
+                    }
+
+                    if (!empty($updateDataKary)) {
+                        $karyawan->update($updateDataKary);
+                    }
+                }
+
+                // 4. Update Jadwal Kerja (Biasanya mengikuti jadwal baru meskipun penambahan tugas)
+                $jadwalBaruId = $data['jadwal_kerja_baru_id'] ?? $data['t_jadwal_kerja_baru_id'] ?? null;
+                if (!empty($jadwalBaruId)) {
+                    t_jadwal_kerja_d_n::where('m_kary_id', $karyawan->id)
+                        ->where('status', 'AKTIF')
+                        ->update(['status' => 'NON AKTIF']);
+
+                    t_jadwal_kerja_d_n::create([
+                        't_jadwal_kerja_n_id' => $jadwalBaruId,
+                        'm_subcomp_id' => $data["m_sub_baru_id"],
+                        'm_branch_id' => $data["m_branch_baru_id"],
+                        'm_divisi_id' => $data["m_divisi_baru_id"],
+                        'm_kary_id' => $data['m_kary_id'],
+                        'start_date' => $data['tgl'],
+                        'desc' => 'AUTO GENERATE FROM ' . ($tipeSurat->value ?? 'MUTASI'),
+                        'status' => 'AKTIF'
+                    ]);
+                }
+            } else if ($isTermination) {
+                // Pengakhiran Hubungan Kerja: Non-aktifkan jabatan aktif
                 m_kary_det_jabatan::where(function ($q) use ($karyawan) {
                     $q->where('m_karyawan_id', $karyawan->id)
                         ->orWhere('m_kary_id', $karyawan->id);
                 })
                     ->where('is_active', true)
-                    ->where('is_primary', true)
                     ->update([
-                        'end_time' => date('Y-m-d'),
+                        'end_time' => $data['tgl'],
                         'is_primary' => false,
                         'is_active' => false,
                     ]);
-            }
 
-            // 2. Tambah Jabatan Baru
-            $isPrimaryNew = ($kodeSurat === 'J05') ? false : true;
-            // dd($isPrimaryNew, $kodeSurat, $tipeSurat);
-            $newJabatan = m_kary_det_jabatan::create([
-                'm_kary_id' => $karyawan->id,
-                'm_karyawan_id' => $karyawan->id,
-                'm_comp_id' => $data["m_sbu_baru_id"],
-                'm_subcomp_id' => $data["m_sub_baru_id"],
-                'm_branch_id' => $data["m_branch_baru_id"],
-                'm_divisi_id' => $data["m_divisi_baru_id"],
-                'm_posisi_id' => $data["m_posisi_baru_id"],
-                'start_time' => $data['tgl'],
-                'is_primary' => $isPrimaryNew,
-                'is_active' => true,
-            ]);
-
-            // 3. Logika Update Data Utama Karyawan
-            // Jika Penambahan Tugas, data profil utama karyawan (m_posisi_id, dll) biasanya tidak berubah
-            if ($kodeSurat !== 'J05') {
-                $updateDataKary = [
-                    "m_comp_id" => $data["m_sbu_baru_id"],
-                    "m_subcomp_id" => $data["m_sub_baru_id"],
-                    "m_divisi_id" => $data["m_divisi_baru_id"],
-                    "m_posisi_id" => $data["m_posisi_baru_id"],
-                    "m_branch_id" => $data["m_branch_baru_id"],
-                ];
-
-                // Khusus J07 (PENGANGKATAN) -> Update status karyawan
-                if ($kodeSurat === 'J07') {
-                    $updateDataKary["status_kary_id"] = $data['status_kary_baru_id'];
-                    $updateDataKary["tgl_pengangkatan"] = $data['tgl'];
-                }
-
-                $karyawan->update($updateDataKary);
-            }
-
-            // 4. Update Jadwal Kerja (Biasanya mengikuti jadwal baru meskipun penambahan tugas)
-            if (isset($data['t_jadwal_kerja_baru_id'])) {
                 t_jadwal_kerja_d_n::where('m_kary_id', $karyawan->id)
                     ->where('status', 'AKTIF')
                     ->update(['status' => 'NON AKTIF']);
 
-                t_jadwal_kerja_d_n::create([
-                    't_jadwal_kerja_n_id' => $data['t_jadwal_kerja_baru_id'],
-                    'm_subcomp_id' => $data["m_sub_baru_id"],
-                    'm_branch_id' => $data["m_branch_baru_id"],
-                    'm_divisi_id' => $data["m_divisi_baru_id"],
-                    'm_kary_id' => $data['m_kary_id'],
-                    'start_date' => $data['tgl'],
-                    'desc' => 'AUTO GENERATE FROM ' . ($tipeSurat->value ?? 'MUTASI'),
-                    'status' => 'AKTIF'
-                ]);
+                try {
+                    $karyawan->update(['is_active' => false]);
+                } catch (\Throwable $th) {}
             }
+            // Catatan: Untuk surat administrasi (Keterangan Kerja, Paklaring, Surat Tugas Pelatihan, PKWT),
+            // posisi jabatan aktif karyawan tetap dipertahankan dan TIDAK diubah.
 
             // Finalize
             $data->update(["status" => "POSTED"]);
 
             \DB::commit();
-            return response()->json(["message" => "Proses " . ($tipeSurat->value ?? 'Mutasi') . " berhasil diposting."]);
+            return response()->json(["message" => "Proses " . ($tipeSurat->value ?? 'Surat') . " berhasil diposting."]);
 
         } catch (\Exception $e) {
             \DB::rollBack();

@@ -1,71 +1,104 @@
-<!DOCTYPE html>
-<html>
+@php
+use Carbon\Carbon;
+use App\Models\CustomModels\t_mutasi;
 
-<head>
-  <meta charset="UTF-8">
-  <title>Surat Konfirmasi</title>
-</head>
+Carbon::setLocale('id');
+$req = app()->request;
+$id = $req->id;
 
-<body style="background:#d9d9d9; margin:0; padding:40px; font-family:'Times New Roman', Times, serif;">
+$t_mutasi = $id ? t_mutasi::find($id) : null;
 
-  <div style="width:700px; margin:0 auto; background:white; padding:60px 70px; font-size:11px; line-height:1.6; color:black;">
+$nomor = $t_mutasi?->nomor ?? $req->nomor ?? '001/TMG/HLD/VII/2022';
+$tgl = $t_mutasi?->tgl ?? now();
+$carbonDate = Carbon::parse($tgl);
+$tanggalSurat = $carbonDate->translatedFormat('d F Y');
 
-    <div style="margin-bottom:10px;">
-      Nomor : 001/TMG/HLD/VII/2022
-    </div>
+$city = $t_mutasi?->m_branch_baru?->kota 
+      ?? $t_mutasi?->m_branch_lama?->kota 
+      ?? $t_mutasi?->m_kary?->m_branch?->kota 
+      ?? 'Gresik';
 
-    <div style="margin-bottom:20px;">
-      Perihal : <b>Konfirmasi Penerimaan siswa Praktek Kerja Lapangan</b>
-    </div>
+$signature = $t_mutasi?->signature;
+$namaTtd = $signature?->nama_lengkap ?? 'Dissy Ardjani';
+$jabatanTtd = $signature?->m_posisi?->name ?? 'Human Capital';
 
-    <div style="margin-bottom:20px;">
-      Kepada Yth.<br>
-      <b>Dr. Ir. Novarina Hendarasie, MT.</b><br>
-      <b>Dekan Fakultas Ilmu Komputer</b><br>
-      <b>UPN Jawa Timur</b><br>
-    Di Tempat
-    </div>
+$perihal = $t_mutasi?->deskripsi ?? 'Konfirmasi Penerimaan siswa Praktek Kerja Lapangan';
+$tujuanNama = $req->tujuan_nama ?? 'Dr. Ir. Novarina Hendrasarie, MT.';
+$tujuanJabatan = $req->tujuan_jabatan ?? 'Dekan Fakultas Ilmu Komputer';
+$tujuanInstansi = $req->tujuan_instansi ?? 'UPN Jawa Timur';
 
-    <div style="margin-bottom:15px;">
-      Dengan hormat,
-    </div>
+$suratBalasanNo = $req->surat_balasan_no ?? '876/UN63.7/PJ/2024';
+$suratBalasanTgl = $req->surat_balasan_tgl ?? '01 Juli 2024';
 
-    <div style="margin-bottom:15px; font-size: 11px;">
-      Menanggapi surat Nomor : <b>876/UN63.7/PJ/2024</b> tanggal 01 Juli 2024 perihal
-      Praktek Kerja Lapangan mahasiswa :
-    </div>
+$periodeMulai = $t_mutasi?->date_from ? Carbon::parse($t_mutasi->date_from)->translatedFormat('d F Y') : '08 Juli 2024';
+$periodeSelesai = $t_mutasi?->date_to ? Carbon::parse($t_mutasi->date_to)->translatedFormat('d F Y') : '31 Agustus 2024';
+$pembimbing = $t_mutasi?->keterangan ?? 'Bpk Turikan';
+@endphp
 
-    <div style="margin-left:30px; margin-bottom:15px; font-size: 11px;">
-      1. &nbsp;Nadia Dita Salsabila NPM. 21081010181<br>
-    2. &nbsp;Yuani Pranajelita NPM. 21081010204
-    </div>
+<div style="font-family:'Times New Roman',serif;width:90%;margin:auto;font-size:11px;line-height:1.6;color:black;">
 
-    <div style="margin-bottom:15px; text-align:justify font-size: 11px;">
-      Dengan ini disampaikan bahwa permohonan Praktek Kerja Lapangan kami
-      <b>terima</b> dengan waktu pelaksanaan Praktek Kerja Lapangan terhitung mulai
-      tanggal <b>08 Juli 2024</b> s.d. <b>31 Agustus 2024</b> dengan Pembimbing dari perusahaan
-      atas nama Bpk Turikan.
-    </div>
+  @include('projects.web_sk_kop')
 
-    <div style="margin-bottom:30px; text-align:justify; font-size: 11px;">
-      Demikian surat persetujuan ini kami buat untuk digunakan sebagaimana mestinya.
-      Terimakasih.
-    </div>
-
-    <div></div>
-
-    <div style="margin-bottom:40px; font-size: 11px;">
-      Gresik, 05 Juli 2024<br>
-    Hormat kami,
-    </div>
-
-    <div style="margin-top:60px; font-size: 11px;">
-      <b><u>Dissy Ardiani</u></b><br>
-    Human Capital
-    </div>
-
+  <div style="margin-top:20px; margin-bottom:5px;">
+    Nomor : {{$nomor}}
   </div>
 
-</body>
+  <div style="margin-bottom:20px;">
+    Perihal : <b>{{$perihal}}</b>
+  </div>
 
-</html>
+  <div style="margin-bottom:20px;">
+    Kepada Yth.<br>
+    <b>{{$tujuanNama}}</b><br>
+    <b>{{$tujuanJabatan}}</b><br>
+    <b>{{$tujuanInstansi}}</b><br>
+    Di Tempat
+  </div>
+
+  <div style="margin-bottom:15px;">
+    Dengan hormat,
+  </div>
+
+  <div style="margin-bottom:15px; text-align:justify;">
+    Menanggapi surat Nomor : <b>{{$suratBalasanNo}}</b> tanggal {{$suratBalasanTgl}} perihal
+    Praktek Kerja Lapangan mahasiswa :
+  </div>
+
+  <div style="margin-left:30px; margin-bottom:15px;">
+    @if($t_mutasi?->m_kary)
+      1. &nbsp;{{$t_mutasi->m_kary->nama_lengkap}} (NIP/NIM: {{$t_mutasi->m_kary->kode}})<br>
+    @else
+      1. &nbsp;Nadia Dita Salsabila NPM. 21081010181<br>
+      2. &nbsp;Yuani Pranajelita NPM. 21081010204
+    @endif
+  </div>
+
+  <div style="margin-bottom:15px; text-align:justify;">
+    Dengan ini disampaikan bahwa permohonan Praktek Kerja Lapangan kami
+    <b>terima</b> dengan waktu pelaksanaan Praktek Kerja Lapangan terhitung mulai
+    tanggal <b>{{$periodeMulai}}</b> s.d. <b>{{$periodeSelesai}}</b> dengan Pembimbing dari perusahaan
+    atas nama <b>{{$pembimbing}}</b>.
+  </div>
+
+  <div style="margin-bottom:30px; text-align:justify;">
+    Demikian surat persetujuan ini kami buat untuk digunakan sebagaimana mestinya.
+    Terimakasih.
+  </div>
+
+  <!-- TANDA TANGAN -->
+  <table cellspacing="0" cellpadding="0" style="width:100%; margin-top:20px; font-size:11px; line-height:1.3;">
+    <tr>
+      <td style="width:60%;"></td>
+      <td style="width:40%;">
+        {{$city}}, {{$tanggalSurat}}<br>
+        Hormat kami,<br>
+        <div style="height:55px;"></div>
+        <b><u>{{$namaTtd}}</u></b><br>
+        {{$jabatanTtd}}
+      </td>
+    </tr>
+  </table>
+
+  @include('projects.web_sk_footer')
+
+</div>
