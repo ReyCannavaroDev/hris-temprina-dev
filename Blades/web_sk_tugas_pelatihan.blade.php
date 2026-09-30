@@ -66,41 +66,41 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
 
   <div></div>
 
-  <!-- MEMPERHATIKAN -->
+  <!-- MEMPERHATIKAN (STRUKTUR TABEL FLAT AGAR TIDAK PATAH DI TCPDF) -->
   <table style="width:100%; margin-top:18px; border-collapse:collapse; font-size:11px;">
-    <tr>
-      <td style="width:17%; vertical-align:top; text-align:left;">MEMPERHATIKAN</td>
-      <td style="width:2%; vertical-align:top;">:</td>
-      <td style="width:81%; vertical-align:top;">
-        @if($memperhatikan && count($memperhatikan) > 0)
-          <table style="width:100%; border-collapse:collapse;">
-            @foreach($memperhatikan as $item)
-              <tr>
-                <td style="width:2.5%; vertical-align:top;">•</td>
-                <td style="width:97.5%; vertical-align:top; text-align:justify; padding-bottom: 3px;">
-                  {{ $item->value ?? $item['value'] }}
-                </td>
-              </tr>
-            @endforeach
-          </table>
-        @else
-          <table style="width:100%; border-collapse:collapse;">
-            <tr>
-              <td style="width:2.5%; vertical-align:top;">•</td>
-              <td style="width:97.5%; vertical-align:top; text-align:justify; padding-bottom: 3px;">
-                Keputusan hasil rapat / koordinasi manajemen
-              </td>
-            </tr>
-            <tr>
-              <td style="width:2.5%; vertical-align:top;">•</td>
-              <td style="width:97.5%; vertical-align:top; text-align:justify; padding-bottom: 3px;">
-                Peningkatan SDM & produktifitas di PT Temprina Media Grafika
-              </td>
-            </tr>
-          </table>
-        @endif
-      </td>
-    </tr>
+    @if($memperhatikan && count($memperhatikan) > 0)
+      @foreach($memperhatikan as $index => $item)
+        <tr>
+          <td style="width:20%; vertical-align:top; text-align:left;">
+            @if($index === 0) MEMPERHATIKAN @endif
+          </td>
+          <td style="width:2%; vertical-align:top;">
+            @if($index === 0) : @endif
+          </td>
+          <td style="width:3%; vertical-align:top; text-align:center;">•</td>
+          <td style="width:75%; vertical-align:top; text-align:justify; padding-bottom:3px;">
+            {{ $item->value ?? $item['value'] }}
+          </td>
+        </tr>
+      @endforeach
+    @else
+      <tr>
+        <td style="width:20%; vertical-align:top; text-align:left;">MEMPERHATIKAN</td>
+        <td style="width:2%; vertical-align:top;">:</td>
+        <td style="width:3%; vertical-align:top; text-align:center;">•</td>
+        <td style="width:75%; vertical-align:top; text-align:justify; padding-bottom:3px;">
+          Keputusan hasil rapat / koordinasi manajemen
+        </td>
+      </tr>
+      <tr>
+        <td style="width:20%;"></td>
+        <td style="width:2%;"></td>
+        <td style="width:3%; vertical-align:top; text-align:center; padding-top:2px;">•</td>
+        <td style="width:75%; vertical-align:top; text-align:justify; padding-top:2px;">
+          Peningkatan SDM & produktifitas di PT Temprina Media Grafika
+        </td>
+      </tr>
+    @endif
   </table>
 
   <div></div>
@@ -108,15 +108,15 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
   <!-- MEMUTUSKAN SERTA MENETAPKAN -->
   <table style="width:100%; margin-top:16px; font-size:11px;">
     <tr>
-      <td style="width:17%; vertical-align:top; text-align:left;">MEMUTUSKAN<br>SERTA<br>MENETAPKAN</td>
+      <td style="width:20%; vertical-align:top; text-align:left;">MEMUTUSKAN<br>SERTA<br>MENETAPKAN</td>
       <td style="width:2%; vertical-align:bottom; padding-bottom:2px;">:</td>
-      <td style="width:81%;">
+      <td style="width:78%;">
 
         <table style="width:100%; border-collapse:collapse;">
           <tr>
-            <td style="width:14%; vertical-align:top;">• Nama</td>
+            <td style="width:16%; vertical-align:top;">• Nama</td>
             <td style="width:2.5%; vertical-align:top;">:</td>
-            <td style="width:83.5%; font-weight:bold;">{{$t_mutasi?->m_kary?->nama_lengkap ?? '-'}}</td>
+            <td style="width:81.5%; font-weight:bold;">{{$t_mutasi?->m_kary?->nama_lengkap ?? '-'}}</td>
           </tr>
           <tr>
             <td style="vertical-align:top;">• Tugas</td>
