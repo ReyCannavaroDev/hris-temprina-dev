@@ -46,43 +46,38 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
             ?? 'Surabaya';
 @endphp
 
-<div style="font-family:'Times New Roman',serif;width:92%;margin:auto;font-size:11.5px;line-height:1.45;">
+<div style="font-family:'Times New Roman',serif;width:93%;margin:auto;font-size:11.5px;line-height:1.45;">
 
   @include('projects.web_sk_kop')
 
   <!-- JUDUL SURAT (SESUAI DOKUMEN ACUAN & RIIL) -->
-  <table style="width:100%;margin-top:18px;">
+  <table style="width:100%;margin-top:16px;">
     <tr>
-      <td style="width:25%;"></td>
-      <td
-        style="width:50%;text-align:center;font-weight:bold;font-size:14px;border-bottom:1.5px solid black;height:24px;letter-spacing:5px;">
-        S U R A T &nbsp; T U G A S
+      <td style="text-align:center;">
+        <span style="font-weight:bold;font-size:13.5px;letter-spacing:4px;"><u>S U R A T &nbsp; T U G A S</u></span>
       </td>
-      <td style="width:25%;"></td>
     </tr>
     <tr>
-      <td></td>
-      <td style="text-align:center;font-weight:bold;font-size:11px;padding-top:4px;">
+      <td style="text-align:center;font-weight:bold;font-size:11px;padding-top:3px;">
         No. {{$t_mutasi?->nomor ?? '-'}}
       </td>
-      <td></td>
     </tr>
   </table>
 
   <div></div>
 
   <!-- MEMPERHATIKAN -->
-  <table style="width:100%; margin-top:20px; border-collapse:collapse; font-size:11px;">
+  <table style="width:100%; margin-top:18px; border-collapse:collapse; font-size:11px;">
     <tr>
-      <td style="width:23%; vertical-align:top; text-align:left;">MEMPERHATIKAN</td>
+      <td style="width:17%; vertical-align:top; text-align:left;">MEMPERHATIKAN</td>
       <td style="width:2%; vertical-align:top;">:</td>
-      <td style="width:75%; vertical-align:top;">
+      <td style="width:81%; vertical-align:top;">
         @if($memperhatikan && count($memperhatikan) > 0)
           <table style="width:100%; border-collapse:collapse;">
             @foreach($memperhatikan as $item)
               <tr>
-                <td style="width:3%; vertical-align:top;">•</td>
-                <td style="vertical-align:top; text-align:justify; padding-bottom: 4px;">
+                <td style="width:2.5%; vertical-align:top;">•</td>
+                <td style="width:97.5%; vertical-align:top; text-align:justify; padding-bottom: 3px;">
                   {{ $item->value ?? $item['value'] }}
                 </td>
               </tr>
@@ -91,14 +86,14 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
         @else
           <table style="width:100%; border-collapse:collapse;">
             <tr>
-              <td style="width:3%; vertical-align:top;">•</td>
-              <td style="vertical-align:top; text-align:justify; padding-bottom: 4px;">
+              <td style="width:2.5%; vertical-align:top;">•</td>
+              <td style="width:97.5%; vertical-align:top; text-align:justify; padding-bottom: 3px;">
                 Keputusan hasil rapat / koordinasi manajemen
               </td>
             </tr>
             <tr>
-              <td style="width:3%; vertical-align:top;">•</td>
-              <td style="vertical-align:top; text-align:justify; padding-bottom: 4px;">
+              <td style="width:2.5%; vertical-align:top;">•</td>
+              <td style="width:97.5%; vertical-align:top; text-align:justify; padding-bottom: 3px;">
                 Peningkatan SDM & produktifitas di PT Temprina Media Grafika
               </td>
             </tr>
@@ -113,15 +108,15 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
   <!-- MEMUTUSKAN SERTA MENETAPKAN -->
   <table style="width:100%; margin-top:16px; font-size:11px;">
     <tr>
-      <td style="width:23%; vertical-align:top; text-align:left;">MEMUTUSKAN<br>SERTA<br>MENETAPKAN</td>
-      <td style="width:2%; vertical-align:top;">:</td>
-      <td style="width:75%;">
+      <td style="width:17%; vertical-align:top; text-align:left;">MEMUTUSKAN<br>SERTA<br>MENETAPKAN</td>
+      <td style="width:2%; vertical-align:bottom; padding-bottom:2px;">:</td>
+      <td style="width:81%;">
 
         <table style="width:100%; border-collapse:collapse;">
           <tr>
-            <td style="width:18%; vertical-align:top;">• Nama</td>
-            <td style="width:3%; vertical-align:top;">:</td>
-            <td style="width:79%; font-weight:bold;">{{$t_mutasi?->m_kary?->nama_lengkap ?? '-'}}</td>
+            <td style="width:14%; vertical-align:top;">• Nama</td>
+            <td style="width:2.5%; vertical-align:top;">:</td>
+            <td style="width:83.5%; font-weight:bold;">{{$t_mutasi?->m_kary?->nama_lengkap ?? '-'}}</td>
           </tr>
           <tr>
             <td style="vertical-align:top;">• Tugas</td>
@@ -178,19 +173,21 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
   </table>
 
   <!-- TEMBUSAN (SESUAI DOKUMEN 2 & 3) -->
-  <div style="margin-top:16px; font-size:10px;">
-    <b>Tembusan :</b><br>
-    <div style="margin-left:8px; line-height:1.4;">
-      @if($tembusan && count($tembusan) > 0)
-        @foreach($tembusan as $index => $t)
-          {{ $index + 1 }}. {{ $t->value ?? $t['value'] }}<br>
-        @endforeach
-      @else
-        1. Direksi<br>
-        2. Keuangan
-      @endif
-    </div>
-  </div>
+  <table style="width:100%; margin-top:14px; font-size:10px; border-collapse:collapse;">
+    <tr>
+      <td style="width:100%;">
+        <b>Tembusan :</b><br>
+        @if($tembusan && count($tembusan) > 0)
+          @foreach($tembusan as $index => $t)
+            &nbsp;&nbsp;{{ $index + 1 }}. {{ $t->value ?? $t['value'] }}<br>
+          @endforeach
+        @else
+          &nbsp;&nbsp;1. Direksi<br>
+          &nbsp;&nbsp;2. Keuangan
+        @endif
+      </td>
+    </tr>
+  </table>
 
   <!-- FOOTER CABANG TEMPRINA (SESUAI DOKUMEN RIIL TEMPRINA) -->
   <div style="margin-top:35px; border-top:0.5px solid #bbb; padding-top:4px; font-size:6.8px; line-height:1.35; color:#333; text-align:justify;">
