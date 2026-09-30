@@ -534,7 +534,7 @@ const landing = reactive({
     params: {
       simplest: true,
       //scopes:'landing',
-      searchfield: 'm_kary.kode , m_kary.nama_lengkap , m_posisi_lama.name , m_posisi_baru.name',
+      searchfield: 'this.nomor , m_kary.kode , m_kary.nama_lengkap , m_posisi_lama.name , m_posisi_baru.name',
     },
     onsuccess(response) {
       response.page = response.current_page
@@ -549,7 +549,17 @@ const landing = reactive({
     sortable: true,
     resizable: true,
     filter: true,
-    cellClass: ['justify-left', 'bg-gray-50', 'border-r', '!border-gray-200']
+    cellClass: ['justify-center', 'bg-gray-50', 'border-r', '!border-gray-200']
+  },
+  {
+    field: 'nomor',
+    headerName: 'No. Surat',
+    filter: true,
+    sortable: true,
+    flex: 1.2,
+    filter: 'ColFilter',
+    resizable: true,
+    cellClass: ['border-r', '!border-gray-200', 'justify-left']
   },
   {
     field: 'm_kary.kode',
@@ -566,54 +576,57 @@ const landing = reactive({
     headerName: 'Nama Karyawan',
     filter: true,
     sortable: true,
-    flex: 1,
+    flex: 1.3,
     filter: 'ColFilter',
     resizable: true,
     cellClass: ['border-r', '!border-gray-200', 'justify-left']
   },
-  {
-    field: 'tgl',
-    headerName: 'Tanggal Mutasi',
-    filter: true,
-    sortable: true,
-    flex: 1,
-    filter: 'ColFilter',
-    resizable: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-left']
-  },
-
   {
     field: 'jenis_surat.value',
     headerName: 'Jenis Surat',
     filter: true,
     sortable: true,
-    flex: 1,
+    flex: 1.3,
     filter: 'ColFilter',
     resizable: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-left']
+    cellClass: ['border-r', '!border-gray-200', 'justify-left'],
+    cellRenderer: ({ value }) => {
+      if (!value) return '-'
+      return `<span class="font-semibold text-gray-800">${value}</span>`
+    }
   },
-
   {
-    field: 'm_posisi_lama.name',
-    headerName: 'Posisi Lama',
+    field: 'tgl',
+    headerName: 'Tanggal Surat',
     filter: true,
     sortable: true,
     flex: 1,
     filter: 'ColFilter',
     resizable: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-left']
+    cellClass: ['border-r', '!border-gray-200', 'justify-center']
+  },
+  {
+    field: 'm_posisi_lama.name',
+    headerName: 'Jabatan Saat Ini',
+    filter: true,
+    sortable: true,
+    flex: 1.2,
+    filter: 'ColFilter',
+    resizable: true,
+    cellClass: ['border-r', '!border-gray-200', 'justify-left'],
+    cellRenderer: ({ value }) => value || '-'
   },
   {
     field: 'm_posisi_baru.name',
-    headerName: 'Posisi baru',
+    headerName: 'Jabatan Baru',
     filter: true,
     sortable: true,
-    flex: 1,
+    flex: 1.2,
     filter: 'ColFilter',
     resizable: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-left']
+    cellClass: ['border-r', '!border-gray-200', 'justify-left'],
+    cellRenderer: ({ value }) => value || '-'
   },
-
   {
     headerName: 'Status',
     field: 'status',
