@@ -9,17 +9,17 @@ $req = app()->request;
 $id = $req->id;
 $t_mutasi = t_mutasi::find($id);
 
-$carbonDate = Carbon::parse($t_mutasi->tgl);
+$carbonDate = Carbon::parse($t_mutasi?->tgl ?? now());
 $tanggalIndo = $carbonDate->translatedFormat('l, d F Y');
 
 $terbitDate = Carbon::parse($t_mutasi?->updated_at ?? $t_mutasi?->created_at ?? now());
 $tanggalTerbit = $terbitDate->translatedFormat('d F Y');
 
-$tembusan = $t_mutasi->t_mutasi_d_tembusan ?? null;
-$memperhatikan = $t_mutasi->t_mutasi_d_memperhatikan ?? null;
+$tembusan = $t_mutasi?->t_mutasi_d_tembusan ?? null;
+$memperhatikan = $t_mutasi?->t_mutasi_d_memperhatikan ?? null;
 
-$materiPelatihan = $t_mutasi->deskripsi ?? 'Training & Sertifikasi';
-$keteranganDetail = $t_mutasi->keterangan ?? '-';
+$materiPelatihan = $t_mutasi?->deskripsi ?? 'Training & Sertifikasi';
+$keteranganDetail = $t_mutasi?->keterangan ?? '-';
 
 $sbuCode = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
 $sbuName = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
@@ -106,7 +106,7 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
           <tr>
             <td style="width:24%;">• Nama</td>
             <td style="width:3%;">:</td>
-            <td style="width:73%; font-weight:bold;">{{$t_mutasi->m_kary?->nama_lengkap ?? '-'}}</td>
+            <td style="width:73%; font-weight:bold;">{{$t_mutasi?->m_kary?->nama_lengkap ?? '-'}}</td>
           </tr>
           <tr>
             <td>• Tugas</td>
@@ -126,7 +126,7 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
           <tr>
             <td>• Penempatan</td>
             <td>:</td>
-            <td>{{$t_mutasi->m_posisi_lama?->name ?? '-'}} - {{$t_mutasi->m_sub_lama?->name ?? '-'}}</td>
+            <td>{{$t_mutasi?->m_posisi_lama?->name ?? '-'}} - {{$t_mutasi?->m_sub_lama?->name ?? '-'}}</td>
           </tr>
         </table>
 
@@ -150,10 +150,10 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
         </div>
         <div></div>
         <div style="margin-top:50px;font-weight:bold;text-decoration:underline;">
-          {{$t_mutasi->signature?->nama_lengkap ?? 'DEVI NOVARIA PURNAMASARI'}}
+          {{$t_mutasi?->signature?->nama_lengkap ?? 'DEVI NOVARIA PURNAMASARI'}}
         </div>
         <div>
-          {{$t_mutasi->signature?->m_posisi?->name ?? 'Asst. Manager Human Capital'}}
+          {{$t_mutasi?->signature?->m_posisi?->name ?? 'Asst. Manager Human Capital'}}
         </div>
       </td>
     </tr>
