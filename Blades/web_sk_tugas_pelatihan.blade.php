@@ -59,7 +59,7 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
     </tr>
     <tr>
       <td style="text-align:center;font-weight:bold;font-size:11px;padding-top:3px;">
-        No. {{$t_mutasi?->nomor ?? '-'}}
+        No. {{ strtoupper($t_mutasi?->nomor ?? '-') }}
       </td>
     </tr>
   </table>
