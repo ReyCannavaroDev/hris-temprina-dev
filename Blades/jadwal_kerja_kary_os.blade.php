@@ -138,10 +138,10 @@
         @input="(v)=>values.t_jadwal_kerja_n_id=v" :errorText="formErrors.t_jadwal_kerja_n_id?'failed':''"
         :hints="formErrors.t_jadwal_kerja_n_id" valueField="id" displayField="keterangan" @update:valueFull="response =>  {
           $log(response)
-           $log('test',response['t_jadwal_kerja_d_hari_n']);
-          values.m_group_barang = response['tipe'];
+           $log('test',response?.t_jadwal_kerja_d_hari_n);
+          values.m_group_barang = response?.tipe;
         
-          detailArr = response['t_jadwal_kerja_d_hari_n'].map((dt)=>({
+          detailArr = (response?.t_jadwal_kerja_d_hari_n || []).map((dt)=>({
             ...dt, 
           }))
           //values.divisi = response['divisi_id']
@@ -233,7 +233,7 @@
                   scopes: 'Name',
                   transform:true,
                   join:true,
-                  where: `this.is_active='true' AND this.m_branch_id = ${values.m_branch_id}`,
+                  where: `this.is_active='true' AND this.m_branch_id = ${values.m_branch_id || 0}`,
                   selectfield:'name.value,this.id'
                 }
               }" placeholder="" label="" fa-icon="" :check="false" />
@@ -310,7 +310,7 @@
                         params: {
                           transform:false,
                           join:false,
-                          selectfield:'id,waktu_akhir,waktu_mulai,this.desc',
+                          selectfield:'id,waktu_akhir,waktu_mulai,desc',
                         }
                     }" placeholder="" label="" fa-icon="" :check="false" />
             </td>

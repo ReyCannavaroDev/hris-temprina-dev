@@ -57,7 +57,7 @@ const user = JSON.parse(localStorage.getItem('user'))
 const values = reactive({
   status: 'AKTIF',
   m_kary_id: route.query.isKaryId
-    ? route.query.isKaryId.split(',').map(Number)
+    ? (Array.isArray(route.query.isKaryId) ? route.query.isKaryId : String(route.query.isKaryId).split(',')).map(Number)
     : [],
   atasan_id: store.user.data.m_kary_id
 })
@@ -106,7 +106,7 @@ onBeforeMount(async () => {
       headers: { 'Content-Type': 'application/json', Authorization: `${store.user.token_type} ${store.user.token}` }
     })
     const data = await res.json()
-    karyOptions.value = data.data
+          karyOptions.value = Array.isArray(data.data) ? data.data : [];
   }
 
   if (isRead) {
@@ -135,6 +135,7 @@ onBeforeMount(async () => {
       const resultJson = await res.json();
       initialValues = resultJson.data;
     } catch (err) {
+      console.log('TRACE ERROR MAP:', err.stack || err);
       isBadForm.value = true;
       swal.fire({
         icon: 'error',
@@ -149,10 +150,23 @@ onBeforeMount(async () => {
     }
     // Assign ke values semua properti initialValues
     for (const key in initialValues) {
-      values[key] = initialValues[key];
+      if (key === 'm_kary_id') {
+        let karyVal = initialValues[key];
+        if (typeof karyVal === 'string' && karyVal.startsWith('[')) {
+          try {
+            karyVal = JSON.parse(karyVal);
+          } catch (e) {}
+        }
+        let parsedKary = karyVal != null 
+          ? (Array.isArray(karyVal) ? karyVal : [karyVal])
+          : [];
+        values[key] = parsedKary.map(k => typeof k === 'object' && k !== null ? (k.id || k.m_kary_id || k) : k);
+      } else {
+        values[key] = initialValues[key];
+      }
     }
 
-    if (initialValues.t_jadwal_kerja_n_id) {
+    if (initialValues && initialValues.t_jadwal_kerja_n_id) {
       const jadwalUrl = `${store.server.url_backend}/operation/t_jadwal_kerja_n/${initialValues.t_jadwal_kerja_n_id}`;
       const jadwalRes = await fetch(`${jadwalUrl}`, {
         headers: {
@@ -164,13 +178,15 @@ onBeforeMount(async () => {
       if (!jadwalRes.ok) throw new Error("Failed when trying to read jadwal kerja detail");
 
       const jadwalJson = await jadwalRes.json();
-      console.log('jadwal kerja detail', jadwalJson.data.t_jadwal_kerja_d_hari_n);
-      jadwalJson.data.t_jadwal_kerja_d_hari_n.forEach(item => {
-        console.log('test isi jadwal kerja n', item);
-      });
+      console.log('jadwal kerja detail', jadwalJson.data?.t_jadwal_kerja_d_hari_n);
+      if (Array.isArray(jadwalJson.data?.t_jadwal_kerja_d_hari_n)) {
+        jadwalJson.data.t_jadwal_kerja_d_hari_n.forEach(item => {
+          console.log('test isi jadwal kerja n', item);
+        });
+      }
 
-      detailArr.value = Array.isArray(jadwalJson.data.t_jadwal_kerja_d_hari_n)
-        ? jadwalJson.data.t_jadwal_kerja_d_hari_n.slice().reverse().map(item => ({ ...item }))
+      detailArr.value = Array.isArray(jadwalJson.data?.t_jadwal_kerja_d_hari_n)
+        ? (jadwalJson.data.t_jadwal_kerja_d_hari_n || []).slice().reverse().map(item => ({ ...item }))
         : [];
     }
   }
@@ -203,7 +219,7 @@ async function onSave() {
     values.t_assessment_kary_d = detailArr.value
 
     const payloads = Array.isArray(values.m_kary_id)
-      ? values.m_kary_id.map(id => ({
+      ? (values.m_kary_id || []).map(id => ({
         ...values,
         m_kary_id: id
       }))
@@ -263,8 +279,9 @@ onBeforeMount(async () => {
 })
 
 function multiCreate(items) {
+  if (!items || !Array.isArray(items)) return;
   console.log('Isi items:', items)
-  const ids = items.map(i => i.id).filter(Boolean)
+  const ids = (items || []).map(i => i.id).filter(Boolean)
   console.log('Hasil map IDs:', ids)
   router.push(`${route.path}/create?isKaryId=${ids}&ts=${Date.now()}`)
 }
@@ -451,10 +468,10 @@ const landing = reactive({
 
       // Backend API doesn't eager load m_kary, so we fetch names manually in the background
       try {
-        if (response.data && response.data.length > 0) {
-          const ids = [...new Set(response.data.map(d => d.m_kary_id).filter(Boolean))]
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+          const ids = [...new Set((response.data || []).map(d => d.m_kary_id).filter(Boolean))]
           if (ids.length > 0) {
-             const promises = ids.map(id => 
+             const promises = (ids || []).map(id => 
                fetch(`${store.server.url_backend}/operation/m_kary/${id}?simplest=true`, {
                  headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
                }).then(r => r.json())
