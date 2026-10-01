@@ -24,12 +24,22 @@ if ((!$tembusan || count($tembusan) === 0) && !empty($t_mutasi?->id)) {
         $tembusan = \DB::table('t_mutasi_d_tembusan')->where('t_mutasi_id', $t_mutasi->id)->get();
     } catch (\Throwable $th) {}
 }
+if ($tembusan && count($tembusan) > 0) {
+    $tembusan = collect($tembusan)->unique(function ($item) {
+        return trim(is_array($item) ? ($item['value'] ?? '') : ($item->value ?? ''));
+    })->values();
+}
 
 $memperhatikan = $t_mutasi?->t_mutasi_d_memperhatikan ?? null;
 if ((!$memperhatikan || count($memperhatikan) === 0) && !empty($t_mutasi?->id)) {
     try {
         $memperhatikan = \DB::table('t_mutasi_d_memperhatikan')->where('t_mutasi_id', $t_mutasi->id)->get();
     } catch (\Throwable $th) {}
+}
+if ($memperhatikan && count($memperhatikan) > 0) {
+    $memperhatikan = collect($memperhatikan)->unique(function ($item) {
+        return trim(is_array($item) ? ($item['value'] ?? '') : ($item->value ?? ''));
+    })->values();
 }
 
 $jadwalLama = null;
@@ -260,16 +270,16 @@ if (!str_contains($subJudul, 'JABATAN')) {
   <div></div>
 
   <!-- PENUTUP -->
-  <table style="width:100%; margin-top:22px; font-size:11px; border-collapse:collapse;">
+  <table style="width:100%; margin-top:16px; font-size:11px; border-collapse:collapse;">
     <tr>
       <td style="width:55%;"></td>
       <td style="width:45%; vertical-align:top;">
         Dikeluarkan di&nbsp;&nbsp;: {{ $kotaTerbit }}<br>
         Pada Tanggal&nbsp;&nbsp;: {{ $tanggalTerbit }}
-        <div style="margin-top:14px; font-weight:bold;">
+        <div style="margin-top:10px; font-weight:bold;">
           {{ $companyName }}
         </div>
-        <div style="height:55px;"></div>
+        <div style="height:48px;"></div>
         <div style="font-weight:bold; text-decoration:underline;">
           {{ $t_mutasi->signature?->nama_lengkap ?? '( ........................................ )' }}
         </div>
@@ -281,7 +291,7 @@ if (!str_contains($subJudul, 'JABATAN')) {
   </table>
 
   <!-- TEMBUSAN -->
-  <table style="width:100%; margin-top:14px; font-size:10px; border-collapse:collapse;">
+  <table style="width:100%; margin-top:10px; font-size:10px; border-collapse:collapse;">
     <tr>
       <td style="width:100%;">
         <b>Tembusan :</b><br>
@@ -303,7 +313,7 @@ if (!str_contains($subJudul, 'JABATAN')) {
     @include('projects.web_sk_footer')
   @else
     <!-- FOOTER CABANG TEMPRINA (SESUAI DOKUMEN RIIL TEMPRINA) -->
-    <div style="margin-top:25px; border-top:0.5px solid #bbb; padding-top:4px; font-size:6.8px; line-height:1.35; color:#333; text-align:justify;">
+    <div style="margin-top:15px; border-top:0.5px solid #bbb; padding-top:4px; font-size:6.8px; line-height:1.35; color:#333; text-align:justify;">
       <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
       <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
       <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>

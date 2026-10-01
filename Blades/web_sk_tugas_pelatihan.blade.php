@@ -21,12 +21,22 @@ if ((!$tembusan || count($tembusan) === 0) && !empty($t_mutasi?->id)) {
         $tembusan = \DB::table('t_mutasi_d_tembusan')->where('t_mutasi_id', $t_mutasi->id)->get();
     } catch (\Throwable $th) {}
 }
+if ($tembusan && count($tembusan) > 0) {
+    $tembusan = collect($tembusan)->unique(function ($item) {
+        return trim(is_array($item) ? ($item['value'] ?? '') : ($item->value ?? ''));
+    })->values();
+}
 
 $memperhatikan = $t_mutasi?->t_mutasi_d_memperhatikan ?? null;
 if ((!$memperhatikan || count($memperhatikan) === 0) && !empty($t_mutasi?->id)) {
     try {
         $memperhatikan = \DB::table('t_mutasi_d_memperhatikan')->where('t_mutasi_id', $t_mutasi->id)->get();
     } catch (\Throwable $th) {}
+}
+if ($memperhatikan && count($memperhatikan) > 0) {
+    $memperhatikan = collect($memperhatikan)->unique(function ($item) {
+        return trim(is_array($item) ? ($item['value'] ?? '') : ($item->value ?? ''));
+    })->values();
 }
 
 // Parse data pelatihan dari keterangan (JSON)

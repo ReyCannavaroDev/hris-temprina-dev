@@ -16,10 +16,7 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
         'file_dokumen'
     ];
 
-    public $details = [
-        't_mutasi_d_memperhatikan',
-        't_mutasi_d_tembusan'
-    ];
+    public $details = [];
 
     public function t_mutasi_d_memperhatikan()
     {
@@ -464,17 +461,37 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
     {
         $id = $row['this.id'] ?? $row['id'] ?? null;
         if ($id) {
-            $row['t_mutasi_d_memperhatikan'] = \DB::table('t_mutasi_d_memperhatikan')
+            $memperhatikan = \DB::table('t_mutasi_d_memperhatikan')
                 ->where('t_mutasi_id', $id)
                 ->select('id', 't_mutasi_id', 'value')
                 ->get()
                 ->toArray();
+            $uniqueMemperhatikan = [];
+            $seenMemperhatikan = [];
+            foreach ($memperhatikan as $m) {
+                $val = trim(is_array($m) ? ($m['value'] ?? '') : ($m->value ?? ''));
+                if ($val !== '' && !isset($seenMemperhatikan[$val])) {
+                    $seenMemperhatikan[$val] = true;
+                    $uniqueMemperhatikan[] = $m;
+                }
+            }
+            $row['t_mutasi_d_memperhatikan'] = $uniqueMemperhatikan;
 
-            $row['t_mutasi_d_tembusan'] = \DB::table('t_mutasi_d_tembusan')
+            $tembusan = \DB::table('t_mutasi_d_tembusan')
                 ->where('t_mutasi_id', $id)
                 ->select('id', 't_mutasi_id', 'value')
                 ->get()
                 ->toArray();
+            $uniqueTembusan = [];
+            $seenTembusan = [];
+            foreach ($tembusan as $t) {
+                $val = trim(is_array($t) ? ($t['value'] ?? '') : ($t->value ?? ''));
+                if ($val !== '' && !isset($seenTembusan[$val])) {
+                    $seenTembusan[$val] = true;
+                    $uniqueTembusan[] = $t;
+                }
+            }
+            $row['t_mutasi_d_tembusan'] = $uniqueTembusan;
         }
         return $row;
     }
@@ -493,10 +510,12 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
                 if (is_array($decoded)) $memperhatikan = $decoded;
             }
             if (is_array($memperhatikan)) {
+                $seen = [];
                 foreach ($memperhatikan as $row) {
                     $val = is_array($row) ? ($row['value'] ?? '') : (is_string($row) ? $row : ($row->value ?? ''));
                     $val = trim((string)$val);
-                    if ($val !== '') {
+                    if ($val !== '' && !isset($seen[$val])) {
+                        $seen[$val] = true;
                         \DB::table('t_mutasi_d_memperhatikan')->insert([
                             't_mutasi_id' => $mutasiId,
                             'value' => $val,
@@ -517,10 +536,12 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
                 if (is_array($decoded)) $tembusan = $decoded;
             }
             if (is_array($tembusan)) {
+                $seen = [];
                 foreach ($tembusan as $row) {
                     $val = is_array($row) ? ($row['value'] ?? '') : (is_string($row) ? $row : ($row->value ?? ''));
                     $val = trim((string)$val);
-                    if ($val !== '') {
+                    if ($val !== '' && !isset($seen[$val])) {
+                        $seen[$val] = true;
                         \DB::table('t_mutasi_d_tembusan')->insert([
                             't_mutasi_id' => $mutasiId,
                             'value' => $val,
