@@ -482,6 +482,7 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
     private function syncDetails($mutasiId)
     {
         $req = app()->request;
+        $now = date('Y-m-d H:i:s');
 
         // 1. Sinkronisasi Poin Memperhatikan
         if ($req->has('t_mutasi_d_memperhatikan')) {
@@ -499,8 +500,8 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
                         \DB::table('t_mutasi_d_memperhatikan')->insert([
                             't_mutasi_id' => $mutasiId,
                             'value' => $val,
-                            'created_at' => now(),
-                            'updated_at' => now(),
+                            'created_at' => $now,
+                            'updated_at' => $now,
                         ]);
                     }
                 }
@@ -523,8 +524,8 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
                         \DB::table('t_mutasi_d_tembusan')->insert([
                             't_mutasi_id' => $mutasiId,
                             'value' => $val,
-                            'created_at' => now(),
-                            'updated_at' => now(),
+                            'created_at' => $now,
+                            'updated_at' => $now,
                         ]);
                     }
                 }
