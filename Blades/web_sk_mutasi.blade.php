@@ -17,12 +17,19 @@ $tanggalIndo = $carbonDate->translatedFormat('l, d F Y');
 $terbitDate = Carbon::parse($t_mutasi?->updated_at ?? $t_mutasi?->created_at ?? now());
 $tanggalTerbit = $terbitDate->translatedFormat('d F Y');
 
-$tembusan = $t_mutasi->t_mutasi_d_tembusan ?? null;
-$memperhatikan = $t_mutasi->t_mutasi_d_memperhatikan ?? null;
+$tembusan = $t_mutasi?->t_mutasi_d_tembusan ?? null;
+if ((!$tembusan || count($tembusan) === 0) && !empty($t_mutasi?->id)) {
+    try {
+        $tembusan = \DB::table('t_mutasi_d_tembusan')->where('t_mutasi_id', $t_mutasi->id)->get();
+    } catch (\Throwable $th) {}
+}
 
-//dd($memperhatikan);
-//dd($terbitDate);
-//dd($t_mutasi);
+$memperhatikan = $t_mutasi?->t_mutasi_d_memperhatikan ?? null;
+if ((!$memperhatikan || count($memperhatikan) === 0) && !empty($t_mutasi?->id)) {
+    try {
+        $memperhatikan = \DB::table('t_mutasi_d_memperhatikan')->where('t_mutasi_id', $t_mutasi->id)->get();
+    } catch (\Throwable $th) {}
+}
 
 // Query jam kerja asli dari tabel detail jadwal kerja di database
 $jadwalLama = null;

@@ -16,7 +16,18 @@ $terbitDate = Carbon::parse($t_mutasi?->updated_at ?? $t_mutasi?->created_at ?? 
 $tanggalTerbit = $terbitDate->translatedFormat('d F Y');
 
 $tembusan = $t_mutasi?->t_mutasi_d_tembusan ?? null;
+if ((!$tembusan || count($tembusan) === 0) && !empty($t_mutasi?->id)) {
+    try {
+        $tembusan = \DB::table('t_mutasi_d_tembusan')->where('t_mutasi_id', $t_mutasi->id)->get();
+    } catch (\Throwable $th) {}
+}
+
 $memperhatikan = $t_mutasi?->t_mutasi_d_memperhatikan ?? null;
+if ((!$memperhatikan || count($memperhatikan) === 0) && !empty($t_mutasi?->id)) {
+    try {
+        $memperhatikan = \DB::table('t_mutasi_d_memperhatikan')->where('t_mutasi_id', $t_mutasi->id)->get();
+    } catch (\Throwable $th) {}
+}
 
 // Parse data pelatihan dari keterangan (JSON)
 $meta = null;

@@ -16,6 +16,21 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
         'file_dokumen'
     ];
 
+    public $details = [
+        't_mutasi_d_memperhatikan',
+        't_mutasi_d_tembusan'
+    ];
+
+    public function t_mutasi_d_memperhatikan()
+    {
+        return $this->hasMany('App\Models\BasicModels\t_mutasi_d_memperhatikan', 't_mutasi_id', 'id');
+    }
+
+    public function t_mutasi_d_tembusan()
+    {
+        return $this->hasMany('App\Models\BasicModels\t_mutasi_d_tembusan', 't_mutasi_id', 'id');
+    }
+
     public $createAdditionalData = ["creator_id" => "auth:id"];
     public $updateAdditionalData = ["last_editor_id" => "auth:id"];
 
@@ -415,6 +430,106 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
             "model" => $model,
             "data" => $newArrayData,
         ];
+    }
+
+    public function createAfter($model, $arrayData, $metaData, $id = null)
+    {
+        $mutasiId = $id ?? $model->id ?? null;
+        if ($mutasiId) {
+            $this->syncDetails($mutasiId);
+        }
+    }
+
+    public function updateAfter($model, $arrayData, $metaData, $id = null)
+    {
+        $mutasiId = $id ?? $model->id ?? null;
+        if ($mutasiId) {
+            $this->syncDetails($mutasiId);
+        }
+    }
+
+    public function deleteBefore($model, $arrayData, $metaData, $id = null)
+    {
+        if ($id) {
+            \DB::table('t_mutasi_d_memperhatikan')->where('t_mutasi_id', $id)->delete();
+            \DB::table('t_mutasi_d_tembusan')->where('t_mutasi_id', $id)->delete();
+        }
+        return [
+            "model" => $model,
+            "data" => $arrayData
+        ];
+    }
+
+    public function transformRowData(array $row)
+    {
+        $id = $row['this.id'] ?? $row['id'] ?? null;
+        if ($id) {
+            $row['t_mutasi_d_memperhatikan'] = \DB::table('t_mutasi_d_memperhatikan')
+                ->where('t_mutasi_id', $id)
+                ->select('id', 't_mutasi_id', 'value')
+                ->get()
+                ->toArray();
+
+            $row['t_mutasi_d_tembusan'] = \DB::table('t_mutasi_d_tembusan')
+                ->where('t_mutasi_id', $id)
+                ->select('id', 't_mutasi_id', 'value')
+                ->get()
+                ->toArray();
+        }
+        return $row;
+    }
+
+    private function syncDetails($mutasiId)
+    {
+        $req = app()->request;
+
+        // 1. Sinkronisasi Poin Memperhatikan
+        if ($req->has('t_mutasi_d_memperhatikan')) {
+            \DB::table('t_mutasi_d_memperhatikan')->where('t_mutasi_id', $mutasiId)->delete();
+            $memperhatikan = $req->t_mutasi_d_memperhatikan;
+            if (is_string($memperhatikan)) {
+                $decoded = json_decode($memperhatikan, true);
+                if (is_array($decoded)) $memperhatikan = $decoded;
+            }
+            if (is_array($memperhatikan)) {
+                foreach ($memperhatikan as $row) {
+                    $val = is_array($row) ? ($row['value'] ?? '') : (is_string($row) ? $row : ($row->value ?? ''));
+                    $val = trim((string)$val);
+                    if ($val !== '') {
+                        \DB::table('t_mutasi_d_memperhatikan')->insert([
+                            't_mutasi_id' => $mutasiId,
+                            'value' => $val,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // 2. Sinkronisasi Tembusan
+        if ($req->has('t_mutasi_d_tembusan')) {
+            \DB::table('t_mutasi_d_tembusan')->where('t_mutasi_id', $mutasiId)->delete();
+            $tembusan = $req->t_mutasi_d_tembusan;
+            if (is_string($tembusan)) {
+                $decoded = json_decode($tembusan, true);
+                if (is_array($decoded)) $tembusan = $decoded;
+            }
+            if (is_array($tembusan)) {
+                foreach ($tembusan as $row) {
+                    $val = is_array($row) ? ($row['value'] ?? '') : (is_string($row) ? $row : ($row->value ?? ''));
+                    $val = trim((string)$val);
+                    if ($val !== '') {
+                        \DB::table('t_mutasi_d_tembusan')->insert([
+                            't_mutasi_id' => $mutasiId,
+                            'value' => $val,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
+        }
     }
 
     public function scopelanding($model)
