@@ -23,13 +23,18 @@ const selectedJenisSurat = ref(null)
 
 function onSelectJenisSurat(obj) {
   selectedJenisSurat.value = obj
-  if (!isCareerMutation.value) {
+  if (!isTipeMutasiVisible.value) {
     values.tipe_mutasi = obj?.value || 'Non-Mutasi / Persuratan'
   }
 }
 
 const currentJenisSuratName = computed(() => {
   return (selectedJenisSurat.value?.value || initialValues['jenis_surat.value'] || '').toUpperCase()
+})
+
+const isTipeMutasiVisible = computed(() => {
+  const name = currentJenisSuratName.value
+  return name.includes('MUTASI') && !name.includes('PROMOSI') && !name.includes('DEMOSI')
 })
 
 const isCareerMutation = computed(() => {

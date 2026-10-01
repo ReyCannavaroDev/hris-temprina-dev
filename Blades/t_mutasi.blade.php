@@ -173,7 +173,7 @@
     </div>
 
     <!-- TIPE MUTASI -->
-    <div v-show="isCareerMutation">
+    <div v-show="isTipeMutasiVisible">
       <FieldSelect class="w-full !mt0 " :value="values.tipe_mutasi" @input="v => values.tipe_mutasi=v"
         placeholder="Pilih Tipe Mutasi" label="Tipe Mutasi" :check="false"
         :options="['Antar SBU', 'Antar SUB', 'Antar Branch / Cabang' , 'Antar Divisi' ]" />
