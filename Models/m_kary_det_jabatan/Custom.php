@@ -62,6 +62,14 @@ class m_kary_det_jabatan extends \App\Models\BasicModels\m_kary_det_jabatan
             } catch (\Throwable $e) {}
         }
 
+        if (array_key_exists('is_active', $arrayData) && $id) {
+            $isActive = filter_var($arrayData['is_active'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+            \DB::table('m_kary_det_jabatan')->where('id', $id)->update([
+                'is_active' => $isActive
+            ]);
+            unset($arrayData['is_active']);
+        }
+
         return [
             "model"  => $model,
             "data"   => $arrayData,
