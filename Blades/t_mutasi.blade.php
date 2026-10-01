@@ -524,6 +524,7 @@
 
     <!-- Upload Dokumen -->
     <div>
+      <label class="block font-semibold text-xs text-gray-700 mb-1">Dokumen</label>
       <FieldUpload class="w-full !mt0 " :bind="{ readonly: !actionText }" :value="values.file_dokumen"
         @input="(v)=>values.file_dokumen=v" :maxSize="10"
         :reducerDisplay="val=>!val?null:val.split(':::')[val.split(':::').length-1]" :api="{
@@ -532,40 +533,46 @@
                 params: { field: 'file_dokumen' },
                 onsuccess: response=>response,
                 onerror:(error)=>{},
-                }" :hints="formErrors.file_dokumen" label="Dokumen" placeholder="Upload Dokumen" fa-icon="upload"
+                }" :hints="formErrors.file_dokumen" label="" placeholder="Upload Dokumen" fa-icon="upload"
         accept="application/pdf" :check="false" />
     </div>
 
     <div>
+      <label class="block font-semibold text-xs text-gray-700 mb-1">{{ labelDeskripsi }}</label>
       <FieldX class="w-full !mt0 " :bind="{ readonly: !actionText }" :value="values.deskripsi"
         :errorText="formErrors.deskripsi?'failed':''" @input="v=>values.deskripsi=v" type="textarea"
-        :hints="formErrors.deskripsi" :label="labelDeskripsi" :placeholder="placeholderDeskripsi" :check="false" />
+        :hints="formErrors.deskripsi" label="" :placeholder="placeholderDeskripsi" :check="false" />
     </div>
 
     <!-- DETAIL KHUSUS SURAT TUGAS PELATIHAN -->
     <template v-if="isSuratTugas">
       <div>
+        <label class="block font-semibold text-xs text-gray-700 mb-1">Pemateri / Penyelenggara</label>
         <FieldX class="w-full !mt0" :bind="{ readonly: !actionText }" :value="detailPelatihan.pemateri"
-          @input="v=>detailPelatihan.pemateri=v" label="Pemateri / Penyelenggara" placeholder="Contoh: Lembaga Pengembangan Kajian Nasional (LPKN)" :check="false" />
+          @input="v=>detailPelatihan.pemateri=v" label="" placeholder="Contoh: Lembaga Pengembangan Kajian Nasional (LPKN)" :check="false" />
       </div>
       <div>
+        <label class="block font-semibold text-xs text-gray-700 mb-1">Hari / Tanggal Pelaksanaan</label>
         <FieldX class="w-full !mt0" :bind="{ readonly: !actionText }" :value="detailPelatihan.hari_tgl"
-          @input="v=>detailPelatihan.hari_tgl=v" label="Hari / Tanggal Pelaksanaan" placeholder="Contoh: Rabu - Kamis / 20 - 21 November 2024" :check="false" />
+          @input="v=>detailPelatihan.hari_tgl=v" label="" placeholder="Contoh: Rabu - Kamis / 20 - 21 November 2024" :check="false" />
       </div>
       <div>
+        <label class="block font-semibold text-xs text-gray-700 mb-1">Jam Pelaksanaan</label>
         <FieldX class="w-full !mt0" :bind="{ readonly: !actionText }" :value="detailPelatihan.jam"
-          @input="v=>detailPelatihan.jam=v" label="Jam Pelaksanaan" placeholder="Contoh: 08.45 - 15.30" :check="false" />
+          @input="v=>detailPelatihan.jam=v" label="" placeholder="Contoh: 08.45 - 15.30" :check="false" />
       </div>
       <div class="col-span-full">
+        <label class="block font-semibold text-xs text-gray-700 mb-1">Tempat Pelatihan & Alamat</label>
         <FieldX class="w-full !mt0" :bind="{ readonly: !actionText }" :value="detailPelatihan.tempat"
-          @input="v=>detailPelatihan.tempat=v" type="textarea" label="Tempat Pelatihan & Alamat" placeholder="Contoh: Hotel Asyana Kemayoran, Jl. Bungur Besar Raya No. 79 – 81 Jakarta Pusat" :check="false" />
+          @input="v=>detailPelatihan.tempat=v" type="textarea" label="" placeholder="Contoh: Hotel Asyana Kemayoran, Jl. Bungur Besar Raya No. 79 – 81 Jakarta Pusat" :check="false" />
       </div>
     </template>
 
     <div v-if="!isSuratTugas">
+      <label class="block font-semibold text-xs text-gray-700 mb-1">{{ labelKeterangan }}</label>
       <FieldX class="w-full !mt0 " :bind="{ readonly: !actionText }" :value="values.keterangan"
         :errorText="formErrors.keterangan?'failed':''" @input="v=>values.keterangan=v" type="textarea"
-        :hints="formErrors.keterangan" :label="labelKeterangan" :placeholder="placeholderKeterangan" :check="false" />
+        :hints="formErrors.keterangan" label="" :placeholder="placeholderKeterangan" :check="false" />
     </div>
 
 
