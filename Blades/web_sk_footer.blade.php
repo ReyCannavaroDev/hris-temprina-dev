@@ -31,12 +31,36 @@
     $qrSrc = $mediaQR ? $resolveMedia($mediaQR->file_path) : '';
 
     $isJP = false;
-    if (isset($t_mutasi)) {
-        $cName = strtoupper(
-            ($t_mutasi->m_sub_lama?->m_company?->name ?? '') . ' ' .
-            ($t_mutasi->m_sub_lama?->m_comp?->name ?? '')
+    if (isset($isJpBooks)) {
+        $isJP = (bool)$isJpBooks;
+    } elseif (isset($t_mutasi)) {
+        $dest = strtoupper(
+            ($t_mutasi->m_sub_baru?->name ?? '') . ' ' .
+            ($t_mutasi->m_sbu_baru?->name ?? '') . ' ' .
+            ($t_mutasi->m_sub_baru?->kode ?? '') . ' ' .
+            ($t_mutasi->m_sbu_baru?->kode ?? '')
         );
-        if (str_contains($cName, 'JEPE') || str_contains($cName, 'JP BOOKS') || str_contains($cName, 'JPMU')) {
+        $origin = strtoupper(
+            ($t_mutasi->m_sub_lama?->name ?? '') . ' ' .
+            ($t_mutasi->m_sbu_lama?->name ?? '') . ' ' .
+            ($t_mutasi->m_sub_lama?->kode ?? '') . ' ' .
+            ($t_mutasi->m_sbu_lama?->kode ?? '') . ' ' .
+            ($t_mutasi->m_kary?->m_sbu?->name ?? '') . ' ' .
+            ($t_mutasi->m_kary?->m_sbu?->kode ?? '')
+        );
+
+        $checkIsJp = function($str) {
+            return str_contains($str, 'JEPE') || 
+                   str_contains($str, 'JP BOOKS') || 
+                   str_contains($str, 'JPBOOKS') || 
+                   str_contains($str, 'JPMU') || 
+                   str_contains($str, 'SAHABAT EDUKASI') ||
+                   preg_match('/\bJP\b/', $str);
+        };
+
+        if ($checkIsJp($dest)) {
+            $isJP = true;
+        } elseif (empty(trim($dest)) && $checkIsJp($origin)) {
             $isJP = true;
         }
     }
@@ -47,6 +71,14 @@
     <div style="margin-top:25px; text-align:center;">
         <img src="{{ $footerJpSrc }}" style="max-width:100%; max-height:42px;" alt="Footer JP Books">
     </div>
+    @else
+    <table style="width:100%; border-collapse:collapse; margin-top:20px; border-top:1.5px solid #ff8a00; padding-top:6px;">
+        <tr>
+            <td style="font-size:8px; color:#555; vertical-align:middle; line-height:1.4;">
+                <strong style="color:#111;">Head Office:</strong> Jl. Karah Agung 45 Surabaya 60232 &bull; Telp. (031) 8289999 (Hunting) &bull; Fax. (031) 8286999
+            </td>
+        </tr>
+    </table>
     @endif
 @else
     <table style="width:100%; border-collapse:collapse; margin-top:20px; border-top:0.5px solid #ccc; padding-top:5px;">

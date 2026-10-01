@@ -21,13 +21,43 @@ $tembusan = $t_mutasi->t_mutasi_d_tembusan ?? null;
 $memperhatikan = $t_mutasi->t_mutasi_d_memperhatikan ?? null;
 
 
-$jadwalLama = t_jadwal_kerja_d_hari_n::whereHas('t_jadwal_kerja_n', function($q) use ($t_mutasi){
-$q->where('id', $t_mutasi?->jadwal_kerja_lama_id);
-})->first();
+$jadwalLama = null;
+if (!empty($t_mutasi?->jadwal_kerja_lama_id)) {
+    try {
+        $jadwalLama = \DB::table('t_jadwal_kerja_d_hari_n')
+            ->where('t_jadwal_kerja_n_id', $t_mutasi->jadwal_kerja_lama_id)
+            ->whereNotNull('waktu_mulai')
+            ->where('waktu_mulai', '!=', '')
+            ->first();
+    } catch (\Throwable $th) {
+        $jadwalLama = null;
+    }
+}
 
-$jadwalBaru = t_jadwal_kerja_d_hari_n::whereHas('t_jadwal_kerja_n', function($q) use ($t_mutasi){
-$q->where('id', $t_mutasi?->jadwal_kerja_baru_id);
-})->first();
+$jadwalBaru = null;
+if (!empty($t_mutasi?->jadwal_kerja_baru_id)) {
+    try {
+        $jadwalBaru = \DB::table('t_jadwal_kerja_d_hari_n')
+            ->where('t_jadwal_kerja_n_id', $t_mutasi->jadwal_kerja_baru_id)
+            ->whereNotNull('waktu_mulai')
+            ->where('waktu_mulai', '!=', '')
+            ->first();
+    } catch (\Throwable $th) {
+        $jadwalBaru = null;
+    }
+}
+
+$formatJam = function($jadwal) {
+    if (!$jadwal || empty($jadwal->waktu_mulai)) {
+        return '08:00 - 17:00 (Kebutuhan Setempat)';
+    }
+    $mulai = substr($jadwal->waktu_mulai, 0, 5);
+    $akhir = !empty($jadwal->waktu_akhir) ? substr($jadwal->waktu_akhir, 0, 5) : (!empty($jadwal->waktu_selesai) ? substr($jadwal->waktu_selesai, 0, 5) : '17:00');
+    return "{$mulai} - {$akhir} (Kebutuhan Setempat)";
+};
+
+$jamKerjaLama = $formatJam($jadwalLama);
+$jamKerjaBaru = $formatJam($jadwalBaru);
 
 $sbuCode = strtoupper($t_mutasi?->m_sbu_baru?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
 $sbuName = strtoupper($t_mutasi?->m_sbu_baru?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
@@ -151,7 +181,7 @@ $kotaTerbit = $t_mutasi?->m_branch_baru?->kota
         :
       </td>
       <td style="font-size: 11px; width:auto;">
-        {{ $jadwalLama?->waktu_mulai . ' - ' . $jadwalLama?->waktu_akhir}} (Kebutuhan Setempat)
+        {{ $jamKerjaLama }}
       </td>
     </tr>
 
@@ -185,7 +215,7 @@ $kotaTerbit = $t_mutasi?->m_branch_baru?->kota
         :
       </td>
       <td style="font-size: 11px; width:auto;">
-       {{ $jadwalBaru?->waktu_mulai . ' - ' . $jadwalBaru?->waktu_akhir}} (Kebutuhan Setempat)
+        {{ $jamKerjaBaru }}
       </td>
     </tr>
 

@@ -33,13 +33,36 @@
 
     // Deteksi apakah perusahaan adalah JP Books
     $isJPBooks = false;
-    if (isset($t_mutasi)) {
-        $compName = strtoupper(
-            ($t_mutasi->m_sub_lama?->m_company?->name ?? '') . ' ' .
-            ($t_mutasi->m_sub_lama?->m_comp?->name ?? '') . ' ' .
-            ($t_mutasi->m_sub_baru?->m_comp?->name ?? '')
+    if (isset($isJpBooks)) {
+        $isJPBooks = (bool)$isJpBooks;
+    } elseif (isset($t_mutasi)) {
+        $dest = strtoupper(
+            ($t_mutasi->m_sub_baru?->name ?? '') . ' ' .
+            ($t_mutasi->m_sbu_baru?->name ?? '') . ' ' .
+            ($t_mutasi->m_sub_baru?->kode ?? '') . ' ' .
+            ($t_mutasi->m_sbu_baru?->kode ?? '')
         );
-        if (str_contains($compName, 'JEPE') || str_contains($compName, 'JP BOOKS') || str_contains($compName, 'JPMU')) {
+        $origin = strtoupper(
+            ($t_mutasi->m_sub_lama?->name ?? '') . ' ' .
+            ($t_mutasi->m_sbu_lama?->name ?? '') . ' ' .
+            ($t_mutasi->m_sub_lama?->kode ?? '') . ' ' .
+            ($t_mutasi->m_sbu_lama?->kode ?? '') . ' ' .
+            ($t_mutasi->m_kary?->m_sbu?->name ?? '') . ' ' .
+            ($t_mutasi->m_kary?->m_sbu?->kode ?? '')
+        );
+
+        $checkIsJp = function($str) {
+            return str_contains($str, 'JEPE') || 
+                   str_contains($str, 'JP BOOKS') || 
+                   str_contains($str, 'JPBOOKS') || 
+                   str_contains($str, 'JPMU') || 
+                   str_contains($str, 'SAHABAT EDUKASI') ||
+                   preg_match('/\bJP\b/', $str);
+        };
+
+        if ($checkIsJp($dest)) {
+            $isJPBooks = true;
+        } elseif (empty(trim($dest)) && $checkIsJp($origin)) {
             $isJPBooks = true;
         }
     }
@@ -47,21 +70,19 @@
 
 @if($isJPBooks)
     <!-- KOP JP BOOKS -->
-    <table style="width:100%; border-collapse:collapse; margin-bottom:15px; border-bottom:2px solid #000; padding-bottom:8px;">
+    <table style="width:100%; border-collapse:collapse; margin-bottom:15px; padding-bottom:4px;">
         <tr>
-            <td style="width:40%; vertical-align:middle;">
+            <td style="width:35%; vertical-align:middle;">
                 @if($logoJpSrc)
-                    <img src="{{ $logoJpSrc }}" style="max-height:55px; max-width:220px;" alt="JP Books">
+                    <img src="{{ $logoJpSrc }}" style="max-height:52px; max-width:210px;" alt="JP Books">
                 @else
-                    <div style="font-size:22px; font-weight:bold; color:#005FBF;">JP BOOKS</div>
-                    <div style="font-size:11px; font-weight:bold;">PT. JePe Press Media Utama</div>
+                    <div style="display:inline-block; background-color:#ff8a00; padding:6px 14px; border-radius:4px; font-size:22px; font-weight:bold; color:#0055aa; letter-spacing:1px; border:2px solid #0055aa;">JP BOOKS</div>
                 @endif
             </td>
-            <td style="width:60%; text-align:right; vertical-align:middle; font-size:9px; line-height:1.3; color:#333;">
-                <b style="font-size:11px; color:#000;">PT. JePe Press Media Utama</b><br>
-                Office: Jl. Karah Agung 45 Surabaya<br>
-                Telp. : 031-8289999 ext. 145/156/157/303/208 | Fax. 031 8281004<br>
-                Website : www.jpbooks.co.id, email : jpbooks.surabaya@gmail.com
+            <td style="width:65%; text-align:left; vertical-align:middle;">
+                <div style="font-size:22px; font-weight:bold; color:#0055aa; font-family:Arial, Helvetica, sans-serif; letter-spacing:0.5px;">
+                    PT. JePe Press Media Utama
+                </div>
             </td>
         </tr>
     </table>

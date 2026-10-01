@@ -23,13 +23,43 @@ $memperhatikan = $t_mutasi->t_mutasi_d_memperhatikan ?? null;
 //dd($terbitDate);
 //dd($t_mutasi);
 
-$jadwalLama = t_jadwal_kerja_d_hari_n::whereHas('t_jadwal_kerja_n', function($q) use ($t_mutasi){
-  $q->where('id', $t_mutasi?->jadwal_kerja_lama_id);
-})->first();
+$jadwalLama = null;
+if (!empty($t_mutasi?->jadwal_kerja_lama_id)) {
+    try {
+        $jadwalLama = \DB::table('t_jadwal_kerja_d_hari_n')
+            ->where('t_jadwal_kerja_n_id', $t_mutasi->jadwal_kerja_lama_id)
+            ->whereNotNull('waktu_mulai')
+            ->where('waktu_mulai', '!=', '')
+            ->first();
+    } catch (\Throwable $th) {
+        $jadwalLama = null;
+    }
+}
 
-$jadwalBaru = t_jadwal_kerja_d_hari_n::whereHas('t_jadwal_kerja_n', function($q) use ($t_mutasi){
-  $q->where('id', $t_mutasi?->jadwal_kerja_baru_id);
-})->first();
+$jadwalBaru = null;
+if (!empty($t_mutasi?->jadwal_kerja_baru_id)) {
+    try {
+        $jadwalBaru = \DB::table('t_jadwal_kerja_d_hari_n')
+            ->where('t_jadwal_kerja_n_id', $t_mutasi->jadwal_kerja_baru_id)
+            ->whereNotNull('waktu_mulai')
+            ->where('waktu_mulai', '!=', '')
+            ->first();
+    } catch (\Throwable $th) {
+        $jadwalBaru = null;
+    }
+}
+
+$formatJam = function($jadwal) {
+    if (!$jadwal || empty($jadwal->waktu_mulai)) {
+        return '08:00 - 17:00 (Kebutuhan Setempat)';
+    }
+    $mulai = substr($jadwal->waktu_mulai, 0, 5);
+    $akhir = !empty($jadwal->waktu_akhir) ? substr($jadwal->waktu_akhir, 0, 5) : (!empty($jadwal->waktu_selesai) ? substr($jadwal->waktu_selesai, 0, 5) : '17:00');
+    return "{$mulai} - {$akhir} (Kebutuhan Setempat)";
+};
+
+$jamKerjaLama = $formatJam($jadwalLama);
+$jamKerjaBaru = $formatJam($jadwalBaru);
 
 $sbuCode = strtoupper($t_mutasi?->m_sbu_baru?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
 $sbuName = strtoupper($t_mutasi?->m_sbu_baru?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
@@ -150,7 +180,7 @@ if (!str_contains($subJudul, 'JABATAN')) {
                 <tr>
                   <td>Jam Kerja</td>
                   <td>:</td>
-                  <td>{{ $jadwalLama?->waktu_mulai . ' - ' . $jadwalLama?->waktu_akhir}} (Kebutuhan Setempat)</td>
+                  <td>{{ $jamKerjaLama }}</td>
                 </tr>
               </table>
             </td>
@@ -180,7 +210,7 @@ if (!str_contains($subJudul, 'JABATAN')) {
                 <tr>
                   <td>Jam Kerja</td>
                   <td>:</td>
-                  <td>{{ $jadwalBaru?->waktu_mulai . ' - ' . $jadwalBaru?->waktu_akhir}} (Kebutuhan Setempat)</td>
+                  <td>{{ $jamKerjaBaru }}</td>
                 </tr>
               </table>
             </td>

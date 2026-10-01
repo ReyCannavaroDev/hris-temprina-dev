@@ -24,19 +24,73 @@ $memperhatikan = $t_mutasi->t_mutasi_d_memperhatikan ?? null;
 //dd($terbitDate);
 //dd($t_mutasi);
 
-$jadwalLama = t_jadwal_kerja_d_hari_n::whereHas('t_jadwal_kerja_n', function($q) use ($t_mutasi){
-  $q->where('id', $t_mutasi?->jadwal_kerja_lama_id);
-})->first();
+// Query jam kerja asli dari tabel detail jadwal kerja di database
+$jadwalLama = null;
+if (!empty($t_mutasi?->jadwal_kerja_lama_id)) {
+    try {
+        $jadwalLama = \DB::table('t_jadwal_kerja_d_hari_n')
+            ->where('t_jadwal_kerja_n_id', $t_mutasi->jadwal_kerja_lama_id)
+            ->whereNotNull('waktu_mulai')
+            ->where('waktu_mulai', '!=', '')
+            ->first();
+    } catch (\Throwable $th) {
+        $jadwalLama = null;
+    }
+}
 
-$jadwalBaru = t_jadwal_kerja_d_hari_n::whereHas('t_jadwal_kerja_n', function($q) use ($t_mutasi){
-  $q->where('id', $t_mutasi?->jadwal_kerja_baru_id);
-})->first();
+$jadwalBaru = null;
+if (!empty($t_mutasi?->jadwal_kerja_baru_id)) {
+    try {
+        $jadwalBaru = \DB::table('t_jadwal_kerja_d_hari_n')
+            ->where('t_jadwal_kerja_n_id', $t_mutasi->jadwal_kerja_baru_id)
+            ->whereNotNull('waktu_mulai')
+            ->where('waktu_mulai', '!=', '')
+            ->first();
+    } catch (\Throwable $th) {
+        $jadwalBaru = null;
+    }
+}
 
-$sbuCode = strtoupper($t_mutasi?->m_sbu_baru?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
-$sbuName = strtoupper($t_mutasi?->m_sbu_baru?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
-$isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
+// Format jam kerja riil dari database
+$formatJam = function($jadwal) {
+    if (!$jadwal || empty($jadwal->waktu_mulai)) {
+        return '08:00 - 17:00 (Kebutuhan Setempat)';
+    }
+    $mulai = substr($jadwal->waktu_mulai, 0, 5);
+    $akhir = !empty($jadwal->waktu_akhir) ? substr($jadwal->waktu_akhir, 0, 5) : (!empty($jadwal->waktu_selesai) ? substr($jadwal->waktu_selesai, 0, 5) : '17:00');
+    return "{$mulai} - {$akhir} (Kebutuhan Setempat)";
+};
 
-$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : 'PT Temprina Media Grafika';
+$jamKerjaLama = $formatJam($jadwalLama);
+$jamKerjaBaru = $formatJam($jadwalBaru);
+
+// Deteksi entitas perusahaan baru & lama
+$dest = strtoupper(
+    ($t_mutasi->m_sub_baru?->name ?? '') . ' ' .
+    ($t_mutasi->m_sbu_baru?->name ?? '') . ' ' .
+    ($t_mutasi->m_sub_baru?->kode ?? '') . ' ' .
+    ($t_mutasi->m_sbu_baru?->kode ?? '')
+);
+$origin = strtoupper(
+    ($t_mutasi->m_sub_lama?->name ?? '') . ' ' .
+    ($t_mutasi->m_sbu_lama?->name ?? '') . ' ' .
+    ($t_mutasi->m_sub_lama?->kode ?? '') . ' ' .
+    ($t_mutasi->m_sbu_lama?->kode ?? '') . ' ' .
+    ($t_mutasi->m_kary?->m_sbu?->name ?? '') . ' ' .
+    ($t_mutasi->m_kary?->m_sbu?->kode ?? '')
+);
+
+$checkIsJp = function($str) {
+    return str_contains($str, 'JEPE') || 
+           str_contains($str, 'JP BOOKS') || 
+           str_contains($str, 'JPBOOKS') || 
+           str_contains($str, 'JPMU') || 
+           str_contains($str, 'SAHABAT EDUKASI') ||
+           preg_match('/\bJP\b/', $str);
+};
+
+$isJpBooks = $checkIsJp($dest) || (empty(trim($dest)) && $checkIsJp($origin));
+$companyName = $isJpBooks ? 'PT. JePe Press Media Utama' : 'PT Temprina Media Grafika';
 $kotaTerbit = $t_mutasi?->m_branch_baru?->kota 
             ?? $t_mutasi?->m_branch_lama?->kota 
             ?? $t_mutasi?->m_kary?->m_branch?->kota 
@@ -146,60 +200,62 @@ $kotaTerbit = $t_mutasi?->m_branch_baru?->kota
           <!-- TEMPAT TUGAS LAMA -->
           <tr>
             <td></td>
-            <td style="padding-top:6px; font-size: 10px;">
-              Tempat Tugas Lama:
+            <td style="padding-top:6px; font-size: 11px; font-weight:bold; text-decoration:underline;">
+              Tempat Tugas Lama :
             </td>
           </tr>
 
           <tr>
             <td></td>
             <td>
-              <table style="width:100%;margin-top:4px;font-size:10px;">
+              <table style="width:100%; margin-top:4px; font-size:11px; border-collapse:collapse;">
                 <tr>
-                  <td style="width:18%;">Jabatan</td>
-                  <td style="width:3%;">:</td>
-                  <td style="width:79%;">
-                     {{$t_mutasi->m_posisi_lama?->name ?? '-'}}<br>
-                {{$t_mutasi->m_sub_lama?->name ?? '-'}}<br>
-                {{$t_mutasi->m_sub_lama?->address ?? '-'}}
+                  <td style="width:18%; vertical-align:top;">- Jabatan</td>
+                  <td style="width:3%; vertical-align:top;">:</td>
+                  <td style="width:79%; vertical-align:top;">
+                    <strong>{{ $t_mutasi->m_posisi_lama?->name ?? '-' }}</strong><br>
+                    {{ $t_mutasi->m_sub_lama?->name ?? '-' }}<br>
+                    <span style="color:#555;">{{ $t_mutasi->m_sub_lama?->address ?? '' }}</span>
                   </td>
                 </tr>
                 <tr>
-                  <td>Jam Kerja</td>
-                  <td>:</td>
-                  <td>{{ $jadwalLama?->waktu_mulai . ' - ' . $jadwalLama?->waktu_akhir}} (Kebutuhan Setempat)</td>
+                  <td style="vertical-align:top;">- Jam Kerja</td>
+                  <td style="vertical-align:top;">:</td>
+                  <td style="vertical-align:top;">
+                    {{ $jamKerjaLama }}
+                  </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <br>
-
           <!-- TEMPAT TUGAS BARU -->
           <tr>
             <td></td>
-            <td style="padding-top:6px; font-size: 10px;">
-              Tempat Tugas Baru:
+            <td style="padding-top:10px; font-size: 11px; font-weight:bold; text-decoration:underline;">
+              Tempat Tugas Baru :
             </td>
           </tr>
 
           <tr>
             <td></td>
             <td>
-              <table style="width:100%;margin-top:4px;font-size:10px;">
+              <table style="width:100%; margin-top:4px; font-size:11px; border-collapse:collapse;">
                 <tr>
-                  <td style="width:18%;">Jabatan</td>
-                  <td style="width:3%;">:</td>
-                  <td style="width:79%;">
-                     {{$t_mutasi->m_posisi_baru?->name ?? '-'}}<br>
-                {{$t_mutasi->m_sub_baru?->name ?? '-'}}<br>
-                {{$t_mutasi->m_sub_baru?->address ?? '-'}}
+                  <td style="width:18%; vertical-align:top;">- Jabatan</td>
+                  <td style="width:3%; vertical-align:top;">:</td>
+                  <td style="width:79%; vertical-align:top;">
+                    <strong>{{ $t_mutasi->m_posisi_baru?->name ?? '-' }}</strong><br>
+                    {{ $t_mutasi->m_sub_baru?->name ?? '-' }}<br>
+                    <span style="color:#555;">{{ $t_mutasi->m_sub_baru?->address ?? '' }}</span>
                   </td>
                 </tr>
                 <tr>
-                  <td>Jam Kerja</td>
-                  <td>:</td>
-                  <td>{{ $jadwalBaru?->waktu_mulai . ' - ' . $jadwalBaru?->waktu_akhir}} (Kebutuhan Setempat)</td>
+                  <td style="vertical-align:top;">- Jam Kerja</td>
+                  <td style="vertical-align:top;">:</td>
+                  <td style="vertical-align:top;">
+                    {{ $jamKerjaBaru }}
+                  </td>
                 </tr>
               </table>
             </td>
