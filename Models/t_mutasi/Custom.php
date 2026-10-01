@@ -291,6 +291,8 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
             $nomor = $arrayData['nomor'];
         }
 
+        $nomor = strtoupper($nomor);
+
         $newArrayData = array_merge($arrayData, [
             "nomor" => $nomor,
             "tipe_mutasi" => $tipeMutasi,
