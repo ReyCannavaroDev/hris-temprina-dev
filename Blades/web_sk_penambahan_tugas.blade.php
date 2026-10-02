@@ -212,10 +212,10 @@ if ($deskripsiTugas) {
                     @endphp
                     <tr>
                       @if(!$hasCustomPrefix)
-                        <td style="width:3%; vertical-align:top;">-</td>
-                        <td style="vertical-align:top; font-weight:bold; padding-bottom:2px;">{{ $line }}</td>
+                        <td style="width:4%; vertical-align:top;">•</td>
+                        <td style="width:96%; vertical-align:top; font-weight:bold; padding-bottom:2px;">{{ $line }}</td>
                       @else
-                        <td colspan="2" style="vertical-align:top; font-weight:bold; padding-bottom:2px;">{{ $line }}</td>
+                        <td style="width:100%; vertical-align:top; font-weight:bold; padding-bottom:2px;" colspan="2">{{ $line }}</td>
                       @endif
                     </tr>
                   @endforeach
