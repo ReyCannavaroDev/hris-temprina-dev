@@ -9,7 +9,6 @@ namespace App\Models\CustomModels;
  */
 class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
 {
-    public $details = ["t_jadwal_kerja_d_hari_n"];
 
     public function readAfter($model, $result)
     {
@@ -49,5 +48,37 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
             $result['t_jadwal_kerja_d_hari_n'] = $formattedDetails;
         }
         return $result;
+    }
+
+    public function createAfter($model, $arrayData, $metaData, $id)
+    {
+        $this->saveDetails($id);
+        return $arrayData;
+    }
+
+    public function updateAfter($model, $arrayData, $metaData, $id)
+    {
+        $this->saveDetails($id);
+        return $arrayData;
+    }
+
+    private function saveDetails($id)
+    {
+        $details = app()->request->t_jadwal_kerja_d_hari_n ?? [];
+        if (!empty($details)) {
+            \DB::table('t_jadwal_kerja_d_hari_n')->where('t_jadwal_kerja_n_id', $id)->delete();
+            
+            $inserts = [];
+            foreach ($details as $idx => $d) {
+                $inserts[] = [
+                    't_jadwal_kerja_n_id' => $id,
+                    'm_jam_kerja_id' => $d['m_jam_kerja_id'] ?? null,
+                    'tipe_hari' => $d['tipe_hari'] ?? 'KERJA',
+                    'day' => $d['day'] ?? null,
+                    'day_num' => $d['day_num'] ?? null,
+                ];
+            }
+            \DB::table('t_jadwal_kerja_d_hari_n')->insert($inserts);
+        }
     }
 }
