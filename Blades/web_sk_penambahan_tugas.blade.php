@@ -200,7 +200,31 @@ if ($deskripsiTugas) {
           <tr>
             <td style="width:4%;"></td>
             <td colspan="3" style="vertical-align:top; padding-top:2px;">
-              <b>{{ $tambahanTugasText }}</b>
+              @php
+                $linesTugas = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $tambahanTugasText ?? ''))));
+              @endphp
+
+              @if(count($linesTugas) > 1)
+                <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                  @foreach($linesTugas as $line)
+                    @php
+                      $hasCustomPrefix = preg_match('/^([0-9]+\.|\-|\•|\*)\s+/', $line);
+                    @endphp
+                    <tr>
+                      @if(!$hasCustomPrefix)
+                        <td style="width:3%; vertical-align:top;">-</td>
+                        <td style="vertical-align:top; font-weight:bold; padding-bottom:2px;">{{ $line }}</td>
+                      @else
+                        <td colspan="2" style="vertical-align:top; font-weight:bold; padding-bottom:2px;">{{ $line }}</td>
+                      @endif
+                    </tr>
+                  @endforeach
+                </table>
+              @elseif(count($linesTugas) === 1)
+                <b>{{ $linesTugas[0] }}</b>
+              @else
+                -
+              @endif
             </td>
           </tr>
 
@@ -221,7 +245,7 @@ if ($deskripsiTugas) {
   <div></div>
 
   <!-- PENUTUP -->
-  <table style="width:100%; margin-top:20px; font-size:11px; border-collapse:collapse;">
+  <table style="width:100%; margin-top:16px; font-size:11px; border-collapse:collapse;">
     <tr>
       <td style="width:55%;"></td>
       <td style="width:45%; vertical-align:top;">
@@ -242,7 +266,7 @@ if ($deskripsiTugas) {
   </table>
 
   <!-- TEMBUSAN -->
-  <table style="width:100%; margin-top:12px; font-size:10px; border-collapse:collapse;">
+  <table style="width:100%; margin-top:10px; font-size:10px; border-collapse:collapse;">
     <tr>
       <td style="width:100%;">
         <b>Tembusan :</b><br>
@@ -264,7 +288,7 @@ if ($deskripsiTugas) {
     @include('projects.web_sk_footer')
   @else
     <!-- FOOTER CABANG TEMPRINA (SESUAI DOKUMEN RIIL TEMPRINA) -->
-    <div style="margin-top:18px; border-top:0.5px solid #bbb; padding-top:4px; font-size:6.8px; line-height:1.35; color:#333; text-align:justify;">
+    <div style="margin-top:14px; border-top:0.5px solid #bbb; padding-top:4px; font-size:6.8px; line-height:1.35; color:#333; text-align:justify;">
       <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
       <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
       <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
