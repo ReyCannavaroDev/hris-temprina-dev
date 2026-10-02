@@ -64,7 +64,8 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
 
     private function saveDetails($id, $arrayData)
     {
-        $details = $arrayData['t_jadwal_kerja_d_hari_n'] ?? (app()->request->t_jadwal_kerja_d_hari_n ?? []);
+        $payload = app('request')->input('t_jadwal_kerja_d_hari_n');
+        $details = $arrayData['t_jadwal_kerja_d_hari_n'] ?? $payload ?? [];
         if (!empty($details)) {
             \DB::table('t_jadwal_kerja_d_hari_n')->where('t_jadwal_kerja_n_id', $id)->delete();
             
