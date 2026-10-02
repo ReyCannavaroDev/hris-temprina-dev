@@ -18,100 +18,33 @@
       Authorization: `${store.user.token_type} ${store.user.token}`
     },
     params: {
-      //kary_id : `${store.user.data.m_kary_id ?? 0}`,
-      //respo_id : `${data.respo_id}`,
       m_subcomp_id : `${data.subcomp_id}`,
       m_branch_id : `${data.branch_id}`,
-      scopes : 'os',
-      searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name'
+      simplest: true,
+      join: store.user.data.is_hc ? false : true,
+      scopes: store.user.data.is_hc ? 'landing,nonos' : 'nonos,respo',
+      searchfield: 'this.nama_lengkap,m_posisi.name,m_branch.name'
     }
-  }" :bind="{ readonly: false }" valueField="id" placeholder="SO" :check="true" @add="multiCreate" :columns="[
-    { headerName: 'No', valueGetter:(p)=>p.node.rowIndex + 1, width: 60, cellClass: ['justify-start', 'bg-gray-50'] },
-    { flex: 1, field: 'kode', headerName: 'Kode', cellClass: ['border-r', '!border-gray-200', 'justify-start'] },
-    { flex: 1, field: 'nama_lengkap', headerName: 'Nama', cellClass: ['border-r', '!border-gray-200', 'justify-start'] },
-    { flex: 1, field: 'atasan.nama_lengkap', headerName: 'Atasan', cellClass: ['border-r', '!border-gray-200', 'justify-end'] },
-    { flex: 1, field: 'm_posisi.name', headerName: 'Posisi', cellClass: ['border-r', '!border-gray-200', 'justify-end'] }
+  }" :bind="{ readonly: false, searchable: true }" valueField="id" placeholder="SO" :check="true" @add="multiCreate" :columns="[
+    { headerName: 'No', valueGetter:(p)=>p.node.rowIndex + 1, width: 60, cellClass: ['justify-start', 'bg-gray-50'], searchable:true },
+    { flex: 1, field: 'kode', headerName: 'Kode', cellClass: ['border-r', '!border-gray-200', 'justify-start'], searchable:true },
+    { flex: 1, field: 'nama_lengkap', headerName: 'Nama', cellClass: ['border-r', '!border-gray-200', 'justify-start'], searchable:true },
+    { flex: 1, field: 'm_branch.name', headerName: 'Cabang', cellClass: ['border-r', '!border-gray-200', 'justify-end'], searchable:true },
+    { flex: 1, field: 'm_posisi.name', headerName: 'Posisi', cellClass: ['border-r', '!border-gray-200', 'justify-end'], searchable:true }
   ]">
       <div
         class="flex justify-center w-full h-full items-center px-2 py-1.5 text-xs rounded text-white bg-blue-500 hover:bg-blue-700 hover:bg-blue-600 transition-all duration-200">
         <icon fa="plus" size="sm mr-0.5" /> Create New
       </div>
     </ButtonMultiSelect>
-
-
-    <!-- <div>
-      <button class="border-2 border-[#428BCA] font-semibold text-[#428BCA] bg-white  hover:bg-[#428BCA] hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2" @click="openOutstanding">Create New</button>
-    </div> -->
   </div>
-
 
   <hr>
   <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions"
-    class="">
-    <!-- <template #header>
-    </template> -->
+    class="h-full">
   </TableApi>
 
   <div class="flex items-center gap-x-2">
-
-
-
-    <!-- 
-    <FieldPopup style="display: none" valueField="id" ref="infoOutstanding" :api="{
-                
-              url:  `${store.server.url_backend}/operation/m_kary`,
-              headers: {
-                'Content-Type': 'Application/json',
-                Authorization: `${store.user.token_type} ${store.user.token}`
-              },
-              params: {
-                kary_id : `${store.user.data.m_kary_id ?? 0}`,
-                where : `this.m_subcomp_id = ${data.subcomp_id} AND this.m_branch_id = ${data.branch_id}`,
-                //join: true,
-                //transform: true,
-                searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name, m_divisi.name'
-              }
-            }" :bind="{ readonly: false }" valueField="id" @input="(v) => {
-                $log('Object dipilih:', v); 
-               router.push(`${route.path}/create?isKaryId=${v}&ts=${Date.now()}`);
-              }" placeholder="SO" :check="false" :columns="[{
-              headerName: 'No',
-              valueGetter:(p)=>p.node.rowIndex + 1,
-              width: 60,
-              sortable: false, resizable: false, filter: false,
-              cellClass: ['justify-start', 'bg-gray-50']
-            },
-            {
-              flex: 1,
-              field: 'kode',
-              headerName: 'Kode',
-              sortable: false, resizable: true, filter: false,
-              cellClass: ['border-r', '!border-gray-200', 'justify-start']
-            },
-            {
-              flex: 1,
-              field: 'nama_lengkap',
-              headerName: 'Nama',
-              sortable: false, resizable: true, filter: false,
-              cellClass: ['border-r', '!border-gray-200', 'justify-start']
-            },
-            {
-              flex: 1,
-              field: 'm_divisi.name_old',
-              headerName: 'Divisi',
-              sortable: false, resizable: true, filter: false,
-              cellClass: ['border-r', '!border-gray-200', 'justify-end']
-            },
-          ]">
-      <template #header>
-        <h1 class="text-lg font-semibold mb-1 absolute left-1/2 transform -translate-x-1/2 text-center">Pilih Karyawan
-        </h1>
-      </template>
-    </FieldPopup> -->
-    <!-- <RouterLink :to="$route.path + '/create?' + Date.now()" class="border border-[#428BCA] font-semibold text-[#428BCA] bg-white hover:bg-[#428BCA] hover:text-white 
-        duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">
-      Tambah Baru
-    </RouterLink> -->
   </div>
 </div>
 @else
@@ -136,22 +69,25 @@
       <label class="col-span-12">JADWAL KERJA</label>
       <FieldPopup :bind="{ readonly: !actionText }" :value="values.t_jadwal_kerja_n_id"
         @input="(v)=>values.t_jadwal_kerja_n_id=v" :errorText="formErrors.t_jadwal_kerja_n_id?'failed':''"
-        :hints="formErrors.t_jadwal_kerja_n_id" valueField="id" displayField="keterangan" @update:valueFull="response =>  {
-          $log(response)
-           $log('test',response?.t_jadwal_kerja_det_hari);
+        :hints="formErrors.t_jadwal_kerja_n_id" valueField="id" displayField="keterangan"
+        @update:valueFull="(response) =>  {
+          $log(response);
           values.m_group_barang = response?.tipe;
-        
+
+          if (!response?.t_jadwal_kerja_det_hari || response.t_jadwal_kerja_det_hari.length === 0) {
+              alert('DEBUG: Data detail hari (t_jadwal_kerja_det_hari) KOSONG atau UNDEFINED! Ini berarti file Custom.php untuk t_jadwal_kerja_n di generator belum di-update (atau jadwal ini memang tidak punya detail).');
+          }
+
           detailArr = (response?.t_jadwal_kerja_det_hari || []).map((dt)=>({
             ...dt, 
-          }))
-          //values.divisi = response['divisi_id']
+          }));
         }" :api="{
           url: `${store.server.url_backend}/operation/t_jadwal_kerja_n`,
           headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
           params: {
-              simplest:true,
+              simplest: true,
               transform:true,
-              join:true,
+              join:false,
               where: `this.status='AKTIF'`
           }
         }" placeholder="" label="" fa-icon="" :check="false" :columns="[{
@@ -177,10 +113,7 @@
         valueField="name" displayField="name"
         :options="[ { id: true, name: 'AKTIF' }, { id: false, name: 'NON AKTIF' } ]" placeholder="" label=""
         :check="false" />
-
     </div>
-
-
 
     <div>
       <label class="col-span-12">Tanggal Mulai</label>
@@ -191,7 +124,7 @@
 
     <div>
       <label class="col-span-12">SUB</label>
-      <FieldSelect :bind="{ disabled: true, clearable:false}" :value="values.m_subcomp_id"
+      <FieldSelect :bind="{ disabled: !actionText, clearable:false}" :value="values.m_subcomp_id"
         @input="v=>values.m_subcomp_id=v" :errorText="formErrors.m_subcomp_id?'failed':''"
         :hints="formErrors.m_subcomp_id" valueField="id" displayField="name" :api="{
         url: `${store.server.url_backend}/operation/m_subcomp`,
@@ -207,7 +140,7 @@
 
     <div>
       <label class="col-span-12">Branch</label>
-      <FieldSelect :bind="{ disabled: true, clearable:false }" :value="values.m_branch_id"
+      <FieldSelect :bind="{ disabled: !actionText, clearable:false }" :value="values.m_branch_id"
         @input="v=>values.m_branch_id=v" :errorText="formErrors.m_branch_id?'failed':''" :hints="formErrors.m_branch_id"
         valueField="id" displayField="name" :api="{
                   url: `${store.server.url_backend}/operation/m_branch`,
@@ -224,24 +157,27 @@
       <label class="col-span-12">Divisi</label>
       <FieldSelect :bind="{ disabled: !actionText, clearable:false }" :value="values.m_divisi_id"
         @input="v=>values.m_divisi_id=v" :errorText="formErrors.m_divisi_id?'failed':''" :hints="formErrors.m_divisi_id"
-        valueField="id" displayField="name.value" :api="{
+        valueField="id" displayField="name" :api="{
                 url: `${store.server.url_backend}/operation/m_divisi`,
                 headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                 params: {
-                  scopes: 'Name',
                   transform:true,
-                  join:true,
-                  where: `this.is_active='true'`,
-                  selectfield:'name.value,this.id'
+                  join:false
                 }
               }" placeholder="" label="" fa-icon="" :check="false" />
     </div>
 
-        <div>
+    <div>
       <label class="col-span-12">Karyawan</label>
-      <FieldSelect :bind="{ clearable:false, multiple:true }" :value="values.m_kary_id"
-        @input="v => values.m_kary_id = v" valueField="id" displayField="nama_lengkap" :options="karyOptions" placeholder="" label=""
-        :check="false"/>
+      <FieldSelect :bind="{ disabled: !actionText, clearable:false,multiple:true }" :value="values.m_kary_id"
+        @input="v=>values.m_kary_id=v" :errorText="formErrors.m_kary_id?'failed':''" :hints="formErrors.m_kary_id"
+        valueField="id" displayField="nama_lengkap" :api="{
+        url: `${store.server.url_backend}/operation/m_kary`,
+        headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+        params: {
+          transform:true,
+        }
+        }" placeholder="" label="" fa-icon="" :check="false" />
     </div>
 
     <div>
@@ -251,7 +187,7 @@
         label="" fa-icon="" :check="false" />
     </div>
 
-    <div class="font-semibold text-20px col-span-2 mt-5 mb-3">
+    <div class="font- text-20px col-span-2 mt-5 mb-3">
       <h2>Detail Jadwal kerja</h2>
     </div>
 
@@ -259,99 +195,64 @@
       <table class="w-[100%] overflow-x-auto table-auto border border-[#CACACA] pt-4">
         <thead>
           <tr class="border">
-            <td
-              class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center w-[5%] border bg-[#f8f8f8] border-[#CACACA]">
-              No</td>
-            <td
-              class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center border bg-[#f8f8f8] border-[#CACACA]">
-              Hari</td>
-            <td
-              class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center border bg-[#f8f8f8] border-[#CACACA]">
-              Tipe hari</td>
-            <td
-              class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center border bg-[#f8f8f8] border-[#CACACA]">
-              Jam Kerja</td>
-            <td
-              class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center border bg-[#f8f8f8] border-[#CACACA]">
-              Start</td>
-            <td
-              class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center border bg-[#f8f8f8] border-[#CACACA]">
-              End</td>
+            <td class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center w-[5%] border bg-[#f8f8f8] border-[#CACACA]">No</td>
+            <td class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center border bg-[#f8f8f8] border-[#CACACA]">Hari</td>
+            <td class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center border bg-[#f8f8f8] border-[#CACACA]">Tipe hari</td>
+            <td class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center border bg-[#f8f8f8] border-[#CACACA]">Jam Kerja</td>
+            <td class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center border bg-[#f8f8f8] border-[#CACACA]">Start</td>
+            <td class="text-[#8f8f8f] font-semibold text-[12px] text-capitalize p-2 text-center border bg-[#f8f8f8] border-[#CACACA]">End</td>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(item, i) in detailArr" :key="item.id" class="border-t" v-if="detailArr.length > 0">
-            <td class="text-[12px] text-center border border-[#CACACA]">
-              {{ i + 1 }}.
-            </td>
-            <td class="text-[12px] text-center border border-[#CACACA]">
-              {{item.day}}
-            </td>
+            <td class="text-[12px] text-center border border-[#CACACA]">{{ i + 1 }}.</td>
+            <td class="text-[12px] text-center border border-[#CACACA]">{{item.day}}</td>
             <td>
               <FieldSelect :bind="{ disabled: true, clearable: false }" :value="item.tipe_hari"
-                @input="v => item.tipe_hari = v" :errorText="formErrors.tipe_hari ? 'failed' : ''"
-                :hints="formErrors.tipe_hari" valueField="name" displayField="name"
-                :options="[ { id: true, name: 'KERJA' }, { id: false, name: 'LIBUR' } ]" placeholder="" label=""
-                :check="false" />
+                @input="v => item.tipe_hari = v" valueField="name" displayField="name"
+                :options="[ { id: true, name: 'KERJA' }, { id: false, name: 'LIBUR' } ]" placeholder="" label="" :check="false" />
             </td>
-
             <td class="text-[12px] text-left border border-[#CACACA]">
               <FieldSelect :bind="{ disabled: true, clearable:false }" :value="item.m_jam_kerja_id"
-                @input="v=>item.m_jam_kerja_id=v" :errorText="formErrors.m_jam_kerja_id?'failed':''"
-                :hints="formErrors.m_jam_kerja_id" valueField="id" displayField="desc" @update:valueFull="(response) => {
+                @input="v=>item.m_jam_kerja_id=v" valueField="id" displayField="desc" @update:valueFull="(response) => {
                     item.waktu_mulai = response.waktu_mulai
                     item.waktu_akhir = response.waktu_akhir
-                    $log(response);
                     }" :api="{
                         url: `${store.server.url_backend}/operation/m_jam_kerja`,
                         headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-                        params: {
-                          transform:false,
-                          join:false,
-                          selectfield:'id,waktu_akhir,waktu_mulai,desc',
-                        }
+                        params: { transform:false, join:false, selectfield:'id,waktu_akhir,waktu_mulai,this.desc' }
                     }" placeholder="" label="" fa-icon="" :check="false" />
             </td>
-
             <td>
               <FieldX type="time" :bind="{ readonly: true }" :value="item.waktu_mulai"
-                :errorText="formErrors.waktu_mulai?'failed':''" @input="v=>item.waktu_mulai=v"
-                :hints="formErrors.waktu_mulai" placeholder="" label="" fa-icon="" :check="false" />
+                @input="v=>item.waktu_mulai=v" placeholder="" label="" fa-icon="" :check="false" />
             </td>
             <td>
               <FieldX type="time" :bind="{ readonly: true }" :value="item.waktu_akhir"
-                :errorText="formErrors.waktu_akhir?'failed':''" @input="v=>item.waktu_akhir=v"
-                :hints="formErrors.waktu_akhir" placeholder="" label="" fa-icon="" :check="false" />
+                @input="v=>item.waktu_akhir=v" placeholder="" label="" fa-icon="" :check="false" />
             </td>
           </tr>
           <tr v-else class="text-center">
-            <td colspan="7" class="py-[20px]">
-              No data to show
-            </td>
-          </tr>
+            <td colspan="6" class="py-[20px]">No data to show</td>
           </tr>
         </tbody>
       </table>
     </div>
-    <!-- END TABLE DETAIL -->
   </div>
 
   <div class="flex flex-row items-center justify-end space-x-2 p-2" v-show="actionText">
     <i class="text-gray-500 text-[12px]">Tekan CTRL + S untuk shortcut Save Data</i>
     <button
         class="bg-red-600 text-white font-semibold hover:bg-red-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
-        @click="onReset(true)"
-      >
-        <icon fa="times" />
-        Reset
-      </button>
+        @click="onReset(true)">
+        <icon fa="times" /> Reset
+    </button>
     <button
         class="bg-green-600 text-white font-semibold hover:bg-green-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
         @click="onSave"
-      >
-        <icon fa="save" />
-        Simpan
-      </button>
+        v-show="currentMenu?.can_create || currentMenu?.can_update">
+        <icon fa="save" /> Simpan
+    </button>
   </div>
 </div>
 @endverbatim

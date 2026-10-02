@@ -38,6 +38,7 @@ class t_jadwal_kerja extends \App\Models\BasicModels\t_jadwal_kerja
         }
 
 
+        unset($arrayData['t_jadwal_kerja_det_hari']);
         $newArrayData  = array_merge( $arrayData,[
             'nomor' => $this->helper->generateNomor('KODE JADWAL KERJA')
         ]);
@@ -73,6 +74,7 @@ class t_jadwal_kerja extends \App\Models\BasicModels\t_jadwal_kerja
             }
         }
 
+        unset($arrayData['t_jadwal_kerja_det_hari']);
         $newArrayData  = array_merge( $arrayData,[] );
         return [
             "model"  => $model,
@@ -81,49 +83,85 @@ class t_jadwal_kerja extends \App\Models\BasicModels\t_jadwal_kerja
         ];
     }
     
-    public $details = ["t_jadwal_kerja_det_hari"];
-
-    public function readAfter($model, $result)
+    public function transformRowData(array $row)
     {
-        if (isset($result['id'])) {
-            $rawDetails = \DB::table('t_jadwal_kerja_det_hari')
-                ->where('t_jadwal_kerja_id', $result['id'])
-                ->orderBy('id', 'asc')
-                ->get();
-                
-            $formattedDetails = [];
-            foreach ($rawDetails as $det) {
-                $det = (array) $det;
-                
-                // Fetch m_jam_kerja to populate the missing view fields
-                if (!empty($det['m_jam_kerja_id'])) {
-                    $m_jam_kerja = \DB::table('m_jam_kerja')->where('id', $det['m_jam_kerja_id'])->first();
-                    if ($m_jam_kerja) {
-                        $det['m_jam_kerja'] = (array) $m_jam_kerja;
-                        $det['m_jam_kerja.kode'] = $m_jam_kerja->kode;
-                        $det['m_jam_kerja.waktu_mulai'] = $m_jam_kerja->waktu_mulai;
-                        $det['m_jam_kerja.waktu_akhir'] = $m_jam_kerja->waktu_akhir;
-                        $det['start_jam_kerja'] = $m_jam_kerja->waktu_mulai;
-                        $det['end_jam_kerja'] = $m_jam_kerja->waktu_akhir;
-                        $det['start'] = $m_jam_kerja->waktu_mulai;
-                        $det['end'] = $m_jam_kerja->waktu_akhir;
-                        $det['jam_kerja'] = $m_jam_kerja->id; // set model for select
-                    }
-                } else {
-                    $det['start'] = $det['waktu_mulai'] ?? '--:--';
-                    $det['end'] = $det['waktu_akhir'] ?? '--:--';
-                    $det['start_jam_kerja'] = $det['waktu_mulai'] ?? '--:--';
-                    $det['end_jam_kerja'] = $det['waktu_akhir'] ?? '--:--';
+        $id = $row['this.id'] ?? $row['id'] ?? null;
+        if (!$id) return $row;
+
+        $rawDetails = \DB::table('t_jadwal_kerja_det_hari')
+            ->where('t_jadwal_kerja_id', $id)
+            ->orderBy('id', 'asc')
+            ->get();
+            
+        $formattedDetails = [];
+        foreach ($rawDetails as $det) {
+            $det = (array) $det;
+            
+            if (!empty($det['m_jam_kerja_id'])) {
+                $m_jam_kerja = \DB::table('m_jam_kerja')->where('id', $det['m_jam_kerja_id'])->first();
+                if ($m_jam_kerja) {
+                    $det['m_jam_kerja'] = (array) $m_jam_kerja;
+                    $det['m_jam_kerja.kode'] = $m_jam_kerja->kode;
+                    $det['m_jam_kerja.waktu_mulai'] = $m_jam_kerja->waktu_mulai;
+                    $det['m_jam_kerja.waktu_akhir'] = $m_jam_kerja->waktu_akhir;
+                    $det['start_jam_kerja'] = $m_jam_kerja->waktu_mulai;
+                    $det['end_jam_kerja'] = $m_jam_kerja->waktu_akhir;
+                    $det['start'] = $m_jam_kerja->waktu_mulai;
+                    $det['end'] = $m_jam_kerja->waktu_akhir;
+                    $det['jam_kerja'] = $m_jam_kerja->id;
                 }
-                
-                $formattedDetails[] = $det;
+            } else {
+                $det['start'] = $det['waktu_mulai'] ?? '--:--';
+                $det['end'] = $det['waktu_akhir'] ?? '--:--';
+                $det['start_jam_kerja'] = $det['waktu_mulai'] ?? '--:--';
+                $det['end_jam_kerja'] = $det['waktu_akhir'] ?? '--:--';
             }
-            $result['t_jadwal_kerja_det_hari'] = $formattedDetails;
+            
+            $formattedDetails[] = $det;
         }
-        return $result;
+
+        $row['t_jadwal_kerja_det_hari'] = $formattedDetails;
+        return $row;
     }
 
-    
+    public function createAfter($model, $arrayData, $metaData, $id = null)
+    {
+        $this->saveDetails($id, $arrayData);
+        return $arrayData;
+    }
+
+    public function updateAfter($model, $arrayData, $metaData, $id = null)
+    {
+        $this->saveDetails($id, $arrayData);
+        return $arrayData;
+    }
+
+    private function saveDetails($id, $arrayData)
+    {
+        $payload = app('request')->input('t_jadwal_kerja_det_hari');
+        $details = $arrayData['t_jadwal_kerja_det_hari'] ?? $payload ?? [];
+        
+        if (empty($details)) {
+            $keys = array_keys(app('request')->all());
+            throw new \Exception("DEBUG: Data detail tidak terbaca oleh server! Keys: " . implode(', ', $keys));
+        }
+
+        \DB::table('t_jadwal_kerja_det_hari')->where('t_jadwal_kerja_id', $id)->delete();
+        
+        $inserts = [];
+        foreach ($details as $idx => $d) {
+            $inserts[] = [
+                't_jadwal_kerja_id' => $id,
+                'm_jam_kerja_id' => $d['m_jam_kerja_id'] ?? null,
+                'day' => $d['hari'] ?? $d['day'] ?? null,
+                'waktu_mulai' => $d['waktu_mulai'] ?? $d['start'] ?? '--:--',
+                'waktu_akhir' => $d['waktu_akhir'] ?? $d['end'] ?? '--:--',
+            ];
+        }
+        \DB::table('t_jadwal_kerja_det_hari')->insert($inserts);
+    }
+
+
 
     public function custom_generate(){
         $validator = \Validator::make(app()->request->all(), [

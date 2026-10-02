@@ -7,9 +7,6 @@
  */
 class t_jadwal_kerja_det_hari extends \App\Models\BasicModels\t_jadwal_kerja_det_hari
 {
-    public $joins = [
-        "m_jam_kerja.id=t_jadwal_kerja_det_hari.m_jam_kerja_id"
-    ];
 
     public function transformRowData(array $row)
     {

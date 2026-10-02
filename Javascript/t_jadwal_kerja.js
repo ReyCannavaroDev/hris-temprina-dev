@@ -162,8 +162,8 @@ onBeforeMount(async () => {
         initialValues.date = formattedDate
       }
 
-      if (Array.isArray(initialValues.t_jadwal_kerja_d_hari_n) && initialValues.t_jadwal_kerja_d_hari_n.length > 0) {
-        detailArr.value = initialValues.t_jadwal_kerja_d_hari_n.map((dt) => {
+      if (Array.isArray(initialValues.t_jadwal_kerja_det_hari) && initialValues.t_jadwal_kerja_det_hari.length > 0) {
+        detailArr.value = initialValues.t_jadwal_kerja_det_hari.map((dt) => {
           if (actionText.value?.toLowerCase() === 'copy' && dt.id) {
             delete dt.id;
             delete dt.no;
@@ -233,7 +233,7 @@ async function onSave() {
       });
       return;
     }
-    values.t_jadwal_kerja_d_hari_n = detailArr.value;
+    values.t_jadwal_kerja_det_hari = detailArr.value;
   }
 
 
