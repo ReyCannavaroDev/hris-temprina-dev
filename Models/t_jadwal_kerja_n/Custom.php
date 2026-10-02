@@ -52,12 +52,18 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
 
     public function createAfter($model, $arrayData, $metaData, $id = null)
     {
+        $payload1 = app('request')->input('t_jadwal_kerja_d_hari_n');
+        $payload2 = $arrayData['t_jadwal_kerja_d_hari_n'] ?? 'missing';
+        throw new \Exception("DEBUG_SAVE_CREATE - p1: " . json_encode($payload1) . " | p2: " . json_encode($payload2));
         $this->saveDetails($id, $arrayData);
         return $arrayData;
     }
 
     public function updateAfter($model, $arrayData, $metaData, $id = null)
     {
+        $payload1 = app('request')->input('t_jadwal_kerja_d_hari_n');
+        $payload2 = $arrayData['t_jadwal_kerja_d_hari_n'] ?? 'missing';
+        throw new \Exception("DEBUG_SAVE - p1: " . json_encode($payload1) . " | p2: " . json_encode($payload2));
         $this->saveDetails($id, $arrayData);
         return $arrayData;
     }
