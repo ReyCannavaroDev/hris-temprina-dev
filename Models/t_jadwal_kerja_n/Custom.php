@@ -50,13 +50,13 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
         return $result;
     }
 
-    public function createAfter($model, $arrayData, $metaData, $id)
+    public function createAfter($model, $arrayData, $metaData, $id = null)
     {
         $this->saveDetails($id);
         return $arrayData;
     }
 
-    public function updateAfter($model, $arrayData, $metaData, $id)
+    public function updateAfter($model, $arrayData, $metaData, $id = null)
     {
         $this->saveDetails($id);
         return $arrayData;
