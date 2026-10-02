@@ -18,6 +18,14 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
                 ->orderBy('id', 'asc')
                 ->get();
                 
+            // Fallback for old data: if empty, try fetching from the old table
+            if ($rawDetails->isEmpty()) {
+                $rawDetails = \DB::table('t_jadwal_kerja_det_hari')
+                    ->where('t_jadwal_kerja_id', $result['id'])
+                    ->orderBy('id', 'asc')
+                    ->get();
+            }
+                
             $formattedDetails = [];
             foreach ($rawDetails as $det) {
                 $det = (array) $det;
@@ -43,6 +51,10 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
                     $det['end_jam_kerja'] = $det['waktu_akhir'] ?? '--:--';
                 }
                 
+                // Map old columns to new frontend expectations if necessary
+                if (!isset($det['day']) && isset($det['hari'])) $det['day'] = $det['hari'];
+                if (!isset($det['tipe_hari'])) $det['tipe_hari'] = 'KERJA';
+                
                 $formattedDetails[] = $det;
             }
             $result['t_jadwal_kerja_d_hari_n'] = $formattedDetails;
@@ -52,18 +64,12 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
 
     public function createAfter($model, $arrayData, $metaData, $id = null)
     {
-        $payload1 = app('request')->input('t_jadwal_kerja_d_hari_n');
-        $payload2 = $arrayData['t_jadwal_kerja_d_hari_n'] ?? 'missing';
-        throw new \Exception("DEBUG_SAVE_CREATE - p1: " . json_encode($payload1) . " | p2: " . json_encode($payload2));
         $this->saveDetails($id, $arrayData);
         return $arrayData;
     }
 
     public function updateAfter($model, $arrayData, $metaData, $id = null)
     {
-        $payload1 = app('request')->input('t_jadwal_kerja_d_hari_n');
-        $payload2 = $arrayData['t_jadwal_kerja_d_hari_n'] ?? 'missing';
-        throw new \Exception("DEBUG_SAVE - p1: " . json_encode($payload1) . " | p2: " . json_encode($payload2));
         $this->saveDetails($id, $arrayData);
         return $arrayData;
     }
