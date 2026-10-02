@@ -81,6 +81,43 @@ class t_jadwal_kerja extends \App\Models\BasicModels\t_jadwal_kerja
         ];
     }
     
+    public function readAfter($model, $result)
+    {
+        if (isset($result['id']) && !empty($result['t_jadwal_kerja_det_hari'])) {
+            $formattedDetails = [];
+            foreach ($result['t_jadwal_kerja_det_hari'] as $det) {
+                if (is_object($det)) {
+                    $det = (array) $det;
+                }
+                
+                // Fetch m_jam_kerja to populate the missing view fields
+                if (!empty($det['m_jam_kerja_id'])) {
+                    $m_jam_kerja = \DB::table('m_jam_kerja')->where('id', $det['m_jam_kerja_id'])->first();
+                    if ($m_jam_kerja) {
+                        $det['m_jam_kerja'] = (array) $m_jam_kerja;
+                        $det['m_jam_kerja.kode'] = $m_jam_kerja->kode;
+                        $det['m_jam_kerja.waktu_mulai'] = $m_jam_kerja->waktu_mulai;
+                        $det['m_jam_kerja.waktu_akhir'] = $m_jam_kerja->waktu_akhir;
+                        $det['start_jam_kerja'] = $m_jam_kerja->waktu_mulai;
+                        $det['end_jam_kerja'] = $m_jam_kerja->waktu_akhir;
+                        // Injecting generic 'start' and 'end' just in case the UI expects them
+                        $det['start'] = $m_jam_kerja->waktu_mulai;
+                        $det['end'] = $m_jam_kerja->waktu_akhir;
+                    }
+                } else {
+                    $det['start'] = $det['waktu_mulai'] ?? '--:--';
+                    $det['end'] = $det['waktu_akhir'] ?? '--:--';
+                    $det['start_jam_kerja'] = $det['waktu_mulai'] ?? '--:--';
+                    $det['end_jam_kerja'] = $det['waktu_akhir'] ?? '--:--';
+                }
+                $formattedDetails[] = $det;
+            }
+            $result['t_jadwal_kerja_det_hari'] = $formattedDetails;
+        }
+        return $result;
+    }
+
+    
 
     public function custom_generate(){
         $validator = \Validator::make(app()->request->all(), [

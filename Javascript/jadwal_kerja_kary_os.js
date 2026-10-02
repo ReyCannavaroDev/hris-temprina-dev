@@ -216,7 +216,7 @@ async function onSave() {
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
     const dataURL = `${store.server.url_backend}/operation/${endpointApi}${isCreating ? '' : '/' + route.params.id}`
 
-    values.t_assessment_kary_d = detailArr.value
+    values.t_jadwal_kerja_d_n = detailArr.value
 
     const payloads = Array.isArray(values.m_kary_id)
       ? (values.m_kary_id || []).map(id => ({
