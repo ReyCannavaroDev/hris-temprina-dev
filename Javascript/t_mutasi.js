@@ -26,6 +26,15 @@ function onSelectJenisSurat(obj) {
   if (!isTipeMutasiVisible.value) {
     values.tipe_mutasi = obj?.value || 'Non-Mutasi / Persuratan'
   }
+  if (!isCareerMutation.value) {
+    values.status_kary_baru_id = null
+    values.jadwal_kerja_baru_id = null
+    values.m_sbu_baru_id = null
+    values.m_sub_baru_id = null
+    values.m_branch_baru_id = null
+    values.m_divisi_baru_id = null
+    values.m_posisi_baru_id = null
+  }
 }
 
 const currentJenisSuratName = computed(() => {
@@ -40,10 +49,10 @@ const isTipeMutasiVisible = computed(() => {
 const isCareerMutation = computed(() => {
   const name = currentJenisSuratName.value
   if (!name) return true // default tampil sebelum user memilih
+  if (name.includes('PENAMBAHAN TUGAS') || name.includes('TAMBAHAN TUGAS')) return false
   return name.includes('MUTASI') ||
          name.includes('PROMOSI') ||
          name.includes('DEMOSI') ||
-         name.includes('PENAMBAHAN TUGAS') ||
          name.includes('PENGANGKATAN') ||
          name.includes('TUNJANGAN JABATAN')
 })

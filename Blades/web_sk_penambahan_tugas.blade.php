@@ -55,18 +55,18 @@ $subPokok = $t_mutasi->m_sub_lama?->name ?? $t_mutasi->m_kary?->m_sub?->name ?? 
 $alamatPokok = $t_mutasi->m_sub_lama?->address ?? $t_mutasi->m_kary?->m_sub?->address ?? $t_mutasi->m_branch_lama?->address ?? '';
 
 // Format Tambahan Tugas
+$deskripsiTugas = (!empty($t_mutasi->deskripsi) && $t_mutasi->deskripsi !== '-') ? $t_mutasi->deskripsi : null;
 $posisiBaru = $t_mutasi->m_posisi_baru?->name ?? null;
 $subBaru = $t_mutasi->m_sub_baru?->name ?? '';
-$deskripsiTugas = (!empty($t_mutasi->deskripsi) && $t_mutasi->deskripsi !== '-') ? $t_mutasi->deskripsi : null;
 
-if ($posisiBaru) {
+if ($deskripsiTugas) {
+    $tambahanTugasText = $deskripsiTugas;
+} elseif ($posisiBaru) {
     if ($subBaru && !str_contains(strtoupper($posisiBaru), strtoupper($subBaru))) {
         $tambahanTugasText = "{$posisiBaru} {$subBaru}";
     } else {
         $tambahanTugasText = $posisiBaru;
     }
-} elseif ($deskripsiTugas) {
-    $tambahanTugasText = $deskripsiTugas;
 } else {
     $tambahanTugasText = '-';
 }
