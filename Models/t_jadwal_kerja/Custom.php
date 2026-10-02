@@ -81,14 +81,19 @@ class t_jadwal_kerja extends \App\Models\BasicModels\t_jadwal_kerja
         ];
     }
     
+    public $details = ["t_jadwal_kerja_det_hari"];
+
     public function readAfter($model, $result)
     {
-        if (isset($result['id']) && !empty($result['t_jadwal_kerja_det_hari'])) {
+        if (isset($result['id'])) {
+            $rawDetails = \DB::table('t_jadwal_kerja_det_hari')
+                ->where('t_jadwal_kerja_id', $result['id'])
+                ->orderBy('id', 'asc')
+                ->get();
+                
             $formattedDetails = [];
-            foreach ($result['t_jadwal_kerja_det_hari'] as $det) {
-                if (is_object($det)) {
-                    $det = (array) $det;
-                }
+            foreach ($rawDetails as $det) {
+                $det = (array) $det;
                 
                 // Fetch m_jam_kerja to populate the missing view fields
                 if (!empty($det['m_jam_kerja_id'])) {
@@ -100,9 +105,9 @@ class t_jadwal_kerja extends \App\Models\BasicModels\t_jadwal_kerja
                         $det['m_jam_kerja.waktu_akhir'] = $m_jam_kerja->waktu_akhir;
                         $det['start_jam_kerja'] = $m_jam_kerja->waktu_mulai;
                         $det['end_jam_kerja'] = $m_jam_kerja->waktu_akhir;
-                        // Injecting generic 'start' and 'end' just in case the UI expects them
                         $det['start'] = $m_jam_kerja->waktu_mulai;
                         $det['end'] = $m_jam_kerja->waktu_akhir;
+                        $det['jam_kerja'] = $m_jam_kerja->id; // set model for select
                     }
                 } else {
                     $det['start'] = $det['waktu_mulai'] ?? '--:--';
@@ -110,6 +115,7 @@ class t_jadwal_kerja extends \App\Models\BasicModels\t_jadwal_kerja
                     $det['start_jam_kerja'] = $det['waktu_mulai'] ?? '--:--';
                     $det['end_jam_kerja'] = $det['waktu_akhir'] ?? '--:--';
                 }
+                
                 $formattedDetails[] = $det;
             }
             $result['t_jadwal_kerja_det_hari'] = $formattedDetails;
