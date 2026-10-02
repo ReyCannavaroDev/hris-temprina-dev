@@ -65,6 +65,7 @@ const labelDeskripsi = computed(() => {
   if (name.includes('KETERANGAN KERJA')) return 'Keperluan Surat'
   if (name.includes('SURAT TUGAS')) return 'Tugas / Materi Pelatihan'
   if (name.includes('PKWT') || name.includes('PERJANJIAN')) return 'Rincian / Catatan Kontrak'
+  if (name.includes('PENAMBAHAN TUGAS')) return 'Rincian Tambahan Tugas'
   return 'Deskripsi'
 })
 
@@ -72,6 +73,7 @@ const placeholderDeskripsi = computed(() => {
   const name = currentJenisSuratName.value
   if (name.includes('KETERANGAN KERJA')) return 'Contoh: Pengajuan KPR / Pencairan BPJS / Visa'
   if (name.includes('SURAT TUGAS')) return 'Contoh: Pelatihan & Sertifikasi Ahli K3 Umum'
+  if (name.includes('PENAMBAHAN TUGAS')) return 'Contoh: Staff Legal Holding / PIC Proyek'
   return 'Tuliskan Deskripsi'
 })
 
