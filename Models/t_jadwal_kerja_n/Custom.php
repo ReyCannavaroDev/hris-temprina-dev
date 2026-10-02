@@ -1,5 +1,7 @@
 <?php
 
+namespace App\Models\CustomModels;
+
 /**
  * placeholder model: t_jadwal_kerja_n
  * bagian: Custom
