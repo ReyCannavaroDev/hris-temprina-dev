@@ -54,7 +54,9 @@ const isCareerMutation = computed(() => {
          name.includes('PROMOSI') ||
          name.includes('DEMOSI') ||
          name.includes('PENGANGKATAN') ||
-         name.includes('TUNJANGAN JABATAN')
+         name.includes('TUNJANGAN JABATAN') ||
+         name.includes('TETAP') ||
+         name.includes('PKWTT')
 })
 
 const isSuratTugas = computed(() => {
@@ -75,6 +77,7 @@ const labelDeskripsi = computed(() => {
   if (name.includes('SURAT TUGAS')) return 'Tugas / Materi Pelatihan'
   if (name.includes('PKWT') || name.includes('PERJANJIAN')) return 'Rincian / Catatan Kontrak'
   if (name.includes('PENAMBAHAN TUGAS')) return 'Rincian Tambahan Tugas'
+  if (name.includes('TETAP') || name.includes('PKWTT') || name.includes('PENGANGKATAN')) return 'Keterangan Pengangkatan'
   return 'Deskripsi'
 })
 
@@ -83,6 +86,7 @@ const placeholderDeskripsi = computed(() => {
   if (name.includes('KETERANGAN KERJA')) return 'Contoh: Pengajuan KPR / Pencairan BPJS / Visa'
   if (name.includes('SURAT TUGAS')) return 'Contoh: Pelatihan & Sertifikasi Ahli K3 Umum'
   if (name.includes('PENAMBAHAN TUGAS')) return 'Contoh: Staff Legal Holding / PIC Proyek'
+  if (name.includes('TETAP') || name.includes('PKWTT') || name.includes('PENGANGKATAN')) return 'Contoh: Pengangkatan Karyawan Tetap Hasil Evaluasi Masa Percobaan'
   return 'Tuliskan Deskripsi'
 })
 
