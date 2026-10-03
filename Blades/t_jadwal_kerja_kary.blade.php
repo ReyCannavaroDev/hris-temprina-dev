@@ -5,9 +5,9 @@
     <div class="flex items-center gap-x-4">
       <p>Filter Status :</p>
       <div class="flex gap-x-2">
-        <button @click="filterShowData(true,1)" :class="activeBtn === 1?'bg-green-600 text-white hover:bg-green-400':'border border-green-600 text-green-600 bg-white  hover:bg-green-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">Aktif</button>
+        <button @click="filterShowData(true,1)" :class="activeBtn === 1?'bg-green-600 text-white hover:bg-green-400':'border border-green-600 text-green-600 bg-white  hover:bg-green-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">Active</button>
         <div class="flex my-auto h-4 w-0.5 bg-[#6E91D1]"></div>
-        <button @click="filterShowData(false,2)" :class="activeBtn === 2?'bg-red-600 text-white hover:bg-red-400':'border border-red-600 text-red-600 bg-white  hover:bg-red-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">Non Aktif</button>
+        <button @click="filterShowData(false,2)" :class="activeBtn === 2?'bg-red-600 text-white hover:bg-red-400':'border border-red-600 text-red-600 bg-white  hover:bg-red-600 hover:text-white'" class="duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">Non Active</button>
       </div>
     </div>
 
@@ -88,7 +88,7 @@
               simplest: true,
               transform:true,
               join:false,
-              where: `this.status='AKTIF'`
+              where: `this.status='ACTIVE'`
           }
         }" placeholder="" label="" fa-icon="" :check="false" :columns="[{
           headerName: 'No',
@@ -110,8 +110,8 @@
       <label class="font-semibold">Status</label>
       <FieldSelect :bind="{ disabled: !actionText, clearable: false }" :value="values.status"
         @input="v => values.status = v" :errorText="formErrors.status ? 'failed' : ''" :hints="formErrors.status"
-        valueField="name" displayField="name"
-        :options="[ { id: true, name: 'AKTIF' }, { id: false, name: 'NON AKTIF' } ]" placeholder="" label=""
+        valueField="id" displayField="name"
+        :options="[ { id: 'AKTIF', name: 'Active' }, { id: 'NON AKTIF', name: 'Non Active' } ]" placeholder="" label=""
         :check="false" />
     </div>
 

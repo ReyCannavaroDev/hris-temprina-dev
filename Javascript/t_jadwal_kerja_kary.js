@@ -599,11 +599,11 @@ const landing = reactive({
     cellClass: ['border-r', '!border-gray-200', 'justify-center'],
     cellRenderer: (params) => {
       const status = params.data['status']?.toUpperCase();
-      return status === 'AKTIF'
-        ? `<span class="text-green-600 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">${status}</span>`
-        : status === 'NON AKTIF'
-          ? `<span class="text-amber-600 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">${status}</span>`
-          : `<span class="text-red-600 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">Status Tidak Terdaftar</span>`;
+      return status === 'AKTIF' || status === 'ACTIVE'
+        ? `<span class="text-green-600 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">Active</span>`
+        : status === 'NON AKTIF' || status === 'NON ACTIVE'
+          ? `<span class="text-red-600 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">Non Active</span>`
+          : `<span class="text-gray-600 rounded-md text-xs font-medium px-4 py-1 inline-block capitalize">Status Tidak Terdaftar</span>`;
     }
   }
   ]
