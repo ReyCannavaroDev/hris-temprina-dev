@@ -346,19 +346,22 @@ $bannerIsoSrc = $mediaISO ? $resolveMediaPath($mediaISO->file_path) : '';
     <tr>
       <td style="vertical-align:top;">4.1.</td>
       <td style="vertical-align:top; text-align:justify;">
-        Pihak kedua bersedia diberikan upah yang bersifat HONORARIUM - Sebesar Rp. {{ $totalSalaryFormatted }},- per bulan.
-        <table style="width:100%; border-collapse:collapse; margin-top:1px; margin-bottom:1px; font-size:9.2px;">
+        <div>Pihak kedua bersedia diberikan upah yang bersifat HONORARIUM - Sebesar Rp. {{ $totalSalaryFormatted }},- per bulan.</div>
+        <table style="width:100%; border-collapse:collapse; margin-top:2px; margin-bottom:2px; font-size:9.2px;">
           <tr>
             <td style="width:3%;"></td>
-            <td style="width:97%;">1. Gaji Pokok : Rp. {{ $gapokFormatted }},-</td>
+            <td style="width:4%; vertical-align:top;">1.</td>
+            <td style="width:93%; vertical-align:top;">Gaji Pokok : Rp. {{ $gapokFormatted }},-</td>
           </tr>
           <tr>
             <td></td>
-            <td>2. Tunjangan transport : Rp. {{ $ttransFormatted }},-</td>
+            <td style="vertical-align:top;">2.</td>
+            <td style="vertical-align:top;">Tunjangan transport : Rp. {{ $ttransFormatted }},-</td>
           </tr>
           <tr>
             <td></td>
-            <td>3. Tunjangan produktifitas : Rp. {{ $tprodFormatted }},-</td>
+            <td style="vertical-align:top;">3.</td>
+            <td style="vertical-align:top;">Tunjangan produktifitas : Rp. {{ $tprodFormatted }},-</td>
           </tr>
         </table>
       </td>
