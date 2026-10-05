@@ -72,9 +72,12 @@ $keperluan = $t_mutasi?->deskripsi
           ?? $t_mutasi?->keterangan 
           ?? $t_mutasi?->catatan 
           ?? '-';
+
+// Icon Pointer Segitiga Hitam Base64 (100% kompatibel dengan TCPDF tanpa resiko jadi '?')
+$arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAASElEQVR4nJWNQQ4AIAjD3OL/vzxPJEZhKCcCbQpJ42cYCwB9CSF1IrOjk1g9qhpdPquxE8ZRmy+CJDwXdtgWTtAWKvgqODBmAXo9GyO93OPeAAAAAElFTkSuQmCC';
 @endphp
 
-<div style="font-family:'Times New Roman', Times, serif; width:90%; margin:auto; font-size:12px; line-height:1.5; color:#000;">
+<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:12px; line-height:1.5; color:#000;">
 
   <!-- KOP SURAT RESMI -->
   @include('projects.web_sk_kop')
@@ -100,20 +103,26 @@ $keperluan = $t_mutasi?->deskripsi
   </table>
 
   <!-- PEMBUKA -->
-  <div style="margin-top:24px; font-size:12px;">
+  <div style="margin-top:22px; font-size:12px;">
     Yang bertanda tangan di bawah ini :
   </div>
 
   <!-- DATA PIHAK PENERANG -->
-  <table style="width:100%; border-collapse:collapse; margin-top:10px; margin-left:30px; font-size:12px; line-height:1.5;">
+  <table style="width:100%; border-collapse:collapse; margin-top:8px; font-size:12px; line-height:1.5;">
     <tr>
-      <td style="width:25px; vertical-align:top;">&#9658;</td>
-      <td style="width:110px; vertical-align:top;">Nama</td>
-      <td style="width:15px; vertical-align:top; text-align:center;">:</td>
-      <td style="vertical-align:top;"><b>{{ $signatureNama }}</b></td>
+      <td style="width:4%;"></td>
+      <td style="width:3%; vertical-align:top; padding-top:3px;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
+      </td>
+      <td style="width:16%; vertical-align:top;">Nama</td>
+      <td style="width:3%; vertical-align:top; text-align:center;">:</td>
+      <td style="width:74%; vertical-align:top;"><b>{{ $signatureNama }}</b></td>
     </tr>
     <tr>
-      <td style="vertical-align:top;">&#9658;</td>
+      <td></td>
+      <td style="vertical-align:top; padding-top:3px;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
+      </td>
       <td style="vertical-align:top;">Bagian</td>
       <td style="vertical-align:top; text-align:center;">:</td>
       <td style="vertical-align:top;">
@@ -125,26 +134,35 @@ $keperluan = $t_mutasi?->deskripsi
   </table>
 
   <!-- KETERANGAN BAHWA -->
-  <div style="margin-top:20px; font-size:12px;">
+  <div style="margin-top:18px; font-size:12px;">
     Menerangkan bahwa :
   </div>
 
   <!-- DATA KARYAWAN -->
-  <table style="width:100%; border-collapse:collapse; margin-top:10px; margin-left:30px; font-size:12px; line-height:1.5;">
+  <table style="width:100%; border-collapse:collapse; margin-top:8px; font-size:12px; line-height:1.5;">
     <tr>
-      <td style="width:25px; vertical-align:top;">&#9658;</td>
-      <td style="width:110px; vertical-align:top;">Nama</td>
-      <td style="width:15px; vertical-align:top; text-align:center;">:</td>
-      <td style="vertical-align:top;"><b>{{ $karyawanNama }}</b></td>
+      <td style="width:4%;"></td>
+      <td style="width:3%; vertical-align:top; padding-top:3px;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
+      </td>
+      <td style="width:16%; vertical-align:top;">Nama</td>
+      <td style="width:3%; vertical-align:top; text-align:center;">:</td>
+      <td style="width:74%; vertical-align:top;"><b>{{ $karyawanNama }}</b></td>
     </tr>
     <tr>
-      <td style="vertical-align:top;">&#9658;</td>
+      <td></td>
+      <td style="vertical-align:top; padding-top:3px;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
+      </td>
       <td style="vertical-align:top;">Status</td>
       <td style="vertical-align:top; text-align:center;">:</td>
       <td style="vertical-align:top;">Yang bersangkutan adalah {{ $statusClean }}</td>
     </tr>
     <tr>
-      <td style="vertical-align:top;">&#9658;</td>
+      <td></td>
+      <td style="vertical-align:top; padding-top:3px;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
+      </td>
       <td style="vertical-align:top;">Bagian</td>
       <td style="vertical-align:top; text-align:center;">:</td>
       <td style="vertical-align:top;">
@@ -154,13 +172,19 @@ $keperluan = $t_mutasi?->deskripsi
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top;">&#9658;</td>
+      <td></td>
+      <td style="vertical-align:top; padding-top:3px;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
+      </td>
       <td style="vertical-align:top;">Awal Kerja</td>
       <td style="vertical-align:top; text-align:center;">:</td>
       <td style="vertical-align:top;">{{ $awalKerja }} s/d {{ $akhirKerja }}</td>
     </tr>
     <tr>
-      <td style="vertical-align:top;">&#9658;</td>
+      <td></td>
+      <td style="vertical-align:top; padding-top:3px;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
+      </td>
       <td style="vertical-align:top;">Keperluan</td>
       <td style="vertical-align:top; text-align:center;">:</td>
       <td style="vertical-align:top;">{{ $keperluan }}</td>
@@ -168,18 +192,18 @@ $keperluan = $t_mutasi?->deskripsi
   </table>
 
   <!-- PENUTUP -->
-  <div style="margin-top:24px; font-size:12px; text-align:justify;">
+  <div style="margin-top:22px; font-size:12px; text-align:justify;">
     Demikian surat keterangan kerja ini dibuat agar dapat dipergunakan sebagaimana mestinya.
   </div>
 
   <!-- TANDA TANGAN -->
-  <table style="width:100%; border-collapse:collapse; margin-top:28px; font-size:12px;">
+  <table style="width:100%; border-collapse:collapse; margin-top:26px; font-size:12px;">
     <tr>
       <td style="width:55%; vertical-align:top;">
         {{ $kotaTerbit }}, {{ $tanggalTerbit }}<br>
         <b>{{ $companyName }}</b>
-        <div style="height:55px;"></div>
-        <b><u>{{ $signatureNama }}</u></b><br>
+        <div style="height:55px; line-height:55px;">&nbsp;</div>
+        <u><b>{{ $signatureNama }}</b></u><br>
         <i>{{ $signatureJabatan }}</i>
       </td>
       <td style="width:45%;"></td>
@@ -190,7 +214,7 @@ $keperluan = $t_mutasi?->deskripsi
   @if($isJpBooks)
     @include('projects.web_sk_footer')
   @else
-    <div style="position:fixed; bottom:0; left:5%; right:5%; width:90%; margin:auto;">
+    <div style="position:fixed; bottom:0; left:4%; right:4%; width:92%; margin:auto;">
       <div style="border-top:0.5px solid #777; margin-bottom:3px;"></div>
       <table style="width:100%; font-size:6.8px; line-height:1.2; color:#333; border-collapse:collapse;">
         <tr>
