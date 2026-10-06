@@ -140,84 +140,89 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
   </div>
 
   <!-- TABEL DATA KARYAWAN & PELANGGARAN -->
-  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:2px; font-size:10.5px; line-height:1.22;">
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:4px; font-size:10.5px; line-height:1.22;">
     <tr>
       <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
-      <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
+      <td width="18%" style="width:18%; vertical-align:top; white-space:nowrap;">
         <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Nama
       </td>
-      <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td width="71%" style="width:71%; vertical-align:top;"><b>{{ $namaKaryawan }}</b></td>
+      <td width="2%" style="width:2%; vertical-align:top; text-align:center;">:</td>
+      <td width="74%" style="width:74%; vertical-align:top;"><b>{{ $namaKaryawan }}</b></td>
     </tr>
     <tr>
       <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
-      <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
+      <td width="18%" style="width:18%; vertical-align:top; white-space:nowrap;">
         <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Jabatan
       </td>
-      <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td width="71%" style="width:71%; vertical-align:top;">{{ $jabatanLengkap }}</td>
+      <td width="2%" style="width:2%; vertical-align:top; text-align:center;">:</td>
+      <td width="74%" style="width:74%; vertical-align:top;">{{ $jabatanLengkap }}</td>
     </tr>
     <tr>
       <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
-      <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
+      <td width="18%" style="width:18%; vertical-align:top; white-space:nowrap;">
         <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Alamat
       </td>
-      <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td width="71%" style="width:71%; vertical-align:top;">{{ $alamatKaryawan }}</td>
+      <td width="2%" style="width:2%; vertical-align:top; text-align:center;">:</td>
+      <td width="74%" style="width:74%; vertical-align:top;">{{ $alamatKaryawan }}</td>
     </tr>
     <tr>
       <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
-      <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
+      <td width="18%" style="width:18%; vertical-align:top; white-space:nowrap;">
         <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Kesalahan
       </td>
-      <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td width="71%" style="width:71%; vertical-align:top; text-align:justify;">
+      <td width="2%" style="width:2%; vertical-align:top; text-align:center;">:</td>
+      <td width="74%" style="width:74%; vertical-align:top; text-align:justify;">
         @php
-          $rawKesalahan = '';
+          $rawList = [];
           if (count($pelanggaran) > 0) {
-              $rawKesalahan = null;
+              foreach ($pelanggaran as $p) {
+                  $rawList[] = trim($p->value ?? $p['value'] ?? '');
+              }
           } elseif (!empty($t_mutasi?->catatan)) {
-              $rawKesalahan = $t_mutasi->catatan;
+              $rawList = explode("\n", str_replace("\r", "", $t_mutasi->catatan));
           } elseif (!empty($t_mutasi?->deskripsi)) {
-              $rawKesalahan = $t_mutasi->deskripsi;
+              $rawList = explode("\n", str_replace("\r", "", $t_mutasi->deskripsi));
+          }
+
+          $itemsKesalahan = [];
+          foreach ($rawList as $l) {
+              $trimmed = trim($l);
+              if ($trimmed === '') continue;
+              
+              // Bersihkan penomoran awal misal '1.', '2.', '3)', '-', '*', bullet
+              $text = preg_replace('/^(?:\d+[\.\)\-]\s*|[-*•]\s*)/u', '', $trimmed);
+              $text = trim($text);
+              if ($text === '') continue;
+
+              // Deteksi cerdas apakah baris ini kelanjutan dari baris sebelumnya:
+              // 1. Diawali huruf kecil (contoh: 'tertulis...', 'yang...', 'atas...')
+              // 2. Baris sebelumnya berakhiran tanda hubung/garis miring (contoh: 'tertulis/tidak') atau kata gantung
+              // 3. Diawali kata sambung lanjutan
+              $isContinuation = false;
+              if (count($itemsKesalahan) > 0) {
+                  $prev = $itemsKesalahan[count($itemsKesalahan) - 1];
+                  $firstChar = mb_substr($text, 0, 1);
+                  
+                  if (mb_strtolower($firstChar) === $firstChar && !is_numeric($firstChar) && !in_array($firstChar, ['[', '(', '{', '"', "'"])) {
+                      $isContinuation = true;
+                  } elseif (preg_match('/[-\/,]$/u', $prev) || preg_match('/\b(dan|atau|tidak|secara|yang)$/iu', $prev)) {
+                      $isContinuation = true;
+                  } elseif (preg_match('/^(?:tertulis|yang|dan|atau|oleh|dengan|di|pada|ke|atas)\b/iu', $text) && !str_ends_with($prev, '.')) {
+                      $isContinuation = true;
+                  }
+              }
+
+              if ($isContinuation && count($itemsKesalahan) > 0) {
+                  $itemsKesalahan[count($itemsKesalahan) - 1] .= ' ' . $text;
+              } else {
+                  $itemsKesalahan[] = $text;
+              }
           }
         @endphp
-        @if(count($pelanggaran) > 0)
-          @foreach($pelanggaran as $index => $item)
-            @php
-              $valText = trim($item->value ?? $item['value'] ?? '-');
-              $cleanText = preg_replace('/^\d+[\.\)]\s*/', '', $valText);
-            @endphp
-            {{ $index + 1 }}. {{ $cleanText }}<br>
+        @if(count($itemsKesalahan) > 0)
+          @foreach($itemsKesalahan as $idx => $itemText)
+            {{ $idx + 1 }}. {{ $itemText }}<br>
           @endforeach
-        @elseif($rawKesalahan)
-          @php
-            $rawLines = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $rawKesalahan))));
-            $hasNumbered = false;
-            foreach ($rawLines as $l) {
-                if (preg_match('/^\d+[\.\)\-]/', $l)) {
-                    $hasNumbered = true;
-                    break;
-                }
-            }
-            $items = [];
-            foreach ($rawLines as $l) {
-                if (preg_match('/^\d+[\.\)\-]\s*(.*)$/', $l, $m)) {
-                    $items[] = trim($m[1]);
-                } elseif ($hasNumbered && count($items) > 0) {
-                    $items[count($items) - 1] .= ' ' . $l;
-                } else {
-                    $items[] = $l;
-                }
-            }
-          @endphp
-          @if(count($items) > 0)
-            @foreach($items as $index => $itemText)
-              {{ $index + 1 }}. {{ $itemText }}<br>
-            @endforeach
-          @else
-            -
-          @endif
         @else
           -
         @endif
@@ -225,34 +230,33 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
     </tr>
     <tr>
       <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
-      <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
+      <td width="18%" style="width:18%; vertical-align:top; white-space:nowrap;">
         <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Jenis Sanksi
       </td>
-      <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td width="71%" style="width:71%; vertical-align:top;">
+      <td width="2%" style="width:2%; vertical-align:top; text-align:center;">:</td>
+      <td width="74%" style="width:74%; vertical-align:top;">
         1. {{ $sanksiTitle }}
       </td>
     </tr>
   </table>
 
   <!-- PARAGRAF KETENTUAN MASA BERLAKU -->
-  <div style="margin-top:5px; font-size:10.5px; line-height:1.22; text-align:justify;">
-    {{ $spBerlakuTitle }} ini berlaku selama <b><i>{{ $masaBerlaku }} bulan</i></b> terhitung dari tanggal dikeluarkan, apabila yang bersangkutan masih melakukan pelanggaran lagi maka perusahaan dapat memberikan Surat Peringatan berikutnya atau sesuai dengan Undang - Undang yang berlaku.
+  <div style="margin-top:6px; font-size:10.5px; line-height:1.25; text-align:justify;">
+    {{ $spBerlakuTitle }} ini berlaku selama <b>{{ $masaBerlaku }} bulan</b> terhitung dari tanggal dikeluarkan, apabila yang bersangkutan masih melakukan pelanggaran lagi maka perusahaan dapat memberikan Surat Peringatan berikutnya atau sesuai dengan Undang - Undang yang berlaku.
   </div>
 
   <!-- PARAGRAF PEMBINAAN & HARAPAN MANAJEMEN -->
-  <div style="margin-top:4px; font-size:10.5px; line-height:1.22; text-align:justify;">
+  <div style="margin-top:6px; font-size:10.5px; line-height:1.25; text-align:justify;">
     Dengan adanya {{ $spHarapanTitle }} yang diberikan kepada Saudara/i ini maka manajemen berharap agar Saudara/i dapat lebih baik lagi dalam hal kontrol, konsentrasi dan koordinasi tugas di lingkungan kerja Saudara/i sehari-hari. Atas perhatiannya disampaikan terima kasih.
   </div>
 
-  <!-- TANDA TANGAN (LEFT-ALIGNED, NOBR AGAR TIDAK PERNAH TERPOTONG KE HALAMAN 2) -->
-  <table nobr="true" style="width:100%; border-collapse:collapse; margin-top:5px; font-size:10.5px; page-break-inside:avoid;">
+  <!-- TANDA TANGAN (LEFT-ALIGNED SESUAI ACUAN RESMI HRIS/SP KARYAWAN.pdf) -->
+  <table style="width:100%; border-collapse:collapse; margin-top:14px; font-size:10.5px; line-height:1.25;">
     <tr>
       <td style="width:55%; vertical-align:top; text-align:left;">
         Hormat Kami,<br>
-        {{ $companyName }}
-        <div style="height:25px; line-height:25px; font-size:1px;">&nbsp;</div>
-        <u><b>{{ $namaTtd }}</b></u><br>
+        {{ $companyName }}<br><br><br><br>
+        <b>{{ $namaTtd }}</b><br>
         <b>{{ $jabatanTtd }}</b>
       </td>
       <td style="width:45%;">&nbsp;</td>
@@ -260,7 +264,7 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
   </table>
 
   <!-- TEMBUSAN RESMI KORPORAT -->
-  <div style="margin-top:4px; font-size:9.5px; line-height:1.15;">
+  <div style="margin-top:10px; font-size:10px; line-height:1.2;">
     Tembusan :<br>
     @if($tembusan && count($tembusan) > 0)
       @foreach($tembusan as $index => $t)
