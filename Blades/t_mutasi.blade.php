@@ -577,9 +577,10 @@
 
 
     <div>
+      <label class="block font-semibold text-xs text-gray-700 mb-1">{{ labelCatatan }}</label>
       <FieldX class="w-full !mt0 " :bind="{ readonly: !actionText }" :value="values.catatan"
         :errorText="formErrors.catatan?'failed':''" @input="v=>values.catatan=v" type="textarea"
-        :hints="formErrors.catatan" label="Catatan" placeholder="Tuliskan Catatan" :check="false" />
+        :hints="formErrors.catatan" label="" :placeholder="placeholderCatatan" :check="false" />
     </div>
 
     <div>

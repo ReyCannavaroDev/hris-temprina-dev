@@ -78,6 +78,7 @@ const labelDeskripsi = computed(() => {
   if (name.includes('PKWT') || name.includes('PERJANJIAN')) return 'Rincian / Catatan Kontrak'
   if (name.includes('PENAMBAHAN TUGAS')) return 'Rincian Tambahan Tugas'
   if (name.includes('TETAP') || name.includes('PKWTT') || name.includes('PENGANGKATAN')) return 'Keterangan Pengangkatan'
+  if (name.includes('PERINGATAN') || name.includes('SP')) return 'Ringkasan Pelanggaran'
   return 'Deskripsi'
 })
 
@@ -87,6 +88,7 @@ const placeholderDeskripsi = computed(() => {
   if (name.includes('SURAT TUGAS')) return 'Contoh: Pelatihan & Sertifikasi Ahli K3 Umum'
   if (name.includes('PENAMBAHAN TUGAS')) return 'Contoh: Staff Legal Holding / PIC Proyek'
   if (name.includes('TETAP') || name.includes('PKWTT') || name.includes('PENGANGKATAN')) return 'Contoh: Pengangkatan Karyawan Tetap Hasil Evaluasi Masa Percobaan'
+  if (name.includes('PERINGATAN') || name.includes('SP')) return 'Contoh: Pelanggaran Indisipliner dan Ketidakhadiran'
   return 'Tuliskan Deskripsi'
 })
 
@@ -94,6 +96,7 @@ const labelKeterangan = computed(() => {
   const name = currentJenisSuratName.value
   if (name.includes('PENGALAMAN KERJA')) return 'Alasan Berakhir Kerja'
   if (name.includes('SURAT TUGAS')) return 'Penyelenggara / Jadwal & Tempat'
+  if (name.includes('PERINGATAN') || name.includes('SP')) return 'Tingkat SP (I / II / III)'
   return 'Keterangan'
 })
 
@@ -101,7 +104,20 @@ const placeholderKeterangan = computed(() => {
   const name = currentJenisSuratName.value
   if (name.includes('PENGALAMAN KERJA')) return 'Contoh: Resign / Pensiun Dini / Selesai Masa Kontrak'
   if (name.includes('SURAT TUGAS')) return 'Contoh: PT. Trust Bimo Indonesia, 22 April - 06 Mei 2026, Via Zoom'
+  if (name.includes('PERINGATAN') || name.includes('SP')) return 'Contoh: SP 1 / SP 2 / SP 3 (Kosongkan jika default SP 1)'
   return 'Tuliskan Keterangan'
+})
+
+const labelCatatan = computed(() => {
+  const name = currentJenisSuratName.value
+  if (name.includes('PERINGATAN') || name.includes('SP')) return 'Daftar Kesalahan / Pelanggaran Karyawan'
+  return 'Catatan'
+})
+
+const placeholderCatatan = computed(() => {
+  const name = currentJenisSuratName.value
+  if (name.includes('PERINGATAN') || name.includes('SP')) return 'Tuliskan pasal / rincian kesalahan karyawan (tekan Enter untuk baris baru)\nContoh:\n1. BAB IV Pasal 14 (7) - Mengambil cuti tanpa persetujuan atasan.\n2. BAB XII Pasal 45 (8.ff) - Menolak mentaati perintah pimpinan.'
+  return 'Tuliskan Catatan'
 })
 
 function onPrintSurat() {
