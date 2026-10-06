@@ -99,6 +99,13 @@ $tembusan = $t_surat_peringatan?->t_surat_peringatan_d_tembusan
           ?? null;
 
 $signature = $t_surat_peringatan?->signature ?? $t_mutasi?->signature;
+$sigId = $t_surat_peringatan?->signature_id ?? $t_mutasi?->signature_id;
+if (!$signature && !empty($sigId)) {
+    try {
+        $signature = \App\Models\CustomModels\m_kary::find($sigId) 
+                  ?? \App\Models\BasicModels\m_kary::find($sigId);
+    } catch (\Throwable $e) {}
+}
 $namaTtd = $signature?->nama_lengkap ?? '( ........................................ )';
 $jabatanTtd = $signature?->m_posisi?->name ?? 'Kadiv. Human Capital';
 
