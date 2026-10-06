@@ -21,19 +21,69 @@ $carbonDate = Carbon::parse($tgl);
 $tanggalOnly = $carbonDate->translatedFormat('d F Y');
 
 $karyawan = $t_surat_peringatan?->m_kary ?? $t_mutasi?->m_kary;
-$namaKaryawan = $karyawan?->nama_lengkap ?? '-';
-$jabatanKaryawan = $karyawan?->m_posisi?->name ?? $t_mutasi?->m_posisi_baru?->name ?? $t_mutasi?->m_posisi_lama?->name ?? '-';
-$alamatKaryawan = $karyawan?->address ?? '-';
+$namaKaryawan = strtoupper($karyawan?->nama_lengkap ?? '-');
 
-$levelSpName = 'Surat Peringatan (SP) I (Satu)';
-if ($t_surat_peringatan?->level_sp) {
-    $level_sp = m_general::find($t_surat_peringatan->level_sp);
-    $levelSpName = $level_sp?->value ?? 'Surat Peringatan';
-} elseif ($t_mutasi?->keterangan) {
-    $levelSpName = $t_mutasi->keterangan;
+$posisiName = trim($t_mutasi?->m_posisi_lama?->name ?? $karyawan?->m_posisi?->name ?? '-');
+$subcompName = trim($t_mutasi?->m_sub_lama?->name ?? $karyawan?->m_subcomp?->name ?? '');
+
+$sbuCode = strtoupper($t_mutasi?->m_sbu_baru?->kode ?? $karyawan?->m_sbu?->kode ?? '');
+$sbuName = strtoupper($t_mutasi?->m_sbu_baru?->name ?? $karyawan?->m_sbu?->name ?? '');
+$isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
+
+$compRaw = $t_mutasi?->m_sub_lama?->m_company?->name ?? $karyawan?->m_company?->name ?? 'PT Temprina Media Grafika';
+if (!str_starts_with(strtoupper(trim($compRaw)), 'PT')) {
+    $compRaw = 'PT ' . $compRaw;
+}
+$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : $compRaw;
+
+if (!empty($subcompName) && !str_contains(strtoupper($posisiName), strtoupper($subcompName))) {
+    $jabatanKaryawan = $posisiName . ' ' . $subcompName;
+} else {
+    $jabatanKaryawan = $posisiName;
 }
 
-$city = $t_surat_peringatan?->m_kary?->m_branch?->city?->value 
+$jabatanLengkap = str_contains(strtoupper($jabatanKaryawan), strtoupper(str_replace('PT ', '', $companyName)))
+    ? $jabatanKaryawan
+    : trim($jabatanKaryawan . ' ' . $companyName);
+
+$alamatKaryawan = $karyawan?->address 
+               ?? $karyawan?->m_subcomp?->address 
+               ?? $t_mutasi?->m_sub_lama?->address 
+               ?? $t_mutasi?->m_branch_lama?->address 
+               ?? '-';
+
+// Resolusi Level SP (I, II, atau III) secara presisi
+$rawLevel = '';
+if ($t_surat_peringatan?->level_sp) {
+    $level_sp = m_general::find($t_surat_peringatan->level_sp);
+    $rawLevel = $level_sp?->value ?? '';
+}
+if (empty($rawLevel)) {
+    $rawLevel = $t_mutasi?->keterangan 
+             ?: ($t_mutasi?->catatan 
+             ?: ($t_mutasi?->tipe_mutasi 
+             ?: ($t_mutasi?->jenis_surat ? m_general::find($t_mutasi->jenis_surat)?->value : '')));
+}
+
+$upperLevel = strtoupper($rawLevel ?? '');
+if (str_contains($upperLevel, 'III') || str_contains($upperLevel, ' 3') || str_contains($upperLevel, 'TIGA')) {
+    $spRomawi = 'III';
+    $spText = 'Tiga';
+} elseif (str_contains($upperLevel, 'II') || str_contains($upperLevel, ' 2') || str_contains($upperLevel, 'DUA')) {
+    $spRomawi = 'II';
+    $spText = 'Dua';
+} else {
+    $spRomawi = 'I';
+    $spText = 'Satu';
+}
+
+$spLevelLabel = "{$spRomawi} ({$spText})";
+$halTitle = "Surat Peringatan (SP) {$spLevelLabel}";
+$sanksiTitle = "Peringatan {$spLevelLabel} atas kesalahan di atas";
+$spBerlakuTitle = "Surat Peringatan {$spLevelLabel}";
+$spHarapanTitle = "surat peringatan {$spLevelLabel}";
+
+$city = $t_surat_peringatan?->m_kary?->m_branch?->kota 
       ?? $t_mutasi?->m_branch_baru?->kota 
       ?? $t_mutasi?->m_branch_lama?->kota 
       ?? $t_mutasi?->m_kary?->m_branch?->kota 
@@ -50,128 +100,160 @@ $tembusan = $t_surat_peringatan?->t_surat_peringatan_d_tembusan
           ?? null;
 
 $signature = $t_surat_peringatan?->signature ?? $t_mutasi?->signature;
-$namaTtd = $signature?->nama_lengkap ?? '-';
-$jabatanTtd = $signature?->m_posisi?->name ?? '-';
+$namaTtd = $signature?->nama_lengkap ?? '( ........................................ )';
+$jabatanTtd = $signature?->m_posisi?->name ?? 'Kadiv. Human Capital';
 
-$sbuCode = strtoupper($t_mutasi?->m_sbu_baru?->kode ?? $karyawan?->m_sbu?->kode ?? '');
-$sbuName = strtoupper($t_mutasi?->m_sbu_baru?->name ?? $karyawan?->m_sbu?->name ?? '');
-$isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
-$companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : 'PT Temprina Media Grafika';
+// Icon Wedge Arrow Hitam Base64 (Identik acuan resmi dan anti tanda tanya '?' di font PDF)
+$arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAXklEQVR4nJ2S0Q4AEAwDV/H/v1zxQIqFWZ93rrGBpGVSUpQJCOBLDa06YJIIG5fXAL4aLEa1arwGoc+B0+AwjkG7pDeoPxCl8gG+APPA3XZbi2uM7HGC3RYB5nz2yBvH5jIZAPwxNAAAAABJRU5ErkJggg==';
 @endphp
 
-<div style="font-family:'Times New Roman',serif;width:90%;margin:auto;font-size:12px;line-height:1.5;">
+<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:11px; line-height:1.25; color:#000;">
 
+  <!-- KOP SURAT RESMI -->
   @include('projects.web_sk_kop')
 
-  <table cellspacing="0" cellpadding="0"
-    style="width:100%; margin-top:20px; font-family:'Times New Roman'; font-size:12px; line-height:1.3;">
+  @if(!$isJpBooks)
+    <!-- DOUBLE LINE SEPARATOR (TABEL AMAN TCPDF TANPA BALOK HITAM) -->
+    <table style="width:100%; border-collapse:collapse; margin-top:2px; margin-bottom:6px;">
+      <tr><td style="border-bottom:1px solid #000; height:1px; line-height:1px; font-size:1px;"></td></tr>
+      <tr><td style="border-bottom:2px solid #000; height:2px; line-height:2px; font-size:1px;"></td></tr>
+    </table>
+  @endif
+
+  <!-- TANGGAL, NOMOR & PERIHAL (RATA KIRI SESUAI ACUAN RESMI HRIS/SP KARYAWAN.pdf) -->
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:4px; font-size:11px; line-height:1.3;">
     <tr>
-      <td style="width:70%; padding:0;">No. &nbsp;{{$nomor}}</td>
-      <td style="width:30%; text-align:right; padding:0;">{{$city}}, {{$tanggalOnly}}</td>
+      <td style="text-align:left;">
+        {{ $city }}, {{ $tanggalOnly }}<br>
+        No. {{ $nomor }}
+      </td>
     </tr>
     <tr>
-      <td colspan="2" style="padding-top:4px;">Hal : <strong>{{$levelSpName}}</strong></td>
+      <td style="padding-top:4px;">
+        Hal : <b>{{ $halTitle }}</b>
+      </td>
     </tr>
   </table>
 
-  <div style="margin-top:15px; font-size:12px;">
+  <!-- PEMBUKA -->
+  <div style="margin-top:10px; font-size:11px;">
     Diberikan kepada :
   </div>
 
-  <table cellspacing="0" style="width:100%; margin-top:10px; font-family:'Times New Roman'; font-size:11px; line-height:1.5;">
+  <!-- TABEL DATA KARYAWAN & PELANGGARAN -->
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:3px; font-size:11px; line-height:1.3;">
     <tr>
-      <td style="width: 5%;"></td>
-      <td style="width: 20%; vertical-align:top;">Nama</td>
-      <td style="width: 3%; vertical-align:top;">:</td>
-      <td style="width: 72%; vertical-align:top; font-weight:bold;">{{$namaKaryawan}}</td>
+      <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
+      <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Nama
+      </td>
+      <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
+      <td width="71%" style="width:71%; vertical-align:top;"><b>{{ $namaKaryawan }}</b></td>
     </tr>
     <tr>
-      <td></td>
-      <td style="vertical-align:top;">Jabatan</td>
-      <td style="vertical-align:top;">:</td>
-      <td style="vertical-align:top;">{{$jabatanKaryawan}} {{$companyName}}</td>
+      <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
+      <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Jabatan
+      </td>
+      <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
+      <td width="71%" style="width:71%; vertical-align:top;">{{ $jabatanLengkap }}</td>
     </tr>
     <tr>
-      <td></td>
-      <td style="vertical-align:top;">Alamat</td>
-      <td style="vertical-align:top;">:</td>
-      <td style="vertical-align:top;">{{$alamatKaryawan}}</td>
+      <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
+      <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Alamat
+      </td>
+      <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
+      <td width="71%" style="width:71%; vertical-align:top;">{{ $alamatKaryawan }}</td>
     </tr>
     <tr>
-      <td></td>
-      <td style="vertical-align:top;">Kesalahan</td>
-      <td style="vertical-align:top;">:</td>
-      <td style="vertical-align:top;">
+      <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
+      <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Kesalahan
+      </td>
+      <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
+      <td width="71%" style="width:71%; vertical-align:top; text-align:justify;">
         @if(count($pelanggaran) > 0)
           @foreach($pelanggaran as $index => $item)
-            {{ $index + 1 }}. {{ $item->value ?? $item['value'] ?? '-' }}<br>
+            @php
+              $valText = trim($item->value ?? $item['value'] ?? '-');
+              $cleanText = preg_replace('/^\d+[\.\)]\s*/', '', $valText);
+            @endphp
+            {{ $index + 1 }}. {{ $cleanText }}<br>
           @endforeach
         @elseif($t_mutasi?->deskripsi)
-          {{ $t_mutasi->deskripsi }}
+          {!! nl2br(e($t_mutasi->deskripsi)) !!}
+        @elseif($t_mutasi?->catatan)
+          {!! nl2br(e($t_mutasi->catatan)) !!}
         @else
           -
         @endif
       </td>
     </tr>
     <tr>
-      <td></td>
-      <td style="vertical-align:top;">Jenis Sanksi</td>
-      <td style="vertical-align:top;">:</td>
-      <td style="vertical-align:top;">1. {{ $levelSpName }} atas kesalahan di atas</td>
-    </tr>
-  </table>
-
-  <table cellspacing="0" cellpadding="0" style="width:100%; margin-top:15px; font-family:'Times New Roman'; font-size:12px; line-height:1.5;">
-    <tr>
-      <td style="text-align:justify;">
-        {{$levelSpName}} ini berlaku selama {{$masaBerlaku}} bulan terhitung dari tanggal dikeluarkan, apabila yang
-        bersangkutan masih melakukan pelanggaran lagi maka perusahaan dapat memberikan Surat Peringatan
-        berikutnya atau sesuai dengan Undang - Undang yang berlaku.
+      <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
+      <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
+        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Jenis Sanksi
       </td>
-    </tr>
-    <tr>
-      <td style="padding-top:12px; text-align:justify;">
-        Dengan adanya {{$levelSpName}} yang diberikan kepada Saudara/i ini maka manajemen
-        berharap agar Saudara/i dapat lebih baik lagi dalam hal kontrol, konsentrasi dan koordinasi tugas di
-        lingkungan kerja Saudara/i sehari-hari. Atas perhatiannya disampaikan terima kasih.
+      <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
+      <td width="71%" style="width:71%; vertical-align:top;">
+        1. {{ $sanksiTitle }}
       </td>
     </tr>
   </table>
 
-  <!-- TANDA TANGAN -->
-  <table cellspacing="0" cellpadding="0"
-    style="width:100%; margin-top:25px; font-family:'Times New Roman'; font-size:12px; line-height:1.2;">
+  <!-- PARAGRAF KETENTUAN MASA BERLAKU -->
+  <div style="margin-top:10px; font-size:11px; line-height:1.3; text-align:justify;">
+    {{ $spBerlakuTitle }} ini berlaku selama <b><i>{{ $masaBerlaku }} bulan</i></b> terhitung dari tanggal dikeluarkan, apabila yang bersangkutan masih melakukan pelanggaran lagi maka perusahaan dapat memberikan Surat Peringatan berikutnya atau sesuai dengan Undang - Undang yang berlaku.
+  </div>
+
+  <!-- PARAGRAF PEMBINAAN & HARAPAN MANAJEMEN -->
+  <div style="margin-top:8px; font-size:11px; line-height:1.3; text-align:justify;">
+    Dengan adanya {{ $spHarapanTitle }} yang diberikan kepada Saudara/i ini maka manajemen berharap agar Saudara/i dapat lebih baik lagi dalam hal kontrol, konsentrasi dan koordinasi tugas di lingkungan kerja Saudara/i sehari-hari. Atas perhatiannya disampaikan terima kasih.
+  </div>
+
+  <!-- TANDA TANGAN (LEFT-ALIGNED SESUAI ACUAN RESMI HRIS/SP KARYAWAN.pdf) -->
+  <table nobr="true" style="width:100%; border-collapse:collapse; margin-top:10px; font-size:11px; page-break-inside:avoid;">
     <tr>
-      <td style="width:60%;"></td>
-      <td style="width:40%;">
+      <td style="width:55%; vertical-align:top; text-align:left;">
         Hormat Kami,<br>
-        <strong>{{$companyName}}</strong>
-        <div style="height:55px;"></div>
-        <div style="font-weight:bold; text-decoration:underline;">{{$namaTtd}}</div>
-        <div>{{$jabatanTtd}}</div>
+        {{ $companyName }}
+        <div style="height:35px; line-height:35px; font-size:1px;">&nbsp;</div>
+        <u><b>{{ $namaTtd }}</b></u><br>
+        <b>{{ $jabatanTtd }}</b>
       </td>
+      <td style="width:45%;">&nbsp;</td>
     </tr>
   </table>
 
-  <!-- TEMBUSAN -->
-  <table style="font-family:'Times New Roman'; width:100%; margin-top:20px; font-size: 11px; border-collapse: collapse;">
-    <tr>
-      <td style="width:12%; vertical-align:top;">Tembusan</td>
-      <td style="width:2%; vertical-align:top;">:</td>
-      <td style="width:86%; vertical-align:top;">
-        @if($tembusan && count($tembusan) > 0)
-          @foreach($tembusan as $index => $t)
-            {{ $index + 1 }}. {{ $t->value ?? $t['value'] ?? '-' }}<br>
-          @endforeach
-        @else
-          1. Direksi<br>
-          2. Operational Manager<br>
-          3. HRD
-        @endif
-      </td>
-    </tr>
-  </table>
+  <!-- TEMBUSAN RESMI KORPORAT -->
+  <div style="margin-top:8px; font-size:10px; line-height:1.25;">
+    Tembusan :<br>
+    @if($tembusan && count($tembusan) > 0)
+      @foreach($tembusan as $index => $t)
+        @php
+          $tVal = trim($t->value ?? $t['value'] ?? '-');
+          $cleanTVal = preg_replace('/^\d+[\.\)]\s*/', '', $tVal);
+        @endphp
+        &nbsp;&nbsp;{{ $index + 1 }}. {{ $cleanTVal }}<br>
+      @endforeach
+    @else
+      &nbsp;&nbsp;1. Direksi<br>
+      &nbsp;&nbsp;2. Operational Manager<br>
+      &nbsp;&nbsp;3. HRD
+    @endif
+  </div>
 
-  @include('projects.web_sk_footer')
+  <!-- FOOTER CABANG RESMI (FLOW BIASA RINGKAS, PASTI MUAT DI HALAMAN 1) -->
+  @if($isJpBooks)
+    @include('projects.web_sk_footer')
+  @else
+    <div style="margin-top:8px; border-top:0.5px solid #bbb; padding-top:2px; font-size:6.2px; line-height:1.15; color:#333; text-align:justify;">
+      <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
+      <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
+      <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
+      <b>Jember :</b> 0331-320300 Fax : 0331-320190, E-mail : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, E-mail : Bali@temprina.com
+    </div>
+  @endif
 
 </div>

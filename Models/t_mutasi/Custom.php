@@ -607,6 +607,70 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
         }
     }
 
+    public function ensureGenerateNumSp()
+    {
+        try {
+            $formatName = "SURAT PERINGATAN";
+            $existing = \App\Models\CustomModels\generate_num::where("nama", $formatName)->first();
+            if ($existing) {
+                return $existing;
+            }
+
+            // 1. Siapkan/ambil elemen di generate_num_type
+            $getOrMakeType = function($nama, $refType, $value) {
+                $type = \App\Models\CustomModels\generate_num_type::where('ref_type', $refType)
+                    ->where('value', $value)
+                    ->first();
+                if (!$type) {
+                    $type = \App\Models\CustomModels\generate_num_type::create([
+                        'nama' => $nama,
+                        'ref_type' => $refType,
+                        'value' => $value,
+                        'is_active' => true,
+                    ]);
+                }
+                return $type;
+            };
+
+            $tSeq3     = $getOrMakeType('SEQUENCE xxx1 (3 Digit)', 'seq', '3');
+            $tSlash    = $getOrMakeType('Separator (/)', 'text', '/');
+            $tDayIndo  = $getOrMakeType('DAY INDO Title (Sn, Jm, dll)', 'day', 'hari_indo_title');
+            $tDot      = $getOrMakeType('Separator (.)', 'text', '.');
+            $tDateDmy  = $getOrMakeType('DATE dmy (6 Digit)', 'day', 'dmy');
+            $tTmg      = $getOrMakeType('PREFIX /TMG/', 'text', '/TMG/');
+            $tCabang   = $getOrMakeType('BRANCH [CABANG]/', 'text', '[CABANG]/');
+            $tHrdSp    = $getOrMakeType('SUFFIX HRD/SP', 'text', 'HRD/SP');
+
+            // 2. Buat header generate_num
+            $genNum = \App\Models\CustomModels\generate_num::create([
+                'nama' => $formatName,
+                'comp_id' => 1,
+                'is_active' => true,
+            ]);
+
+            // 3. Pasang susunan generate_num_det (seq 1..8)
+            $details = [
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tSeq3->id, 'seq' => 1],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tSlash->id, 'seq' => 2],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tDayIndo->id, 'seq' => 3],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tDot->id, 'seq' => 4],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tDateDmy->id, 'seq' => 5],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tTmg->id, 'seq' => 6],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tCabang->id, 'seq' => 7],
+                ['generate_num_id' => $genNum->id, 'generate_num_type_id' => $tHrdSp->id, 'seq' => 8],
+            ];
+
+            foreach ($details as $det) {
+                \App\Models\CustomModels\generate_num_det::create($det);
+            }
+
+            return $genNum;
+        } catch (\Throwable $th) {
+            \Log::warning("Gagal auto-init generate_num SURAT PERINGATAN: " . $th->getMessage());
+            return null;
+        }
+    }
+
     public function resolveBranchCode($mKaryId, $mBranchId = null)
     {
         $cityMap = [
@@ -705,6 +769,8 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
                              str_contains(strtoupper($tipeMutasi ?? ''), 'PAKLARING');
         $isSkk = !$isPengalamanKerja && (str_contains(strtoupper($tipeMutasi ?? ''), 'KETERANGAN KERJA') || 
                  str_contains(strtoupper($tipeMutasi ?? ''), 'SKK'));
+        $isSp = str_contains(strtoupper($tipeMutasi ?? ''), 'PERINGATAN') || 
+                str_contains(strtoupper($tipeMutasi ?? ''), 'SP');
         $isMutasi = str_contains(strtoupper($tipeMutasi ?? ''), 'MUTASI') ||
                     in_array($tipeMutasi, ['Antar SBU', 'Antar SUB', 'Antar Branch / Cabang', 'Antar Divisi']);
 
@@ -895,6 +961,29 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
                     $dmy = date('dmy', $tStamp);
                     $seq = sprintf("%03d", \DB::table('t_mutasi')->count() + 1);
                     $nomor = "{$seq}/{$hari}.{$dmy}/TMG/{$branchCode}/HRD/PK";
+                }
+            } elseif ($isSp) {
+                $this->ensureGenerateNumSp();
+                try {
+                    $nomor = $this->helper->generateNomor(
+                        "SURAT PERINGATAN", 
+                        true, 
+                        null, 
+                        $tglSurat, 
+                        [
+                            '[CABANG]' => $branchCode,
+                            '{branch}' => $branchCode,
+                            '{cabang}' => $branchCode,
+                            'SBY' => $branchCode,
+                        ]
+                    );
+                } catch (\Throwable $th) {
+                    $hariMap = [0 => 'Mg', 1 => 'Sn', 2 => 'Sl', 3 => 'Rb', 4 => 'Km', 5 => 'Jm', 6 => 'Sb'];
+                    $tStamp = strtotime(str_replace('/', '-', $tglSurat)) ?: time();
+                    $hari = $hariMap[(int)date('w', $tStamp)] ?? 'Sn';
+                    $dmy = date('dmy', $tStamp);
+                    $seq = sprintf("%03d", \DB::table('t_mutasi')->count() + 1);
+                    $nomor = "{$seq}/{$hari}.{$dmy}/TMG/{$branchCode}/HRD/SP";
                 }
             } elseif ($isMutasi) {
                 $this->ensureGenerateNumMutasi();
