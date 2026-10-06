@@ -113,14 +113,14 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
 
   @if(!$isJpBooks)
     <!-- DOUBLE LINE SEPARATOR (TABEL AMAN TCPDF TANPA BALOK HITAM) -->
-    <table style="width:100%; border-collapse:collapse; margin-top:2px; margin-bottom:8px;">
+    <table style="width:100%; border-collapse:collapse; margin-top:2px; margin-bottom:14px;">
       <tr><td style="border-bottom:1px solid #000; height:1px; line-height:1px; font-size:1px;"></td></tr>
       <tr><td style="border-bottom:2px solid #000; height:2px; line-height:2px; font-size:1px;"></td></tr>
     </table>
   @endif
 
-  <!-- TANGGAL, NOMOR & PERIHAL (RATA KIRI SESUAI ACUAN RESMI HRIS/SP KARYAWAN.pdf) -->
-  <table width="100%" style="width:100%; border-collapse:collapse; font-size:12pt; line-height:1.3;">
+  <!-- TANGGAL, NOMOR & PERIHAL (RATA KIRI LURUS DENGAN JARAK PAS DARI KOP) -->
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:6px; font-size:12pt; line-height:1.32;">
     <tr>
       <td style="text-align:left;">
         {{ $city }}, {{ $tanggalOnly }}<br>
@@ -128,16 +128,20 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
       </td>
     </tr>
     <tr>
-      <td style="padding-top:6px;">
+      <td style="padding-top:8px;">
         Hal : <b>{{ $halTitle }}</b>
       </td>
     </tr>
   </table>
 
-  <!-- PEMBUKA -->
-  <div style="margin-top:14px; margin-bottom:6px; font-size:12pt;">
-    Diberikan kepada :
-  </div>
+  <!-- PEMBUKA (TABEL AGAR LURUS PERSIS DENGAN TANGGAL & PARAGRAF) -->
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:14px; margin-bottom:4px; font-size:12pt; line-height:1.3;">
+    <tr>
+      <td style="text-align:left;">
+        Diberikan kepada :
+      </td>
+    </tr>
+  </table>
 
   <!-- TABEL DATA KARYAWAN & PELANGGARAN (RAPAT & PROPORSIONAL DENGAN HANGING INDENT) -->
   <table width="100%" style="width:100%; border-collapse:collapse; font-size:12pt; line-height:1.3;">
@@ -220,11 +224,11 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
           }
         @endphp
         @if(count($itemsKesalahan) > 0)
-          <table style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:12pt; line-height:1.3;">
+          <table width="100%" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:12pt; line-height:1.3;">
             @foreach($itemsKesalahan as $idx => $itemText)
               <tr>
-                <td style="width:4%; vertical-align:top; text-align:left; padding:0 0 1px 0;">{{ $idx + 1 }}.</td>
-                <td style="width:96%; vertical-align:top; text-align:justify; padding:0 0 1px 0;">{{ $itemText }}</td>
+                <td width="4%" style="width:4%; vertical-align:top; text-align:left; padding:0 0 1px 0;">{{ $idx + 1 }}.</td>
+                <td width="96%" style="width:96%; vertical-align:top; text-align:justify; padding:0 0 1px 0;">{{ $itemText }}</td>
               </tr>
             @endforeach
           </table>
@@ -248,22 +252,30 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
     </tr>
   </table>
 
-  <!-- PARAGRAF KETENTUAN MASA BERLAKU -->
-  <div style="margin-top:14px; font-size:12pt; line-height:1.32; text-align:justify;">
-    {{ $spBerlakuTitle }} ini berlaku selama <b>{{ $masaBerlaku }} bulan</b> terhitung dari tanggal dikeluarkan, apabila yang bersangkutan masih melakukan pelanggaran lagi maka perusahaan dapat memberikan Surat Peringatan berikutnya atau sesuai dengan Undang-Undang yang berlaku.
-  </div>
+  <!-- PARAGRAF KETENTUAN MASA BERLAKU (TABEL AGAR LURUS PERSIS KIRI) -->
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:14px; font-size:12pt; line-height:1.32;">
+    <tr>
+      <td style="text-align:justify;">
+        {{ $spBerlakuTitle }} ini berlaku selama <b>{{ $masaBerlaku }} bulan</b> terhitung dari tanggal dikeluarkan, apabila yang bersangkutan masih melakukan pelanggaran lagi maka perusahaan dapat memberikan Surat Peringatan berikutnya atau sesuai dengan Undang-Undang yang berlaku.
+      </td>
+    </tr>
+  </table>
 
-  <!-- PARAGRAF PEMBINAAN & HARAPAN MANAJEMEN -->
-  <div style="margin-top:10px; font-size:12pt; line-height:1.32; text-align:justify;">
-    Dengan adanya {{ $spHarapanTitle }} yang diberikan kepada Saudara/i ini maka manajemen berharap agar Saudara/i dapat lebih baik lagi dalam hal kontrol, konsentrasi dan koordinasi tugas di lingkungan kerja Saudara/i sehari-hari. Atas perhatiannya disampaikan terima kasih.
-  </div>
+  <!-- PARAGRAF PEMBINAAN & HARAPAN MANAJEMEN (TABEL AGAR LURUS PERSIS KIRI) -->
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:10px; font-size:12pt; line-height:1.32;">
+    <tr>
+      <td style="text-align:justify;">
+        Dengan adanya {{ $spHarapanTitle }} yang diberikan kepada Saudara/i ini maka manajemen berharap agar Saudara/i dapat lebih baik lagi dalam hal kontrol, konsentrasi dan koordinasi tugas di lingkungan kerja Saudara/i sehari-hari. Atas perhatiannya disampaikan terima kasih.
+      </td>
+    </tr>
+  </table>
 
-  <!-- TANDA TANGAN (LEFT-ALIGNED SESUAI ACUAN RESMI HRIS/SP KARYAWAN.pdf) -->
-  <table style="width:100%; border-collapse:collapse; margin-top:16px; font-size:12pt; line-height:1.3;">
+  <!-- TANDA TANGAN (LEFT-ALIGNED, KEBAWAHKAN AGAR FORMAL & SEIMBANG) -->
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:28px; font-size:12pt; line-height:1.3;">
     <tr>
       <td style="width:55%; vertical-align:top; text-align:left;">
         Hormat Kami,<br>
-        {{ $companyName }}<br><br><br><br>
+        {{ $companyName }}<br><br><br><br><br>
         <b>{{ $namaTtd }}</b><br>
         <b>{{ $jabatanTtd }}</b>
       </td>
@@ -271,34 +283,42 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
     </tr>
   </table>
 
-  <!-- TEMBUSAN RESMI KORPORAT -->
-  <div style="margin-top:14px; font-size:11pt; line-height:1.3;">
-    Tembusan :<br>
-    @if($tembusan && count($tembusan) > 0)
-      @foreach($tembusan as $index => $t)
-        @php
-          $tVal = trim($t->value ?? $t['value'] ?? '-');
-          $cleanTVal = preg_replace('/^\d+[\.\)]\s*/', '', $tVal);
-        @endphp
-        &nbsp;&nbsp;{{ $index + 1 }}. {{ $cleanTVal }}<br>
-      @endforeach
-    @else
-      &nbsp;&nbsp;1. Direksi<br>
-      &nbsp;&nbsp;2. Operational Manager<br>
-      &nbsp;&nbsp;3. HRD
-    @endif
-  </div>
+  <!-- TEMBUSAN RESMI KORPORAT (LURUS PERSIS KIRI DENGAN KONTEN ATAS) -->
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:16px; font-size:11pt; line-height:1.3;">
+    <tr>
+      <td style="text-align:left;">
+        Tembusan :<br>
+        @if($tembusan && count($tembusan) > 0)
+          @foreach($tembusan as $index => $t)
+            @php
+              $tVal = trim($t->value ?? $t['value'] ?? '-');
+              $cleanTVal = preg_replace('/^\d+[\.\)]\s*/', '', $tVal);
+            @endphp
+            &nbsp;&nbsp;{{ $index + 1 }}. {{ $cleanTVal }}<br>
+          @endforeach
+        @else
+          &nbsp;&nbsp;1. Direksi<br>
+          &nbsp;&nbsp;2. Operational Manager<br>
+          &nbsp;&nbsp;3. HRD
+        @endif
+      </td>
+    </tr>
+  </table>
 
   <!-- FOOTER CABANG RESMI (FLOW BIASA RINGKAS, PASTI MUAT DI HALAMAN 1) -->
   @if($isJpBooks)
     @include('projects.web_sk_footer')
   @else
-    <div style="margin-top:18px; border-top:0.5px solid #bbb; padding-top:2px; font-size:6.2px; line-height:1.18; color:#333; text-align:justify;">
-      <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
-      <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
-      <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
-      <b>Jember :</b> 0331-320300 Fax : 0331-320190, E-mail : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, E-mail : Bali@temprina.com
-    </div>
+    <table width="100%" style="width:100%; border-collapse:collapse; margin-top:18px; border-top:0.5px solid #bbb;">
+      <tr>
+        <td style="padding-top:2px; font-size:6.2px; line-height:1.18; color:#333; text-align:justify;">
+          <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
+          <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
+          <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
+          <b>Jember :</b> 0331-320300 Fax : 0331-320190, E-mail : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, E-mail : Bali@temprina.com
+        </td>
+      </tr>
+    </table>
   @endif
 
 </div>
