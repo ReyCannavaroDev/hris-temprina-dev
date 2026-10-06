@@ -5,11 +5,43 @@ namespace App\Models\CustomModels;
 class t_mutasi extends \App\Models\BasicModels\t_mutasi
 {
     private $helper;
+    public static $hasEnsuredJenisSurat = false;
+
     public function __construct()
     {
         parent::__construct();
         $this->helper = getCore("Helper");
         $this->required = ["m_kary_id", "tgl", "status_kary_lama_id"];
+        $this->ensureJenisSuratGeneral();
+    }
+
+    public function ensureJenisSuratGeneral()
+    {
+        if (self::$hasEnsuredJenisSurat) {
+            return;
+        }
+        self::$hasEnsuredJenisSurat = true;
+
+        try {
+            $needed = [
+                'SURAT PERINGATAN',
+            ];
+            foreach ($needed as $val) {
+                $exists = \DB::table('m_general')
+                    ->where('group', 'JENIS SURAT')
+                    ->where('value', $val)
+                    ->first();
+                if (!$exists) {
+                    \DB::table('m_general')->insert([
+                        'group' => 'JENIS SURAT',
+                        'value' => $val,
+                        'is_active' => true,
+                    ]);
+                }
+            }
+        } catch (\Throwable $th) {
+            \Log::warning("Gagal auto-init m_general JENIS SURAT: " . $th->getMessage());
+        }
     }
 
     public $fileColumns = [
@@ -1083,6 +1115,7 @@ class t_mutasi extends \App\Models\BasicModels\t_mutasi
 
     public function transformRowData(array $row)
     {
+        $this->ensureJenisSuratGeneral();
         $id = $row['this.id'] ?? $row['id'] ?? null;
         if ($id) {
             $memperhatikan = \DB::table('t_mutasi_d_memperhatikan')
