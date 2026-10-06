@@ -60,9 +60,8 @@ if ($t_surat_peringatan?->level_sp) {
 }
 if (empty($rawLevel)) {
     $rawLevel = $t_mutasi?->keterangan 
-             ?: ($t_mutasi?->catatan 
              ?: ($t_mutasi?->tipe_mutasi 
-             ?: ($t_mutasi?->jenis_surat ? m_general::find($t_mutasi->jenis_surat)?->value : '')));
+             ?: ($t_mutasi?->jenis_surat ? m_general::find($t_mutasi->jenis_surat)?->value : ''));
 }
 
 $upperLevel = strtoupper($rawLevel ?? '');
@@ -173,6 +172,16 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
       </td>
       <td width="3%" style="width:3%; vertical-align:top; text-align:center;">:</td>
       <td width="71%" style="width:71%; vertical-align:top; text-align:justify;">
+        @php
+          $rawKesalahan = '';
+          if (count($pelanggaran) > 0) {
+              $rawKesalahan = null;
+          } elseif (!empty($t_mutasi?->catatan)) {
+              $rawKesalahan = $t_mutasi->catatan;
+          } elseif (!empty($t_mutasi?->deskripsi)) {
+              $rawKesalahan = $t_mutasi->deskripsi;
+          }
+        @endphp
         @if(count($pelanggaran) > 0)
           @foreach($pelanggaran as $index => $item)
             @php
@@ -181,10 +190,26 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
             @endphp
             {{ $index + 1 }}. {{ $cleanText }}<br>
           @endforeach
-        @elseif($t_mutasi?->deskripsi)
-          {!! nl2br(e($t_mutasi->deskripsi)) !!}
-        @elseif($t_mutasi?->catatan)
-          {!! nl2br(e($t_mutasi->catatan)) !!}
+        @elseif($rawKesalahan)
+          @php
+            $rawLines = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $rawKesalahan))));
+          @endphp
+          @if(count($rawLines) > 1)
+            @foreach(array_values($rawLines) as $index => $line)
+              @php
+                $cleanLine = preg_replace('/^\d+[\.\)]\s*/', '', $line);
+              @endphp
+              {{ $index + 1 }}. {{ $cleanLine }}<br>
+            @endforeach
+          @elseif(count($rawLines) == 1)
+            @php
+              $singleLine = reset($rawLines);
+              $cleanLine = preg_replace('/^\d+[\.\)]\s*/', '', $singleLine);
+            @endphp
+            1. {{ $cleanLine }}
+          @else
+            -
+          @endif
         @else
           -
         @endif
