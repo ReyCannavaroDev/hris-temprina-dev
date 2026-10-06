@@ -96,149 +96,150 @@ $alasanBerakhir = $t_mutasi?->deskripsi
 $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAXklEQVR4nJ2S0Q4AEAwDV/H/v1zxQIqFWZ93rrGBpGVSUpQJCOBLDa06YJIIG5fXAL4aLEa1arwGoc+B0+AwjkG7pDeoPxCl8gG+APPA3XZbi2uM7HGC3RYB5nz2yBvH5jIZAPwxNAAAAABJRU5ErkJggg==';
 @endphp
 
-<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:12px; line-height:1.45; color:#000;">
+<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:12px; line-height:1.35; color:#000;">
 
   <!-- KOP SURAT RESMI -->
   @include('projects.web_sk_kop')
 
   @if(!$isJpBooks)
     <!-- DOUBLE LINE SEPARATOR (TABEL AMAN TCPDF TANPA BALOK HITAM) -->
-    <table style="width:100%; border-collapse:collapse; margin-top:3px; margin-bottom:10px;">
+    <table style="width:100%; border-collapse:collapse; margin-top:2px; margin-bottom:8px;">
       <tr><td style="border-bottom:1px solid #000; height:1px; line-height:1px; font-size:1px;"></td></tr>
       <tr><td style="border-bottom:2px solid #000; height:2px; line-height:2px; font-size:1px;"></td></tr>
     </table>
   @endif
 
   <!-- JUDUL SURAT -->
-  <table style="width:100%; border-collapse:collapse; margin-top:6px;">
+  <table style="width:100%; border-collapse:collapse; margin-top:4px;">
     <tr>
       <td style="text-align:center; font-weight:bold; font-size:16px; letter-spacing:1px; text-decoration:underline;">
         SURAT PENGALAMAN KERJA
       </td>
     </tr>
     <tr>
-      <td style="text-align:center; font-size:12px; padding-top:4px;">
+      <td style="text-align:center; font-size:12px; padding-top:3px;">
         No. {{ $t_mutasi?->nomor ?? '-' }}
       </td>
     </tr>
   </table>
 
   <!-- PEMBUKA -->
-  <div style="margin-top:16px; font-size:12px;">
+  <div style="margin-top:12px; font-size:12px;">
     Yang bertanda tangan di bawah ini :
   </div>
 
-  <!-- TABEL DATA LENGKAP (SATU TABEL KONSISTEN AGAR TITIK DUA DAN PANAH 100% LURUS VERTIKAL) -->
-  <table style="width:100%; border-collapse:collapse; margin-top:6px; font-size:12px; line-height:1.45;">
-    <!-- DATA PIHAK PENERANG -->
+  <!-- TABEL PIHAK PENERANG (LEBAR TERKUNCI PERSIS SAMA DENGAN TABEL KARYAWAN) -->
+  <table style="width:100%; border-collapse:collapse; margin-top:4px; font-size:12px; line-height:1.35;">
     <tr>
-      <td style="width:7%; vertical-align:top;"></td>
-      <td style="width:20%; vertical-align:top;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Nama
+      <td style="width:7%; vertical-align:top;">&nbsp;</td>
+      <td style="width:21%; vertical-align:top;">
+        <div style="width:95px;"><img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Nama</div>
       </td>
       <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td style="width:70%; vertical-align:top;"><b>{{ $signatureNama }}</b></td>
+      <td style="width:69%; vertical-align:top;"><b>{{ $signatureNama }}</b></td>
     </tr>
     <tr>
-      <td style="width:7%; vertical-align:top;"></td>
-      <td style="width:20%; vertical-align:top;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Bagian
+      <td style="width:7%; vertical-align:top;">&nbsp;</td>
+      <td style="width:21%; vertical-align:top;">
+        <div style="width:95px;"><img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Bagian</div>
       </td>
       <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td style="width:70%; vertical-align:top;">
+      <td style="width:69%; vertical-align:top;">
         {{ $signatureJabatan }}<br>
         {{ $signatureCompany }}<br>
         {{ $signatureAlamat }}
       </td>
     </tr>
+  </table>
 
-    <!-- PEMBATAS: MENERANGKAN BAHWA -->
-    <tr>
-      <td colspan="4" style="padding-top:14px; padding-bottom:6px; font-size:12px;">
-        Menerangkan bahwa :
-      </td>
-    </tr>
+  <!-- PEMBATAS: MENERANGKAN BAHWA -->
+  <div style="margin-top:10px; font-size:12px;">
+    Menerangkan bahwa :
+  </div>
 
-    <!-- DATA PIHAK KARYAWAN -->
+  <!-- TABEL PIHAK KARYAWAN (LEBAR TERKUNCI PERSIS SAMA DENGAN TABEL PENERANG) -->
+  <table style="width:100%; border-collapse:collapse; margin-top:4px; font-size:12px; line-height:1.35;">
     <tr>
-      <td style="width:7%; vertical-align:top;"></td>
-      <td style="width:20%; vertical-align:top;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Nama
+      <td style="width:7%; vertical-align:top;">&nbsp;</td>
+      <td style="width:21%; vertical-align:top;">
+        <div style="width:95px;"><img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Nama</div>
       </td>
       <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td style="width:70%; vertical-align:top;"><b>{{ $karyawanNama }}</b></td>
+      <td style="width:69%; vertical-align:top;"><b>{{ $karyawanNama }}</b></td>
     </tr>
     <tr>
-      <td style="width:7%; vertical-align:top;"></td>
-      <td style="width:20%; vertical-align:top;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Status
+      <td style="width:7%; vertical-align:top;">&nbsp;</td>
+      <td style="width:21%; vertical-align:top;">
+        <div style="width:95px;"><img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Status</div>
       </td>
       <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td style="width:70%; vertical-align:top;">{{ $statusDisplay }}</td>
+      <td style="width:69%; vertical-align:top;">{{ $statusDisplay }}</td>
     </tr>
     <tr>
-      <td style="width:7%; vertical-align:top;"></td>
-      <td style="width:20%; vertical-align:top;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Bagian
+      <td style="width:7%; vertical-align:top;">&nbsp;</td>
+      <td style="width:21%; vertical-align:top;">
+        <div style="width:95px;"><img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Bagian</div>
       </td>
       <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td style="width:70%; vertical-align:top;">{{ $bagianKaryawanLine1 }}</td>
+      <td style="width:69%; vertical-align:top;">{{ $bagianKaryawanLine1 }}</td>
     </tr>
     @if(!empty($alamatKaryawan))
     <tr>
-      <td style="width:7%; vertical-align:top;"></td>
-      <td style="width:20%; vertical-align:top;"></td>
+      <td style="width:7%; vertical-align:top;">&nbsp;</td>
+      <td style="width:21%; vertical-align:top;">
+        <div style="width:95px;">&nbsp;</div>
+      </td>
       <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td style="width:70%; vertical-align:top;">{{ $alamatKaryawan }}</td>
+      <td style="width:69%; vertical-align:top;">{{ $alamatKaryawan }}</td>
     </tr>
     @endif
     <tr>
-      <td style="width:7%; vertical-align:top;"></td>
-      <td style="width:20%; vertical-align:top;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Awal Kerja
+      <td style="width:7%; vertical-align:top;">&nbsp;</td>
+      <td style="width:21%; vertical-align:top;">
+        <div style="width:95px;"><img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Awal Kerja</div>
       </td>
       <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td style="width:70%; vertical-align:top;">{{ $awalKerja }} s/d {{ $akhirKerja }}</td>
+      <td style="width:69%; vertical-align:top;">{{ $awalKerja }} s/d {{ $akhirKerja }}</td>
     </tr>
     <tr>
-      <td style="width:7%; vertical-align:top;"></td>
-      <td style="width:20%; vertical-align:top;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Keterangan
+      <td style="width:7%; vertical-align:top;">&nbsp;</td>
+      <td style="width:21%; vertical-align:top;">
+        <div style="width:95px;"><img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Keterangan</div>
       </td>
       <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td style="width:70%; vertical-align:top;">{{ $alasanBerakhir }}</td>
+      <td style="width:69%; vertical-align:top;">{{ $alasanBerakhir }}</td>
     </tr>
   </table>
 
   <!-- PARAGRAF APRESIASI -->
-  <div style="margin-top:16px; font-size:12px; line-height:1.45; text-align:justify;">
+  <div style="margin-top:10px; font-size:12px; line-height:1.35; text-align:justify;">
     Selama bekerja yang bersangkutan telah menunjukan dedikasi serta kinerja yang baik untuk perusahaan. Untuk itu atas nama manajemen {{ $companyName }} menyampaikan terima kasih atas kerjasamanya selama ini.
   </div>
 
   <!-- PENUTUP -->
-  <div style="margin-top:10px; font-size:12px; line-height:1.45; text-align:justify;">
+  <div style="margin-top:8px; font-size:12px; line-height:1.35; text-align:justify;">
     Demikian surat pengalaman kerja ini kami buat agar dapat dipergunakan sebagaimana mestinya.
   </div>
 
-  <!-- TANDA TANGAN (LEFT-ALIGNED SESUAI ACUAN RESMI KORPORAT) -->
-  <table style="width:100%; border-collapse:collapse; margin-top:18px; font-size:12px;">
+  <!-- TANDA TANGAN (LEFT-ALIGNED, NOBR AGAR TIDAK PERNAH TERPOTONG KE HALAMAN 2) -->
+  <table nobr="true" style="width:100%; border-collapse:collapse; margin-top:10px; font-size:12px; page-break-inside:avoid;">
     <tr>
       <td style="width:55%; vertical-align:top; text-align:left;">
         {{ $kotaTerbit }}, {{ $tanggalTerbit }}<br>
         {{ $companyName }}
-        <div style="height:48px; line-height:48px; font-size:1px;">&nbsp;</div>
+        <div style="height:36px; line-height:36px; font-size:1px;">&nbsp;</div>
         <u><b>{{ $signatureNama }}</b></u><br>
         <b><i>{{ $signatureJabatan }}</i></b>
       </td>
-      <td style="width:45%;"></td>
+      <td style="width:45%;">&nbsp;</td>
     </tr>
   </table>
 
-  <!-- FOOTER CABANG RESMI (FLOW BIASA AGAR TIDAK TRIGGER HALAMAN 2 DI TCPDF) -->
+  <!-- FOOTER CABANG RESMI (FLOW BIASA RINGKAS, PASTI MUAT DI HALAMAN 1) -->
   @if($isJpBooks)
     @include('projects.web_sk_footer')
   @else
-    <div style="margin-top:20px; border-top:0.5px solid #bbb; padding-top:4px; font-size:6.8px; line-height:1.35; color:#333; text-align:justify;">
+    <div style="margin-top:10px; border-top:0.5px solid #bbb; padding-top:3px; font-size:6.5px; line-height:1.25; color:#333; text-align:justify;">
       <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
       <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
       <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
