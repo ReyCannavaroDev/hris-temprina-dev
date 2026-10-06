@@ -106,21 +106,21 @@ $jabatanTtd = $signature?->m_posisi?->name ?? 'Kadiv. Human Capital';
 $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAXklEQVR4nJ2S0Q4AEAwDV/H/v1zxQIqFWZ93rrGBpGVSUpQJCOBLDa06YJIIG5fXAL4aLEa1arwGoc+B0+AwjkG7pDeoPxCl8gG+APPA3XZbi2uM7HGC3RYB5nz2yBvH5jIZAPwxNAAAAABJRU5ErkJggg==';
 @endphp
 
-<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:11px; line-height:1.25; color:#000;">
+<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:10.5px; line-height:1.2; color:#000;">
 
   <!-- KOP SURAT RESMI -->
   @include('projects.web_sk_kop')
 
   @if(!$isJpBooks)
     <!-- DOUBLE LINE SEPARATOR (TABEL AMAN TCPDF TANPA BALOK HITAM) -->
-    <table style="width:100%; border-collapse:collapse; margin-top:2px; margin-bottom:6px;">
+    <table style="width:100%; border-collapse:collapse; margin-top:2px; margin-bottom:4px;">
       <tr><td style="border-bottom:1px solid #000; height:1px; line-height:1px; font-size:1px;"></td></tr>
       <tr><td style="border-bottom:2px solid #000; height:2px; line-height:2px; font-size:1px;"></td></tr>
     </table>
   @endif
 
   <!-- TANGGAL, NOMOR & PERIHAL (RATA KIRI SESUAI ACUAN RESMI HRIS/SP KARYAWAN.pdf) -->
-  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:4px; font-size:11px; line-height:1.3;">
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:2px; font-size:10.5px; line-height:1.22;">
     <tr>
       <td style="text-align:left;">
         {{ $city }}, {{ $tanggalOnly }}<br>
@@ -128,19 +128,19 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
       </td>
     </tr>
     <tr>
-      <td style="padding-top:4px;">
+      <td style="padding-top:2px;">
         Hal : <b>{{ $halTitle }}</b>
       </td>
     </tr>
   </table>
 
   <!-- PEMBUKA -->
-  <div style="margin-top:10px; font-size:11px;">
+  <div style="margin-top:4px; font-size:10.5px;">
     Diberikan kepada :
   </div>
 
   <!-- TABEL DATA KARYAWAN & PELANGGARAN -->
-  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:3px; font-size:11px; line-height:1.3;">
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:2px; font-size:10.5px; line-height:1.22;">
     <tr>
       <td width="6%" style="width:6%; vertical-align:top;">&nbsp;</td>
       <td width="20%" style="width:20%; vertical-align:top; white-space:nowrap;">
@@ -193,20 +193,28 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
         @elseif($rawKesalahan)
           @php
             $rawLines = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $rawKesalahan))));
+            $hasNumbered = false;
+            foreach ($rawLines as $l) {
+                if (preg_match('/^\d+[\.\)\-]/', $l)) {
+                    $hasNumbered = true;
+                    break;
+                }
+            }
+            $items = [];
+            foreach ($rawLines as $l) {
+                if (preg_match('/^\d+[\.\)\-]\s*(.*)$/', $l, $m)) {
+                    $items[] = trim($m[1]);
+                } elseif ($hasNumbered && count($items) > 0) {
+                    $items[count($items) - 1] .= ' ' . $l;
+                } else {
+                    $items[] = $l;
+                }
+            }
           @endphp
-          @if(count($rawLines) > 1)
-            @foreach(array_values($rawLines) as $index => $line)
-              @php
-                $cleanLine = preg_replace('/^\d+[\.\)]\s*/', '', $line);
-              @endphp
-              {{ $index + 1 }}. {{ $cleanLine }}<br>
+          @if(count($items) > 0)
+            @foreach($items as $index => $itemText)
+              {{ $index + 1 }}. {{ $itemText }}<br>
             @endforeach
-          @elseif(count($rawLines) == 1)
-            @php
-              $singleLine = reset($rawLines);
-              $cleanLine = preg_replace('/^\d+[\.\)]\s*/', '', $singleLine);
-            @endphp
-            1. {{ $cleanLine }}
           @else
             -
           @endif
@@ -228,22 +236,22 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
   </table>
 
   <!-- PARAGRAF KETENTUAN MASA BERLAKU -->
-  <div style="margin-top:10px; font-size:11px; line-height:1.3; text-align:justify;">
+  <div style="margin-top:5px; font-size:10.5px; line-height:1.22; text-align:justify;">
     {{ $spBerlakuTitle }} ini berlaku selama <b><i>{{ $masaBerlaku }} bulan</i></b> terhitung dari tanggal dikeluarkan, apabila yang bersangkutan masih melakukan pelanggaran lagi maka perusahaan dapat memberikan Surat Peringatan berikutnya atau sesuai dengan Undang - Undang yang berlaku.
   </div>
 
   <!-- PARAGRAF PEMBINAAN & HARAPAN MANAJEMEN -->
-  <div style="margin-top:8px; font-size:11px; line-height:1.3; text-align:justify;">
+  <div style="margin-top:4px; font-size:10.5px; line-height:1.22; text-align:justify;">
     Dengan adanya {{ $spHarapanTitle }} yang diberikan kepada Saudara/i ini maka manajemen berharap agar Saudara/i dapat lebih baik lagi dalam hal kontrol, konsentrasi dan koordinasi tugas di lingkungan kerja Saudara/i sehari-hari. Atas perhatiannya disampaikan terima kasih.
   </div>
 
-  <!-- TANDA TANGAN (LEFT-ALIGNED SESUAI ACUAN RESMI HRIS/SP KARYAWAN.pdf) -->
-  <table nobr="true" style="width:100%; border-collapse:collapse; margin-top:10px; font-size:11px; page-break-inside:avoid;">
+  <!-- TANDA TANGAN (LEFT-ALIGNED, NOBR AGAR TIDAK PERNAH TERPOTONG KE HALAMAN 2) -->
+  <table nobr="true" style="width:100%; border-collapse:collapse; margin-top:5px; font-size:10.5px; page-break-inside:avoid;">
     <tr>
       <td style="width:55%; vertical-align:top; text-align:left;">
         Hormat Kami,<br>
         {{ $companyName }}
-        <div style="height:35px; line-height:35px; font-size:1px;">&nbsp;</div>
+        <div style="height:25px; line-height:25px; font-size:1px;">&nbsp;</div>
         <u><b>{{ $namaTtd }}</b></u><br>
         <b>{{ $jabatanTtd }}</b>
       </td>
@@ -252,7 +260,7 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
   </table>
 
   <!-- TEMBUSAN RESMI KORPORAT -->
-  <div style="margin-top:8px; font-size:10px; line-height:1.25;">
+  <div style="margin-top:4px; font-size:9.5px; line-height:1.15;">
     Tembusan :<br>
     @if($tembusan && count($tembusan) > 0)
       @foreach($tembusan as $index => $t)
@@ -273,7 +281,7 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
   @if($isJpBooks)
     @include('projects.web_sk_footer')
   @else
-    <div style="margin-top:8px; border-top:0.5px solid #bbb; padding-top:2px; font-size:6.2px; line-height:1.15; color:#333; text-align:justify;">
+    <div style="margin-top:4px; border-top:0.5px solid #bbb; padding-top:1px; font-size:6px; line-height:1.12; color:#333; text-align:justify;">
       <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
       <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
       <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
