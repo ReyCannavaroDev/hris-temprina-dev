@@ -96,40 +96,40 @@ $alasanBerakhir = $t_mutasi?->deskripsi
 $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAXklEQVR4nJ2S0Q4AEAwDV/H/v1zxQIqFWZ93rrGBpGVSUpQJCOBLDa06YJIIG5fXAL4aLEa1arwGoc+B0+AwjkG7pDeoPxCl8gG+APPA3XZbi2uM7HGC3RYB5nz2yBvH5jIZAPwxNAAAAABJRU5ErkJggg==';
 @endphp
 
-<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:12px; line-height:1.35; color:#000;">
+<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:11px; line-height:1.25; color:#000;">
 
   <!-- KOP SURAT RESMI -->
   @include('projects.web_sk_kop')
 
   @if(!$isJpBooks)
     <!-- DOUBLE LINE SEPARATOR (TABEL AMAN TCPDF TANPA BALOK HITAM) -->
-    <table style="width:100%; border-collapse:collapse; margin-top:2px; margin-bottom:8px;">
+    <table style="width:100%; border-collapse:collapse; margin-top:2px; margin-bottom:6px;">
       <tr><td style="border-bottom:1px solid #000; height:1px; line-height:1px; font-size:1px;"></td></tr>
       <tr><td style="border-bottom:2px solid #000; height:2px; line-height:2px; font-size:1px;"></td></tr>
     </table>
   @endif
 
   <!-- JUDUL SURAT -->
-  <table style="width:100%; border-collapse:collapse; margin-top:4px;">
+  <table style="width:100%; border-collapse:collapse; margin-top:3px;">
     <tr>
-      <td style="text-align:center; font-weight:bold; font-size:16px; letter-spacing:1px; text-decoration:underline;">
+      <td style="text-align:center; font-weight:bold; font-size:15px; letter-spacing:1px; text-decoration:underline;">
         SURAT PENGALAMAN KERJA
       </td>
     </tr>
     <tr>
-      <td style="text-align:center; font-size:12px; padding-top:3px;">
+      <td style="text-align:center; font-size:11px; padding-top:2px;">
         No. {{ $t_mutasi?->nomor ?? '-' }}
       </td>
     </tr>
   </table>
 
   <!-- PEMBUKA -->
-  <div style="margin-top:10px; font-size:12px;">
+  <div style="margin-top:8px; font-size:11px;">
     Yang bertanda tangan di bawah ini :
   </div>
 
   <!-- TABEL PIHAK PENERANG (KOLOM PERSENTASE IDENTIK DENGAN TABEL KARYAWAN) -->
-  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:3px; font-size:12px; line-height:1.35;">
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:2px; font-size:11px; line-height:1.25;">
     <tr>
       <td width="8%" style="width:8%; vertical-align:top;">&nbsp;</td>
       <td width="22%" style="width:22%; vertical-align:top; white-space:nowrap;">
@@ -153,12 +153,12 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
   </table>
 
   <!-- PEMBATAS: MENERANGKAN BAHWA -->
-  <div style="margin-top:8px; margin-bottom:3px; font-size:12px;">
+  <div style="margin-top:6px; margin-bottom:2px; font-size:11px;">
     Menerangkan bahwa :
   </div>
 
   <!-- TABEL PIHAK KARYAWAN (KOLOM PERSENTASE IDENTIK DENGAN TABEL PENERANG) -->
-  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:3px; font-size:12px; line-height:1.35;">
+  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:2px; font-size:11px; line-height:1.25;">
     <tr>
       <td width="8%" style="width:8%; vertical-align:top;">&nbsp;</td>
       <td width="22%" style="width:22%; vertical-align:top; white-space:nowrap;">
@@ -210,22 +210,22 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
   </table>
 
   <!-- PARAGRAF APRESIASI -->
-  <div style="margin-top:8px; font-size:12px; line-height:1.35; text-align:justify;">
+  <div style="margin-top:6px; font-size:11px; line-height:1.25; text-align:justify;">
     Selama bekerja yang bersangkutan telah menunjukan dedikasi serta kinerja yang baik untuk perusahaan. Untuk itu atas nama manajemen {{ $companyName }} menyampaikan terima kasih atas kerjasamanya selama ini.
   </div>
 
   <!-- PENUTUP -->
-  <div style="margin-top:6px; font-size:12px; line-height:1.35; text-align:justify;">
+  <div style="margin-top:5px; font-size:11px; line-height:1.25; text-align:justify;">
     Demikian surat pengalaman kerja ini kami buat agar dapat dipergunakan sebagaimana mestinya.
   </div>
 
   <!-- TANDA TANGAN (LEFT-ALIGNED, NOBR AGAR TIDAK PERNAH TERPOTONG KE HALAMAN 2) -->
-  <table nobr="true" style="width:100%; border-collapse:collapse; margin-top:8px; font-size:12px; page-break-inside:avoid;">
+  <table nobr="true" style="width:100%; border-collapse:collapse; margin-top:6px; font-size:11px; page-break-inside:avoid;">
     <tr>
       <td style="width:55%; vertical-align:top; text-align:left;">
         {{ $kotaTerbit }}, {{ $tanggalTerbit }}<br>
         {{ $companyName }}
-        <div style="height:35px; line-height:35px; font-size:1px;">&nbsp;</div>
+        <div style="height:28px; line-height:28px; font-size:1px;">&nbsp;</div>
         <u><b>{{ $signatureNama }}</b></u><br>
         <b><i>{{ $signatureJabatan }}</i></b>
       </td>
@@ -237,7 +237,7 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3R
   @if($isJpBooks)
     @include('projects.web_sk_footer')
   @else
-    <div style="margin-top:8px; border-top:0.5px solid #bbb; padding-top:3px; font-size:6.5px; line-height:1.2; color:#333; text-align:justify;">
+    <div style="margin-top:6px; border-top:0.5px solid #bbb; padding-top:2px; font-size:6.2px; line-height:1.15; color:#333; text-align:justify;">
       <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
       <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
       <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
