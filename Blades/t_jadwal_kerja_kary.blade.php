@@ -88,7 +88,7 @@
               simplest: true,
               transform:true,
               join:false,
-              where: `this.status='ACTIVE'`
+              where: `this.status='AKTIF'`
           }
         }" placeholder="" label="" fa-icon="" :check="false" :columns="[{
           headerName: 'No',
