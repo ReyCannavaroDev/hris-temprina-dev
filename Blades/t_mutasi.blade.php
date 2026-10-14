@@ -717,9 +717,9 @@
     <!-- END COLUMN -->
     <div class="col-span-full mt-6">
       <div class="flex justify-between items-center mb-2">
-        <h3 class="font-bold text-gray-700">Poin Memperhatikan</h3>
+        <h3 class="font-bold text-gray-700">{{ (currentJenisSuratName.includes('PERINGATAN') || currentJenisSuratName.includes('SP')) ? 'Poin Pelanggaran / Kesalahan (Memperhatikan)' : 'Poin Memperhatikan' }}</h3>
         <button :disabled="!actionText" @click="addMemperhatikan" type="button" class="bg-[#005FBF] hover:bg-[#0055ab] text-white py-[8px] px-[15px] flex items-center justify-center space-x-2 rounded text-sm">
-          <icon fa="plus" /> <span>Tambah Memperhatikan</span>
+          <icon fa="plus" /> <span>{{ (currentJenisSuratName.includes('PERINGATAN') || currentJenisSuratName.includes('SP')) ? 'Tambah Pelanggaran' : 'Tambah Memperhatikan' }}</span>
         </button>
       </div>
       <div class="mx-1 overflow-x-auto">
@@ -728,7 +728,7 @@
             <tr class="bg-[#f8f8f8]">
               <td class="text-[#8F8F8F] font-semibold text-[14px] p-2 text-center w-[5%] border border-[#CACACA]">No.
               </td>
-              <td class="text-[#8F8F8F] font-semibold text-[14px] p-2 border border-[#CACACA]">Isi Memperhatikan</td>
+              <td class="text-[#8F8F8F] font-semibold text-[14px] p-2 border border-[#CACACA]">{{ (currentJenisSuratName.includes('PERINGATAN') || currentJenisSuratName.includes('SP')) ? 'Rincian Kesalahan / Pelanggaran' : 'Isi Memperhatikan' }}</td>
               <td class="text-[#8F8F8F] font-semibold text-[14px] p-2 text-center w-[10%] border border-[#CACACA]">Aksi
               </td>
             </tr>
