@@ -6,7 +6,8 @@
  * 1. {!! kopTugas() !!}     -> Kop Surat Tugas (Logo Temprina + Banner ISO | Garis Batas | Head Office)
  * 2. {!! kopStandar() !!}   -> Kop Temprina Standar (Surat Promosi, Mutasi, Demosi, dll.)
  * 3. {!! kopJpBooks() !!}   -> Kop khusus PT JePe Press Media Utama (JP Books)
- * 4. {!! renderKop('tugas'|'standar'|'jpbooks'|'auto') !!}
+ * 4. {!! kopPkwt() !!}      -> Kop khusus PKWT / Freelance (Format Resmi PDF Acuan)
+ * 5. {!! renderKop('tugas'|'standar'|'jpbooks'|'pkwt'|'auto') !!}
  * 
  * Atau via Include:
  * - @include('projects.web_sk_kop', ['kop' => 'tugas'])
@@ -36,7 +37,8 @@ if (!function_exists('resolveKopMediaData')) {
                 'uploads/m_media/' . $clean,
                 'uploads/' . $clean,
                 'storage/' . $clean,
-                'images/' . $clean
+                'images/' . $clean,
+                'media/' . $clean
             ];
 
             foreach ($candidates as $cand) {
@@ -95,24 +97,19 @@ if (!function_exists('kopTugas')) {
         <table width="100%" cellpadding="10" cellspacing="0" style="border-collapse:collapse;">
             <tr>
                 <!-- GRUP 1: LOGO TEMPRINA -->
-                <!-- Ubah padding-top jika ingin mengatur posisi naik/turun Logo Temprina -->
                 <td width="26%" valign="top" style="vertical-align:top; padding-right:16px; padding-top:20px;">
                     ' . ($logoTmg ? '<img src="' . $logoTmg . '" height="48" alt="Temprina">' : '<b style="font-size:18px; color:#0055aa;">temprina</b>') . '
                 </td>
 
                 <!-- GRUP 2: BANNER ISO -->
-                <!-- Ubah padding-top jika ingin mengatur posisi naik/turun Banner ISO -->
                 <td width="36%" valign="top" style="vertical-align:top; padding-right:16px; padding-top:20px;">
                     ' . ($bannerIso ? '<img src="' . $bannerIso . '" height="40" alt="Banner ISO">' : '') . '
                 </td>
 
                 <!-- GRUP 3: GARIS ABU-ABU + HEAD OFFICE -->
-                <!-- Ubah padding-top di <td> luar ini jika ingin menaikkan/menurunkan posisi blok Head Office -->
                 <td width="38%" valign="top" style="vertical-align:top; padding-top:0px;">
                     <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                         <tr>
-                            <!-- GARIS ABU-ABU MENEMPEL PAS DI KIRI TEKS (Tingginya 100% pas dengan teks Head Office) -->
-                            <!-- Ubah padding-left di bawah jika ingin garis lebih menempel/merapat (4px = sangat rapat) -->
                             <td style="border-left:2px solid #888; padding-left:4px; font-size:6.8px; color:#111; line-height:1.25; font-family:Arial, Helvetica, sans-serif;">
                                 <span style="font-size:7.5px; font-weight:bold; color:#000;">Head Office :</span><br>
                                 Jl. Raya Sumengko KM 30-31 Wringin Anom Gresik<br>
@@ -197,18 +194,53 @@ if (!function_exists('kopJpBooks')) {
 }
 
 /**
- * 4. DISPATCHER FUNCTION
+ * 4. KOP PKWT / FREELANCE (FORMAT RESMI PDF ACUAN)
+ */
+if (!function_exists('kopPkwt')) {
+    function kopPkwt() {
+        if (function_exists('view') && view()->exists('projects.web_sk_kop_pkwt')) {
+            return view('projects.web_sk_kop_pkwt')->render();
+        }
+        $b64Path = function_exists('base_path') ? base_path('media/real_header_b64.txt') : '';
+        $src = '';
+        if ($b64Path && file_exists($b64Path)) {
+            $src = 'data:image/jpeg;base64,' . trim(file_get_contents($b64Path));
+        }
+        if (!$src) {
+            return kopStandar();
+        }
+        return '
+        <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:12px; padding:0;">
+          <tr>
+            <td style="width:100%; text-align:center; padding:0; line-height:0;">
+              <img src="' . $src . '" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Kop Surat PKWT">
+            </td>
+          </tr>
+        </table>';
+    }
+}
+
+/**
+ * 5. DISPATCHER FUNCTION
  */
 if (!function_exists('renderKop')) {
     function renderKop($type = 'auto', $context = []) {
         if ($type === 'tugas' || $type === 'surat_tugas') {
             return kopTugas();
         }
+        if ($type === 'pkwt' || $type === 'freelance') {
+            return kopPkwt();
+        }
         if ($type === 'jpbooks' || $type === 'jp') {
             return kopJpBooks();
         }
         if ($type === 'standar' || $type === 'promosi') {
             return kopStandar();
+        }
+
+        // Auto-detect PKWT / Freelance dari context
+        if (!empty($context['isPkwt']) || !empty($context['isPKWT'])) {
+            return kopPkwt();
         }
 
         // Auto-detect JP Books dari context
@@ -231,11 +263,54 @@ if (!function_exists('renderKop')) {
     }
 }
 
-// Menentukan tipe kop yang direquest
-$requestedKop = $kop ?? ($type ?? ($isSuratTugas ?? false ? 'tugas' : 'auto'));
-@endphp
-{!! renderKop($requestedKop, [
-    'isJpBooks' => $isJpBooks ?? false,
-    't_mutasi'  => $t_mutasi ?? null
-]) !!}
+// Deteksi apakah dokumen adalah PKWT / Freelance
+$isPKWT = false;
+if (!empty($isPkwt) || !empty($isPKWT)) {
+    $isPKWT = true;
+} elseif (function_exists('request') && request()) {
+    $uri = request()->getRequestUri() ?? '';
+    $path = request()->path() ?? '';
+    $fullUrl = request()->fullUrl() ?? '';
+    $targetStr = strtolower($uri . ' ' . $path . ' ' . $fullUrl);
+    if (str_contains($targetStr, 'sk_pkwt') || str_contains($targetStr, 'pkwt') || str_contains($targetStr, 'freelance')) {
+        $isPKWT = true;
+    }
+}
+if (!$isPKWT && isset($t_mutasi)) {
+    $nomorDoc = strtoupper(($t_mutasi->no_dokumen ?? '') . ' ' . ($t_mutasi->nomor ?? ''));
+    $jenisMut = strtoupper(($t_mutasi->m_jenis_mutasi?->name ?? '') . ' ' . ($t_mutasi->m_jenis_mutasi?->kode ?? ''));
+    if (str_contains($nomorDoc, 'PKWT') || str_contains($nomorDoc, 'HLD') || str_contains($nomorDoc, '/HL/') || str_contains($nomorDoc, 'HL') ||
+        str_contains($jenisMut, 'PKWT') || str_contains($jenisMut, 'HARIAN LEPAS') || str_contains($jenisMut, 'HL')) {
+        $isPKWT = true;
+    }
+}
 
+// Deteksi JP Books
+$isJP = false;
+if (isset($isJpBooks)) {
+    $isJP = (bool)$isJpBooks;
+} elseif (isset($t_mutasi)) {
+    $dest = strtoupper(($t_mutasi->m_sub_baru?->name ?? '') . ' ' . ($t_mutasi->m_sbu_baru?->name ?? ''));
+    $origin = strtoupper(($t_mutasi->m_sub_lama?->name ?? '') . ' ' . ($t_mutasi->m_sbu_lama?->name ?? ''));
+    if (str_contains($dest, 'JP') || str_contains($origin, 'JP') || str_contains($dest, 'JEPE') || str_contains($origin, 'JEPE')) {
+        $isJP = true;
+    }
+}
+
+// Menentukan tipe kop yang direquest
+$requestedKop = $kop ?? ($type ?? ($isSuratTugas ?? false ? 'tugas' : ($isPKWT ? 'pkwt' : ($isJP ? 'jpbooks' : 'auto'))));
+@endphp
+
+@if($isPKWT || $requestedKop === 'pkwt' || $requestedKop === 'freelance')
+    @if(view()->exists('projects.web_sk_kop_pkwt'))
+        @include('projects.web_sk_kop_pkwt')
+    @else
+        {!! kopPkwt() !!}
+    @endif
+@elseif($requestedKop === 'tugas' || $requestedKop === 'surat_tugas')
+    {!! kopTugas() !!}
+@elseif($isJP || $requestedKop === 'jpbooks' || $requestedKop === 'jp')
+    {!! kopJpBooks() !!}
+@else
+    {!! kopStandar() !!}
+@endif

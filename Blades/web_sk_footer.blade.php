@@ -3,13 +3,14 @@
  * MASTER FOOTER SURAT - HRIS TEMPRINA
  * 
  * Tersedia Function Helper:
- * 1. {!! footerTugas() !!}     -> Footer khusus Surat Tugas Pelatihan (Daftar Cabang Lengkap: Telp, Fax, Email)
- * 2. {!! footerStandar() !!}   -> Footer Temprina Standar (Surat Promosi, Mutasi, Demosi, dll.)
- * 3. {!! footerJpBooks() !!}   -> Footer khusus PT JePe Press Media Utama (JP Books)
- * 4. {!! renderFooter('tugas'|'standar'|'jpbooks'|'auto') !!}
+ * 1. {!! footerTugas($align) !!} -> Footer khusus Surat Tugas Pelatihan (Daftar Cabang Lengkap: Telp, Fax, Email)
+ * 2. {!! footerStandar() !!}     -> Footer Temprina Standar (Surat Promosi, Mutasi, Demosi, dll.)
+ * 3. {!! footerJpBooks() !!}     -> Footer khusus PT JePe Press Media Utama (JP Books)
+ * 4. {!! footerPkwt() !!}        -> Footer khusus PKWT / Freelance (Format Resmi PDF Acuan)
+ * 5. {!! renderFooter('tugas'|'standar'|'jpbooks'|'pkwt'|'auto') !!}
  * 
  * Atau via Include:
- * - @include('projects.web_sk_footer', ['footer' => 'tugas'])
+ * - @include('projects.web_sk_footer', ['footer' => 'tugas', 'align' => 'center'])
  * - @include('projects.web_sk_footer', ['footer' => 'standar'])
  * - @include('projects.web_sk_footer')  <-- otomatis sesuai surat
  */
@@ -21,8 +22,8 @@ if (!function_exists('resolveFooterMediaData')) {
             return $cached;
         }
 
-        $mediaFooterTMG = \DB::table('m_media')->where('is_active', true)->where('kode', 'FOOTER-TEMPRINA')->first();
-        $mediaFooterJP  = \DB::table('m_media')->where('is_active', true)->where('kode', 'FOOTER-JPBOOKS')->first();
+        $mediaFooterTMG = \DB::table('m_media')->where('is_active', true)->whereIn('kode', ['FOOTER-CABANG-TEMPRINA', 'FOOTER-TEMPRINA'])->first();
+        $mediaFooterJP  = \DB::table('m_media')->where('is_active', true)->whereIn('kode', ['FOOTER-JPBOOKS', 'BANNER-JPBOOKS'])->orderBy('id', 'desc')->first();
         $mediaQR        = \DB::table('m_media')->where('is_active', true)->where('kode', 'QR-TEMPRINA')->first();
 
         $resolveMedia = function($rawPath) {
@@ -35,7 +36,8 @@ if (!function_exists('resolveFooterMediaData')) {
                 'uploads/m_media/' . $clean,
                 'uploads/' . $clean,
                 'storage/' . $clean,
-                'images/' . $clean
+                'images/' . $clean,
+                'media/' . $clean
             ];
 
             foreach ($candidates as $cand) {
@@ -93,7 +95,11 @@ if (!function_exists('footerStandar')) {
         <table style="width:100%; border-collapse:collapse; margin-top:20px; border-top:0.5px solid #ccc; padding-top:5px;">
             <tr>
                 <td style="width:88%; vertical-align:middle;">
-                    ' . ($footerTmgSrc ? '<img src="' . $footerTmgSrc . '" width="450" alt="Cabang Temprina">' : '<div style="font-size:7px; line-height:1.2; color:#555;">Bekasi: 021-8815222 | Cengkareng: 021-5553472 | Semarang: 024-7462136 | Solo: 0271-783001 | Malang: 0341-396700 | Nganjuk: 0358-773500 | Jember: 0331-320300 | Bali: 0361-421384</div>') . '
+                    ' . ($footerTmgSrc ? '<img src="' . $footerTmgSrc . '" width="450" alt="Cabang Temprina">' : '
+                        <div style="font-size:7px; line-height:1.2; color:#555;">
+                            Bekasi: 021-8815222 | Cengkareng: 021-5553472 | Semarang: 024-7462136 | Solo: 0271-783001 | Malang: 0341-396700 | Nganjuk: 0358-773500 | Jember: 0331-320300 | Bali: 0361-421384
+                        </div>
+                    ') . '
                 </td>
                 <td style="width:12%; text-align:right; vertical-align:middle;">
                     ' . ($qrSrc ? '<img src="' . $qrSrc . '" width="40" height="40" alt="QR Code">' : '') . '
@@ -131,19 +137,55 @@ if (!function_exists('footerJpBooks')) {
 }
 
 /**
- * 4. DISPATCHER FUNCTION
+ * 4. FOOTER PKWT / FREELANCE (FORMAT RESMI PDF ACUAN)
+ */
+if (!function_exists('footerPkwt')) {
+    function footerPkwt() {
+        if (function_exists('view') && view()->exists('projects.web_sk_footer_pkwt')) {
+            return view('projects.web_sk_footer_pkwt')->render();
+        }
+        $b64Path = function_exists('base_path') ? base_path('media/real_footer_b64.txt') : '';
+        $src = '';
+        if ($b64Path && file_exists($b64Path)) {
+            $src = 'data:image/jpeg;base64,' . trim(file_get_contents($b64Path));
+        }
+        if (!$src) {
+            return footerStandar();
+        }
+        return '
+        <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:14px; padding:0;">
+          <tr>
+            <td style="width:100%; text-align:center; padding:0; line-height:0;">
+              <img src="' . $src . '" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Footer PKWT">
+            </td>
+          </tr>
+        </table>';
+    }
+}
+
+/**
+ * 5. DISPATCHER FUNCTION
  */
 if (!function_exists('renderFooter')) {
     function renderFooter($type = 'auto', $context = []) {
+        $align = $context['align'] ?? 'justify';
+
         if ($type === 'tugas' || $type === 'surat_tugas') {
-            $align = $context['align'] ?? 'justify';
             return footerTugas($align);
+        }
+        if ($type === 'pkwt' || $type === 'freelance') {
+            return footerPkwt();
         }
         if ($type === 'jpbooks' || $type === 'jp') {
             return footerJpBooks();
         }
         if ($type === 'standar' || $type === 'promosi') {
             return footerStandar();
+        }
+
+        // Auto-detect PKWT / Freelance dari context
+        if (!empty($context['isPkwt']) || !empty($context['isPKWT'])) {
+            return footerPkwt();
         }
 
         // Auto-detect JP Books dari context
@@ -166,21 +208,10 @@ if (!function_exists('renderFooter')) {
                 ($t->m_kary?->m_sbu?->name ?? '') . ' ' .
                 ($t->m_kary?->m_sbu?->kode ?? '')
             );
-
-            $checkIsJp = function($str) {
-                return str_contains($str, 'JEPE') || 
-                       str_contains($str, 'JP BOOKS') || 
-                       str_contains($str, 'JPBOOKS') || 
-                       str_contains($str, 'JPMU') || 
-                       str_contains($str, 'SAHABAT EDUKASI') ||
-                       preg_match('/\bJP\b/', $str);
-            };
-
-            if ($checkIsJp($dest) || (empty(trim($dest)) && $checkIsJp($origin))) {
+            if (str_contains($dest, 'JP') || str_contains($origin, 'JP') || str_contains($dest, 'JEPE') || str_contains($origin, 'JEPE')) {
                 $isJP = true;
             }
         }
-
         if ($isJP) {
             return footerJpBooks();
         }
@@ -189,13 +220,65 @@ if (!function_exists('renderFooter')) {
     }
 }
 
-// Menentukan tipe footer dan alignment yang direquest
-$requestedFooter = $footer ?? ($type ?? ($isSuratTugas ?? false ? 'tugas' : 'auto'));
+// Deteksi apakah dokumen adalah PKWT / Freelance
+$isPKWT = false;
+if (!empty($isPkwt) || !empty($isPKWT)) {
+    $isPKWT = true;
+} elseif (function_exists('request') && request()) {
+    $uri = request()->getRequestUri() ?? '';
+    $path = request()->path() ?? '';
+    $fullUrl = request()->fullUrl() ?? '';
+    $targetStr = strtolower($uri . ' ' . $path . ' ' . $fullUrl);
+    if (str_contains($targetStr, 'sk_pkwt') || str_contains($targetStr, 'pkwt') || str_contains($targetStr, 'freelance')) {
+        $isPKWT = true;
+    }
+}
+if (!$isPKWT && isset($t_mutasi)) {
+    $nomorDoc = strtoupper(($t_mutasi->no_dokumen ?? '') . ' ' . ($t_mutasi->nomor ?? ''));
+    $jenisMut = strtoupper(($t_mutasi->m_jenis_mutasi?->name ?? '') . ' ' . ($t_mutasi->m_jenis_mutasi?->kode ?? ''));
+    if (str_contains($nomorDoc, 'PKWT') || str_contains($nomorDoc, 'HLD') || str_contains($nomorDoc, '/HL/') || str_contains($nomorDoc, 'HL') ||
+        str_contains($jenisMut, 'PKWT') || str_contains($jenisMut, 'HARIAN LEPAS') || str_contains($jenisMut, 'HL')) {
+        $isPKWT = true;
+    }
+}
+
+// Deteksi JP Books
+$isJP = false;
+if (isset($isJpBooks)) {
+    $isJP = (bool)$isJpBooks;
+} elseif (isset($t_mutasi)) {
+    $dest = strtoupper(
+        ($t_mutasi->m_sub_baru?->name ?? '') . ' ' .
+        ($t_mutasi->m_sbu_baru?->name ?? '') . ' ' .
+        ($t_mutasi->m_sub_baru?->kode ?? '') . ' ' .
+        ($t_mutasi->m_sbu_baru?->kode ?? '')
+    );
+    $origin = strtoupper(
+        ($t_mutasi->m_sub_lama?->name ?? '') . ' ' .
+        ($t_mutasi->m_sbu_lama?->name ?? '') . ' ' .
+        ($t_mutasi->m_sub_lama?->kode ?? '') . ' ' .
+        ($t_mutasi->m_sbu_lama?->kode ?? '') . ' ' .
+        ($t_mutasi->m_kary?->m_sbu?->name ?? '') . ' ' .
+        ($t_mutasi->m_kary?->m_sbu?->kode ?? '')
+    );
+    if (str_contains($dest, 'JP') || str_contains($origin, 'JP') || str_contains($dest, 'JEPE') || str_contains($origin, 'JEPE')) {
+        $isJP = true;
+    }
+}
+
+// Menentukan tipe footer yang direquest
+$requestedFooter = $footer ?? ($type ?? ($isSuratTugas ?? false ? 'tugas' : ($isPKWT ? 'pkwt' : ($isJP ? 'jpbooks' : 'auto'))));
 $requestedAlign  = $align ?? ($footerAlign ?? 'justify');
 $validAlign      = in_array($requestedAlign, ['left', 'center', 'right', 'justify']) ? $requestedAlign : 'justify';
 @endphp
 
-@if($requestedFooter === 'tugas' || $requestedFooter === 'surat_tugas')
+@if($isPKWT || $requestedFooter === 'pkwt' || $requestedFooter === 'freelance')
+    @if(view()->exists('projects.web_sk_footer_pkwt'))
+        @include('projects.web_sk_footer_pkwt')
+    @else
+        {!! footerPkwt() !!}
+    @endif
+@elseif($requestedFooter === 'tugas' || $requestedFooter === 'surat_tugas')
 <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; border-top:0.5px solid #bbb;">
     <tr>
         <td align="{{ $validAlign }}" style="text-align:{{ $validAlign }}; padding-top:4px; font-size:6.8px; line-height:1.35; color:#333;">
@@ -206,10 +289,46 @@ $validAlign      = in_array($requestedAlign, ['left', 'center', 'right', 'justif
         </td>
     </tr>
 </table>
+@elseif($isJP || $requestedFooter === 'jpbooks' || $requestedFooter === 'jp')
+    @php
+        $m = resolveFooterMediaData();
+        $footerJpSrc = $m['footerJp'];
+    @endphp
+    @if($footerJpSrc)
+    <div style="margin-top:25px; text-align:center;">
+        <img src="{{ $footerJpSrc }}" style="max-width:100%; max-height:42px;" alt="Footer JP Books">
+    </div>
+    @else
+    <table style="width:100%; border-collapse:collapse; margin-top:20px; border-top:1.5px solid #ff8a00; padding-top:6px;">
+        <tr>
+            <td style="font-size:8px; color:#555; vertical-align:middle; line-height:1.4;">
+                <strong style="color:#111;">Head Office:</strong> Jl. Karah Agung 45 Surabaya 60232 &bull; Telp. (031) 8289999 (Hunting) &bull; Fax. (031) 8286999
+            </td>
+        </tr>
+    </table>
+    @endif
 @else
-{!! renderFooter($requestedFooter, [
-    'isJpBooks' => $isJpBooks ?? false,
-    't_mutasi'  => $t_mutasi ?? null,
-    'align'     => $validAlign
-]) !!}
+    @php
+        $m = resolveFooterMediaData();
+        $footerTmgSrc = $m['footerTmg'];
+        $qrSrc        = $m['qr'];
+    @endphp
+    <table style="width:100%; border-collapse:collapse; margin-top:20px; border-top:0.5px solid #ccc; padding-top:5px;">
+        <tr>
+            <td style="width:88%; vertical-align:middle;">
+                @if($footerTmgSrc)
+                    <img src="{{ $footerTmgSrc }}" width="450" alt="Cabang Temprina">
+                @else
+                    <div style="font-size:7px; line-height:1.2; color:#555;">
+                        Bekasi: 021-8815222 | Cengkareng: 021-5553472 | Semarang: 024-7462136 | Solo: 0271-783001 | Malang: 0341-396700 | Nganjuk: 0358-773500 | Jember: 0331-320300 | Bali: 0361-421384
+                    </div>
+                @endif
+            </td>
+            <td style="width:12%; text-align:right; vertical-align:middle;">
+                @if($qrSrc)
+                    <img src="{{ $qrSrc }}" width="40" height="40" alt="QR Code">
+                @endif
+            </td>
+        </tr>
+    </table>
 @endif
