@@ -65,17 +65,33 @@ $companyName = $isJpBooks ? 'PT Media Sahabat Edukasi' : $compRaw;
 $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota 
             ?? $t_mutasi?->m_kary?->m_branch?->kota 
             ?? 'Surabaya';
+
+$signature = $t_mutasi?->signature;
+if (!$signature && !empty($t_mutasi?->signature_id)) {
+    try {
+        $signature = \App\Models\CustomModels\m_kary::find($t_mutasi->signature_id);
+    } catch (\Throwable $th) {}
+}
+$signatureNama = $signature?->nama_lengkap ?? '';
+$signatureJabatan = $signature?->m_posisi?->name ?? '';
 @endphp
 
-<div style="font-family:'Times New Roman',serif;width:93%;margin:auto;font-size:11.5px;line-height:1.45;">
+<div style="font-family:'Times New Roman',serif;width:93%;margin:auto;font-size:11.5px;line-height:1.5;">
 
-  @include('projects.web_sk_kop')
+  @include('projects.web_sk_kop', ['kop' => 'tugas'])
 
   <!-- JUDUL SURAT (SESUAI DOKUMEN ACUAN & RIIL) -->
-  <table style="width:100%;margin-top:16px;">
+  <table style="width:100%; border-collapse:collapse;">
+    <!-- ============================================================== -->
+    <!-- PENGATUR SPASI KOP KE SURAT TUGAS:                             -->
+    <!-- Ubah kedua angka '18px' di bawah ini (misal: 10px, 20px, 30px) -->
+    <!-- ============================================================== -->
+    <tr style="line-height:22px;">
+      <td style="height:22px; font-size:1px;">&nbsp;</td>
+    </tr>
     <tr>
       <td style="text-align:center;">
-        <span style="font-weight:bold;font-size:13.5px;letter-spacing:4px;"><u>S U R A T &nbsp; T U G A S</u></span>
+        <span style="font-weight:bold;font-size:13.5px;letter-spacing:2px;"><u>SURAT TUGAS</u></span>
       </td>
     </tr>
     <tr>
@@ -89,35 +105,33 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
 
   <!-- MEMPERHATIKAN (STRUKTUR TABEL FLAT AGAR TIDAK PATAH DI TCPDF) -->
   <table style="width:100%; margin-top:18px; border-collapse:collapse; font-size:11px;">
+    <tr>
+      <td style="width:20%; vertical-align:top; text-align:left; font-weight:bold;">MEMPERHATIKAN</td>
+      <td style="width:2.5%; vertical-align:top; text-align:center;">:</td>
+      <td style="width:77.5%;"></td>
+    </tr>
     @if($memperhatikan && count($memperhatikan) > 0)
-      @foreach($memperhatikan as $index => $item)
+      @foreach($memperhatikan as $item)
         <tr>
-          <td style="width:20%; vertical-align:top; text-align:left;">
-            @if($index === 0) MEMPERHATIKAN @endif
-          </td>
-          <td style="width:2%; vertical-align:top;">
-            @if($index === 0) : @endif
-          </td>
-          <td style="width:3%; vertical-align:top; text-align:center;">•</td>
-          <td style="width:75%; vertical-align:top; text-align:justify; padding-bottom:3px;">
+          <td></td>
+          <td style="vertical-align:top; text-align:center; padding-top:2px;">•</td>
+          <td style="vertical-align:top; text-align:justify; padding-top:2px; padding-bottom:2px;">
             {{ $item->value ?? $item['value'] }}
           </td>
         </tr>
       @endforeach
     @else
       <tr>
-        <td style="width:20%; vertical-align:top; text-align:left;">MEMPERHATIKAN</td>
-        <td style="width:2%; vertical-align:top;">:</td>
-        <td style="width:3%; vertical-align:top; text-align:center;">•</td>
-        <td style="width:75%; vertical-align:top; text-align:justify; padding-bottom:3px;">
+        <td></td>
+        <td style="vertical-align:top; text-align:center; padding-top:2px;">•</td>
+        <td style="vertical-align:top; text-align:justify; padding-top:2px; padding-bottom:2px;">
           Keputusan hasil rapat / koordinasi manajemen
         </td>
       </tr>
       <tr>
-        <td style="width:20%;"></td>
-        <td style="width:2%;"></td>
-        <td style="width:3%; vertical-align:top; text-align:center; padding-top:2px;">•</td>
-        <td style="width:75%; vertical-align:top; text-align:justify; padding-top:2px;">
+        <td></td>
+        <td style="vertical-align:top; text-align:center; padding-top:2px;">•</td>
+        <td style="vertical-align:top; text-align:justify; padding-top:2px; padding-bottom:2px;">
           Peningkatan SDM & produktifitas di PT Temprina Media Grafika
         </td>
       </tr>
@@ -127,95 +141,147 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
   <div></div>
 
   <!-- MEMUTUSKAN SERTA MENETAPKAN -->
-  <table style="width:100%; margin-top:16px; font-size:11px;">
+  <table style="width:100%; margin-top:16px; font-size:11px; border-collapse:collapse;">
     <tr>
-      <td style="width:20%; vertical-align:top; text-align:left;">MEMUTUSKAN<br>SERTA<br>MENETAPKAN</td>
-      <td style="width:2%; vertical-align:bottom; padding-bottom:2px;">:</td>
-      <td style="width:78%;">
+      <td style="font-weight:bold; line-height:1.35;">MEMUTUSKAN</td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold; line-height:1.35;">&nbsp;&nbsp;SERTA</td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold; line-height:1.35;">MENETAPKAN&nbsp;&nbsp;&nbsp;&nbsp;:</td>
+    </tr>
+  </table>
 
-        <table style="width:100%; border-collapse:collapse;">
-          <tr>
-            <td style="width:16%; vertical-align:top;">• Nama</td>
-            <td style="width:2.5%; vertical-align:top;">:</td>
-            <td style="width:81.5%; font-weight:bold;">{{$t_mutasi?->m_kary?->nama_lengkap ?? '-'}}</td>
-          </tr>
-          <tr>
-            <td style="vertical-align:top;">• Tugas</td>
-            <td style="vertical-align:top;">:</td>
-            <td style="vertical-align:top; text-align:justify;">{{$materiPelatihan}}</td>
-          </tr>
-          <tr>
-            <td style="vertical-align:top;">• Pemateri</td>
-            <td style="vertical-align:top;">:</td>
-            <td style="vertical-align:top;">{{$pemateri}}</td>
-          </tr>
-          <tr>
-            <td style="vertical-align:top;">• Hari/Tgl</td>
-            <td style="vertical-align:top;">:</td>
-            <td style="vertical-align:top;">{{$hariTgl}}</td>
-          </tr>
-          <tr>
-            <td style="vertical-align:top;">• Jam</td>
-            <td style="vertical-align:top;">:</td>
-            <td style="vertical-align:top;">{{$jam}}</td>
-          </tr>
-          <tr>
-            <td style="vertical-align:top;">• Tempat</td>
-            <td style="vertical-align:top;">:</td>
-            <td style="vertical-align:top; text-align:justify;">{!! nl2br(e($tempat)) !!}</td>
-          </tr>
-        </table>
-
-      </td>
+  <!-- ISI RINCIAN TUGAS (DI BAWAH PAS DENGAN BULLET POINT) -->
+  <table style="width:100%; margin-top:6px; font-size:11px; border-collapse:collapse;">
+    <tr>
+      <td style="width:3%; vertical-align:top; text-align:center;">•</td>
+      <td style="width:14%; vertical-align:top;">Nama</td>
+      <td style="width:2.5%; vertical-align:top; text-align:center;">:</td>
+      <td style="width:80.5%; vertical-align:top;">{{ $t_mutasi?->m_kary?->nama_lengkap ?? '-' }}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align:top; text-align:center; padding-top:3px;">•</td>
+      <td style="vertical-align:top; padding-top:3px;">Tugas</td>
+      <td style="vertical-align:top; text-align:center; padding-top:3px;">:</td>
+      <td style="vertical-align:top; text-align:justify; padding-top:3px;">{{ $materiPelatihan }}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align:top; text-align:center; padding-top:3px;">•</td>
+      <td style="vertical-align:top; padding-top:3px;">Pemateri</td>
+      <td style="vertical-align:top; text-align:center; padding-top:3px;">:</td>
+      <td style="vertical-align:top; padding-top:3px;">{{ $pemateri }}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align:top; text-align:center; padding-top:3px;">•</td>
+      <td style="vertical-align:top; padding-top:3px;">Hari/Tgl</td>
+      <td style="vertical-align:top; text-align:center; padding-top:3px;">:</td>
+      <td style="vertical-align:top; padding-top:3px;">{{ $hariTgl }}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align:top; text-align:center; padding-top:3px;">•</td>
+      <td style="vertical-align:top; padding-top:3px;">Jam</td>
+      <td style="vertical-align:top; text-align:center; padding-top:3px;">:</td>
+      <td style="vertical-align:top; padding-top:3px;">{{ $jam }}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align:top; text-align:center; padding-top:3px;">•</td>
+      <td style="vertical-align:top; padding-top:3px;">Tempat</td>
+      <td style="vertical-align:top; text-align:center; padding-top:3px;">:</td>
+      <td style="vertical-align:top; text-align:justify; padding-top:3px;">{!! nl2br(e($tempat)) !!}</td>
     </tr>
   </table>
 
   <!-- PARAGRAF PENUTUP -->
-  <p style="text-align:justify; margin-top:20px; font-size:11px;">
-    Demikian surat tugas ini kami sampaikan guna diperhatikan serta dilaksanakan dengan penuh tanggung jawab.
-  </p>
-
-  <!-- BLOK TANDA TANGAN (SESUAI DOKUMEN 2 & 3) -->
-  <table style="width:100%; margin-top:18px; font-size: 11px;">
+  <table style="width:100%; margin-top:16px; font-size:11px; border-collapse:collapse;">
     <tr>
-      <td style="width:58%;"></td>
-      <td style="width:42%;">
-        Dikeluarkan di&nbsp;&nbsp;: {{$kotaTerbit}}<br>
-        Pada Tanggal&nbsp;&nbsp;: {{$tanggalTerbit}}
-        <div style="height:55px;"></div>
-        <div style="font-weight:bold; text-decoration:underline;">
-          {{$t_mutasi?->signature?->nama_lengkap ?? 'DEVI NOVARIA PURNAMASARI'}}
-        </div>
-        <div style="font-style:italic;">
-          {{$t_mutasi?->signature?->m_posisi?->name ?? 'Asst. Manager Human Capital'}}
-        </div>
+      <td style="text-align:justify; line-height:1.45;">
+        Demikian surat tugas ini kami sampaikan guna diperhatikan serta dilaksanakan dengan penuh tanggung jawab.
       </td>
+    </tr>
+  </table>
+
+  <!-- BLOK TANDA TANGAN (DI SEBELAH KIRI SESUAI DOKUMEN ACUAN) -->
+  <table style="width:100%; border-collapse:collapse; font-size:11px;">
+    <!-- ============================================================== -->
+    <!-- PENGATUR JEDA / ENTER SEBELUM DIKELUARKAN DI:                  -->
+    <!-- Ubah kedua angka '25px' di bawah ini (misal: 15px, 30px, 40px) -->
+    <!-- ============================================================== -->
+    <tr style="line-height:25px;">
+      <td colspan="2" style="height:25px; font-size:1px;">&nbsp;</td>
+    </tr>
+    <tr>
+      <td style="width:50%; vertical-align:top; text-align:left;">
+        Dikeluarkan di : {{ $kotaTerbit }}<br>
+        Pada Tanggal&nbsp;&nbsp;: {{ $tanggalTerbit }}
+        @if(!empty($signatureNama))
+          <!-- ============================================================== -->
+          <!-- PENGATUR JARAK / RUANG TANDA TANGAN (JEDA TANGGAL KE NAMA):    -->
+          <!-- Ubah kedua angka '50px' di bawah ini (misal: 35px, 60px, 70px) -->
+          <!-- ============================================================== -->
+          <div style="line-height:5px; height:50px; font-size:1px;">&nbsp;</div>
+          <div style="line-height:1.2;">
+            <b><u>{{ trim($signatureNama) }}</u></b><br>
+            @if(!empty($signatureJabatan))
+              <i>{{ trim($signatureJabatan) }}</i>
+            @endif
+          </div>
+        @endif
+      </td>
+      <td style="width:50%;"></td>
     </tr>
   </table>
 
   <!-- TEMBUSAN (SESUAI DOKUMEN 2 & 3) -->
-  <table style="width:100%; margin-top:14px; font-size:10px; border-collapse:collapse;">
+  @if($tembusan && count($tembusan) > 0)
+  <table style="width:100%; border-collapse:collapse; font-size:10px;">
+    <!-- ============================================================== -->
+    <!-- PENGATUR JEDA DARI JABATAN KE TEMBUSAN:                        -->
+    <!-- Ubah kedua angka '14px' di bawah ini (misal: 10px, 20px, 30px) -->
+    <!-- ============================================================== -->
+    <tr style="line-height:14px;">
+      <td style="height:14px; font-size:1px;">&nbsp;</td>
+    </tr>
     <tr>
       <td style="width:100%;">
         <b>Tembusan :</b><br>
-        @if($tembusan && count($tembusan) > 0)
-          @foreach($tembusan as $index => $t)
-            &nbsp;&nbsp;{{ $index + 1 }}. {{ $t->value ?? $t['value'] }}<br>
-          @endforeach
-        @else
-          &nbsp;&nbsp;1. Direksi<br>
-          &nbsp;&nbsp;2. Keuangan
-        @endif
+        @foreach($tembusan as $index => $t)
+          &nbsp;&nbsp;{{ $index + 1 }}. {{ $t->value ?? $t['value'] }}<br>
+        @endforeach
       </td>
     </tr>
   </table>
+  @endif
 
-  <!-- FOOTER CABANG TEMPRINA (SESUAI DOKUMEN RIIL TEMPRINA) -->
-  <div style="margin-top:35px; border-top:0.5px solid #bbb; padding-top:4px; font-size:6.8px; line-height:1.35; color:#333; text-align:justify;">
-    <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
-    <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
-    <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
-    <b>Jember :</b> 0331-320300 Fax : 0331-320190, E-mail : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, E-mail : Bali@temprina.com
-  </div>
+  @php
+    $countTembusan = ($tembusan && count($tembusan) > 0) ? count($tembusan) : 0;
+    
+    // FORMULA JEDA FOOTER OTOMATIS:
+    // Menghitung tinggi secara dinamis berdasarkan JUMLAH BARIS tembusan.
+    // - Jika 0 tembusan: jeda 195px (footer tidak naik)
+    // - Jika 1 tembusan: jeda ~148px
+    // - Jika 2 tembusan: jeda ~136px
+    // - Jika 4 tembusan: jeda ~112px
+    // - Jika 6 tembusan: jeda ~88px (otomatis menyusut agar tidak bablas ke halaman 2)
+    if ($countTembusan === 0) {
+        $jedaFooterPx = 195;
+    } else {
+        $jedaFooterPx = max(15, 160 - ($countTembusan * 12));
+    }
+  @endphp
+
+  <!-- ============================================================== -->
+  <!-- PENGATUR JEDA KE FOOTER (DINAMIS SESUAI JUMLAH TEMBUSAN):      -->
+  <!-- ============================================================== -->
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="line-height:{{ $jedaFooterPx }}px;">
+      <td style="height:{{ $jedaFooterPx }}px; font-size:1px;">&nbsp;</td>
+    </tr>
+  </table>
+
+  <!-- FOOTER SURAT -->
+  <!-- Ubah 'align' di bawah ini: 'center' (tengah), 'justify' (rata kanan-kiri), 'left' (kiri), 'right' (kanan) -->
+  @include('projects.web_sk_footer', ['footer' => 'tugas', 'align' => 'center'])
 
 </div>
