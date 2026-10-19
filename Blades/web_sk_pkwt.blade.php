@@ -209,11 +209,11 @@ if (function_exists('base_path')) {
     }
 }
 
-// Dynamic m_media lookup for PKWT Kop and Footer (prioritizing KOP-PKWT and FOOTER-PKWT)
+// Dynamic m_media lookup for PKWT Kop and Footer (mengutamakan upload terbaru dari m_media)
 $kopMediaPkwt = null;
 $footerMediaPkwt = null;
 try {
-    $kopQuery = \DB::table('m_media')
+    $kopMediaPkwt = \DB::table('m_media')
         ->select('m_media.*')
         ->leftJoin('m_general', 'm_general.id', '=', 'm_media.kategori_id')
         ->where(function($q) {
@@ -221,83 +221,176 @@ try {
               ->orWhereNull('m_media.is_active');
         })
         ->where(function($q) {
-            $q->whereIn(\DB::raw("UPPER(TRIM(COALESCE(m_media.kode, '')))"), [
-                'KOP-PKWT', 'HEADER-PKWT', 'KOP_PKWT', 'HEADER_PKWT',
-                'KOP-PKTW', 'HEADER-PKTW', 'KOP_PKTW', 'HEADER_PKTW',
-                'KOP-SURAT', 'KOP_SURAT', 'KOP SURAT', 'KOP', 'HEADER',
-                'LOGO-PKWT-HEADER', 'LOGO-HEADER-PKWT', 'LOGO-KOP-PKWT',
-                'LOGO-PKTW-HEADER', 'LOGO-HEADER-PKTW', 'LOGO-KOP-PKTW',
-                'LOGO-PKWT', 'LOGO-PKTW', 'LOGO-TMG', 'LOGO-TEMPRINA', 'LOGO_UTAMA'
-            ])
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%KOP%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%HEADER%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%ATAS%'")
-            ->orWhereRaw("((UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%PKWT%' OR UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%PKTW%') AND UPPER(TRIM(COALESCE(m_media.kode, ''))) NOT LIKE '%FOOTER%' AND UPPER(TRIM(COALESCE(m_media.kode, ''))) NOT LIKE '%BANNER%')")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%KOP%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%HEADER%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%ATAS%'")
-            ->orWhereRaw("((UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%PKWT%' OR UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%PKTW%') AND UPPER(TRIM(COALESCE(m_media.nama, ''))) NOT LIKE '%FOOTER%' AND UPPER(TRIM(COALESCE(m_media.nama, ''))) NOT LIKE '%BANNER%')")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%KOP%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%HEADER%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%ATAS%'");
-        });
-
-    $kopMediaPkwt = $kopQuery->orderByRaw("CASE 
-            WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) IN ('KOP-PKWT', 'KOP-PKTW') THEN 0 
-            WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) IN ('HEADER-PKWT', 'HEADER-PKTW') THEN 1 
-            WHEN (UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%PKWT%' OR UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%PKTW%') AND UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%KOP%' THEN 2 
-            WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%PKWT%' OR UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%PKTW%' THEN 3 
-            WHEN UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%PKWT%' OR UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%PKTW%' THEN 4 
-            WHEN UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%PKWT%' OR UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%PKTW%' THEN 5
-            WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) IN ('KOP-SURAT', 'KOP_SURAT', 'KOP SURAT') THEN 6 
-            WHEN UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%KOP%SURAT%' THEN 7 
-            WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%KOP%' THEN 8 
-            WHEN UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%KOP%' THEN 9 
-            WHEN UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%KOP%' THEN 10
-            ELSE 11 
+            $q->where(function($sub) {
+                $sub->whereRaw("(UPPER(COALESCE(m_media.kode,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%PKTW%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKTW%')")
+                    ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%FOOTER%'")
+                    ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%FOOTER%'")
+                    ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%BANNER%'")
+                    ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%BANNER%'")
+                    ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%BAWAH%'")
+                    ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%BAWAH%'");
+            })
+            ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) IN ('KOP-PKWT', 'HEADER-PKWT', 'KOP_PKWT', 'HEADER_PKWT', 'KOP-PKTW', 'HEADER-PKTW', 'KOP-SURAT', 'KOP_SURAT', 'KOP SURAT', 'KOP', 'HEADER', 'LOGO-PKWT', 'LOGO-TMG', 'LOGO-TEMPRINA', 'LOGO_UTAMA')")
+            ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%KOP%'")
+            ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%HEADER%'")
+            ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%ATAS%'")
+            ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%KOP%'")
+            ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%HEADER%'")
+            ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%ATAS%'")
+            ->orWhereRaw("UPPER(COALESCE(m_general.value,'')) LIKE '%KOP%'")
+            ->orWhereRaw("UPPER(COALESCE(m_general.value,'')) LIKE '%HEADER%'");
+        })
+        ->orderByRaw("CASE 
+            WHEN UPPER(COALESCE(m_media.kode,'')) IN ('KOP-PKWT', 'KOP_PKWT', 'KOP-PKTW', 'HEADER-PKWT') THEN 0
+            WHEN (UPPER(COALESCE(m_media.kode,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%PKTW%') AND (UPPER(COALESCE(m_media.kode,'')) LIKE '%KOP%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%HEADER%') THEN 1
+            WHEN (UPPER(COALESCE(m_media.nama,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKTW%') AND (UPPER(COALESCE(m_media.nama,'')) LIKE '%KOP%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%HEADER%') THEN 2
+            WHEN (UPPER(COALESCE(m_media.nama,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKTW%') AND UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%FOOTER%' AND UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%BANNER%' THEN 3
+            WHEN (UPPER(COALESCE(m_media.kode,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%PKTW%') AND UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%FOOTER%' AND UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%BANNER%' THEN 4
+            WHEN UPPER(COALESCE(m_media.nama,'')) LIKE '%KOP%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%KOP%' THEN 5
+            WHEN UPPER(COALESCE(m_media.nama,'')) LIKE '%HEADER%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%HEADER%' THEN 6
+            ELSE 10
         END")
         ->orderBy('m_media.id', 'desc')
         ->first();
 
-    $footerQuery = \DB::table('m_media')
+    // Fallback Kop: cari media terbaru bertema Kop / Header
+    if (!$kopMediaPkwt) {
+        $kopMediaPkwt = \DB::table('m_media')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) {
+                $q->whereRaw("(UPPER(COALESCE(m_media.kode,'')) LIKE '%KOP%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%KOP%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%HEADER%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%HEADER%')")
+                  ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%FOOTER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%FOOTER%'");
+            })
+            ->orderBy('m_media.id', 'desc')
+            ->first();
+    }
+
+    // Fallback Kop 2: cari media terbaru yang bukan footer/banner
+    if (!$kopMediaPkwt) {
+        $kopMediaPkwt = \DB::table('m_media')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) {
+                $q->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%FOOTER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%FOOTER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%BANNER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%BANNER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%BAWAH%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%BAWAH%'");
+            })
+            ->orderBy('m_media.id', 'desc')
+            ->first();
+    }
+
+    $kopExcludeId = $kopMediaPkwt ? $kopMediaPkwt->id : 0;
+
+    $footerMediaPkwt = \DB::table('m_media')
         ->select('m_media.*')
         ->leftJoin('m_general', 'm_general.id', '=', 'm_media.kategori_id')
         ->where(function($q) {
             $q->where('m_media.is_active', true)
               ->orWhereNull('m_media.is_active');
         })
+        ->where(function($q) use ($kopExcludeId) {
+            if ($kopExcludeId > 0) {
+                $q->where('m_media.id', '!=', $kopExcludeId);
+            }
+        })
         ->where(function($q) {
-            $q->whereIn(\DB::raw("UPPER(TRIM(COALESCE(m_media.kode, '')))"), [
-                'FOOTER-PKWT', 'BANNER-PKWT', 'FOOTER_PKWT', 'BANNER_PKWT',
-                'LOGO-PKWT-FOOTER', 'LOGO-FOOTER-PKWT', 'FOOTER', 'BANNER',
-                'FOOTER-TEMPRINA', 'FOOTER-CABANG', 'FOOTER-CABANG-TEMPRINA', 'FOOTER-SURAT'
-            ])
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%FOOTER%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%BANNER%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%BAWAH%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%FOOTER%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%BANNER%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%BAWAH%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%FOOTER%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%BANNER%'")
-            ->orWhereRaw("UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%BAWAH%'");
-        });
-
-    $footerMediaPkwt = $footerQuery->orderByRaw("CASE 
-            WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) = 'FOOTER-PKWT' THEN 0 
-            WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) = 'BANNER-PKWT' THEN 1 
-            WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%PKWT%' THEN 2 
-            WHEN UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%PKWT%' THEN 3 
-            WHEN UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%PKWT%' THEN 4
-            WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) IN ('FOOTER-TEMPRINA', 'FOOTER-CABANG', 'FOOTER-CABANG-TEMPRINA') THEN 5 
-            WHEN UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%CABANG%' THEN 6 
-            WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%FOOTER%' THEN 7 
-            WHEN UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%FOOTER%' THEN 8 
-            WHEN UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%FOOTER%' THEN 9
-            ELSE 10 
+            $q->where(function($sub) {
+                $sub->whereRaw("(UPPER(COALESCE(m_media.kode,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%PKTW%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKTW%')")
+                    ->where(function($sub2) {
+                        $sub2->whereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%FOOTER%'")
+                             ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%FOOTER%'")
+                             ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%BANNER%'")
+                             ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%BANNER%'")
+                             ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%BAWAH%'")
+                             ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%BAWAH%'");
+                    });
+            })
+            ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) IN ('FOOTER-PKWT', 'BANNER-PKWT', 'FOOTER_PKWT', 'BANNER_PKWT', 'FOOTER-PKTW', 'BANNER-PKTW', 'LOGO-PKWT-FOOTER', 'LOGO-FOOTER-PKWT', 'FOOTER', 'BANNER', 'FOOTER-SURAT', 'FOOTER-CABANG', 'FOOTER-TEMPRINA')")
+            ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%FOOTER%'")
+            ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%BANNER%'")
+            ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%BAWAH%'")
+            ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%FOOTER%'")
+            ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%BANNER%'")
+            ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%BAWAH%'")
+            ->orWhereRaw("UPPER(COALESCE(m_general.value,'')) LIKE '%FOOTER%'")
+            ->orWhereRaw("UPPER(COALESCE(m_general.value,'')) LIKE '%BANNER%'");
+        })
+        ->orderByRaw("CASE 
+            WHEN UPPER(COALESCE(m_media.kode,'')) IN ('FOOTER-PKWT', 'FOOTER_PKWT', 'FOOTER-PKTW', 'BANNER-PKWT') THEN 0
+            WHEN (UPPER(COALESCE(m_media.kode,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%PKTW%') AND (UPPER(COALESCE(m_media.kode,'')) LIKE '%FOOTER%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%BANNER%') THEN 1
+            WHEN (UPPER(COALESCE(m_media.nama,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKTW%') AND (UPPER(COALESCE(m_media.nama,'')) LIKE '%FOOTER%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%BANNER%') THEN 2
+            WHEN UPPER(COALESCE(m_media.nama,'')) LIKE '%FOOTER%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%FOOTER%' THEN 3
+            WHEN UPPER(COALESCE(m_media.nama,'')) LIKE '%BANNER%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%BANNER%' THEN 4
+            WHEN UPPER(COALESCE(m_media.nama,'')) LIKE '%BAWAH%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%BAWAH%' THEN 5
+            ELSE 10
         END")
         ->orderBy('m_media.id', 'desc')
         ->first();
+
+    // Fallback: jika belum ketemu tapi ada media terbaru lain bertema PKWT (bukan Kop yang sudah dipilih)
+    if (!$footerMediaPkwt) {
+        $footerMediaPkwt = \DB::table('m_media')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) use ($kopExcludeId) {
+                if ($kopExcludeId > 0) {
+                    $q->where('m_media.id', '!=', $kopExcludeId);
+                }
+                $q->whereRaw("(UPPER(COALESCE(m_media.kode,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%PKTW%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKTW%')")
+                  ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%HEADER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%HEADER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%KOP%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%KOP%'");
+            })
+            ->orderBy('m_media.id', 'desc')
+            ->first();
+    }
+
+    // Fallback 2: cari media footer umum (bukan Kop)
+    if (!$footerMediaPkwt) {
+        $footerMediaPkwt = \DB::table('m_media')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) use ($kopExcludeId) {
+                if ($kopExcludeId > 0) {
+                    $q->where('m_media.id', '!=', $kopExcludeId);
+                }
+                $q->where(function($sub) {
+                    $sub->whereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%FOOTER%'")
+                        ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%FOOTER%'")
+                        ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%BANNER%'")
+                        ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%BANNER%'")
+                        ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%BAWAH%'")
+                        ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%BAWAH%'");
+                });
+            })
+            ->orderBy('m_media.id', 'desc')
+            ->first();
+    }
+
+    // Fallback ultimate: jika masih belum ketemu, ambil media terbaru lain (selain Kop yang sudah terpilih)
+    if (!$footerMediaPkwt) {
+        $footerMediaPkwt = \DB::table('m_media')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) use ($kopExcludeId) {
+                if ($kopExcludeId > 0) {
+                    $q->where('m_media.id', '!=', $kopExcludeId);
+                }
+            })
+            ->orderBy('m_media.id', 'desc')
+            ->first();
+    }
 } catch (\Throwable $e) {}
 
 $resolvePkwtMedia = function($mediaObj, $defaultB64, $defaultType = 'jpg') {
@@ -445,13 +538,19 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
 <div style="font-family:'Times New Roman', Times, serif; width:92%; margin:0 auto; font-size:10pt; line-height:1.24; color:#000;">
 
     <!-- KOP SURAT TEMPRINA RESMI (FORMAT PDF ACUAN) -->
+@if(view()->exists('projects.web_sk_kop_pkwt'))
+    @include('projects.web_sk_kop_pkwt')
+@elseif(view()->exists('web_sk_kop_pkwt'))
+    @include('web_sk_kop_pkwt')
+@else
 <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:12px; padding:0;">
   <tr>
-    <td style="width:100%; text-align:center; padding:0; line-height:0;">
-      <img src="{{ $headerPkwtImgSrc }}" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Kop Surat PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+      <img src="{{ $headerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Kop Surat PKWT">
     </td>
   </tr>
 </table>
+@endif
 
 
   <!-- JUDUL & NOMOR -->
@@ -645,13 +744,19 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
   </table>
 
     <!-- FOOTER PKWT TEMPLATE (STATIONERY / JPSTORE BANNER) -->
+@if(view()->exists('projects.web_sk_footer_pkwt'))
+    @include('projects.web_sk_footer_pkwt')
+@elseif(view()->exists('web_sk_footer_pkwt'))
+    @include('web_sk_footer_pkwt')
+@else
 <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:14px; padding:0;">
   <tr>
-    <td style="width:100%; text-align:center; padding:0; line-height:0;">
-      <img src="{{ $footerPkwtImgSrc }}" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Footer PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+      <img src="{{ $footerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Footer PKWT">
     </td>
   </tr>
 </table>
+@endif
 
 </div>
 
@@ -662,13 +767,19 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
 <div style="font-family:'Times New Roman', Times, serif; width:92%; margin:0 auto; font-size:10pt; line-height:1.24; color:#000;">
 
     <!-- KOP SURAT TEMPRINA RESMI HALAMAN 2 (FORMAT PDF ACUAN) -->
+@if(view()->exists('projects.web_sk_kop_pkwt'))
+    @include('projects.web_sk_kop_pkwt')
+@elseif(view()->exists('web_sk_kop_pkwt'))
+    @include('web_sk_kop_pkwt')
+@else
 <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:12px; padding:0;">
   <tr>
-    <td style="width:100%; text-align:center; padding:0; line-height:0;">
-      <img src="{{ $headerPkwtImgSrc }}" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Kop Surat PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+      <img src="{{ $headerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Kop Surat PKWT">
     </td>
   </tr>
 </table>
+@endif
 
 
   <!-- PASAL 5 S/D 7 -->
@@ -801,12 +912,18 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
   </table>
 
     <!-- FOOTER PKWT TEMPLATE (STATIONERY / JPSTORE BANNER) HALAMAN 2 -->
+@if(view()->exists('projects.web_sk_footer_pkwt'))
+    @include('projects.web_sk_footer_pkwt')
+@elseif(view()->exists('web_sk_footer_pkwt'))
+    @include('web_sk_footer_pkwt')
+@else
 <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:14px; padding:0;">
   <tr>
-    <td style="width:100%; text-align:center; padding:0; line-height:0;">
-      <img src="{{ $footerPkwtImgSrc }}" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Footer PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+      <img src="{{ $footerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Footer PKWT">
     </td>
   </tr>
 </table>
+@endif
 
 </div>

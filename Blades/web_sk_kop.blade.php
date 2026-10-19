@@ -182,7 +182,10 @@ if (!function_exists('resolveKopMediaData')) {
                 }
             }
 
-            return $rawPath;
+            if (str_starts_with($rawPath, 'data:image') || str_starts_with($rawPath, 'http://') || str_starts_with($rawPath, 'https://')) {
+                return $rawPath;
+            }
+            return '';
         };
 
         $logoTmgSrc     = $mediaTMG      ? $resolveMediaPath($mediaTMG->file_path)      : '';
@@ -334,9 +337,7 @@ if (!function_exists('kopJpBooks')) {
  */
 if (!function_exists('kopPkwt')) {
     function kopPkwt() {
-        $m = resolveKopMediaData();
-        $src = !empty($m['headerPkwt']) ? $m['headerPkwt'] : '';
-        if (!$src && function_exists('view')) {
+        if (function_exists('view')) {
             if (view()->exists('projects.web_sk_kop_pkwt')) {
                 return view('projects.web_sk_kop_pkwt')->render();
             }
@@ -344,6 +345,8 @@ if (!function_exists('kopPkwt')) {
                 return view('web_sk_kop_pkwt')->render();
             }
         }
+        $m = resolveKopMediaData();
+        $src = !empty($m['headerPkwt']) ? $m['headerPkwt'] : '';
         if (!$src) {
             $b64Path = function_exists('base_path') ? base_path('media/real_header_b64.txt') : '';
             if ($b64Path && file_exists($b64Path)) {
@@ -359,8 +362,8 @@ if (!function_exists('kopPkwt')) {
         return '
         <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:12px; padding:0;">
           <tr>
-            <td style="width:100%; text-align:center; padding:0; line-height:0;">
-              <img src="' . $src . '" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Kop Surat PKWT">
+            <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+              <img src="' . $src . '" width="700" style="width:700px; max-width:100%;" alt="Kop Surat PKWT">
             </td>
           </tr>
         </table>';

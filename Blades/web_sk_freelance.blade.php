@@ -297,6 +297,99 @@ try {
         END")
         ->orderBy('m_media.id', 'desc')
         ->first();
+
+    // Fallback Kop: cari media terbaru bertema Kop / Header
+    if (!$kopMediaPkwt) {
+        $kopMediaPkwt = \DB::table('m_media')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) {
+                $q->whereRaw("(UPPER(COALESCE(m_media.kode,'')) LIKE '%KOP%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%KOP%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%HEADER%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%HEADER%')")
+                  ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%FOOTER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%FOOTER%'");
+            })
+            ->orderBy('m_media.id', 'desc')
+            ->first();
+    }
+
+    // Fallback Kop 2: cari media terbaru yang bukan footer/banner
+    if (!$kopMediaPkwt) {
+        $kopMediaPkwt = \DB::table('m_media')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) {
+                $q->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%FOOTER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%FOOTER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%BANNER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%BANNER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%BAWAH%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%BAWAH%'");
+            })
+            ->orderBy('m_media.id', 'desc')
+            ->first();
+    }
+
+    $kopExcludeId = $kopMediaPkwt ? $kopMediaPkwt->id : 0;
+
+    // Fallback 1: PKWT selain kop
+    if (!$footerMediaPkwt) {
+        $footerMediaPkwt = \DB::table('m_media')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) use ($kopExcludeId) {
+                if ($kopExcludeId > 0) {
+                    $q->where('m_media.id', '!=', $kopExcludeId);
+                }
+                $q->whereRaw("(UPPER(COALESCE(m_media.kode,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKWT%' OR UPPER(COALESCE(m_media.kode,'')) LIKE '%PKTW%' OR UPPER(COALESCE(m_media.nama,'')) LIKE '%PKTW%')")
+                  ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%HEADER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%HEADER%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.kode,'')) NOT LIKE '%KOP%'")
+                  ->whereRaw("UPPER(COALESCE(m_media.nama,'')) NOT LIKE '%KOP%'");
+            })
+            ->orderBy('m_media.id', 'desc')
+            ->first();
+    }
+
+    // Fallback 2: cari media footer umum (bukan Kop)
+    if (!$footerMediaPkwt) {
+        $footerMediaPkwt = \DB::table('m_media')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) use ($kopExcludeId) {
+                if ($kopExcludeId > 0) {
+                    $q->where('m_media.id', '!=', $kopExcludeId);
+                }
+                $q->where(function($sub) {
+                    $sub->whereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%FOOTER%'")
+                        ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%FOOTER%'")
+                        ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%BANNER%'")
+                        ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%BANNER%'")
+                        ->orWhereRaw("UPPER(COALESCE(m_media.kode,'')) LIKE '%BAWAH%'")
+                        ->orWhereRaw("UPPER(COALESCE(m_media.nama,'')) LIKE '%BAWAH%'");
+                });
+            })
+            ->orderBy('m_media.id', 'desc')
+            ->first();
+    }
+
+    // Fallback ultimate: jika masih belum ketemu, ambil media terbaru lain (selain Kop yang sudah terpilih)
+    if (!$footerMediaPkwt) {
+        $footerMediaPkwt = \DB::table('m_media')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) use ($kopExcludeId) {
+                if ($kopExcludeId > 0) {
+                    $q->where('m_media.id', '!=', $kopExcludeId);
+                }
+            })
+            ->orderBy('m_media.id', 'desc')
+            ->first();
+    }
 } catch (\Throwable $e) {}
 
 $resolvePkwtMedia = function($mediaObj, $defaultB64, $defaultType = 'jpg') {
@@ -446,8 +539,8 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
     <!-- KOP SURAT TEMPRINA RESMI (FORMAT PDF ACUAN) -->
 <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:12px; padding:0;">
   <tr>
-    <td style="width:100%; text-align:center; padding:0; line-height:0;">
-      <img src="{{ $headerPkwtImgSrc }}" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Kop Surat PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+      <img src="{{ $headerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Kop Surat PKWT">
     </td>
   </tr>
 </table>
@@ -646,8 +739,8 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
     <!-- FOOTER PKWT TEMPLATE (STATIONERY / JPSTORE BANNER) -->
 <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:14px; padding:0;">
   <tr>
-    <td style="width:100%; text-align:center; padding:0; line-height:0;">
-      <img src="{{ $footerPkwtImgSrc }}" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Footer PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+      <img src="{{ $footerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Footer PKWT">
     </td>
   </tr>
 </table>
@@ -663,8 +756,8 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
     <!-- KOP SURAT TEMPRINA RESMI HALAMAN 2 (FORMAT PDF ACUAN) -->
 <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:12px; padding:0;">
   <tr>
-    <td style="width:100%; text-align:center; padding:0; line-height:0;">
-      <img src="{{ $headerPkwtImgSrc }}" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Kop Surat PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+      <img src="{{ $headerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Kop Surat PKWT">
     </td>
   </tr>
 </table>
@@ -802,8 +895,8 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
     <!-- FOOTER PKWT TEMPLATE (STATIONERY / JPSTORE BANNER) HALAMAN 2 -->
 <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:14px; padding:0;">
   <tr>
-    <td style="width:100%; text-align:center; padding:0; line-height:0;">
-      <img src="{{ $footerPkwtImgSrc }}" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Footer PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+      <img src="{{ $footerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Footer PKWT">
     </td>
   </tr>
 </table>

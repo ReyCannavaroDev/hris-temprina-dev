@@ -179,7 +179,10 @@ if (!function_exists('resolveFooterMediaData')) {
                 }
             }
 
-            return $rawPath;
+            if (str_starts_with($rawPath, 'data:image') || str_starts_with($rawPath, 'http://') || str_starts_with($rawPath, 'https://')) {
+                return $rawPath;
+            }
+            return '';
         };
 
         $cached = [
@@ -274,9 +277,7 @@ if (!function_exists('footerJpBooks')) {
  */
 if (!function_exists('footerPkwt')) {
     function footerPkwt() {
-        $m = resolveFooterMediaData();
-        $src = !empty($m['footerPkwt']) ? $m['footerPkwt'] : '';
-        if (!$src && function_exists('view')) {
+        if (function_exists('view')) {
             if (view()->exists('projects.web_sk_footer_pkwt')) {
                 return view('projects.web_sk_footer_pkwt')->render();
             }
@@ -284,6 +285,8 @@ if (!function_exists('footerPkwt')) {
                 return view('web_sk_footer_pkwt')->render();
             }
         }
+        $m = resolveFooterMediaData();
+        $src = !empty($m['footerPkwt']) ? $m['footerPkwt'] : '';
         if (!$src) {
             $b64Path = function_exists('base_path') ? base_path('media/real_footer_b64.txt') : '';
             if ($b64Path && file_exists($b64Path)) {
@@ -296,8 +299,8 @@ if (!function_exists('footerPkwt')) {
         return '
         <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:14px; padding:0;">
           <tr>
-            <td style="width:100%; text-align:center; padding:0; line-height:0;">
-              <img src="' . $src . '" style="width:100%; height:auto; display:block; margin:0 auto;" alt="Footer PKWT">
+            <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+              <img src="' . $src . '" width="700" style="width:700px; max-width:100%;" alt="Footer PKWT">
             </td>
           </tr>
         </table>';
