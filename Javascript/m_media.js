@@ -24,6 +24,28 @@ onBeforeMount(() => {
   document.title = 'Master Media & Aset Visual'
 })
 
+function getWebBaseUrl() {
+  const backend = (store.server?.url_backend || '').replace(/\/api\/?$/i, '').replace(/\/$/, '')
+  if (backend) return backend
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin
+  }
+  return ''
+}
+
+function getCleanFilePath(path) {
+  if (!path) return ''
+  let raw = String(path).trim()
+  if (raw.includes(':::')) {
+    raw = raw.split(':::')[0].trim()
+  }
+  let clean = raw.replace(/^\//, '')
+  if (!clean.startsWith('uploads/')) {
+    clean = `uploads/m_media/${clean}`
+  }
+  return clean
+}
+
 function getMediaPreview(path) {
   if (!path) return ''
   if (typeof path !== 'string') return ''
@@ -31,29 +53,46 @@ function getMediaPreview(path) {
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
     return trimmed
   }
-  const backend = (store.server?.url_backend || '').replace(/\/$/, '')
-  let clean = trimmed.replace(/^\//, '')
-  if (!clean.startsWith('uploads/')) {
-    clean = `uploads/m_media/${clean}`
-  }
-  return `${backend}/${clean}`
+  const webBase = getWebBaseUrl()
+  const clean = getCleanFilePath(trimmed)
+  return `${webBase}/${clean}`
 }
 
 function onImgPreviewError(e) {
   const target = e.target
   if (!target) return
-  const backend = (store.server?.url_backend || '').replace(/\/$/, '')
-  const rawPath = (values.file_path || '').replace(/^\//, '')
+  const webBase = getWebBaseUrl()
+  const rawPath = String(values.file_path || '').trim()
+  let fileHash = rawPath
+  let fileName = ''
+  if (rawPath.includes(':::')) {
+    const parts = rawPath.split(':::')
+    fileHash = parts[0].trim().replace(/^\//, '')
+    fileName = (parts[1] || '').trim().replace(/^\//, '')
+  } else {
+    fileHash = fileHash.replace(/^\//, '')
+  }
+
+  const baseHash = fileHash.split('/').pop()
+  const baseName = fileName.split('/').pop()
 
   if (!target.dataset.tried) {
     target.dataset.tried = '1'
-    target.src = `${backend}/${rawPath}`
+    target.src = `${webBase}/storage/${fileHash}`
   } else if (target.dataset.tried === '1') {
     target.dataset.tried = '2'
-    target.src = `${backend}/storage/${rawPath}`
+    target.src = `${webBase}/storage/uploads/m_media/${baseHash}`
   } else if (target.dataset.tried === '2') {
     target.dataset.tried = '3'
-    target.src = `${backend}/storage/uploads/m_media/${rawPath}`
+    target.src = `${webBase}/uploads/m_media/${baseHash}`
+  } else if (target.dataset.tried === '3') {
+    target.dataset.tried = '4'
+    target.src = `${webBase}/${fileHash}`
+  } else if (target.dataset.tried === '4' && baseName) {
+    target.dataset.tried = '5'
+    target.src = `${webBase}/storage/uploads/m_media/${baseName}`
+  } else {
+    target.onerror = null
   }
 }
 
@@ -322,7 +361,15 @@ const landing = computed(() => {
         cellRenderer: (params) => {
           if (!params.value) return '<span class="text-xs text-gray-400 italic">No Image</span>'
           const imgUrl = getMediaPreview(params.value)
-          return `<img src="${imgUrl}" class="max-h-8 max-w-[80px] object-contain rounded border p-0.5 bg-white shadow-sm" alt="Thumbnail" />`
+          const webBase = getWebBaseUrl()
+          const raw = String(params.value).trim()
+          let hashPart = raw.includes(':::') ? raw.split(':::')[0].trim().replace(/^\//, '') : raw.replace(/^\//, '')
+          const baseHash = hashPart.split('/').pop()
+          return `<img src="${imgUrl}" 
+                       data-raw="${raw}"
+                       data-base="${baseHash}"
+                       onerror="if(!this.dataset.step){this.dataset.step='1';this.src='${webBase}/storage/${hashPart}';}else if(this.dataset.step==='1'){this.dataset.step='2';this.src='${webBase}/storage/uploads/m_media/${baseHash}';}else if(this.dataset.step==='2'){this.dataset.step='3';this.src='${webBase}/uploads/m_media/${baseHash}';}else if(this.dataset.step==='3'){this.dataset.step='4';this.src='${webBase}/uploads/m_media/${baseHash}';}else{this.onerror=null;this.style.opacity='0.4';}" 
+                       class="max-h-8 max-w-[80px] object-contain rounded border p-0.5 bg-white shadow-sm" alt="Thumbnail" />`
         }
       },
       {

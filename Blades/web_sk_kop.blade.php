@@ -26,38 +26,173 @@ if (!function_exists('resolveKopMediaData')) {
         $mediaISO       = \DB::table('m_media')->where('is_active', true)->where('kode', 'BANNER-ISO-TEMPRINA')->first();
         $mediaIsoFooter = \DB::table('m_media')->where('is_active', true)->where('kode', 'LOGO_ISO_FOOTER')->first();
         $mediaJP        = \DB::table('m_media')->where('is_active', true)->whereIn('kode', ['LOGO-JPBOOKS', 'HEADER-JPBOOKS'])->orderBy('id', 'desc')->first();
+        $mediaPkwt = \DB::table('m_media')
+            ->select('m_media.*')
+            ->leftJoin('m_general', 'm_general.id', '=', 'm_media.kategori_id')
+            ->where(function($q) {
+                $q->where('m_media.is_active', true)->orWhereNull('m_media.is_active');
+            })
+            ->where(function($q) {
+                $q->whereIn(\DB::raw("UPPER(TRIM(COALESCE(m_media.kode, '')))"), [
+                    'KOP-PKWT', 'HEADER-PKWT', 'KOP_PKWT', 'HEADER_PKWT',
+                    'KOP-SURAT', 'KOP_SURAT', 'KOP SURAT', 'KOP', 'HEADER',
+                    'LOGO-PKWT-HEADER', 'LOGO-HEADER-PKWT', 'LOGO-KOP-PKWT',
+                    'LOGO-PKWT', 'LOGO-TMG', 'LOGO-TEMPRINA', 'LOGO_UTAMA'
+                ])
+                ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%KOP%'")
+                ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%HEADER%'")
+                ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%ATAS%'")
+                ->orWhereRaw("(UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%PKWT%' AND UPPER(TRIM(COALESCE(m_media.kode, ''))) NOT LIKE '%FOOTER%' AND UPPER(TRIM(COALESCE(m_media.kode, ''))) NOT LIKE '%BANNER%')")
+                ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%KOP%'")
+                ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%HEADER%'")
+                ->orWhereRaw("UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%ATAS%'")
+                ->orWhereRaw("(UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%PKWT%' AND UPPER(TRIM(COALESCE(m_media.nama, ''))) NOT LIKE '%FOOTER%' AND UPPER(TRIM(COALESCE(m_media.nama, ''))) NOT LIKE '%BANNER%')")
+                ->orWhereRaw("UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%KOP%'")
+                ->orWhereRaw("UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%HEADER%'")
+                ->orWhereRaw("UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%ATAS%'");
+            })
+            ->orderByRaw("CASE 
+                WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) = 'KOP-PKWT' THEN 0 
+                WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) = 'HEADER-PKWT' THEN 1 
+                WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%PKWT%' AND UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%KOP%' THEN 2 
+                WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%PKWT%' THEN 3 
+                WHEN UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%PKWT%' THEN 4 
+                WHEN UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%PKWT%' THEN 5
+                WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) IN ('KOP-SURAT', 'KOP_SURAT', 'KOP SURAT') THEN 6 
+                WHEN UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%KOP%SURAT%' THEN 7 
+                WHEN UPPER(TRIM(COALESCE(m_media.kode, ''))) LIKE '%KOP%' THEN 8 
+                WHEN UPPER(TRIM(COALESCE(m_media.nama, ''))) LIKE '%KOP%' THEN 9 
+                WHEN UPPER(TRIM(COALESCE(m_general.value, ''))) LIKE '%KOP%' THEN 10
+                ELSE 11 
+            END")
+            ->orderBy('m_media.id', 'desc')
+            ->first();
 
         $resolveMediaPath = function($rawPath) {
             if (empty($rawPath)) return '';
+            $rawPath = trim($rawPath);
+            if (str_starts_with($rawPath, 'data:image')) {
+                return $rawPath;
+            }
+
             $clean = preg_replace('#^https?://[^/]+/#i', '', ltrim($rawPath, '/'));
             $clean = ltrim($clean, '/');
+            $basename = basename($clean);
 
-            $candidates = [
+            $pathCandidates = array_unique(array_filter([
                 $clean,
-                'uploads/m_media/' . $clean,
-                'uploads/' . $clean,
-                'storage/' . $clean,
-                'images/' . $clean,
-                'media/' . $clean
-            ];
+                $basename,
+                str_contains($clean, ':::') ? explode(':::', $clean)[0] : null,
+                str_contains($basename, ':::') ? explode(':::', $basename)[0] : null,
+                str_contains($clean, ':::') ? (explode(':::', $clean)[1] ?? null) : null,
+                str_contains($basename, ':::') ? (explode(':::', $basename)[1] ?? null) : null,
+            ]));
 
-            foreach ($candidates as $cand) {
-                $full = function_exists('public_path') ? public_path($cand) : (function_exists('base_path') ? base_path('public/' . $cand) : ('/opt/www/hris/public/' . $cand));
-                if ($full && file_exists($full) && is_file($full)) {
-                    $type = pathinfo($full, PATHINFO_EXTENSION);
-                    return 'data:image/' . ($type === 'png' ? 'png' : 'jpeg') . ';base64,' . base64_encode(file_get_contents($full));
+            $subPaths = [];
+            foreach ($pathCandidates as $cand) {
+                $cand = trim($cand);
+                if (empty($cand)) continue;
+                $candBase = basename($cand);
+                $subPaths[] = $cand;
+                $subPaths[] = $candBase;
+                $subPaths[] = 'uploads/m_media/' . $candBase;
+                $subPaths[] = 'uploads/' . $candBase;
+                $subPaths[] = 'storage/uploads/m_media/' . $candBase;
+                $subPaths[] = 'storage/' . $candBase;
+                $subPaths[] = 'images/' . $candBase;
+                $subPaths[] = 'media/' . $candBase;
+                $subPaths[] = 'uploads/m_media/' . $cand;
+                $subPaths[] = 'storage/' . $cand;
+            }
+            $subPaths = array_unique(array_filter($subPaths));
+
+            foreach ($subPaths as $sub) {
+                $pathsToCheck = [];
+                if (function_exists('public_path')) {
+                    $pathsToCheck[] = public_path($sub);
+                    $pathsToCheck[] = public_path('storage/' . $sub);
+                }
+                if (function_exists('storage_path')) {
+                    $pathsToCheck[] = storage_path('app/public/' . $sub);
+                    $pathsToCheck[] = storage_path('app/' . $sub);
+                    $pathsToCheck[] = storage_path($sub);
+                }
+                if (function_exists('base_path')) {
+                    $pathsToCheck[] = base_path('storage/app/public/' . $sub);
+                    $pathsToCheck[] = base_path('public/' . $sub);
+                    $pathsToCheck[] = base_path('public/storage/' . $sub);
+                    $pathsToCheck[] = base_path($sub);
+                }
+                $pathsToCheck[] = '/opt/www/hris/storage/app/public/' . $sub;
+                $pathsToCheck[] = '/opt/www/hris/public/' . $sub;
+                $pathsToCheck[] = '/var/www/html/storage/app/public/' . $sub;
+                $pathsToCheck[] = '/var/www/html/public/' . $sub;
+                $pathsToCheck[] = '/var/www/hris/storage/app/public/' . $sub;
+                $pathsToCheck[] = '/var/www/hris/public/' . $sub;
+
+                foreach ($pathsToCheck as $full) {
+                    if ($full && file_exists($full) && is_file($full) && filesize($full) > 50) {
+                        $ext = strtolower(pathinfo($full, PATHINFO_EXTENSION));
+                        $mime = match($ext) {
+                            'png' => 'image/png',
+                            'gif' => 'image/gif',
+                            'webp' => 'image/webp',
+                            'svg' => 'image/svg+xml',
+                            default => 'image/jpeg'
+                        };
+                        return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($full));
+                    }
                 }
             }
+
+            if (function_exists('file_get_contents')) {
+                $streamCtx = stream_context_create([
+                    'http' => ['timeout' => 2, 'ignore_errors' => true],
+                    'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false]
+                ]);
+                $urlsToTry = [];
+                if (str_starts_with($rawPath, 'http://') || str_starts_with($rawPath, 'https://')) {
+                    $urlsToTry[] = $rawPath;
+                }
+                foreach ($pathCandidates as $cand) {
+                    $candBase = basename($cand);
+                    $urlsToTry[] = 'https://hris.temprina.com/storage/uploads/m_media/' . $candBase;
+                    $urlsToTry[] = 'https://hris.temprina.com/storage/uploads/m_media/' . rawurlencode($candBase);
+                    $urlsToTry[] = 'https://hris.temprina.com/uploads/m_media/' . $candBase;
+                    $urlsToTry[] = 'https://hris.temprina.com/uploads/m_media/' . rawurlencode($candBase);
+                    $urlsToTry[] = 'https://hris.temprina.com/storage/' . $candBase;
+                    $urlsToTry[] = 'https://hris.temprina.com/' . ltrim($cand, '/');
+                    $urlsToTry[] = 'http://127.0.0.1/storage/uploads/m_media/' . $candBase;
+                    $urlsToTry[] = 'http://localhost/storage/uploads/m_media/' . $candBase;
+                }
+
+                foreach (array_unique(array_filter($urlsToTry)) as $u) {
+                    try {
+                        $remoteData = @file_get_contents($u, false, $streamCtx);
+                        if ($remoteData && strlen($remoteData) > 50) {
+                            $mime = 'image/jpeg';
+                            if (str_starts_with($remoteData, "\x89PNG")) {
+                                $mime = 'image/png';
+                            } elseif (str_starts_with($remoteData, "GIF")) {
+                                $mime = 'image/gif';
+                            }
+                            return 'data:' . $mime . ';base64,' . base64_encode($remoteData);
+                        }
+                    } catch (\Throwable $e) {}
+                }
+            }
+
             return $rawPath;
         };
 
-        $logoTmgSrc    = $mediaTMG      ? $resolveMediaPath($mediaTMG->file_path)      : '';
-        $bannerIsoSrc  = $mediaISO      ? $resolveMediaPath($mediaISO->file_path)      : '';
-        $logoIsoFooter = $mediaIsoFooter ? $resolveMediaPath($mediaIsoFooter->file_path) : '';
+        $logoTmgSrc     = $mediaTMG      ? $resolveMediaPath($mediaTMG->file_path)      : '';
+        $bannerIsoSrc   = $mediaISO      ? $resolveMediaPath($mediaISO->file_path)      : '';
+        $logoIsoFooter  = $mediaIsoFooter ? $resolveMediaPath($mediaIsoFooter->file_path) : '';
         if (empty($logoIsoFooter)) {
             $logoIsoFooter = $bannerIsoSrc;
         }
-        $logoJpSrc     = $mediaJP       ? $resolveMediaPath($mediaJP->file_path)       : '';
+        $logoJpSrc      = $mediaJP       ? $resolveMediaPath($mediaJP->file_path)       : '';
+        $headerPkwtSrc  = $mediaPkwt     ? $resolveMediaPath($mediaPkwt->file_path)     : '';
 
         // Fallback local media files
         if (empty($bannerIsoSrc)) {
@@ -78,6 +213,7 @@ if (!function_exists('resolveKopMediaData')) {
             'bannerIso'     => $bannerIsoSrc,
             'logoIsoFooter' => $logoIsoFooter,
             'logoJp'        => $logoJpSrc,
+            'headerPkwt'    => $headerPkwtSrc,
         ];
         return $cached;
     }
@@ -198,16 +334,27 @@ if (!function_exists('kopJpBooks')) {
  */
 if (!function_exists('kopPkwt')) {
     function kopPkwt() {
-        if (function_exists('view') && view()->exists('projects.web_sk_kop_pkwt')) {
-            return view('projects.web_sk_kop_pkwt')->render();
-        }
-        $b64Path = function_exists('base_path') ? base_path('media/real_header_b64.txt') : '';
-        $src = '';
-        if ($b64Path && file_exists($b64Path)) {
-            $src = 'data:image/jpeg;base64,' . trim(file_get_contents($b64Path));
+        $m = resolveKopMediaData();
+        $src = !empty($m['headerPkwt']) ? $m['headerPkwt'] : '';
+        if (!$src && function_exists('view')) {
+            if (view()->exists('projects.web_sk_kop_pkwt')) {
+                return view('projects.web_sk_kop_pkwt')->render();
+            }
+            if (view()->exists('web_sk_kop_pkwt')) {
+                return view('web_sk_kop_pkwt')->render();
+            }
         }
         if (!$src) {
-            return kopStandar();
+            $b64Path = function_exists('base_path') ? base_path('media/real_header_b64.txt') : '';
+            if ($b64Path && file_exists($b64Path)) {
+                $src = 'data:image/jpeg;base64,' . trim(file_get_contents($b64Path));
+            }
+        }
+        if (!$src) {
+            $src = function_exists('kopPkwtDefaultB64') ? 'data:image/jpeg;base64,' . kopPkwtDefaultB64() : kopStandar();
+            if (!str_starts_with($src, 'data:image')) {
+                return $src;
+            }
         }
         return '
         <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:12px; padding:0;">
