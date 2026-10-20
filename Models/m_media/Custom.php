@@ -27,14 +27,56 @@ class m_media extends \App\Models\BasicModels\m_media
         if (empty($path)) {
             return $root ? ($root . '/images/logo.png') : '/images/logo.png';
         }
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, 'data:')) {
-            return $path;
+        $raw = trim($path);
+        if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://') || str_starts_with($raw, 'data:')) {
+            return $raw;
         }
-        $clean = ltrim($path, '/');
-        if (!str_starts_with($clean, 'uploads/')) {
-            $clean = 'uploads/m_media/' . $clean;
+
+        $partHash = $raw;
+        $partName = '';
+        if (str_contains($raw, ':::')) {
+            $parts = explode(':::', $raw);
+            $partHash = trim($parts[0]);
+            $partName = trim($parts[1] ?? '');
         }
-        return $root ? ($root . '/' . $clean) : ('/' . $clean);
+
+        $cleanHash = ltrim($partHash, '/');
+        $cleanName = ltrim($partName, '/');
+        $baseHash = basename($cleanHash);
+        $baseName = basename($cleanName);
+
+        $candidates = array_unique(array_filter([
+            $baseName,
+            $baseHash,
+            $cleanName,
+            $cleanHash,
+        ]));
+
+        $subFolders = [
+            'storage/uploads/m_media',
+            'uploads/m_media',
+            'media',
+            'storage',
+            'images',
+            '',
+        ];
+
+        foreach ($subFolders as $folder) {
+            foreach ($candidates as $cand) {
+                $sub = $folder ? ($folder . '/' . $cand) : $cand;
+                $full = function_exists('public_path') ? public_path($sub) : null;
+                if ($full && file_exists($full) && is_file($full) && filesize($full) > 50) {
+                    $enc = rawurlencode($cand);
+                    $finalSub = $folder ? ($folder . '/' . $enc) : $enc;
+                    return $root ? ($root . '/' . $finalSub) : ('/' . $finalSub);
+                }
+            }
+        }
+
+        // Fallback default
+        $target = $baseName ?: $baseHash;
+        $finalSub = 'storage/uploads/m_media/' . rawurlencode($target);
+        return $root ? ($root . '/' . $finalSub) : ('/' . $finalSub);
     }
 
     /**

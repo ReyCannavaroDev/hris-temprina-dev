@@ -116,34 +116,49 @@
     <!-- UPLOAD FILE GAMBAR -->
     <div class="col-span-1 md:col-span-2">
       <label class="font-semibold text-sm">File Gambar / Aset Media <span class="text-red-500">*</span></label>
-      <FieldUpload class="w-full !mt-1"
-        :bind="{ readonly: !actionText }"
-        :value="values.file_path"
-        @input="(v)=>values.file_path=v"
-        :maxSize="10"
-        :reducerDisplay="val=>!val?null:val.split(':::')[val.split(':::').length-1]"
-        :api="{
-          url: `${store.server.url_backend}/operation/m_media/upload`,
-          headers: { Authorization: `${store.user.token_type} ${store.user.token}`},
-          params: { field: 'file_path' },
-          onsuccess: response=>response,
-          onerror:(error)=>{},
-        }"
-        :hints="formErrors.file_path"
-        label=""
-        placeholder="Klik untuk Upload Gambar (PNG, JPG, JPEG)"
-        fa-icon="upload"
-        accept="image/*"
-        :check="false"
-      />
+      <div @click.capture="onFieldUploadClick">
+        <FieldUpload class="w-full !mt-1"
+          :bind="{ readonly: !actionText }"
+          :value="values.file_path"
+          @input="(v)=>values.file_path=v"
+          :maxSize="10"
+          :reducerDisplay="val=>!val?null:val.split(':::')[val.split(':::').length-1]"
+          :api="{
+            url: `${store.server.url_backend}/operation/m_media/upload`,
+            headers: { Authorization: `${store.user.token_type} ${store.user.token}`},
+            params: { field: 'file_path' },
+            onsuccess: response=>response,
+            onerror:(error)=>{},
+          }"
+          :hints="formErrors.file_path"
+          label=""
+          placeholder="Klik untuk Upload Gambar (PNG, JPG, JPEG)"
+          fa-icon="upload"
+          accept="image/*"
+          :check="false"
+        />
+      </div>
 
       <!-- PREVIEW GAMBAR -->
-      <div v-if="values.file_path" class="mt-3 p-3 border rounded-md bg-gray-50 flex items-center gap-4">
-        <span class="text-xs text-gray-500 font-semibold">Preview :</span>
-        <img :src="getMediaPreview(values.file_path)" 
-             @error="onImgPreviewError"
-             alt="Preview Media" 
-             class="max-h-24 max-w-[240px] border rounded bg-white p-1.5 object-contain shadow-sm" />
+      <div v-if="values.file_path" class="mt-3 p-3.5 border border-gray-200 rounded-md bg-gray-50 flex items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-gray-600 font-semibold flex items-center gap-1">
+            <Icon fa="image" class="text-gray-400" /> Preview :
+          </span>
+          <img :src="getMediaPreview(values.file_path, values.kode, values.id)" 
+               @error="onImgPreviewError"
+               @click="openPreviewModal($event.target.currentSrc || $event.target.src, values.nama || 'Aset Media', values.kode || '')"
+               alt="Preview Media" 
+               title="Klik untuk memperbesar gambar"
+               class="max-h-20 max-w-[220px] border border-gray-300 rounded bg-white p-1 object-contain shadow-xs cursor-pointer hover:border-[#428BCA] hover:shadow-md transition-all duration-200" />
+        </div>
+        <div>
+          <button type="button" 
+                  @click="openPreviewModal(getMediaPreview(values.file_path, values.kode, values.id), values.nama || 'Aset Media', values.kode || '')"
+                  class="border border-[#428BCA] text-[#428BCA] font-semibold bg-white hover:bg-[#428BCA] hover:text-white duration-200 rounded-md py-1.5 px-3 text-xs flex items-center gap-1.5 shadow-sm">
+            <Icon fa="expand" /> Lihat Ukuran Penuh
+          </button>
+        </div>
       </div>
     </div>
 
@@ -211,3 +226,59 @@
 </div>
 @endverbatim
 @endif
+
+<!-- MODAL PREVIEW IMAGE / LIGHTBOX -->
+@verbatim
+<div v-show="modalPreview.show" class="fixed inset-0 flex items-center justify-center z-50">
+  <div class="modal-overlay fixed inset-0 bg-black opacity-50" @click="modalPreview.show = false"></div>
+  <div class="modal-container bg-white w-[90%] md:w-[65%] max-w-4xl mx-auto rounded-md shadow-lg z-50 overflow-y-auto max-h-[90vh]">
+    <div class="modal-content py-4 text-left px-6">
+      <!-- Modal Header -->
+      <div class="modal-header flex items-center justify-between border-b pb-2">
+        <div class="flex items-center gap-2">
+          <Icon fa="image" class="text-blue-500 mr-1" />
+          <h3 class="text-lg font-semibold text-gray-800">{{ modalPreview.title || 'Preview Aset Media' }}</h3>
+          <span v-if="modalPreview.code" class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-300 font-mono font-semibold">
+            {{ modalPreview.code }}
+          </span>
+        </div>
+        <button @click="modalPreview.show = false" class="cursor-pointer text-gray-400 hover:text-gray-700 transition-colors p-1" title="Tutup">
+          <Icon fa="times" size="lg" />
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body py-4 flex flex-col items-center justify-center bg-gray-50 rounded-md mt-3 p-4 border border-gray-200">
+        <div class="p-3 bg-white border border-gray-200 rounded shadow-sm max-w-full flex items-center justify-center">
+          <img :src="modalPreview.src" 
+               @error="onImgPreviewError"
+               class="max-h-[55vh] max-w-full object-contain rounded" 
+               :alt="modalPreview.title" />
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer flex flex-wrap justify-between items-center mt-3 border-t pt-3">
+        <div class="text-xs text-gray-500 font-mono truncate max-w-[380px]" :title="modalPreview.src">
+          <Icon fa="link" class="text-gray-400 mr-1" />{{ modalPreview.src }}
+        </div>
+        <div class="flex items-center gap-2 ml-auto">
+          <a :href="modalPreview.src" target="_blank" class="border border-[#428BCA] text-[#428BCA] bg-white hover:bg-[#428BCA] hover:text-white font-semibold px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5 duration-200 shadow-sm">
+            <Icon fa="external-link" /> Buka Tab Baru
+          </a>
+          <button @click="modalPreview.show = false" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5 duration-200 shadow-sm">
+            <Icon fa="times" /> Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+@endverbatim
+
+<style>
+  /* Sembunyikan modal popup_file bawaan framework yang kosong/rusak agar dialihkan sepenuhnya ke modal kustom */
+  .popup_file {
+    display: none !important;
+  }
+</style>

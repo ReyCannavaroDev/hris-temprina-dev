@@ -33,66 +33,214 @@ function getWebBaseUrl() {
   return ''
 }
 
-function getCleanFilePath(path) {
-  if (!path) return ''
-  let raw = String(path).trim()
-  if (raw.includes(':::')) {
-    raw = raw.split(':::')[0].trim()
+function getBackendUrl() {
+  const backend = (store.server?.url_backend || '').replace(/\/$/, '')
+  if (backend) return backend
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/api`
   }
-  let clean = raw.replace(/^\//, '')
-  if (!clean.startsWith('uploads/')) {
-    clean = `uploads/m_media/${clean}`
-  }
-  return clean
+  return '/api'
 }
 
-function getMediaPreview(path) {
-  if (!path) return ''
-  if (typeof path !== 'string') return ''
-  const trimmed = path.trim()
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
-    return trimmed
+// Menghasilkan daftar seluruh kandidat URL aset media yang valid
+function getMediaCandidateUrls(path, kode = '', id = '') {
+  const rawPath = String(path || '').trim()
+  if (rawPath.startsWith('data:image') || rawPath.startsWith('blob:')) {
+    return [rawPath]
   }
+
+  const backend = getBackendUrl()
   const webBase = getWebBaseUrl()
-  const clean = getCleanFilePath(trimmed)
-  return `${webBase}/${clean}`
+  const urls = []
+
+  // 1. Prioritas Utama: Streaming langsung via endpoint backend web/media_preview
+  const queryParts = []
+  if (id) queryParts.push(`id=${encodeURIComponent(id)}`)
+  if (kode) queryParts.push(`kode=${encodeURIComponent(kode)}`)
+  if (rawPath) queryParts.push(`path=${encodeURIComponent(rawPath)}`)
+
+  if (queryParts.length > 0) {
+    urls.push(`${backend}/web/media_preview?${queryParts.join('&')}`)
+  }
+
+  if (id) {
+    urls.push(`${backend}/web/media_preview?id=${encodeURIComponent(id)}`)
+  }
+  if (kode) {
+    urls.push(`${backend}/web/media_preview?kode=${encodeURIComponent(kode)}`)
+  }
+  if (rawPath) {
+    urls.push(`${backend}/web/media_preview?path=${encodeURIComponent(rawPath)}`)
+  }
+
+  // 2. Jika rawPath adalah URL eksternal absolut
+  if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+    urls.push(rawPath)
+  }
+
+  // 3. Fallback direktori statis lokal jika web server memiliki berkas
+  let hashPart = rawPath
+  let namePart = ''
+  if (rawPath.includes(':::')) {
+    const parts = rawPath.split(':::')
+    hashPart = parts[0].trim()
+    namePart = (parts[1] || '').trim()
+  }
+
+  const cleanHash = hashPart.replace(/^\//, '').replace(/^storage\//, '')
+  const cleanName = namePart.replace(/^\//, '').replace(/^storage\//, '')
+  const baseHash = cleanHash.split('/').pop()
+  const baseName = cleanName.split('/').pop()
+  const rawBase = rawPath.split('/').pop()
+
+  const fileNames = [
+    cleanName,
+    baseName,
+    cleanHash,
+    baseHash,
+    rawBase,
+  ].filter(Boolean)
+
+  const uniqueFiles = Array.from(new Set(fileNames))
+  const prefixes = [
+    'storage/uploads/m_media',
+    'uploads/m_media',
+    'media',
+    'storage',
+    'images',
+    ''
+  ]
+
+  for (const prefix of prefixes) {
+    for (const f of uniqueFiles) {
+      const cleanF = f.replace(/^uploads\/m_media\//, '').replace(/^media\//, '').replace(/^storage\//, '').replace(/^\//, '')
+      if (!cleanF) continue
+
+      const enc = encodeURIComponent(cleanF)
+      urls.push(prefix ? `${webBase}/${prefix}/${enc}` : `${webBase}/${enc}`)
+
+      if (enc !== cleanF) {
+        urls.push(prefix ? `${webBase}/${prefix}/${cleanF}` : `${webBase}/${cleanF}`)
+      }
+    }
+  }
+
+  urls.push(`${webBase}/images/logo.png`)
+
+  return Array.from(new Set(urls.filter(Boolean)))
+}
+
+function getMediaPreview(path, kode = '', id = '') {
+  const candidates = getMediaCandidateUrls(path, kode, id)
+  return candidates[0] || ''
+}
+
+// Reactive state untuk modal pratinjau gambar penuh (lightbox)
+const modalPreview = reactive({
+  show: false,
+  src: '',
+  title: '',
+  code: ''
+})
+
+function openPreviewModal(src, title = '', code = '') {
+  modalPreview.src = src
+  modalPreview.title = title
+  modalPreview.code = code
+  modalPreview.show = true
 }
 
 function onImgPreviewError(e) {
   const target = e.target
   if (!target) return
-  const webBase = getWebBaseUrl()
-  const rawPath = String(values.file_path || '').trim()
-  let fileHash = rawPath
-  let fileName = ''
-  if (rawPath.includes(':::')) {
-    const parts = rawPath.split(':::')
-    fileHash = parts[0].trim().replace(/^\//, '')
-    fileName = (parts[1] || '').trim().replace(/^\//, '')
-  } else {
-    fileHash = fileHash.replace(/^\//, '')
+  if (!target.dataset.candidates) {
+    const list = getMediaCandidateUrls(values.file_path, values.kode, values.id)
+    target.dataset.candidates = JSON.stringify(list)
+    target.dataset.step = '0'
   }
-
-  const baseHash = fileHash.split('/').pop()
-  const baseName = fileName.split('/').pop()
-
-  if (!target.dataset.tried) {
-    target.dataset.tried = '1'
-    target.src = `${webBase}/storage/${fileHash}`
-  } else if (target.dataset.tried === '1') {
-    target.dataset.tried = '2'
-    target.src = `${webBase}/storage/uploads/m_media/${baseHash}`
-  } else if (target.dataset.tried === '2') {
-    target.dataset.tried = '3'
-    target.src = `${webBase}/uploads/m_media/${baseHash}`
-  } else if (target.dataset.tried === '3') {
-    target.dataset.tried = '4'
-    target.src = `${webBase}/${fileHash}`
-  } else if (target.dataset.tried === '4' && baseName) {
-    target.dataset.tried = '5'
-    target.src = `${webBase}/storage/uploads/m_media/${baseName}`
+  let list = []
+  try {
+    list = JSON.parse(target.dataset.candidates || '[]')
+  } catch (err) {
+    list = []
+  }
+  let step = parseInt(target.dataset.step || '0', 10)
+  if (step < list.length) {
+    const nextUrl = list[step]
+    target.dataset.step = String(step + 1)
+    target.src = nextUrl
   } else {
     target.onerror = null
+  }
+}
+
+// Registrasi global handler untuk AG-Grid / TableApi cellRenderer
+if (typeof window !== 'undefined') {
+  window.__mMediaHandleImgError = function(imgEl) {
+    if (!imgEl) return
+    let fallback = []
+    try {
+      fallback = JSON.parse(imgEl.getAttribute('data-fallback') || '[]')
+    } catch (e) {
+      fallback = []
+    }
+    let step = parseInt(imgEl.getAttribute('data-step') || '0', 10)
+    if (step < fallback.length) {
+      const nextUrl = fallback[step]
+      imgEl.setAttribute('data-step', String(step + 1))
+      imgEl.src = nextUrl
+    } else {
+      imgEl.onerror = null
+      imgEl.style.display = 'none'
+      const parent = imgEl.parentElement
+      if (parent && !parent.querySelector('.no-preview-badge')) {
+        const badge = document.createElement('span')
+        badge.className = 'no-preview-badge text-[11px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded border border-gray-200 inline-flex items-center gap-1 font-sans italic'
+        badge.innerHTML = '<i class="fa fa-image text-gray-300"></i> No Image'
+        parent.appendChild(badge)
+      }
+    }
+  }
+
+  window.__mMediaOpenModal = function(imgEl) {
+    if (!imgEl) return
+    const currentSrc = imgEl.currentSrc || imgEl.src
+    const nama = imgEl.getAttribute('data-nama') || ''
+    const kode = imgEl.getAttribute('data-kode') || ''
+    openPreviewModal(currentSrc, nama, kode)
+  }
+
+  // Intersepsi klik pada tombol mata (fa-eye) di FieldUpload menggunakan Capture Phase
+  document.addEventListener('click', function(e) {
+    const eyeBtn = e.target?.closest?.('.fa-eye, [title="Open Image"]') ||
+                   (e.target?.classList?.contains('fa-eye') ? e.target : null)
+    if (eyeBtn && eyeBtn.closest('.form-input')) {
+      if (typeof values !== 'undefined' && values.file_path) {
+        e.preventDefault()
+        e.stopPropagation()
+        e.stopImmediatePropagation()
+        const previewUrl = getMediaPreview(values.file_path, values.kode, values.id)
+        if (previewUrl) {
+          openPreviewModal(previewUrl, values.nama || 'Aset Media', values.kode || '')
+        }
+      }
+    }
+  }, true)
+}
+
+function onFieldUploadClick(e) {
+  const target = e.target
+  if (!target) return
+  const eyeBtn = target.closest?.('.fa-eye, [title="Open Image"]') ||
+                 (target.classList?.contains('fa-eye') ? target : null)
+  if (eyeBtn) {
+    e.preventDefault()
+    e.stopPropagation()
+    e.stopImmediatePropagation()
+    const previewUrl = getMediaPreview(values.file_path, values.kode, values.id)
+    if (previewUrl) {
+      openPreviewModal(previewUrl, values.nama || 'Aset Media', values.kode || '')
+    }
   }
 }
 
@@ -356,20 +504,38 @@ const landing = computed(() => {
       {
         headerName: "Preview",
         field: 'file_path',
-        width: 120,
-        cellClass: ['justify-center', 'border-r', '!border-gray-200'],
+        width: 130,
+        sortable: false,
+        filter: false,
+        cellClass: ['justify-center', 'border-r', '!border-gray-200', 'items-center'],
         cellRenderer: (params) => {
-          if (!params.value) return '<span class="text-xs text-gray-400 italic">No Image</span>'
-          const imgUrl = getMediaPreview(params.value)
-          const webBase = getWebBaseUrl()
-          const raw = String(params.value).trim()
-          let hashPart = raw.includes(':::') ? raw.split(':::')[0].trim().replace(/^\//, '') : raw.replace(/^\//, '')
-          const baseHash = hashPart.split('/').pop()
-          return `<img src="${imgUrl}" 
-                       data-raw="${raw}"
-                       data-base="${baseHash}"
-                       onerror="if(!this.dataset.step){this.dataset.step='1';this.src='${webBase}/storage/${hashPart}';}else if(this.dataset.step==='1'){this.dataset.step='2';this.src='${webBase}/storage/uploads/m_media/${baseHash}';}else if(this.dataset.step==='2'){this.dataset.step='3';this.src='${webBase}/uploads/m_media/${baseHash}';}else if(this.dataset.step==='3'){this.dataset.step='4';this.src='${webBase}/uploads/m_media/${baseHash}';}else{this.onerror=null;this.style.opacity='0.4';}" 
-                       class="max-h-8 max-w-[80px] object-contain rounded border p-0.5 bg-white shadow-sm" alt="Thumbnail" />`
+          const raw = String(params.value || '').trim()
+          const kode = String(params.data?.kode || '').trim()
+          const nama = String(params.data?.nama || '').trim()
+          const id = params.data?.id || ''
+          const candidates = getMediaCandidateUrls(raw, kode, id)
+          if (!candidates.length) {
+            return '<span class="text-xs text-gray-400 italic">No Image</span>'
+          }
+          const initialSrc = candidates[0]
+          const fallbackData = JSON.stringify(candidates.slice(1)).replace(/"/g, '&quot;')
+          const safeNama = nama.replace(/'/g, "\\'")
+          const safeKode = kode.replace(/'/g, "\\'")
+
+          return `
+            <div class="flex items-center justify-center p-1 w-full h-full">
+              <img src="${initialSrc}" 
+                   data-fallback="${fallbackData}" 
+                   data-step="0" 
+                   data-kode="${safeKode}"
+                   data-nama="${safeNama}"
+                   onclick="window.__mMediaOpenModal && window.__mMediaOpenModal(this)"
+                   onerror="window.__mMediaHandleImgError && window.__mMediaHandleImgError(this)" 
+                   class="max-h-8 max-w-[85px] h-auto w-auto object-contain rounded border border-gray-200 p-0.5 bg-white shadow-sm cursor-pointer hover:scale-110 hover:border-blue-400 transition-all duration-200" 
+                   title="Klik untuk melihat pratinjau penuh"
+                   alt="Thumbnail" />
+            </div>
+          `
         }
       },
       {
