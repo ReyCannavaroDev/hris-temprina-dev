@@ -15,44 +15,11 @@
  * - @include('projects.web_sk_footer')  <-- otomatis sesuai surat
  */
 
-<<<<<<< HEAD
 if (!function_exists('resolveFooterMediaData')) {
     function resolveFooterMediaData() {
         static $cached = null;
         if ($cached !== null) {
             return $cached;
-=======
-    $resolveMedia = function($rawPath) {
-        if (empty($rawPath)) return '';
-        $clean = preg_replace('#^https?://[^/]+/#i', '', ltrim($rawPath, '/'));
-        $clean = ltrim($clean, '/');
-
-        $candidates = [
-            $clean,
-            'uploads/m_media/' . $clean,
-            'uploads/' . $clean,
-            'storage/' . $clean,
-            'images/' . $clean,
-            'media/' . $clean
-        ];
-
-        foreach ($candidates as $cand) {
-            $paths = [
-                function_exists('public_path') ? public_path($cand) : null,
-                function_exists('base_path') ? base_path('public/' . $cand) : null,
-                function_exists('base_path') ? base_path($cand) : null,
-                __DIR__ . '/../' . $cand,
-                __DIR__ . '/../../' . $cand,
-                '/opt/www/hris/public/' . $cand,
-                '/opt/www/hris/' . $cand
-            ];
-            foreach ($paths as $full) {
-                if ($full && file_exists($full) && is_file($full)) {
-                    $type = pathinfo($full, PATHINFO_EXTENSION);
-                    return 'data:image/' . ($type === 'png' ? 'png' : 'jpeg') . ';base64,' . base64_encode(file_get_contents($full));
-                }
-            }
->>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
         }
 
         $mediaFooterTMG  = \DB::table('m_media')->where('is_active', true)->whereIn('kode', ['FOOTER-CABANG-TEMPRINA', 'FOOTER-TEMPRINA'])->first();
@@ -98,61 +65,12 @@ if (!function_exists('resolveFooterMediaData')) {
             ->orderBy('m_media.id', 'desc')
             ->first();
 
-<<<<<<< HEAD
         $resolveMedia = function($rawPath) {
             if (empty($rawPath)) return '';
             $rawPath = trim($rawPath);
             if (str_starts_with($rawPath, 'data:image')) {
                 return $rawPath;
             }
-=======
-    if (empty($qrSrc)) {
-        $qrCandidates = [
-            'media/qr_temprina.jpg',
-            'public/media/qr_temprina.jpg',
-            'images/qr_temprina.jpg',
-            'storage/qr_temprina.jpg',
-            'uploads/m_media/qr_temprina.jpg'
-        ];
-        foreach ($qrCandidates as $cand) {
-            $paths = [
-                function_exists('public_path') ? public_path($cand) : null,
-                function_exists('base_path') ? base_path('public/' . $cand) : null,
-                function_exists('base_path') ? base_path($cand) : null,
-                __DIR__ . '/../' . $cand,
-                __DIR__ . '/../../' . $cand,
-                '/opt/www/hris/public/' . $cand,
-                '/opt/www/hris/' . $cand
-            ];
-            foreach ($paths as $full) {
-                if ($full && file_exists($full) && is_file($full)) {
-                    $type = pathinfo($full, PATHINFO_EXTENSION);
-                    $qrSrc = 'data:image/' . ($type === 'png' ? 'png' : 'jpeg') . ';base64,' . base64_encode(file_get_contents($full));
-                    break 2;
-                }
-            }
-        }
-    }
-
-    $isJP = false;
-    if (isset($isJpBooks)) {
-        $isJP = (bool)$isJpBooks;
-    } elseif (isset($t_mutasi)) {
-        $dest = strtoupper(
-            ($t_mutasi->m_sub_baru?->name ?? '') . ' ' .
-            ($t_mutasi->m_sbu_baru?->name ?? '') . ' ' .
-            ($t_mutasi->m_sub_baru?->kode ?? '') . ' ' .
-            ($t_mutasi->m_sbu_baru?->kode ?? '')
-        );
-        $origin = strtoupper(
-            ($t_mutasi->m_sub_lama?->name ?? '') . ' ' .
-            ($t_mutasi->m_sbu_lama?->name ?? '') . ' ' .
-            ($t_mutasi->m_sub_lama?->kode ?? '') . ' ' .
-            ($t_mutasi->m_sbu_lama?->kode ?? '') . ' ' .
-            ($t_mutasi->m_kary?->m_sbu?->name ?? '') . ' ' .
-            ($t_mutasi->m_kary?->m_sbu?->kode ?? '')
-        );
->>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
 
             $clean = preg_replace('#^https?://[^/]+/#i', '', ltrim($rawPath, '/'));
             $clean = ltrim($clean, '/');
@@ -306,21 +224,48 @@ if (!function_exists('footerTugas')) {
 if (!function_exists('footerStandar')) {
     function footerStandar() {
         $m = resolveFooterMediaData();
-        $footerTmgSrc = $m['footerTmg'];
-        $qrSrc        = $m['qr'];
+        $qrSrc = $m['qr'] ?? '';
+
+        if (empty($qrSrc)) {
+            $qrCandidates = [
+                'media/qr_temprina.jpg',
+                'public/media/qr_temprina.jpg',
+                'images/qr_temprina.jpg',
+                'storage/qr_temprina.jpg',
+                'uploads/m_media/qr_temprina.jpg'
+            ];
+            foreach ($qrCandidates as $cand) {
+                $paths = [
+                    function_exists('public_path') ? public_path($cand) : null,
+                    function_exists('base_path') ? base_path('public/' . $cand) : null,
+                    function_exists('base_path') ? base_path($cand) : null,
+                    __DIR__ . '/../' . $cand,
+                    __DIR__ . '/../../' . $cand,
+                    '/opt/www/hris/public/' . $cand,
+                    '/opt/www/hris/' . $cand
+                ];
+                foreach ($paths as $full) {
+                    if ($full && file_exists($full) && is_file($full)) {
+                        $type = pathinfo($full, PATHINFO_EXTENSION);
+                        $qrSrc = 'data:image/' . ($type === 'png' ? 'png' : 'jpeg') . ';base64,' . base64_encode(file_get_contents($full));
+                        break 2;
+                    }
+                }
+            }
+        }
 
         return '
-        <table style="width:100%; border-collapse:collapse; margin-top:20px; border-top:0.5px solid #ccc; padding-top:5px;">
+        <table style="width:100%; border-collapse:collapse; margin-top:16px; border-top:0.5px solid #aaa; padding-top:4px;">
             <tr>
-                <td style="width:88%; vertical-align:middle;">
-                    ' . ($footerTmgSrc ? '<img src="' . $footerTmgSrc . '" width="450" alt="Cabang Temprina">' : '
-                        <div style="font-size:7px; line-height:1.2; color:#555;">
-                            Bekasi: 021-8815222 | Cengkareng: 021-5553472 | Semarang: 024-7462136 | Solo: 0271-783001 | Malang: 0341-396700 | Nganjuk: 0358-773500 | Jember: 0331-320300 | Bali: 0361-421384
-                        </div>
-                    ') . '
+                <td style="width:87%; vertical-align:middle;">
+                    <div style="font-size:6.8px; line-height:1.35; color:#222; text-align:justify;">
+                        <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, Email : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, Email : Cengkareng@temprina.com<br>
+                        <b>Semarang :</b> 0298-5200940 Fax : 024-7462135, Email : tmgsmg@gmail.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, Email : Nganjuk@temprina.com<br>
+                        <b>Jember :</b> 0331-320300 Fax : 0331-320190, Email : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, Email : Bali@temprina.com
+                    </div>
                 </td>
-                <td style="width:12%; text-align:right; vertical-align:middle;">
-                    ' . ($qrSrc ? '<img src="' . $qrSrc . '" width="40" height="40" alt="QR Code">' : '') . '
+                <td style="width:13%; text-align:right; vertical-align:middle;">
+                    ' . ($qrSrc ? '<img src="' . $qrSrc . '" width="42" height="42" alt="QR Code">' : '') . '
                 </td>
             </tr>
         </table>';
@@ -459,13 +404,28 @@ if (!empty($isPkwt) || !empty($isPKWT)) {
         $isPKWT = true;
     }
 }
-if (!$isPKWT && isset($t_mutasi)) {
+$isSkKerja = false;
+if (function_exists('request') && request()) {
+    $uri = request()->getRequestUri() ?? '';
+    $path = request()->path() ?? '';
+    $fullUrl = request()->fullUrl() ?? '';
+    $targetStr = strtolower($uri . ' ' . $path . ' ' . $fullUrl);
+    if (str_contains($targetStr, 'sk_kerja') || str_contains($targetStr, 'keterangan_kerja')) {
+        $isSkKerja = true;
+    }
+}
+
+if (!$isPKWT && !$isSkKerja && isset($t_mutasi) && ($footer ?? '') !== 'standar') {
     $nomorDoc = strtoupper(($t_mutasi->no_dokumen ?? '') . ' ' . ($t_mutasi->nomor ?? ''));
     $jenisMut = strtoupper(($t_mutasi->m_jenis_mutasi?->name ?? '') . ' ' . ($t_mutasi->m_jenis_mutasi?->kode ?? ''));
     if (str_contains($nomorDoc, 'PKWT') || str_contains($nomorDoc, 'HLD') || str_contains($nomorDoc, '/HL/') || str_contains($nomorDoc, 'HL') ||
         str_contains($jenisMut, 'PKWT') || str_contains($jenisMut, 'HARIAN LEPAS') || str_contains($jenisMut, 'HL')) {
         $isPKWT = true;
     }
+}
+
+if ($isSkKerja || ($footer ?? '') === 'standar') {
+    $isPKWT = false;
 }
 
 // Deteksi JP Books
@@ -493,12 +453,12 @@ if (isset($isJpBooks)) {
 }
 
 // Menentukan tipe footer yang direquest
-$requestedFooter = $footer ?? ($type ?? ($isSuratTugas ?? false ? 'tugas' : ($isPKWT ? 'pkwt' : ($isJP ? 'jpbooks' : 'auto'))));
+$requestedFooter = $footer ?? ($type ?? ($isSuratTugas ?? false ? 'tugas' : ($isPKWT ? 'pkwt' : ($isJP ? 'jpbooks' : 'standar'))));
 $requestedAlign  = $align ?? ($footerAlign ?? 'justify');
 $validAlign      = in_array($requestedAlign, ['left', 'center', 'right', 'justify']) ? $requestedAlign : 'justify';
 @endphp
 
-@if($isPKWT || $requestedFooter === 'pkwt' || $requestedFooter === 'freelance')
+@if(($requestedFooter === 'pkwt' || $requestedFooter === 'freelance' || $isPKWT) && !$isSkKerja && ($footer ?? '') !== 'standar')
     @if(view()->exists('projects.web_sk_footer_pkwt'))
         @include('projects.web_sk_footer_pkwt')
     @else
@@ -510,8 +470,8 @@ $validAlign      = in_array($requestedAlign, ['left', 'center', 'right', 'justif
         <td align="{{ $validAlign }}" style="text-align:{{ $validAlign }}; padding-top:4px; font-size:6.8px; line-height:1.35; color:#333;">
             <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
             <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
-            <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
-            <b>Jember :</b> 0331-320300 Fax : 0331-320190, E-mail : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, E-mail : Bali@temprina.com
+            <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, Email : Nganjuk@temprina.com<br>
+            <b>Jember :</b> 0331-320300 Fax : 0331-320190, Email : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, Email : Bali@temprina.com
         </td>
     </tr>
 </table>
@@ -534,21 +494,44 @@ $validAlign      = in_array($requestedAlign, ['left', 'center', 'right', 'justif
     </table>
     @endif
 @else
-<<<<<<< HEAD
     @php
         $m = resolveFooterMediaData();
-        $footerTmgSrc = $m['footerTmg'];
-        $qrSrc        = $m['qr'];
+        $qrSrc = $m['qr'] ?? '';
+        if (empty($qrSrc)) {
+            $qrCandidates = [
+                'media/qr_temprina.jpg',
+                'public/media/qr_temprina.jpg',
+                'images/qr_temprina.jpg',
+                'storage/qr_temprina.jpg',
+                'uploads/m_media/qr_temprina.jpg'
+            ];
+            foreach ($qrCandidates as $cand) {
+                $paths = [
+                    function_exists('public_path') ? public_path($cand) : null,
+                    function_exists('base_path') ? base_path('public/' . $cand) : null,
+                    function_exists('base_path') ? base_path($cand) : null,
+                    __DIR__ . '/../' . $cand,
+                    __DIR__ . '/../../' . $cand,
+                    '/opt/www/hris/public/' . $cand,
+                    '/opt/www/hris/' . $cand
+                ];
+                foreach ($paths as $full) {
+                    if ($full && file_exists($full) && is_file($full)) {
+                        $type = pathinfo($full, PATHINFO_EXTENSION);
+                        $qrSrc = 'data:image/' . ($type === 'png' ? 'png' : 'jpeg') . ';base64,' . base64_encode(file_get_contents($full));
+                        break 2;
+                    }
+                }
+            }
+        }
     @endphp
-    <table style="width:100%; border-collapse:collapse; margin-top:20px; border-top:0.5px solid #ccc; padding-top:5px;">
-=======
-    <table style="width:100%; border-collapse:collapse; margin-top:18px; border-top:0.5px solid #aaa; padding-top:4px;">
->>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
+    <!-- FOOTER CABANG TEMPRINA (FORMAT RESMI GAMBAR 2) -->
+    <table style="width:100%; border-collapse:collapse; margin-top:16px; border-top:0.5px solid #aaa; padding-top:4px;">
         <tr>
             <td style="width:87%; vertical-align:middle;">
                 <div style="font-size:6.8px; line-height:1.35; color:#222; text-align:justify;">
                     <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, Email : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, Email : Cengkareng@temprina.com<br>
-                    <b>Semarang :</b> 0298-5200940, Email : tmgsing@gmail.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, Email : Nganjuk@temprina.com<br>
+                    <b>Semarang :</b> 0298-5200940 Fax : 024-7462135, Email : tmgsmg@gmail.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, Email : Nganjuk@temprina.com<br>
                     <b>Jember :</b> 0331-320300 Fax : 0331-320190, Email : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, Email : Bali@temprina.com
                 </div>
             </td>

@@ -9,15 +9,8 @@ $req = app()->request;
 $id = $req->id;
 $t_mutasi = t_mutasi::find($id);
 
-<<<<<<< HEAD
 $carbonDate = Carbon::parse($t_mutasi->tgl);
 $tanggalIndo = $carbonDate->translatedFormat('l, d F Y');
-=======
-$carbonDate = Carbon::parse($t_mutasi?->tgl ?? now());
-$namaHari = $carbonDate->translatedFormat('l');
-$tanggalIndo = $carbonDate->translatedFormat('d F Y');
-$tanggalIndoLengkap = $namaHari . ', ' . $tanggalIndo;
->>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
 
 $terbitDate = Carbon::parse($t_mutasi?->updated_at ?? $t_mutasi?->created_at ?? now());
 $tanggalTerbit = $terbitDate->translatedFormat('d F Y');
@@ -33,21 +26,6 @@ if ($tembusan && count($tembusan) > 0) {
         return trim(is_array($item) ? ($item['value'] ?? '') : ($item->value ?? ''));
     })->values();
 }
-<<<<<<< HEAD
-
-$memperhatikan = $t_mutasi?->t_mutasi_d_memperhatikan ?? null;
-if ((!$memperhatikan || count($memperhatikan) === 0) && !empty($t_mutasi?->id)) {
-    try {
-        $memperhatikan = \DB::table('t_mutasi_d_memperhatikan')->where('t_mutasi_id', $t_mutasi->id)->get();
-    } catch (\Throwable $th) {}
-}
-if ($memperhatikan && count($memperhatikan) > 0) {
-    $memperhatikan = collect($memperhatikan)->unique(function ($item) {
-        return trim(is_array($item) ? ($item['value'] ?? '') : ($item->value ?? ''));
-    })->values();
-}
-=======
->>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
 
 $memperhatikan = $t_mutasi?->t_mutasi_d_memperhatikan ?? null;
 if ((!$memperhatikan || count($memperhatikan) === 0) && !empty($t_mutasi?->id)) {
@@ -61,42 +39,16 @@ if ($memperhatikan && count($memperhatikan) > 0) {
     })->values();
 }
 
-<<<<<<< HEAD
+$sbuCode = strtoupper($t_mutasi?->m_sbu_baru?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
+$sbuName = strtoupper($t_mutasi?->m_sbu_baru?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
+$isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
+
 $companyName = $isJpBooks ? 'PT JePe Press Media Utama' : 'PT Temprina Media Grafika';
-=======
-$dest = strtoupper(
-    ($t_mutasi->m_sub_baru?->name ?? '') . ' ' .
-    ($t_mutasi->m_sbu_baru?->name ?? '') . ' ' .
-    ($t_mutasi->m_sub_baru?->kode ?? '') . ' ' .
-    ($t_mutasi->m_sbu_baru?->kode ?? '')
-);
-$origin = strtoupper(
-    ($t_mutasi->m_sub_lama?->name ?? '') . ' ' .
-    ($t_mutasi->m_sbu_lama?->name ?? '') . ' ' .
-    ($t_mutasi->m_sub_lama?->kode ?? '') . ' ' .
-    ($t_mutasi->m_sbu_lama?->kode ?? '') . ' ' .
-    ($t_mutasi->m_kary?->m_sbu?->name ?? '') . ' ' .
-    ($t_mutasi->m_kary?->m_sbu?->kode ?? '')
-);
-
-$checkIsJp = function($str) {
-    return str_contains($str, 'JEPE') || 
-           str_contains($str, 'JP BOOKS') || 
-           str_contains($str, 'JPBOOKS') || 
-           str_contains($str, 'JPMU') || 
-           str_contains($str, 'SAHABAT EDUKASI') ||
-           preg_match('/\bJP\b/', $str);
-};
-
-$isJpBooks = $checkIsJp($dest) || (empty(trim($dest)) && $checkIsJp($origin));
-$companyName = $isJpBooks ? 'PT. JePe Press Media Utama' : 'PT Temprina Media Grafika';
->>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
 $kotaTerbit = $t_mutasi?->m_branch_baru?->kota 
             ?? $t_mutasi?->m_branch_lama?->kota 
             ?? $t_mutasi?->m_kary?->m_branch?->kota 
             ?? 'Surabaya';
 
-<<<<<<< HEAD
 // Format Jabatan Pokok (Lama)
 $jabatanPokok = $t_mutasi->m_posisi_lama?->name ?? $t_mutasi->m_kary?->m_posisi?->name ?? '-';
 $subPokok = $t_mutasi->m_sub_lama?->name ?? $t_mutasi->m_kary?->m_sub?->name ?? '';
@@ -137,43 +89,12 @@ if ($deskripsiTugas) {
     <tr>
       <td></td>
       <td style="text-align:center;font-weight:bold;font-size:11px;padding-top:4px;">
-=======
-$tugasTambahan = $t_mutasi?->m_posisi_baru?->name;
-if (empty($tugasTambahan) || $tugasTambahan === '-') {
-    $tugasTambahan = (!empty($t_mutasi?->deskripsi) && $t_mutasi?->deskripsi !== '-') 
-        ? $t_mutasi?->deskripsi 
-        : ((!empty($t_mutasi?->keterangan) && $t_mutasi?->keterangan !== '-') ? $t_mutasi?->keterangan : '-');
-}
-if ($tugasTambahan && $tugasTambahan !== '-' && !str_ends_with(trim($tugasTambahan), '.')) {
-    $tugasTambahan = trim($tugasTambahan) . '.';
-}
-
-$alamatLama = $t_mutasi?->m_sub_lama?->address 
-            ?? $t_mutasi?->m_branch_lama?->address 
-            ?? $t_mutasi?->m_kary?->m_branch?->address 
-            ?? '';
-@endphp
-
-<div style="font-family:'Times New Roman',serif;width:90%;margin:auto;font-size:12px;line-height:1.5;">
-
-  @include('projects.web_sk_kop')
-
-  <!-- JUDUL -->
-  <table style="width:100%; margin-top:20px;">
-    <tr>
-      <td style="text-align:center; font-weight:bold; font-size:15px;">
-        <span style="border-bottom:1.5px solid black; padding-bottom:1px;">SURAT KEPUTUSAN</span>
-      </td>
-    </tr>
-    <tr>
-      <td style="text-align:center; font-weight:bold; font-size:11px; padding-top:4px;">
->>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
         No. {{ strtoupper($t_mutasi?->nomor ?? '-') }}
       </td>
+      <td></td>
     </tr>
   </table>
 
-<<<<<<< HEAD
   <div></div>
 
   <!-- SUB JUDUL -->
@@ -184,20 +105,12 @@ $alamatLama = $t_mutasi?->m_sub_lama?->address
         TENTANG <br> PENAMBAHAN TUGAS
       </td>
       <td style="width:25%;"></td>
-=======
-  <!-- TENTANG -->
-  <table style="width:100%; margin-top:16px; border-collapse:collapse;">
-    <tr>
-      <td style="text-align:center; font-size:11px; font-weight:bold; line-height:1.4;">
-        TENTANG <br>
-        PENAMBAHAN TUGAS
-      </td>
->>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
     </tr>
   </table>
 
+  <div></div>
+
   <!-- MEMPERHATIKAN -->
-<<<<<<< HEAD
   <table style="width:100%; margin-top:12px; border-collapse:collapse; font-size:11px;">
     <tr>
       <td style="width:25%; vertical-align:top; font-weight:bold;">MEMPERHATIKAN</td>
@@ -229,156 +142,11 @@ $alamatLama = $t_mutasi?->m_sub_lama?->address
               </td>
             </tr>
           </table>
-=======
-  <table style="width:100%; margin-top:16px; border-collapse:collapse; font-size:11px;">
-    <tr>
-      <td style="width:25%; vertical-align:top;">MEMPERHATIKAN</td>
-      <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td style="width:72%; vertical-align:top;">
-        <table style="width:100%; border-collapse:collapse; font-size:11px;">
-          @if($memperhatikan && count($memperhatikan) > 0)
-            @foreach($memperhatikan as $item)
-            <tr>
-              <td style="width:4%; vertical-align:top;">•</td>
-              <td style="width:96%; vertical-align:top; text-align:justify; padding-bottom:3px;">
-                {{ is_array($item) ? ($item['value'] ?? '') : ($item->value ?? '') }}
-              </td>
-            </tr>
-            @endforeach
-          @else
-            <tr>
-              <td style="width:4%; vertical-align:top;">•</td>
-              <td style="width:96%; vertical-align:top; text-align:justify; padding-bottom:3px;">
-                Keputusan hasil koordinasi manajemen
-              </td>
-            </tr>
-            <tr>
-              <td style="width:4%; vertical-align:top;">•</td>
-              <td style="width:96%; vertical-align:top; text-align:justify; padding-bottom:3px;">
-                Upaya optimalisasi SDM
-              </td>
-            </tr>
-          @endif
-        </table>
-      </td>
-    </tr>
-  </table>
-
-  <!-- SPACE PEMISAH -->
-  <div style="height:18px; line-height:18px;">&nbsp;</div>
-
-  <!-- MEMUTUSKAN SERTA MENETAPKAN -->
-  <table style="width:100%; border-collapse:collapse; font-size:11px;">
-    <tr>
-      <td style="width:25%; vertical-align:top; line-height:1.35;">
-        MEMUTUSKAN<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;SERTA<br>
-        MENETAPKAN
-      </td>
-      <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-      <td style="width:72%; vertical-align:top;">
-        <table style="width:100%; border-collapse:collapse; font-size:11px; line-height:1.45;">
-          <!-- POINT 1 -->
-          <tr>
-            <td style="width:4%; vertical-align:top;">1.</td>
-            <td style="width:96%; vertical-align:top;">
-              Terhitung efektif {{ $tanggalIndoLengkap }}
-            </td>
-          </tr>
-          <tr>
-            <td style="width:4%;"></td>
-            <td style="width:96%; vertical-align:top; padding-top:2px;">
-              <table style="width:100%; border-collapse:collapse; font-size:11px; line-height:1.45;">
-                <tr>
-                  <td style="width:5%; vertical-align:top;">•</td>
-                  <td style="width:15%; vertical-align:top;">Nama</td>
-                  <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-                  <td style="width:77%; vertical-align:top; font-weight:bold;">
-                    {{ $t_mutasi->m_kary?->nama_lengkap ?? '-' }}
-                  </td>
-                </tr>
-                <tr>
-                  <td style="width:5%; vertical-align:top; padding-top:2px;">•</td>
-                  <td style="width:15%; vertical-align:top; padding-top:2px;">Bagian</td>
-                  <td style="width:3%; vertical-align:top; text-align:center; padding-top:2px;">:</td>
-                  <td style="width:77%; vertical-align:top; padding-top:2px;">
-                    {{ $t_mutasi->m_posisi_lama?->name ?? '-' }}<br>
-                    {{ $companyName }}<br>
-                    {{ $alamatLama }}
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- POINT 2 -->
-          <tr>
-            <td style="width:4%; vertical-align:top; padding-top:8px;">2.</td>
-            <td style="width:96%; vertical-align:top; padding-top:8px;">
-              Tambahan tugas :
-            </td>
-          </tr>
-          <tr>
-            <td style="width:4%;"></td>
-            <td style="width:96%; vertical-align:top; padding-top:2px; padding-left:14px;">
-              {{ $tugasTambahan }}
-            </td>
-          </tr>
-
-          <!-- POINT 3 -->
-          <tr>
-            <td style="width:4%; vertical-align:top; padding-top:8px;">3.</td>
-            <td style="width:96%; vertical-align:top; padding-top:8px; text-align:justify;">
-              Keputusan ini berlaku sejak tanggal efektif dan akan ditinjau kembali jika diperlukan.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-
-  <!-- PENUTUP / TANDA TANGAN -->
-  <table style="width:100%; margin-top:28px; font-size:11px; border-collapse:collapse;">
-    <tr>
-      <td style="width:55%;"></td>
-      <td style="width:45%; vertical-align:top;">
-        <table style="border-collapse:collapse; font-size:11px;">
-          <tr>
-            <td style="padding-bottom:2px; white-space:nowrap;">Dikeluarkan di</td>
-            <td style="padding-left:4px; padding-right:6px; padding-bottom:2px; text-align:center;">:</td>
-            <td style="padding-bottom:2px; white-space:nowrap;">{{ $kotaTerbit }}</td>
-          </tr>
-          <tr>
-            <td style="padding-bottom:4px; white-space:nowrap;">Pada Tanggal</td>
-            <td style="padding-left:4px; padding-right:6px; padding-bottom:4px; text-align:center;">:</td>
-            <td style="padding-bottom:4px; white-space:nowrap;">{{ $tanggalTerbit }}</td>
-          </tr>
-        </table>
-        <div style="font-weight:bold; margin-top:6px;">
-          {{ $companyName }}
-        </div>
-        <div style="height:60px;"></div>
-        @if($t_mutasi->signature?->nama_lengkap)
-          <div style="font-weight:bold;">
-            {{ $t_mutasi->signature->nama_lengkap }}
-          </div>
-          <div>
-            {{ $t_mutasi->signature->m_posisi?->name ?? 'Human Capital Dept.' }}
-          </div>
-        @else
-          <div style="font-weight:bold;">
-            ( ........................................ )
-          </div>
-          <div>
-            Human Capital Dept.
-          </div>
->>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
         @endif
       </td>
     </tr>
   </table>
 
-<<<<<<< HEAD
   <!-- MEMUTUSKAN -->
   <table style="width:100%; margin-top:10px; font-size:11px; border-collapse:collapse;">
     <tr>
@@ -496,22 +264,6 @@ $alamatLama = $t_mutasi?->m_sub_lama?->address
       </td>
     </tr>
   </table>
-=======
-  <!-- TEMBUSAN -->
-  <div style="margin-top:16px; font-size:10px; line-height:1.4;">
-    <div><b>Tembusan</b></div>
-    <div style="padding-left:14px; margin-top:2px;">
-      @if($tembusan && count($tembusan) > 0)
-        @foreach($tembusan as $index => $t)
-          {{ $index + 1 }}. {{ is_array($t) ? ($t['value'] ?? '') : ($t->value ?? '') }}<br>
-        @endforeach
-      @else
-        1. Direksi<br>
-        2. GM/Vice GM Business Service
-      @endif
-    </div>
-  </div>
->>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
 
   <!-- TEMBUSAN -->
   <table style="width:100%; margin-top:10px; font-size:10px; border-collapse:collapse;">

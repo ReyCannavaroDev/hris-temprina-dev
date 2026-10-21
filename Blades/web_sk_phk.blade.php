@@ -83,23 +83,7 @@ $tglPerjanjianKerja = $prevMutasi?->tgl
                     : '21/12/2021';
 @endphp
 
-<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:10pt; line-height:1.26; color:#000;">
-
-  <!-- KOP SURAT RESMI -->
-  @include('projects.web_sk_kop')
-
-  @if(!$isJpBooks)
-    <!-- DOUBLE LINE SEPARATOR -->
-    <table cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0;">
-      <tr><td style="border-bottom:1px solid #000; height:1px; line-height:1px; font-size:1px;">&nbsp;</td></tr>
-      <tr><td style="border-bottom:2px solid #000; height:2px; line-height:2px; font-size:1px;">&nbsp;</td></tr>
-      <tr><td style="height:10px; line-height:10px; font-size:1px;">&nbsp;</td></tr>
-    </table>
-  @else
-    <table cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0;">
-      <tr><td style="height:10px; line-height:10px; font-size:1px;">&nbsp;</td></tr>
-    </table>
-  @endif
+<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:10pt; line-height:1.26; color:#000; padding-top:20px;">
 
   <!-- JUDUL DOKUMEN -->
   <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0;">
@@ -231,23 +215,5 @@ $tglPerjanjianKerja = $prevMutasi?->tgl
       </td>
     </tr>
   </table>
-
-  <!-- FOOTER CABANG RESMI -->
-  @if($isJpBooks)
-    @include('projects.web_sk_footer')
-  @else
-    <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0;">
-      <tr><td style="height:14px; line-height:14px; font-size:1px;">&nbsp;</td></tr>
-      <tr><td style="border-top:0.5px solid #bbb; height:1px; line-height:1px; font-size:1px;">&nbsp;</td></tr>
-      <tr>
-        <td style="padding-top:2px; font-size:6px; line-height:1.15; color:#333; text-align:justify;">
-<b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
-<b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
-<b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
-<b>Jember :</b> 0331-320300 Fax : 0331-320190, E-mail : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, E-mail : Bali@temprina.com
-        </td>
-      </tr>
-    </table>
-  @endif
 
 </div>
