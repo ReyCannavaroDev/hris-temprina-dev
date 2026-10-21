@@ -92,157 +92,198 @@ $alasanBerakhir = $t_mutasi?->deskripsi
                ?? $t_mutasi?->m_kary?->alasan_berhenti 
                ?? 'Pensiun Dini';
 
-// Icon Wedge Arrow Hitam Base64 (Identik acuan resmi dan anti tanda tanya '?' di font PDF)
-$arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAXklEQVR4nJ2S0Q4AEAwDV/H/v1zxQIqFWZ93rrGBpGVSUpQJCOBLDa06YJIIG5fXAL4aLEa1arwGoc+B0+AwjkG7pDeoPxCl8gG+APPA3XZbi2uM7HGC3RYB5nz2yBvH5jIZAPwxNAAAAABJRU5ErkJggg==';
+// PENGATUR MARGIN KERTAS (Disamakan dengan SK Tetap)
+$jarakAtas = '3cm';
+// Untuk kertas A4 (lebar 21cm): Margin Kiri 4.3%, Konten 83.4%, Margin Kanan 12.3%
+$lebarSpacerKiri = '4.3%';
+$lebarKonten = '83.4%';
+$lebarSpacerKanan = '12.3%';
+
+// PENGATUR INDENT TANDA PANAH (Default '8%' agar menjorok ke dalam)
+$indentPanah = '8%';
+
+// PENGATUR JARAK TANDA PANAH KE LABEL (Ubah persentase ini untuk atur jarak: '4%', '5%', '6%', dll)
+// Tanda panah rata kiri, sehingga sisa lebar kolom ini menjadi jarak kosong pasti ke teks label
+$lebarKolomPanah = '5%';
+
+$lebarKolomLabel = '16%';
+$lebarKolomTitikDua = '3%';
+$lebarKolomIsi = '68%';
+
+// PENGATUR JARAK DARI NOMOR SURAT KE "Yang bertanda tangan di bawah ini :"
+$jarakNomorKePembuka = '2cm';
+
+// PENGATUR SPASI ANTAR BLOK SURAT (Bisa disesuaikan ukurannya, misal '14px', '16px', '20px', dll)
+$jarakPihak1KePihak2 = '16px';     // Spasi antara Pihak 1 (Yang bertanda tangan) dengan "Menerangkan bahwa :"
+$jarakPihak2KeParagraf = '16px';   // Spasi antara Pihak 2 (Menerangkan bahwa) dengan "Selama bekerja..."
+
+// PENGATUR JUMLAH ENTER TANDA TANGAN (Antara PT dan Nama Penandatangan)
+// Default 3 enter: '<br><br><br>' (jika ingin 2 enter: '<br><br>', 4 enter: '<br><br><br><br>')
+$enterTtd = '<br><br><br>';
+
+// Icon Pointer Panah 3D Wingdings Base64 (100% identik dengan PDF acuan resmi)
+$arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAF4SURBVFhHxZehb4NAGMVfTjQoUtVUkckqMjnVICcnJ5GTkzjmkJOd25/An4CcJFPIZWqZIpshE4TlNdC0X2gDtHf3S56ivPea47sDAFjCMisAbwDu5AWTRAAaALmtIo5S6r0tYa3INcMdx2lc161tFUkYvNlsmjiOrRThUnwuFou6LMuGslEkYFgYhk2HjSKvDMqybFfCdJG5Uurb87y6qqqDEiaL3NM8iiKZv8NEkZTGeZ7L7AN0FlkqpX583+9dComuIg80S5JE5h1FR5FsNpvVRVHIrJNcsshKKfW3Xq9rjuZYpWnaBEHQnTOTi3Qn5iXFIoOZA/jtMRmrAsALgKdWg9keVGcoa0/cSfC1reoxHSIG83w5i+2GNFJc31tpNIWbHvNTmvSEn4KGMqRPHwBCefO50FAGSX3pCCZOay4D94Mf299p4djYle2mpC2Y9I0dg7lxcEPSzv7YscizqWDSjV0XbPzbkWPHl9IrecEE/LdWgq3xD8U6LuwJEeE6AAAAAElFTkSuQmCC';
 @endphp
 
-<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:11px; line-height:1.25; color:#000;">
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+</style>
 
-  <!-- KOP SURAT RESMI -->
-  @include('projects.web_sk_kop')
+<!-- ========================================================================= -->
+<!-- MARGIN TOP (3 cm): DARI ATAS KERTAS KE JUDUL SURAT                        -->
+<!-- ========================================================================= -->
+<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse;">
+  <tr style="line-height:{{ $jarakAtas }};">
+    <td style="height:{{ $jarakAtas }}; line-height:{{ $jarakAtas }}; font-size:1px;">&nbsp;</td>
+  </tr>
+</table>
 
-  @if(!$isJpBooks)
-    <!-- DOUBLE LINE SEPARATOR (TABEL AMAN TCPDF TANPA BALOK HITAM) -->
-    <table style="width:100%; border-collapse:collapse; margin-top:2px; margin-bottom:6px;">
-      <tr><td style="border-bottom:1px solid #000; height:1px; line-height:1px; font-size:1px;"></td></tr>
-      <tr><td style="border-bottom:2px solid #000; height:2px; line-height:2px; font-size:1px;"></td></tr>
-    </table>
-  @endif
+<!-- ========================================================================= -->
+<!-- JUDUL SURAT & NOMOR (100% LEBAR KERTAS A4, PERSIS DI TENGAH SURAT)        -->
+<!-- ========================================================================= -->
+<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-family:'Times New Roman', Times, serif; color:#000;">
+  <tr>
+    <td width="100%" style="width:100%; text-align:center; font-weight:bold; font-size:14.5px;"><u>SURAT PENGALAMAN KERJA</u></td>
+  </tr>
+  <tr>
+    <td width="100%" style="width:100%; text-align:center; font-size:11px; padding-top:2px;">No. {{ $t_mutasi?->nomor ?? '-' }}</td>
+  </tr>
+</table>
 
-  <!-- JUDUL SURAT -->
-  <table style="width:100%; border-collapse:collapse; margin-top:3px;">
+<!-- ========================================================================= -->
+<!-- JARAK (2 cm): DARI NOMOR SURAT KE "Yang bertanda tangan di bawah ini :"   -->
+<!-- ========================================================================= -->
+<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse;">
+  <tr style="line-height:{{ $jarakNomorKePembuka }};">
+    <td style="height:{{ $jarakNomorKePembuka }}; line-height:{{ $jarakNomorKePembuka }}; font-size:1px;">&nbsp;</td>
+  </tr>
+</table>
+
+<!-- ========================================================================= -->
+<!-- TABEL MASTER LAYOUT (MARGIN KIRI & KANAN ISI SURAT TETAP SESUAI SETTINGAN)-->
+<!-- ========================================================================= -->
+<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-family:'Times New Roman', Times, serif; font-size:11.5px; line-height:1.3; color:#000;">
+  <tr>
+    <!-- MARGIN KIRI -->
+    <td width="{{ $lebarSpacerKiri }}" style="width:{{ $lebarSpacerKiri }}; vertical-align:top;">&nbsp;</td>
+
+    <!-- KONTEN TENGAH SURAT -->
+    <td width="{{ $lebarKonten }}" style="width:{{ $lebarKonten }}; vertical-align:top;">
+
+  <!-- TABEL UTAMA ISI SURAT (SEMUA ELEMEN SEJAJAR SEMPURNA 100% DI GARIS KIRI YANG SAMA) -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:11.5px; line-height:1.3;">
+    <!-- PEMBUKA PIHAK 1 -->
     <tr>
-      <td style="text-align:center; font-weight:bold; font-size:15px; letter-spacing:1px; text-decoration:underline;">
-        SURAT PENGALAMAN KERJA
-      </td>
+      <td colspan="5" style="text-align:left;">Yang bertanda tangan di bawah ini :</td>
+    </tr>
+    <tr style="line-height:6px;">
+      <td colspan="5" style="height:6px; line-height:6px; font-size:1px;">&nbsp;</td>
+    </tr>
+
+    <!-- PIHAK PENERANG -->
+    <tr>
+      <td width="{{ $indentPanah }}" style="width:{{ $indentPanah }}; vertical-align:top;">&nbsp;</td>
+      <td width="{{ $lebarKolomPanah }}" style="width:{{ $lebarKolomPanah }}; vertical-align:top; text-align:left; padding-top:2px;"><img src="{{ $arrowIcon }}" width="10" height="10" alt="►"></td>
+      <td width="{{ $lebarKolomLabel }}" style="width:{{ $lebarKolomLabel }}; vertical-align:top;">Nama</td>
+      <td width="{{ $lebarKolomTitikDua }}" style="width:{{ $lebarKolomTitikDua }}; vertical-align:top; text-align:center;">:</td>
+      <td width="{{ $lebarKolomIsi }}" style="width:{{ $lebarKolomIsi }}; vertical-align:top;">{{ strtoupper(trim($signatureNama)) }}</td>
     </tr>
     <tr>
-      <td style="text-align:center; font-size:11px; padding-top:2px;">
-        No. {{ $t_mutasi?->nomor ?? '-' }}
-      </td>
+      <td width="{{ $indentPanah }}" style="width:{{ $indentPanah }}; vertical-align:top;">&nbsp;</td>
+      <td width="{{ $lebarKolomPanah }}" style="width:{{ $lebarKolomPanah }}; vertical-align:top; text-align:left; padding-top:2px;"><img src="{{ $arrowIcon }}" width="10" height="10" alt="►"></td>
+      <td width="{{ $lebarKolomLabel }}" style="width:{{ $lebarKolomLabel }}; vertical-align:top;">Bagian</td>
+      <td width="{{ $lebarKolomTitikDua }}" style="width:{{ $lebarKolomTitikDua }}; vertical-align:top; text-align:center;">:</td>
+      <td width="{{ $lebarKolomIsi }}" style="width:{{ $lebarKolomIsi }}; vertical-align:top;">{{ trim($signatureJabatan) }}<br>{{ trim($signatureCompany) }}<br>{{ trim($signatureAlamat) }}</td>
+    </tr>
+
+    <!-- SPASI ANTARA YANG BERTANDA TANGAN DENGAN MENERANGKAN BAHWA -->
+    <tr style="line-height:{{ $jarakPihak1KePihak2 }};">
+      <td colspan="5" style="height:{{ $jarakPihak1KePihak2 }}; line-height:{{ $jarakPihak1KePihak2 }}; font-size:1px;">&nbsp;</td>
+    </tr>
+
+    <!-- PEMBUKA PIHAK 2 -->
+    <tr>
+      <td colspan="5" style="text-align:left;">Menerangkan bahwa :</td>
+    </tr>
+    <tr style="line-height:6px;">
+      <td colspan="5" style="height:6px; line-height:6px; font-size:1px;">&nbsp;</td>
+    </tr>
+
+    <!-- PIHAK KARYAWAN -->
+    <tr>
+      <td width="{{ $indentPanah }}" style="width:{{ $indentPanah }}; vertical-align:top;">&nbsp;</td>
+      <td width="{{ $lebarKolomPanah }}" style="width:{{ $lebarKolomPanah }}; vertical-align:top; text-align:left; padding-top:2px;"><img src="{{ $arrowIcon }}" width="10" height="10" alt="►"></td>
+      <td width="{{ $lebarKolomLabel }}" style="width:{{ $lebarKolomLabel }}; vertical-align:top;">Nama</td>
+      <td width="{{ $lebarKolomTitikDua }}" style="width:{{ $lebarKolomTitikDua }}; vertical-align:top; text-align:center;">:</td>
+      <td width="{{ $lebarKolomIsi }}" style="width:{{ $lebarKolomIsi }}; vertical-align:top;">{{ strtoupper($karyawanNama) }}</td>
+    </tr>
+    <tr>
+      <td width="{{ $indentPanah }}" style="width:{{ $indentPanah }}; vertical-align:top;">&nbsp;</td>
+      <td width="{{ $lebarKolomPanah }}" style="width:{{ $lebarKolomPanah }}; vertical-align:top; text-align:left; padding-top:2px;"><img src="{{ $arrowIcon }}" width="10" height="10" alt="►"></td>
+      <td width="{{ $lebarKolomLabel }}" style="width:{{ $lebarKolomLabel }}; vertical-align:top;">Status</td>
+      <td width="{{ $lebarKolomTitikDua }}" style="width:{{ $lebarKolomTitikDua }}; vertical-align:top; text-align:center;">:</td>
+      <td width="{{ $lebarKolomIsi }}" style="width:{{ $lebarKolomIsi }}; vertical-align:top;">{{ $statusDisplay }}</td>
+    </tr>
+    <tr>
+      <td width="{{ $indentPanah }}" style="width:{{ $indentPanah }}; vertical-align:top;">&nbsp;</td>
+      <td width="{{ $lebarKolomPanah }}" style="width:{{ $lebarKolomPanah }}; vertical-align:top; text-align:left; padding-top:2px;"><img src="{{ $arrowIcon }}" width="10" height="10" alt="►"></td>
+      <td width="{{ $lebarKolomLabel }}" style="width:{{ $lebarKolomLabel }}; vertical-align:top;">Bagian</td>
+      <td width="{{ $lebarKolomTitikDua }}" style="width:{{ $lebarKolomTitikDua }}; vertical-align:top; text-align:center;">:</td>
+      <td width="{{ $lebarKolomIsi }}" style="width:{{ $lebarKolomIsi }}; vertical-align:top;">{{ $bagianKaryawanLine1 }}@if(!empty($alamatKaryawan))<br>{{ $alamatKaryawan }}@endif</td>
+    </tr>
+    <tr>
+      <td width="{{ $indentPanah }}" style="width:{{ $indentPanah }}; vertical-align:top;">&nbsp;</td>
+      <td width="{{ $lebarKolomPanah }}" style="width:{{ $lebarKolomPanah }}; vertical-align:top; text-align:left; padding-top:2px;"><img src="{{ $arrowIcon }}" width="10" height="10" alt="►"></td>
+      <td width="{{ $lebarKolomLabel }}" style="width:{{ $lebarKolomLabel }}; vertical-align:top;">Awal Kerja</td>
+      <td width="{{ $lebarKolomTitikDua }}" style="width:{{ $lebarKolomTitikDua }}; vertical-align:top; text-align:center;">:</td>
+      <td width="{{ $lebarKolomIsi }}" style="width:{{ $lebarKolomIsi }}; vertical-align:top;">{{ $awalKerja }} s/d {{ $akhirKerja }}</td>
+    </tr>
+    <tr>
+      <td width="{{ $indentPanah }}" style="width:{{ $indentPanah }}; vertical-align:top;">&nbsp;</td>
+      <td width="{{ $lebarKolomPanah }}" style="width:{{ $lebarKolomPanah }}; vertical-align:top; text-align:left; padding-top:2px;"><img src="{{ $arrowIcon }}" width="10" height="10" alt="►"></td>
+      <td width="{{ $lebarKolomLabel }}" style="width:{{ $lebarKolomLabel }}; vertical-align:top;">Keterangan</td>
+      <td width="{{ $lebarKolomTitikDua }}" style="width:{{ $lebarKolomTitikDua }}; vertical-align:top; text-align:center;">:</td>
+      <td width="{{ $lebarKolomIsi }}" style="width:{{ $lebarKolomIsi }}; vertical-align:top;">{{ $alasanBerakhir }}</td>
+    </tr>
+
+    <!-- SPASI ANTARA MENERANGKAN BAHWA DENGAN SELAMA BEKERJA YANG BERSANGKUTAN -->
+    <tr style="line-height:{{ $jarakPihak2KeParagraf }};">
+      <td colspan="5" style="height:{{ $jarakPihak2KeParagraf }}; line-height:{{ $jarakPihak2KeParagraf }}; font-size:1px;">&nbsp;</td>
+    </tr>
+
+    <!-- PARAGRAF APRESIASI & PENUTUP -->
+    <tr>
+      <td colspan="5" style="text-align:justify; line-height:1.35;">Selama bekerja yang bersangkutan telah menunjukan dedikasi serta kinerja yang baik untuk perusahaan. Untuk itu atas nama manajemen {{ $companyName }} menyampaikan terima kasih atas kerjasamanya selama ini.</td>
+    </tr>
+    <tr style="line-height:10px;">
+      <td colspan="5" style="height:10px; line-height:10px; font-size:1px;">&nbsp;</td>
+    </tr>
+    <tr>
+      <td colspan="5" style="text-align:justify; line-height:1.35;">Demikian surat pengalaman kerja ini kami buat agar dapat dipergunakan sebagaimana mestinya.</td>
     </tr>
   </table>
 
-  <!-- PEMBUKA -->
-  <div style="margin-top:8px; font-size:11px;">
-    Yang bertanda tangan di bawah ini :
-  </div>
-
-  <!-- TABEL PIHAK PENERANG (KOLOM PERSENTASE IDENTIK DENGAN TABEL KARYAWAN) -->
-  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:2px; font-size:11px; line-height:1.25;">
-    <tr>
-      <td width="8%" style="width:8%; vertical-align:top;">&nbsp;</td>
-      <td width="22%" style="width:22%; vertical-align:top; white-space:nowrap;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Nama
-      </td>
-      <td width="4%" style="width:4%; vertical-align:top; text-align:center;">:</td>
-      <td width="66%" style="width:66%; vertical-align:top;"><b>{{ $signatureNama }}</b></td>
-    </tr>
-    <tr>
-      <td width="8%" style="width:8%; vertical-align:top;">&nbsp;</td>
-      <td width="22%" style="width:22%; vertical-align:top; white-space:nowrap;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Bagian&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      </td>
-      <td width="4%" style="width:4%; vertical-align:top; text-align:center;">:</td>
-      <td width="66%" style="width:66%; vertical-align:top;">
-        {{ $signatureJabatan }}<br>
-        {{ $signatureCompany }}<br>
-        {{ $signatureAlamat }}
-      </td>
+  <!-- JARAK KE TANDA TANGAN (2 ENTER) -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse;">
+    <tr style="line-height:16px;">
+      <td style="height:16px; line-height:16px; font-size:1px;">&nbsp;</td>
     </tr>
   </table>
 
-  <!-- PEMBATAS: MENERANGKAN BAHWA -->
-  <div style="margin-top:6px; margin-bottom:2px; font-size:11px;">
-    Menerangkan bahwa :
-  </div>
-
-  <!-- TABEL PIHAK KARYAWAN (KOLOM PERSENTASE IDENTIK DENGAN TABEL PENERANG) -->
-  <table width="100%" style="width:100%; border-collapse:collapse; margin-top:2px; font-size:11px; line-height:1.25;">
+  <!-- TANDA TANGAN (LEFT-ALIGNED, NOBR AGAR TIDAK PERNAH TERPOTONG KE HALAMAN BERIKUTNYA) -->
+  <table nobr="true" width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:11.5px; line-height:1.3; page-break-inside:avoid;">
     <tr>
-      <td width="8%" style="width:8%; vertical-align:top;">&nbsp;</td>
-      <td width="22%" style="width:22%; vertical-align:top; white-space:nowrap;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Nama
-      </td>
-      <td width="4%" style="width:4%; vertical-align:top; text-align:center;">:</td>
-      <td width="66%" style="width:66%; vertical-align:top;"><b>{{ $karyawanNama }}</b></td>
-    </tr>
-    <tr>
-      <td width="8%" style="width:8%; vertical-align:top;">&nbsp;</td>
-      <td width="22%" style="width:22%; vertical-align:top; white-space:nowrap;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Status
-      </td>
-      <td width="4%" style="width:4%; vertical-align:top; text-align:center;">:</td>
-      <td width="66%" style="width:66%; vertical-align:top;">{{ $statusDisplay }}</td>
-    </tr>
-    <tr>
-      <td width="8%" style="width:8%; vertical-align:top;">&nbsp;</td>
-      <td width="22%" style="width:22%; vertical-align:top; white-space:nowrap;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Bagian
-      </td>
-      <td width="4%" style="width:4%; vertical-align:top; text-align:center;">:</td>
-      <td width="66%" style="width:66%; vertical-align:top;">{{ $bagianKaryawanLine1 }}</td>
-    </tr>
-    @if(!empty($alamatKaryawan))
-    <tr>
-      <td width="8%" style="width:8%; vertical-align:top;">&nbsp;</td>
-      <td width="22%" style="width:22%; vertical-align:top;">&nbsp;</td>
-      <td width="4%" style="width:4%; vertical-align:top; text-align:center;">:</td>
-      <td width="66%" style="width:66%; vertical-align:top;">{{ $alamatKaryawan }}</td>
-    </tr>
-    @endif
-    <tr>
-      <td width="8%" style="width:8%; vertical-align:top;">&nbsp;</td>
-      <td width="22%" style="width:22%; vertical-align:top; white-space:nowrap;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Awal Kerja
-      </td>
-      <td width="4%" style="width:4%; vertical-align:top; text-align:center;">:</td>
-      <td width="66%" style="width:66%; vertical-align:top;">{{ $awalKerja }} s/d {{ $akhirKerja }}</td>
-    </tr>
-    <tr>
-      <td width="8%" style="width:8%; vertical-align:top;">&nbsp;</td>
-      <td width="22%" style="width:22%; vertical-align:top; white-space:nowrap;">
-        <img src="{{ $arrowIcon }}" width="8" height="8" style="vertical-align:middle; margin-right:4px;">&nbsp;Keterangan
-      </td>
-      <td width="4%" style="width:4%; vertical-align:top; text-align:center;">:</td>
-      <td width="66%" style="width:66%; vertical-align:top;">{{ $alasanBerakhir }}</td>
+      <td style="width:60%; vertical-align:top; text-align:left;">{{ $kotaTerbit }}, {{ $tanggalTerbit }}<br>{{ $companyName }}{!! $enterTtd !!}<u><b>{{ strtoupper($signatureNama) }}</b></u><br><b><i>{{ strtoupper($signatureJabatan) }}</i></b></td>
+      <td style="width:40%;">&nbsp;</td>
     </tr>
   </table>
 
-  <!-- PARAGRAF APRESIASI -->
-  <div style="margin-top:6px; font-size:11px; line-height:1.25; text-align:justify;">
-    Selama bekerja yang bersangkutan telah menunjukan dedikasi serta kinerja yang baik untuk perusahaan. Untuk itu atas nama manajemen {{ $companyName }} menyampaikan terima kasih atas kerjasamanya selama ini.
-  </div>
+    </td>
 
-  <!-- PENUTUP -->
-  <div style="margin-top:5px; font-size:11px; line-height:1.25; text-align:justify;">
-    Demikian surat pengalaman kerja ini kami buat agar dapat dipergunakan sebagaimana mestinya.
-  </div>
-
-  <!-- TANDA TANGAN (LEFT-ALIGNED, NOBR AGAR TIDAK PERNAH TERPOTONG KE HALAMAN 2) -->
-  <table nobr="true" style="width:100%; border-collapse:collapse; margin-top:6px; font-size:11px; page-break-inside:avoid;">
-    <tr>
-      <td style="width:55%; vertical-align:top; text-align:left;">
-        {{ $kotaTerbit }}, {{ $tanggalTerbit }}<br>
-        {{ $companyName }}
-        <div style="height:28px; line-height:28px; font-size:1px;">&nbsp;</div>
-        <u><b>{{ $signatureNama }}</b></u><br>
-        <b><i>{{ $signatureJabatan }}</i></b>
-      </td>
-      <td style="width:45%;">&nbsp;</td>
-    </tr>
-  </table>
-
-  <!-- FOOTER CABANG RESMI (FLOW BIASA RINGKAS, PASTI MUAT DI HALAMAN 1) -->
-  @if($isJpBooks)
-    @include('projects.web_sk_footer')
-  @else
-    <div style="margin-top:6px; border-top:0.5px solid #bbb; padding-top:2px; font-size:6.2px; line-height:1.15; color:#333; text-align:justify;">
-      <b>Bekasi :</b> 021-8815222 Fax : 021-8817444, E-mail : Bekasi@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Cengkareng :</b> 021-5553472 Fax : 021-5553473, E-mail : Cengkareng@temprina.com<br>
-      <b>Semarang :</b> 024-7462136 Fax : 024-7462135, E-mail : Semarang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Solo :</b> 0271-783001 Fax : 0271-782769, E-mail : Solo@temprina.com<br>
-      <b>Malang :</b> 0341-396700 Fax : 0341-396800, E-mail : Malang@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Nganjuk :</b> 0358-773500,771199 Fax : 0358-773465, E-mail : Nganjuk@temprina.com<br>
-      <b>Jember :</b> 0331-320300 Fax : 0331-320190, E-mail : Jember@temprina.com &nbsp;&nbsp;&nbsp;&nbsp;<b>Bali :</b> 0361-421384 Fax : 0361-417155, E-mail : Bali@temprina.com
-    </div>
-  @endif
-
-</div>
+    <!-- MARGIN KANAN -->
+    <td width="{{ $lebarSpacerKanan }}" style="width:{{ $lebarSpacerKanan }}; vertical-align:top;">&nbsp;</td>
+  </tr>
+</table>

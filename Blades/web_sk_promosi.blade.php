@@ -230,7 +230,7 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0
             <td style="vertical-align:top;">
               {{ $t_mutasi->m_posisi_lama?->name ?? '-' }}<br>
               {{ $t_mutasi->m_sub_lama?->name ?? '-' }}<br>
-              <span style="color:#555;">{{ $t_mutasi->m_sub_lama?->address ?? '' }}</span>
+              {{ $t_mutasi->m_sub_lama?->address ?? '' }}
             </td>
           </tr>
 
@@ -270,7 +270,7 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0
             <td style="width:79%; vertical-align:top;">
               {{ $t_mutasi->m_posisi_baru?->name ?? '-' }}<br>
               {{ $t_mutasi->m_sub_baru?->name ?? '-' }}<br>
-              <span style="color:#555;">{{ $t_mutasi->m_sub_baru?->address ?? '' }}</span>
+              {{ $t_mutasi->m_sub_baru?->address ?? '' }}
             </td>
           </tr>
 
@@ -293,10 +293,7 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0
     <tr>
       <td></td>
       <td style="vertical-align:top; padding-top:12px;">2.</td>
-      <td style="vertical-align:top; padding-top:12px; text-align:justify;">
-        Keputusan ini berlaku sejak tanggal efektif dan akan ditinjau kembali
-        apabila di kemudian hari terdapat kekeliruan.
-      </td>
+      <td style="vertical-align:top; padding-top:12px; text-align:justify;">Keputusan ini berlaku sejak tanggal efektif dan akan ditinjau kembali jika diperlukan</td>
     </tr>
   </table>
 
