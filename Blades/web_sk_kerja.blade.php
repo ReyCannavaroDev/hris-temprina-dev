@@ -10,11 +10,41 @@ $id = $req->id;
 $t_mutasi = t_mutasi::find($id);
 
 $carbonDate = Carbon::parse($t_mutasi?->tgl ?? now());
+<<<<<<< HEAD
 $tanggalIndo = $carbonDate->translatedFormat('d F Y');
+=======
+$tanggalIndo = $carbonDate->translatedFormat('l, d F Y');
+>>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
 
 $terbitDate = Carbon::parse($t_mutasi?->updated_at ?? $t_mutasi?->created_at ?? now());
 $tanggalTerbit = $terbitDate->translatedFormat('d F Y');
 
+<<<<<<< HEAD
+=======
+$tembusan = $t_mutasi?->t_mutasi_d_tembusan ?? null;
+$memperhatikan = $t_mutasi?->t_mutasi_d_memperhatikan ?? null;
+
+$karyawan_jabatan = null;
+if (!empty($t_mutasi?->m_kary_id)) {
+    try {
+        $karyawan_jabatan = m_kary_det_jabatan::where(function ($q) use ($t_mutasi) {
+                $q->where('m_karyawan_id', $t_mutasi->m_kary_id)
+                  ->orWhere('m_kary_id', $t_mutasi->m_kary_id);
+            })
+            ->orderBy('start_time', 'asc')
+            ->first();
+    } catch (\Throwable $th) {}
+}
+
+$awalKerja = $karyawan_jabatan && !empty($karyawan_jabatan->start_time ?? $karyawan_jabatan->tgl_mulai) 
+    ? Carbon::parse($karyawan_jabatan->start_time ?? $karyawan_jabatan->tgl_mulai)->translatedFormat('d F Y') 
+    : ($t_mutasi?->m_kary?->tgl_masuk ? Carbon::parse($t_mutasi->m_kary->tgl_masuk)->translatedFormat('d F Y') : '-');
+
+$akhirKerja = $karyawan_jabatan && !empty($karyawan_jabatan->end_time ?? $karyawan_jabatan->tgl_selesai)
+    ? Carbon::parse($karyawan_jabatan->end_time ?? $karyawan_jabatan->tgl_selesai)->translatedFormat('d F Y') 
+    : 'Sekarang';
+
+>>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
 $sbuCode = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->kode ?? $t_mutasi?->m_kary?->m_sbu?->kode ?? '');
 $sbuName = strtoupper($t_mutasi?->m_sub_lama?->m_sbu?->name ?? $t_mutasi?->m_kary?->m_sbu?->name ?? '');
 $isJpBooks = str_contains($sbuCode, 'JP') || str_contains($sbuName, 'JP') || str_contains($sbuName, 'SAHABAT EDUKASI');
@@ -30,6 +60,7 @@ $kotaTerbit = $t_mutasi?->m_sub_lama?->m_branch?->kota
             ?? $t_mutasi?->m_kary?->m_branch?->kota 
             ?? 'Surabaya';
 
+<<<<<<< HEAD
 // Data Pihak 1 (Signature / Yang Bertanda Tangan)
 $signatureNama = $t_mutasi?->signature?->nama_lengkap ?? '( ........................................ )';
 $signatureJabatan = $t_mutasi?->signature?->m_posisi?->name ?? 'Kadiv. Human Capital Holding';
@@ -75,6 +106,14 @@ $keperluan = $t_mutasi?->deskripsi
 
 // Icon Pointer Segitiga Hitam Base64 (100% kompatibel dengan TCPDF tanpa resiko jadi '?')
 $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAASElEQVR4nJWNQQ4AIAjD3OL/vzxPJEZhKCcCbQpJ42cYCwB9CSF1IrOjk1g9qhpdPquxE8ZRmy+CJDwXdtgWTtAWKvgqODBmAXo9GyO93OPeAAAAAElFTkSuQmCC';
+=======
+$rawStatus = $t_mutasi?->status_kary_lama?->value ?? $t_mutasi?->m_kary?->status_kary?->value ?? '-';
+if ($rawStatus !== '-' && !str_contains(strtolower($rawStatus), 'yang bersangkutan')) {
+    $statusText = 'Yang bersangkutan adalah ' . strtoupper($rawStatus);
+} else {
+    $statusText = $rawStatus;
+}
+>>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
 @endphp
 
 <div style="font-family:'Times New Roman', Times, serif; width:92%; margin:auto; font-size:12px; line-height:1.5; color:#000;">
@@ -82,6 +121,7 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVzn
   <!-- KOP SURAT RESMI -->
   @include('projects.web_sk_kop')
 
+<<<<<<< HEAD
   @if(!$isJpBooks)
     <!-- DOUBLE LINE SEPARATOR -->
     <div style="border-top:1px solid #000; margin-top:4px;"></div>
@@ -132,6 +172,120 @@ $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVzn
       </td>
     </tr>
   </table>
+=======
+<table style="width:100%; margin-top:20px; font-family:'Times New Roman', serif;">
+  <tr>
+    <td style="text-align:center; font-weight:bold; font-size:16px;">
+      <span style="border-bottom:2px solid black; padding-bottom:2px;">SURAT KETERANGAN KERJA</span>
+    </td>
+  </tr>
+  <tr>
+    <td style="text-align:center; font-size:12px; font-weight:bold; padding-top:6px;">
+      No. {{ strtoupper($t_mutasi?->nomor ?? '-') }}
+    </td>
+  </tr>
+</table>
+
+<p style="margin-top:24px; margin-bottom:8px; font-size:13px;">Yang bertanda tangan di bawah ini :</p>
+
+<table style="width:100%; border-collapse:collapse; margin-bottom:15px; font-size:13px; line-height:1.5;">
+  <tr>
+    <td style="width:3%;"></td>
+    <td style="width:22%; vertical-align:top;">-&gt;&nbsp;&nbsp;Nama</td>
+    <td style="width:3%; vertical-align:top; text-align:center;">:</td>
+    <td style="width:72%; vertical-align:top;">
+      {{ $t_mutasi->signature?->nama_lengkap ?? '( ........................................ )' }}
+    </td>
+  </tr>
+  <tr>
+    <td style="width:3%;"></td>
+    <td style="width:22%; vertical-align:top; padding-top:4px;">-&gt;&nbsp;&nbsp;Bagian</td>
+    <td style="width:3%; vertical-align:top; text-align:center; padding-top:4px;">:</td>
+    <td style="width:72%; vertical-align:top; padding-top:4px;">
+      {{ $t_mutasi->signature?->m_posisi?->name ?? 'Kadiv. Human Capital Holding' }}<br>
+      {{ $t_mutasi->signature?->m_subcomp?->name ?? $companyName }}<br>
+      {{ $t_mutasi->signature?->m_subcomp?->address ?? 'Jl. Raya Sumengko KM 30-31 Wringin Anom Gresik' }}
+    </td>
+  </tr>
+</table>
+
+<p style="margin-top:16px; margin-bottom:8px; font-size:13px;">Menerangkan bahwa :</p>
+
+<table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px; line-height:1.5;">
+  <tr>
+    <td style="width:3%;"></td>
+    <td style="width:22%; vertical-align:top;">-&gt;&nbsp;&nbsp;Nama</td>
+    <td style="width:3%; vertical-align:top; text-align:center;">:</td>
+    <td style="width:72%; vertical-align:top; font-weight:bold;">
+      {{ $t_mutasi->m_kary?->nama_lengkap ?? '-' }}
+    </td>
+  </tr>
+  <tr>
+    <td style="width:3%;"></td>
+    <td style="width:22%; vertical-align:top; padding-top:4px;">-&gt;&nbsp;&nbsp;Status</td>
+    <td style="width:3%; vertical-align:top; text-align:center; padding-top:4px;">:</td>
+    <td style="width:72%; vertical-align:top; padding-top:4px;">
+      {{ $statusText }}
+    </td>
+  </tr>
+  <tr>
+    <td style="width:3%;"></td>
+    <td style="width:22%; vertical-align:top; padding-top:4px;">-&gt;&nbsp;&nbsp;Bagian</td>
+    <td style="width:3%; vertical-align:top; text-align:center; padding-top:4px;">:</td>
+    <td style="width:72%; vertical-align:top; padding-top:4px;">
+      {{ $t_mutasi->m_posisi_lama?->name ?? '-' }}<br>
+      {{ $t_mutasi->m_sub_lama?->name ?? $companyName }}<br>
+      {{ $t_mutasi->m_sub_lama?->address ?? '' }}
+    </td>
+  </tr>
+  <tr>
+    <td style="width:3%;"></td>
+    <td style="width:22%; vertical-align:top; padding-top:4px;">-&gt;&nbsp;&nbsp;Awal Kerja</td>
+    <td style="width:3%; vertical-align:top; text-align:center; padding-top:4px;">:</td>
+    <td style="width:72%; vertical-align:top; padding-top:4px;">
+      {{ $awalKerja }} s/d {{ $akhirKerja }}
+    </td>
+  </tr>
+  <tr>
+    <td style="width:3%;"></td>
+    <td style="width:22%; vertical-align:top; padding-top:4px;">-&gt;&nbsp;&nbsp;Keperluan</td>
+    <td style="width:3%; vertical-align:top; text-align:center; padding-top:4px;">:</td>
+    <td style="width:72%; vertical-align:top; padding-top:4px;">
+      {{ (!empty($t_mutasi->deskripsi) && $t_mutasi->deskripsi !== '-') ? $t_mutasi->deskripsi : ((!empty($t_mutasi->keterangan) && $t_mutasi->keterangan !== '-') ? $t_mutasi->keterangan : '-') }}
+    </td>
+  </tr>
+</table>
+
+<p style="margin-top:20px; font-size:13px; text-align:justify;">
+  Demikian surat keterangan kerja ini dibuat agar dapat dipergunakan sebagaimana mestinya.
+</p>
+
+<table style="width:100%; margin-top:25px; font-family:'Times New Roman', serif; font-size:13px;">
+  <tr>
+    <td style="width:58%;"></td>
+    <td style="width:42%; vertical-align:top;">
+      <div>{{ $kotaTerbit }}, {{ $tanggalTerbit }}</div>
+      <div style="font-weight:bold; margin-top:4px;">{{ $companyName }}</div>
+      <div style="height:55px;"></div>
+      @if($t_mutasi->signature?->nama_lengkap)
+        <div style="font-weight:bold; text-decoration:underline;">
+          {{ $t_mutasi->signature->nama_lengkap }}
+        </div>
+        <div>
+          {{ $t_mutasi->signature->m_posisi?->name ?? 'Human Capital Dept.' }}
+        </div>
+      @else
+        <div style="font-weight:bold;">
+          ( ........................................ )
+        </div>
+        <div>
+          Human Capital Dept.
+        </div>
+      @endif
+    </td>
+  </tr>
+</table>
+>>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
 
   <!-- KETERANGAN BAHWA -->
   <div style="margin-top:18px; font-size:12px;">

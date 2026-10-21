@@ -1,4 +1,5 @@
 @php
+<<<<<<< HEAD
 /**
  * MASTER KOP SURAT - HRIS TEMPRINA
  * 
@@ -20,8 +21,37 @@ if (!function_exists('resolveKopMediaData')) {
         static $cached = null;
         if ($cached !== null) {
             return $cached;
+=======
+    // Query media items from m_media
+    $mediaTMG = \DB::table('m_media')->where('is_active', true)->where('kode', 'LOGO-TMG')->first();
+    $mediaISO = \DB::table('m_media')->where('is_active', true)->where('kode', 'BANNER-ISO-TEMPRINA')->first();
+    $mediaIsoFooter = \DB::table('m_media')->where('is_active', true)->where('kode', 'LOGO_ISO_FOOTER')->first();
+    $mediaJP = \DB::table('m_media')->where('is_active', true)->whereIn('kode', ['LOGO-JPBOOKS', 'HEADER-JPBOOKS'])->orderBy('id', 'desc')->first();
+
+    $resolveMediaPath = function ($rawPath) {
+        if (empty($rawPath))
+            return '';
+        $clean = preg_replace('#^https?://[^/]+/#i', '', ltrim($rawPath, '/'));
+        $clean = ltrim($clean, '/');
+
+        $candidates = [
+            $clean,
+            'uploads/m_media/' . $clean,
+            'uploads/' . $clean,
+            'storage/' . $clean,
+            'images/' . $clean
+        ];
+
+        foreach ($candidates as $cand) {
+            $full = function_exists('public_path') ? public_path($cand) : (function_exists('base_path') ? base_path('public/' . $cand) : ('/opt/www/hris/public/' . $cand));
+            if ($full && file_exists($full) && is_file($full)) {
+                $type = pathinfo($full, PATHINFO_EXTENSION);
+                return 'data:image/' . ($type === 'png' ? 'png' : 'jpeg') . ';base64,' . base64_encode(file_get_contents($full));
+            }
+>>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
         }
 
+<<<<<<< HEAD
         $mediaTMG       = \DB::table('m_media')->where('is_active', true)->where('kode', 'LOGO-TMG')->first();
         $mediaISO       = \DB::table('m_media')->where('is_active', true)->where('kode', 'BANNER-ISO-TEMPRINA')->first();
         $mediaIsoFooter = \DB::table('m_media')->where('is_active', true)->where('kode', 'LOGO_ISO_FOOTER')->first();
@@ -218,6 +248,45 @@ if (!function_exists('resolveKopMediaData')) {
                 return $rawPath;
             }
             return '';
+=======
+    $logoTmgSrc = $mediaTMG ? $resolveMediaPath($mediaTMG->file_path) : '';
+    $bannerIsoSrc = $mediaISO ? $resolveMediaPath($mediaISO->file_path) : '';
+    // LOGO_ISO_FOOTER: pakai $mediaIsoFooter (huruf kecil, sesuai query di atas)
+    $logoIsoFooter = $mediaIsoFooter ? $resolveMediaPath($mediaIsoFooter->file_path) : '';
+    // Fallback: jika LOGO_ISO_FOOTER tidak ada, pakai BANNER-ISO-TEMPRINA
+    if (empty($logoIsoFooter)) {
+        $logoIsoFooter = $bannerIsoSrc;
+    }
+    $logoJpSrc = $mediaJP ? $resolveMediaPath($mediaJP->file_path) : '';
+
+    // Deteksi apakah perusahaan adalah JP Books
+    $isJPBooks = false;
+    if (isset($isJpBooks)) {
+        $isJPBooks = (bool) $isJpBooks;
+    } elseif (isset($t_mutasi)) {
+        $dest = strtoupper(
+            ($t_mutasi->m_sub_baru?->name ?? '') . ' ' .
+            ($t_mutasi->m_sbu_baru?->name ?? '') . ' ' .
+            ($t_mutasi->m_sub_baru?->kode ?? '') . ' ' .
+            ($t_mutasi->m_sbu_baru?->kode ?? '')
+        );
+        $origin = strtoupper(
+            ($t_mutasi->m_sub_lama?->name ?? '') . ' ' .
+            ($t_mutasi->m_sbu_lama?->name ?? '') . ' ' .
+            ($t_mutasi->m_sub_lama?->kode ?? '') . ' ' .
+            ($t_mutasi->m_sbu_lama?->kode ?? '') . ' ' .
+            ($t_mutasi->m_kary?->m_sbu?->name ?? '') . ' ' .
+            ($t_mutasi->m_kary?->m_sbu?->kode ?? '')
+        );
+
+        $checkIsJp = function ($str) {
+            return str_contains($str, 'JEPE') ||
+                str_contains($str, 'JP BOOKS') ||
+                str_contains($str, 'JPBOOKS') ||
+                str_contains($str, 'JPMU') ||
+                str_contains($str, 'SAHABAT EDUKASI') ||
+                preg_match('/\bJP\b/', $str);
+>>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
         };
 
         $logoTmgSrc     = $mediaTMG      ? $resolveMediaPath($mediaTMG->file_path)      : '';
@@ -598,5 +667,49 @@ $requestedKop = $kop ?? ($type ?? ($isSuratTugas ?? false ? 'tugas' : ($isDemosi
 @elseif($isJP || $requestedKop === 'jpbooks' || $requestedKop === 'jp')
     {!! kopJpBooks() !!}
 @else
+<<<<<<< HEAD
     {!! kopStandar() !!}
+=======
+    <!-- KOP TEMPRINA - sesuai template resmi -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; margin-bottom:6px;">
+        <tr>
+            <!-- Kolom kiri: Logo Temprina (tanpa garis) -->
+            <td width="35%" style="vertical-align:middle; padding-right:10px;">
+                @if($logoTmgSrc)
+                    <img src="{{ $logoTmgSrc }}" width="140" alt="Temprina">
+                @else
+                    <b style="font-size:20px; color:#0055aa;">temprina</b>
+                @endif
+            </td>
+            <!-- Kolom kanan: nested table, semua rata kanan (align=right pada td) -->
+            <td width="65%" style="vertical-align:top; padding-left:10px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                    @if($logoIsoFooter)
+                        <tr>
+                            <td align="right" style="padding-bottom:3px;">
+                                <img src="{{ $logoIsoFooter }}" height="30" alt="ISO">
+                            </td>
+                        </tr>
+                    @endif
+                    <tr>
+                        <td align="right" style="font-size:8px; font-weight:bold; color:#000; line-height:1.5;">
+                            Head Office :
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="right" style="font-size:7px; color:#222; line-height:1.5;">
+                            Jl. RayaSumengko KM 30-31 Wringin Anom Gresik Telp : 0318982999 Far Office 031-8982065
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="right" style="font-size:7px; color:#222; line-height:1.5;">
+                            Marketing : 031-0981777, Purchasing : 031-8982066 HRD : 031-8982622, Email : temprina@temprina.com
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+>>>>>>> c1c740a (feat: add work schedule javascript logic and blade templates for SK documents)
 @endif
+

@@ -287,7 +287,7 @@ onBeforeMount(async () => {
       respo_id: data.respo_id
     })
     const endpoint = `${store.server.url_backend}/operation/m_general/access?${params.toString()}`
-    
+
     try {
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -296,20 +296,20 @@ onBeforeMount(async () => {
         }
       })
       const result = await response.json()
-      console.log('x',result)
+      console.log('x', result)
       data.can_read = result.can_read
       data.can_create = result.can_create
       data.can_delete = result.can_delete
       data.can_update = result.can_update
       data.rows = result.data
 
-      if(data.can_read){
+      if (data.can_read) {
         landing.api.url = `${store.server.url_backend}/operation/${endpointApi}`
-        nextTick(()=>{
+        nextTick(() => {
           apiTable.value.reload()
         })
       }
-      
+
     } catch (err) {
       console.error(err)
     }
@@ -506,8 +506,8 @@ const landing = reactive({
   api: {
     // url: `${store.server.url_backend}/operation/${endpointApi}`,
     url: currentMenu?.can_read
-         ? `${store.server.url_backend}/operation/${endpointApi}` 
-         : '',
+      ? `${store.server.url_backend}/operation/${endpointApi}`
+      : '',
     //url:'',
     headers: {
       'Content-Type': 'Application/json',
