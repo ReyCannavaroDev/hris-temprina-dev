@@ -100,4 +100,15 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
 
         return $row;
     }
+
+    public function t_jadwal_kerja_n()
+    {
+        return $this->belongsTo(\App\Models\CustomModels\t_jadwal_kerja_n::class, 't_jadwal_kerja_n_id', 'id');
+    }
+
+    public function m_kary()
+    {
+        return $this->belongsTo(\App\Models\CustomModels\m_kary::class, 'm_kary_id', 'id');
+    }
 }
+

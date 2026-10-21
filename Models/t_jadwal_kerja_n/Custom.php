@@ -171,4 +171,20 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
             \DB::table('t_jadwal_kerja_det_hari')->insert($inserts);
         }
     }
+
+    public function t_jadwal_kerja_d_hari_n()
+    {
+        return $this->hasMany(\App\Models\CustomModels\t_jadwal_kerja_d_hari_n::class, 't_jadwal_kerja_n_id', 'id');
+    }
+
+    public function t_jadwal_kerja_det_hari()
+    {
+        return $this->hasMany(\App\Models\CustomModels\t_jadwal_kerja_det_hari::class, 't_jadwal_kerja_id', 'id');
+    }
+
+    public function t_jadwal_kerja_d_n()
+    {
+        return $this->hasMany(\App\Models\CustomModels\t_jadwal_kerja_d_n::class, 't_jadwal_kerja_n_id', 'id');
+    }
 }
+
