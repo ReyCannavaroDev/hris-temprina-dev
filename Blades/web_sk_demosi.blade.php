@@ -219,7 +219,7 @@ if (empty($demosiKopSrc)) {
 <style>
   @page {
     size: A4 portrait;
-    margin: 8mm 14mm 6mm 14mm;
+    margin: 10mm 15mm 8mm 15mm;
   }
   body {
     margin: 0;
@@ -227,33 +227,41 @@ if (empty($demosiKopSrc)) {
   }
 </style>
 
-<div style="font-family:'Times New Roman',serif; width:100%; margin:0; font-size:10.5px; line-height:1.26; color:#000; page-break-inside:avoid;">
+<div style="font-family:'Times New Roman',serif; width:100%; font-size:10.5px; line-height:1.28; color:#000;">
 
   <!-- KOP SURAT DEMOSI RESMI (PERSIS PDF ACUAN) -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:4px; padding:0;">
-    <tr>
-      <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
-        <img src="{{ $demosiKopSrc }}" width="700" style="width:700px; max-width:100%; height:auto;" alt="Kop Surat Demosi Temprina">
-      </td>
-    </tr>
-  </table>
+  @if(!empty($demosiKopSrc))
+    <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:6px; padding:0;">
+      <tr>
+        <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
+          <img src="{{ $demosiKopSrc }}" width="700" style="width:700px; max-width:100%; height:auto;" alt="Kop Surat Demosi Temprina">
+        </td>
+      </tr>
+    </table>
+  @else
+    @if(view()->exists('projects.web_sk_kop'))
+      @include('projects.web_sk_kop', ['kop' => 'demosi', 'isDemosi' => true])
+    @elseif(view()->exists('web_sk_kop'))
+      @include('web_sk_kop', ['kop' => 'demosi', 'isDemosi' => true])
+    @endif
+  @endif
 
   <!-- JUDUL DOKUMEN -->
-  <div style="text-align:center; margin-top:2px; margin-bottom:1px;">
+  <div style="text-align:center; margin-top:2px; margin-bottom:2px;">
     <span style="font-weight:bold; font-size:13.5px; text-decoration:underline; letter-spacing:0.5px;">SURAT KEPUTUSAN</span>
   </div>
-  <div style="text-align:center; font-weight:bold; font-size:10.5px; margin-bottom:4px;">
+  <div style="text-align:center; font-weight:bold; font-size:10.5px; margin-bottom:5px;">
     {{ strtoupper($t_mutasi?->nomor ?? '-') }}
   </div>
 
   <!-- SUB JUDUL -->
-  <div style="text-align:center; margin-bottom:6px; line-height:1.2;">
+  <div style="text-align:center; margin-bottom:8px; line-height:1.25;">
     <div style="font-weight:bold; font-size:10.5px;">TENTANG</div>
     <div style="font-weight:bold; font-size:10.5px;">DEMOSI JABATAN</div>
   </div>
 
   <!-- MEMPERHATIKAN -->
-  <table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px; margin-bottom:4px;">
+  <table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px; margin-bottom:6px;">
     <tr>
       <td style="width:23%; vertical-align:top; font-weight:bold;">MEMPERHATIKAN</td>
       <td style="width:3%; vertical-align:top; text-align:center; font-weight:bold;">:</td>
@@ -262,16 +270,16 @@ if (empty($demosiKopSrc)) {
           @foreach($memperhatikan as $item)
             @php $val = trim($item->value ?? $item['value'] ?? ''); @endphp
             @if(!empty($val))
-              <div style="padding-left:14px; text-indent:-14px; margin-bottom:1px; text-align:justify; line-height:1.25;">
+              <div style="padding-left:14px; text-indent:-14px; margin-bottom:2px; text-align:justify; line-height:1.3;">
                 •&nbsp;&nbsp;{{ $val }}
               </div>
             @endif
           @endforeach
         @else
-          <div style="padding-left:14px; text-indent:-14px; margin-bottom:1px; text-align:justify; line-height:1.25;">
+          <div style="padding-left:14px; text-indent:-14px; margin-bottom:2px; text-align:justify; line-height:1.3;">
             •&nbsp;&nbsp;Keputusan hasil koordinasi manajemen {{ $companyName }}
           </div>
-          <div style="padding-left:14px; text-indent:-14px; text-align:justify; line-height:1.25;">
+          <div style="padding-left:14px; text-indent:-14px; text-align:justify; line-height:1.3;">
             •&nbsp;&nbsp;Peraturan Perusahaan
           </div>
         @endif
@@ -280,7 +288,7 @@ if (empty($demosiKopSrc)) {
   </table>
 
   <!-- MEMUTUSKAN SERTA MENETAPKAN -->
-  <table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px; margin-bottom:4px;">
+  <table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px; margin-bottom:5px;">
     <tr>
       <td style="width:23%; vertical-align:top; font-weight:bold; line-height:1.25;">
         MEMUTUSKAN<br>
@@ -291,15 +299,15 @@ if (empty($demosiKopSrc)) {
       <td style="width:74%; vertical-align:top;">
 
         <!-- POIN 1 -->
-        <div style="margin-bottom:3px; line-height:1.25;">
+        <div style="margin-bottom:3px; line-height:1.3;">
           1.&nbsp;&nbsp;Terhitung efektif {{ $tanggalIndo }}.
         </div>
 
         <!-- DETAIL TEMPAT TUGAS LAMA -->
-        <table style="width:100%; border-collapse:collapse; font-size:10.5px; margin-bottom:3px;">
+        <table style="width:100%; border-collapse:collapse; font-size:10.5px; margin-bottom:4px;">
           <tr>
             <td style="width:4%; vertical-align:top; padding-top:2px;">
-              <img src="{{ $arrowIcon }}" width="9" height="9" alt="►">
+              <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
             </td>
             <td style="width:17%; vertical-align:top;">Nama</td>
             <td style="width:3%; vertical-align:top; text-align:center;">:</td>
@@ -309,11 +317,11 @@ if (empty($demosiKopSrc)) {
           </tr>
           <tr>
             <td style="width:4%; vertical-align:top; padding-top:2px;">
-              <img src="{{ $arrowIcon }}" width="9" height="9" alt="►">
+              <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
             </td>
             <td style="width:17%; vertical-align:top;">Jabatan</td>
             <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-            <td style="width:76%; vertical-align:top; line-height:1.2;">
+            <td style="width:76%; vertical-align:top; line-height:1.25;">
               <b>{{ $t_mutasi?->m_posisi_lama?->name ?? '-' }}</b><br>
               {{ $companyNameLama }}<br>
               {{ $alamatLama }}
@@ -321,7 +329,7 @@ if (empty($demosiKopSrc)) {
           </tr>
           <tr>
             <td style="width:4%; vertical-align:top; padding-top:2px;">
-              <img src="{{ $arrowIcon }}" width="9" height="9" alt="►">
+              <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
             </td>
             <td style="width:17%; vertical-align:top;">Jam Kerja</td>
             <td style="width:3%; vertical-align:top; text-align:center;">:</td>
@@ -332,19 +340,19 @@ if (empty($demosiKopSrc)) {
         </table>
 
         <!-- SUB TEMPAT TUGAS BARU -->
-        <div style="margin-bottom:2px; text-decoration:underline;">
+        <div style="margin-bottom:3px; text-decoration:underline;">
           Tempat Tugas Baru :
         </div>
 
         <!-- DETAIL TEMPAT TUGAS BARU -->
-        <table style="width:100%; border-collapse:collapse; font-size:10.5px; margin-bottom:3px;">
+        <table style="width:100%; border-collapse:collapse; font-size:10.5px; margin-bottom:4px;">
           <tr>
             <td style="width:4%; vertical-align:top; padding-top:2px;">
-              <img src="{{ $arrowIcon }}" width="9" height="9" alt="►">
+              <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
             </td>
             <td style="width:17%; vertical-align:top;">Jabatan</td>
             <td style="width:3%; vertical-align:top; text-align:center;">:</td>
-            <td style="width:76%; vertical-align:top; line-height:1.2;">
+            <td style="width:76%; vertical-align:top; line-height:1.25;">
               <b>{{ $t_mutasi?->m_posisi_baru?->name ?? '-' }}</b><br>
               {{ $companyNameBaru }}<br>
               {{ $alamatBaru }}
@@ -352,7 +360,7 @@ if (empty($demosiKopSrc)) {
           </tr>
           <tr>
             <td style="width:4%; vertical-align:top; padding-top:2px;">
-              <img src="{{ $arrowIcon }}" width="9" height="9" alt="►">
+              <img src="{{ $arrowIcon }}" width="8" height="8" alt="►">
             </td>
             <td style="width:17%; vertical-align:top;">Jam Kerja</td>
             <td style="width:3%; vertical-align:top; text-align:center;">:</td>
@@ -362,20 +370,20 @@ if (empty($demosiKopSrc)) {
           </tr>
         </table>
 
-        <!-- PENYESUAIAN TUNJANGAN (BEBAS BUG COLLAPSE TANPA TABEL) -->
-        <div style="margin-bottom:2px; line-height:1.25;">
+        <!-- PENYESUAIAN TUNJANGAN -->
+        <div style="margin-bottom:2px; line-height:1.3;">
           Adapun penyesuaian yang menyertai demosi jabatan tersebut antara lain :
         </div>
-        <div style="margin-bottom:4px;">
+        <div style="margin-bottom:5px;">
           @foreach($listPenyesuaian as $penyesuaian)
-            <div style="padding-left:14px; text-indent:-14px; margin-bottom:1px; line-height:1.25;">
+            <div style="padding-left:14px; text-indent:-14px; margin-bottom:1px; line-height:1.3;">
               -&nbsp;&nbsp;{{ $penyesuaian }}
             </div>
           @endforeach
         </div>
 
         <!-- POIN 2 -->
-        <div style="text-align:justify; line-height:1.25;">
+        <div style="text-align:justify; line-height:1.3;">
           2.&nbsp;&nbsp;Keputusan ini berlaku sejak tanggal efektif dan akan dilakukan evaluasi dan ditinjau kembali sampai dengan {{ $tanggalAkhirTahun }}.
         </div>
 
@@ -384,7 +392,7 @@ if (empty($demosiKopSrc)) {
   </table>
 
   <!-- TANDA TANGAN (KANAN) -->
-  <table style="width:100%; margin-top:6px; font-size:10.5px; border-collapse:collapse;">
+  <table style="width:100%; margin-top:5px; font-size:10.5px; border-collapse:collapse;">
     <tr>
       <td style="width:52%;"></td>
       <td style="width:48%; vertical-align:top;">
@@ -403,7 +411,7 @@ if (empty($demosiKopSrc)) {
         <div style="margin-top:2px; font-weight:bold;">
           {{ $companyName }}
         </div>
-        <div style="height:25px;"></div>
+        <div style="height:28px;"></div>
         <div style="font-weight:bold; text-decoration:underline;">
           {{ $signatureNama ?: 'NAMA YANG TTD' }}
         </div>
@@ -415,11 +423,11 @@ if (empty($demosiKopSrc)) {
   </table>
 
   <!-- TEMBUSAN (KIRI BAWAH) -->
-  <table style="width:100%; margin-top:2px; font-size:9.5px; border-collapse:collapse;">
+  <table style="width:100%; margin-top:1px; font-size:9.5px; border-collapse:collapse;">
     <tr>
       <td style="width:55%; vertical-align:top;">
         <b>Tembusan :</b>
-        <table cellpadding="0" cellspacing="0" style="font-size:9.5px; margin-top:1px; line-height:1.2;">
+        <table cellpadding="0" cellspacing="0" style="font-size:9.5px; margin-top:1px;">
           @if($tembusan && count($tembusan) > 0)
             @foreach($tembusan as $idx => $t)
               <tr>

@@ -534,8 +534,30 @@ $headerPkwtImgSrc = $resolvePkwtMedia($kopMediaPkwt, $b64HeaderPkwt, 'jpg');
 $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
 @endphp
 
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 9mm 18mm 7mm 18mm;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Times New Roman', Times, serif;
+    color: #000;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: 'Times New Roman', Times, serif;
+  }
+  td, th, p, div {
+    font-family: 'Times New Roman', Times, serif;
+    color: #000;
+  }
+</style>
+
 <!-- ==================== HALAMAN 1 ==================== -->
-<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:0 auto; font-size:10pt; line-height:1.24; color:#000;">
+<div style="font-family:'Times New Roman', Times, serif; width:100%; margin:0; font-size:9.5pt; line-height:1.32; color:#000;">
 
     <!-- KOP SURAT TEMPRINA RESMI (FORMAT PDF ACUAN) -->
 @if(view()->exists('projects.web_sk_kop_pkwt'))
@@ -543,41 +565,40 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
 @elseif(view()->exists('web_sk_kop_pkwt'))
     @include('web_sk_kop_pkwt')
 @else
-<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:12px; padding:0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:8px; padding:0;">
   <tr>
-    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
-      <img src="{{ $headerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Kop Surat PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle; line-height:0;">
+      <img src="{{ $headerPkwtImgSrc }}" style="width:100%; max-width:100%; height:auto; display:block;" alt="Kop Surat PKWT">
     </td>
   </tr>
 </table>
 @endif
 
-
   <!-- JUDUL & NOMOR -->
   <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0;">
     <tr>
-      <td style="text-align:center; font-weight:bold; font-size:13pt; letter-spacing:0.5px;">
+      <td style="text-align:center; font-weight:bold; font-size:12.5pt; letter-spacing:0.5px;">
         <u>PERJANJIAN KERJA WAKTU TERTENTU (HL)</u>
       </td>
     </tr>
     <tr>
-      <td style="text-align:center; font-weight:bold; font-size:10.5pt; padding-top:2px;">
+      <td style="text-align:center; font-weight:bold; font-size:10pt; padding-top:2px;">
         No. {{ $nomor }}
       </td>
     </tr>
-    <tr><td style="height:8px; line-height:8px; font-size:1px;">&nbsp;</td></tr>
+    <tr><td style="height:6px; line-height:6px; font-size:1px;">&nbsp;</td></tr>
   </table>
 
   <!-- PEMBUKA -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:10pt; line-height:1.24;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:9.5pt; line-height:1.22;">
     <tr>
       <td style="text-align:left; margin:0; padding:0;">Kami yang bertanda tangan di bawah ini :</td>
     </tr>
-    <tr><td style="height:4px; line-height:4px; font-size:1px;">&nbsp;</td></tr>
+    <tr><td style="height:3px; line-height:3px; font-size:1px;">&nbsp;</td></tr>
   </table>
 
   <!-- DATA PIHAK PERTAMA -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:10pt; line-height:1.24;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:9.5pt; line-height:1.22;">
     <tr>
       <td style="width:4%; vertical-align:top; padding:1px 0;">1</td>
       <td style="width:22%; vertical-align:top; padding:1px 0;">Nama</td>
@@ -604,14 +625,14 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
     </tr>
     <tr>
       <td>&nbsp;</td>
-      <td colspan="3" style="vertical-align:top; text-align:justify; padding:3px 0 6px 0;">
+      <td colspan="3" style="vertical-align:top; text-align:justify; text-justify:inter-word; padding:2px 0 6pt 0;">
         Bertindak atas nama {{ $jabatanPihak1 }} {{ $companyName }}, selanjutnya disebut sebagai Pemberi Kerja atau <b>PIHAK PERTAMA</b>.
       </td>
     </tr>
   </table>
 
   <!-- DATA PIHAK KEDUA -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:10pt; line-height:1.24;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:9.5pt; line-height:1.24;">
     <tr>
       <td style="width:4%; vertical-align:top; padding:1px 0;">2</td>
       <td style="width:22%; vertical-align:top; padding:1px 0;">Nama</td>
@@ -644,100 +665,104 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
     </tr>
     <tr>
       <td>&nbsp;</td>
-      <td colspan="3" style="vertical-align:top; text-align:justify; padding:3px 0 6px 0;">
+      <td colspan="3" style="vertical-align:top; text-align:justify; text-justify:inter-word; padding:2px 0 6pt 0;">
         Bertindak untuk dan atas nama diri sendiri, selanjutnya disebut sebagai Pekerja atau <b>PIHAK KEDUA</b>.
       </td>
     </tr>
   </table>
 
   <!-- PEMBUKA PARA PIHAK -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:10pt; line-height:1.24;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:9.5pt; line-height:1.32;">
     <tr>
-      <td style="text-align:justify; padding-bottom:4px;">
+      <td style="text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PIHAK PERTAMA dan PIHAK KEDUA, bersama-sama dalam Perjanjian ini disebut sebagai <b>PARA PIHAK</b>.
       </td>
     </tr>
     <tr>
-      <td style="text-align:justify; padding-bottom:6px;">
-        PARA PIHAK, pada hari ini <b>{{ $tanggalIndo }}</b> telah bersepakat untuk membuat dan menandatangani Perjanjian Kerja Waktu Tertentu (PKWT) dengan sistem upah harian (harian lepas) yang dalam hal ini disebut dengan “Perjanjian Kerja”dengan syarat-syarat tersebut di bawah ini :
+      <td style="text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+        PARA PIHAK, pada hari ini <b>{{ $tanggalIndo }}</b> telah bersepakat untuk membuat dan menandatangani Perjanjian Kerja Waktu Tertentu (PKWT) dengan sistem upah harian (harian lepas) yang dalam hal ini disebut dengan "Perjanjian Kerja" dengan syarat-syarat tersebut di bawah ini :
       </td>
     </tr>
   </table>
 
   <!-- PASAL 1 S/D 4 -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:10pt; line-height:1.24;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:9.5pt; line-height:1.32;">
+    <colgroup>
+      <col style="width:4%;">
+      <col style="width:96%;">
+    </colgroup>
     <!-- PASAL 1 -->
     <tr>
-      <td colspan="2" style="font-weight:bold; padding-top:2px; padding-bottom:2px;">
+      <td colspan="2" style="font-weight:bold; font-size:9.5pt; padding-top:4pt; padding-bottom:3pt; letter-spacing:0.2px;">
         PASAL 1. MULAI DAN JANGKA WAKTU BERLAKUNYA PERJANJIAN KERJA :
       </td>
     </tr>
     <tr>
-      <td style="width:5%; vertical-align:top; padding-bottom:2px;">1.1</td>
-      <td style="width:95%; vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">1.1</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa Perjanjian Kerja ini berlaku <b>selama {{ $lamaKontrak }} bulan mulai tanggal {{ $durasiKontrak }}</b>.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:5px;">1.2</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:5px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:7pt;">1.2</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
         PIHAK PERTAMA berhak untuk memperpanjang maupun tidak memperpanjang Perjanjian Kerja ini berdasarkan kebutuhan volume pekerjaan, evaluasi dan hasil kerja PIHAK KEDUA yang pelaksanaannya didasarkan pada Keputusan Menteri Tenaga Kerja Nomor : 100/MEN/VI/2004 atau Peraturan perundang-undangan yang terkait.
       </td>
     </tr>
 
     <!-- PASAL 2 -->
     <tr>
-      <td colspan="2" style="font-weight:bold; padding-top:2px; padding-bottom:2px;">
-        PASAL 2. PENEMPATAN TUGAS, HARI dan JAM KERJA :
+      <td colspan="2" style="font-weight:bold; font-size:9.5pt; padding-top:7pt; padding-bottom:3pt; letter-spacing:0.2px;">
+        PASAL 2. PENEMPATAN TUGAS, HARI DAN JAM KERJA :
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">2.1</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">2.1</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa PIHAK KEDUA akan dipekerjakan pada bagian <b>{{ $posisiBaru }} {{ $alamatPenempatan }}</b> atau dialihkan ke lain bagian sesuai dengan kebutuhan Perusahaan dan/atau demi perkembangan skill dan kompetensi PIHAK KEDUA.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">2.2</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">2.2</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PIHAK KEDUA wajib hadir kerja sesuai dengan aturan hari dan jam kerja yang ditetapkan oleh PIHAK PERTAMA atau wakil PIHAK PERTAMA sesuai dengan bidang dan jenis pekerjaan PIHAK PERTAMA.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:5px;">2.3</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:5px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:7pt;">2.3</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
         Apabila diperlukan, mengingat banyaknya permintaan / pesanan atau kebutuhan lain kepada Perusahaan, PIHAK KEDUA bersedia dan sepakat untuk kerja lembur yang tata cara pengaturannya baik waktu dan upahnya sesuai dengan kebijakan PIHAK PERTAMA dan Peraturan Perundang-undangan yang berlaku.
       </td>
     </tr>
 
     <!-- PASAL 3 -->
     <tr>
-      <td colspan="2" style="font-weight:bold; padding-top:2px; padding-bottom:2px;">
+      <td colspan="2" style="font-weight:bold; font-size:9.5pt; padding-top:7pt; padding-bottom:3pt; letter-spacing:0.2px;">
         PASAL 3. TUGAS KERJA DAN TANGGUNG JAWAB :
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:5px;">3.1</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:5px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:7pt;">3.1</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
         PARA PIHAK sepakat bahwa tugas dan tanggungjawab PIHAK KEDUA adalah sebagaimana yang tercantum dalam Job Description atau yang sudah ditentukan dalam Peraturan Perusahaan dan atau dokumen lain yang terkait.
       </td>
     </tr>
 
     <!-- PASAL 4 -->
     <tr>
-      <td colspan="2" style="font-weight:bold; padding-top:2px; padding-bottom:2px;">
+      <td colspan="2" style="font-weight:bold; font-size:9.5pt; padding-top:7pt; padding-bottom:3pt; letter-spacing:0.2px;">
         PASAL 4. PEMUTUSAN HUBUNGAN KERJA :
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">4.1</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">4.1</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Perjanjian Kerja ini berakhir demi hukum sesuai dengan berakhirnya waktu yang disepakati PARA PIHAK, kecuali diperpanjang atau diakhiri setelah disetujui oleh PARA PIHAK secara tertulis.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">4.2</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">4.2</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK SEPAKAT bahwa Perjanjian Kerja berakhir tanpa ada kewajiban pembayaran kompensasi apapun dari PIHAK PERTAMA kepada PIHAK KEDUA, jika PIHAK PERTAMA tertangkap tangan dan/atau melanggar peraturan perundang-undangan di bidang hukum pidana (misal : pemalsuan, pencurian, penggelapan, penipuan, penganiayaan, judi, asusila, dll) atau melakukan kesalahan berat sebagaimana Pasal 158 ayat 1 Undang-undang Nomor 13 Tahun 2003 tentang Ketenagakerjaan dan/atau sebagaimana pelanggaran-pelanggaran berat yang diatur dalam Peraturan Perusahaan.
       </td>
     </tr>
@@ -749,10 +774,10 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
 @elseif(view()->exists('web_sk_footer_pkwt'))
     @include('web_sk_footer_pkwt')
 @else
-<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:14px; padding:0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:6px; padding:0; page-break-inside:avoid;">
   <tr>
-    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
-      <img src="{{ $footerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Footer PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle; line-height:0;">
+      <img src="{{ $footerPkwtImgSrc }}" style="width:100%; max-width:100%; height:auto; display:block;" alt="Footer PKWT">
     </td>
   </tr>
 </table>
@@ -764,7 +789,7 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
 <div style="page-break-before:always;"></div>
 
 <!-- ==================== HALAMAN 2 ==================== -->
-<div style="font-family:'Times New Roman', Times, serif; width:92%; margin:0 auto; font-size:10pt; line-height:1.24; color:#000;">
+<div style="font-family:'Times New Roman', Times, serif; width:100%; margin:0; font-size:9.5pt; line-height:1.32; color:#000;">
 
     <!-- KOP SURAT TEMPRINA RESMI HALAMAN 2 (FORMAT PDF ACUAN) -->
 @if(view()->exists('projects.web_sk_kop_pkwt'))
@@ -772,108 +797,111 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
 @elseif(view()->exists('web_sk_kop_pkwt'))
     @include('web_sk_kop_pkwt')
 @else
-<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:12px; padding:0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:8px; padding:0;">
   <tr>
-    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
-      <img src="{{ $headerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Kop Surat PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle; line-height:0;">
+      <img src="{{ $headerPkwtImgSrc }}" style="width:100%; max-width:100%; height:auto; display:block;" alt="Kop Surat PKWT">
     </td>
   </tr>
 </table>
 @endif
 
-
   <!-- PASAL 5 S/D 7 -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:10pt; line-height:1.24;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0; padding:0; font-size:9.5pt; line-height:1.32;">
+    <colgroup>
+      <col style="width:4%;">
+      <col style="width:96%;">
+    </colgroup>
     <!-- PASAL 5 -->
     <tr>
-      <td colspan="2" style="font-weight:bold; padding-top:2px; padding-bottom:2px;">
-        PASAL 5. UPAH / GAJI dan CARA PEMBAYARAN :
+      <td colspan="2" style="font-weight:bold; font-size:9.5pt; padding-top:4pt; padding-bottom:3pt; letter-spacing:0.2px;">
+        PASAL 5. UPAH / GAJI DAN CARA PEMBAYARAN :
       </td>
     </tr>
     <tr>
-      <td style="width:5%; vertical-align:top; padding-bottom:2px;">5.1.</td>
-      <td style="width:95%; vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">5.1</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa PIHAK KEDUA diberikan upah yang dihitung harian berdasarkan jumlah kehadiran kerja PIHAK KEDUA yakni sejumlah <b>Rp {{ $upahHarianFormatted }} ({{ $upahHarianTerbilang }})</b> untuk setiap hari kehadiran PIHAK KEDUA.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">5.2.</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">5.2</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa Pajak atas penghasilan (PPH Pasal 21) PIHAK KEDUA ditanggung oleh PIHAK PERTAMA.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">5.3.</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">5.3</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Upah PIHAK KEDUA akan dibayarkan PIHAK PERTAMA melalui transfer ke rekening PIHAK KEDUA yakni pada awal bulan selanjutnya PIHAK KEDUA kepada PIHAK PERTAMA.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:6px;">5.4.</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:6px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:7pt;">5.4</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
         PIHAK KEDUA menerima fasilitas BPJS Ketenagakerjaan dengan manfaat Jaminan Kecelakaan Kerja dan Jaminan Kematian yang dibebankan seluruhnya kepada PIHAK PERTAMA.
       </td>
     </tr>
 
     <!-- PASAL 6 -->
     <tr>
-      <td colspan="2" style="font-weight:bold; padding-top:2px; padding-bottom:2px;">
-        PASAL 6. LAIN – LAIN :
+      <td colspan="2" style="font-weight:bold; font-size:9.5pt; padding-top:7pt; padding-bottom:3pt; letter-spacing:0.2px;">
+        PASAL 6. LAIN-LAIN :
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">6.1.</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">6.1</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Pada saat ditandatanganinya Perjanjian Kerja ini, PIHAK PERTAMA telah memberikan 1 (satu) eksemplar dan menyampaikan Peraturan Perusahaan serta PIHAK KEDUA telah membaca, mengerti dan memahami Peraturan Perusahaan yang berlaku.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">6.2.</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">6.2</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa hal-hal lain dalam Peraturan Perusahaan tersebut yang tidak tercantum pada Perjanjian Kerja ini tetap mengikat dan menjadi bagian yang tidak terpisahkan dalam Perjanjian Kerja ini.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">6.3.</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">6.3</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Segala hal yang belum diatur dalam Perjanjian Kerja ini baik atas penambahan-penambahan maupun perubahan-perubahan yang disepakati PARA PIHAK akan diatur dalam addendum Perjanjian Kerja dan/atau dokumen lain yang menjadi bagian tidak terpisahkan dalam Perjanjian Kerja ini.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:6px;">6.4.</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:6px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:7pt;">6.4</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
         PARA PIHAK menyatakan bahwa data dan keterangan yang disampaikan dalam Perjanjian ini adalah benar adanya dan dapat dipertanggungjawabkan, serta akan saling menginformasikan kepada PIHAK lainnya apabila dalam masa berlakunya Perjanjian Kerja ini ada perubahan terkait data dan keterangan paling lambat 7 (tujuh) hari sejak adanya perubahan data dan keterangan.
       </td>
     </tr>
 
     <!-- PASAL 7 -->
     <tr>
-      <td colspan="2" style="font-weight:bold; padding-top:2px; padding-bottom:2px;">
+      <td colspan="2" style="font-weight:bold; font-size:9.5pt; padding-top:7pt; padding-bottom:3pt; letter-spacing:0.2px;">
         PASAL 7. PENUTUP :
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">7.1.</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">7.1</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa perselisihan yang mungkin timbul selama pelaksanaan perjanjian ini akan diselesaikan secara musyawarah mufakat serta diselesaikan melalui Pegawai Mediator di Dinas Ketenagakerjaan Kabupaten Gresik dan apabila tidak tercapai mufakat maka PARA PIHAK memilih menyelesaikan melalui Kepaniteraan Pengadilan Hubungan Industrial pada Pengadilan Negeri Kabupaten Gresik
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:2px;">7.2.</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:2px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">7.2</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Demikian perjanjian kerja ini dibuat, disetujui, dan ditandatangani PARA PIHAK tanpa ada paksaan dari pihak manapun juga serta dibuat rangkap 2 (dua) yang masing-masing PIHAK memiliki 1 (satu) rangkap dengan bunyi yang sama dan memiliki kekuatan pembuktian yang sama juga.
       </td>
     </tr>
     <tr>
-      <td style="vertical-align:top; padding-bottom:6px;">7.3.</td>
-      <td style="vertical-align:top; text-align:justify; padding-bottom:6px;">
+      <td style="width:4%; vertical-align:top; white-space:nowrap; padding-bottom:6pt;">7.3</td>
+      <td style="width:96%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Perjanjian Kerja ini berlaku sejak tanggal ditetapkan. Jika di kemudian hari terdapat kesalahan dalam perjanjian kerja ini, maka akan diadakan perbaikan seperlunya.
       </td>
     </tr>
   </table>
 
   <!-- TEMPAT & TANGGAL KESEPAKATAN -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:6px; font-size:10pt; line-height:1.24;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:6px; font-size:9.5pt; line-height:1.24;">
     <tr>
       <td style="width:24%;">Dibuat dan disepakati di</td>
       <td style="width:2%;">:</td>
@@ -884,22 +912,25 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
       <td>:</td>
       <td>{{ $tanggal }}</td>
     </tr>
+    <tr>
+      <td colspan="3" style="height:18px; line-height:18px; font-size:1px;">&nbsp;</td>
+    </tr>
   </table>
 
   <!-- TANDA TANGAN PARA PIHAK -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:12px; font-size:10pt;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:4px; font-size:9.5pt;">
     <tr>
       <td style="width:50%; text-align:center; vertical-align:top;">
-        <b>PIHAK PERTAMA</b><br>
+        <b>PIHAK PERTAMA</b><br>  
         <b>{{ $companyName }}</b>
       </td>
       <td style="width:50%; text-align:center; vertical-align:top;">
-        <b>PIHAK KEDUA</b>
+        <b>PIHAK KEDUA</b>  
       </td>
     </tr>
     <tr>
-      <td style="height:48px;"></td>
-      <td style="height:48px;"></td>
+      <td style="height:44px;"></td>
+      <td style="height:44px;"></td>
     </tr>
     <tr>
       <td style="text-align:center; vertical-align:top;">
@@ -917,10 +948,10 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
 @elseif(view()->exists('web_sk_footer_pkwt'))
     @include('web_sk_footer_pkwt')
 @else
-<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:14px; padding:0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin-top:6px; padding:0; page-break-inside:avoid;">
   <tr>
-    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle;">
-      <img src="{{ $footerPkwtImgSrc }}" width="700" style="width:700px; max-width:100%;" alt="Footer PKWT">
+    <td align="center" style="width:100%; text-align:center; padding:0; vertical-align:middle; line-height:0;">
+      <img src="{{ $footerPkwtImgSrc }}" style="width:100%; max-width:100%; height:auto; display:block;" alt="Footer PKWT">
     </td>
   </tr>
 </table>
