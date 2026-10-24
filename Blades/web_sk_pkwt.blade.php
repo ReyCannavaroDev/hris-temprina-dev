@@ -688,8 +688,8 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
   <!-- PASAL 1 S/D 4 -->
   <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; table-layout:fixed; margin:0; padding:0; font-size:9.5pt; line-height:1.32;">
     <colgroup>
-      <col style="width:3.2%;">
-      <col style="width:96.8%;">
+      <col style="width:2.6%;">
+      <col style="width:97.4%;">
     </colgroup>
     <!-- PASAL 1 -->
     <tr>
@@ -698,14 +698,14 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">1.1</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">1.1</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa Perjanjian Kerja ini berlaku <b>selama {{ $lamaKontrak }} bulan mulai tanggal {{ $durasiKontrak }}</b>.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:7pt;">1.2</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:7pt;">1.2</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
         PIHAK PERTAMA berhak untuk memperpanjang maupun tidak memperpanjang Perjanjian Kerja ini berdasarkan kebutuhan volume pekerjaan, evaluasi dan hasil kerja PIHAK KEDUA yang pelaksanaannya didasarkan pada Keputusan Menteri Tenaga Kerja Nomor : 100/MEN/VI/2004 atau Peraturan perundang-undangan yang terkait.
       </td>
     </tr>
@@ -717,20 +717,20 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">2.1</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">2.1</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa PIHAK KEDUA akan dipekerjakan pada bagian <b>{{ $posisiBaru }} {{ $alamatPenempatan }}</b> atau dialihkan ke lain bagian sesuai dengan kebutuhan Perusahaan dan/atau demi perkembangan skill dan kompetensi PIHAK KEDUA.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">2.2</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">2.2</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PIHAK KEDUA wajib hadir kerja sesuai dengan aturan hari dan jam kerja yang ditetapkan oleh PIHAK PERTAMA atau wakil PIHAK PERTAMA sesuai dengan bidang dan jenis pekerjaan PIHAK PERTAMA.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:7pt;">2.3</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:7pt;">2.3</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
         Apabila diperlukan, mengingat banyaknya permintaan / pesanan atau kebutuhan lain kepada Perusahaan, PIHAK KEDUA bersedia dan sepakat untuk kerja lembur yang tata cara pengaturannya baik waktu dan upahnya sesuai dengan kebijakan PIHAK PERTAMA dan Peraturan Perundang-undangan yang berlaku.
       </td>
     </tr>
@@ -742,8 +742,8 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:7pt;">3.1</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:7pt;">3.1</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
         PARA PIHAK sepakat bahwa tugas dan tanggungjawab PIHAK KEDUA adalah sebagaimana yang tercantum dalam Job Description atau yang sudah ditentukan dalam Peraturan Perusahaan dan atau dokumen lain yang terkait.
       </td>
     </tr>
@@ -755,14 +755,14 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">4.1</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">4.1</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Perjanjian Kerja ini berakhir demi hukum sesuai dengan berakhirnya waktu yang disepakati PARA PIHAK, kecuali diperpanjang atau diakhiri setelah disetujui oleh PARA PIHAK secara tertulis.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">4.2</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">4.2</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK SEPAKAT bahwa Perjanjian Kerja berakhir tanpa ada kewajiban pembayaran kompensasi apapun dari PIHAK PERTAMA kepada PIHAK KEDUA, jika PIHAK PERTAMA tertangkap tangan dan/atau melanggar peraturan perundang-undangan di bidang hukum pidana (misal : pemalsuan, pencurian, penggelapan, penipuan, penganiayaan, judi, asusila, dll) atau melakukan kesalahan berat sebagaimana Pasal 158 ayat 1 Undang-undang Nomor 13 Tahun 2003 tentang Ketenagakerjaan dan/atau sebagaimana pelanggaran-pelanggaran berat yang diatur dalam Peraturan Perusahaan.
       </td>
     </tr>
@@ -809,8 +809,8 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
   <!-- PASAL 5 S/D 7 -->
   <table width="100%" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; table-layout:fixed; margin:0; padding:0; font-size:9.5pt; line-height:1.32;">
     <colgroup>
-      <col style="width:3.2%;">
-      <col style="width:96.8%;">
+      <col style="width:2.6%;">
+      <col style="width:97.4%;">
     </colgroup>
     <!-- PASAL 5 -->
     <tr>
@@ -819,26 +819,26 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">5.1</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">5.1</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa PIHAK KEDUA diberikan upah yang dihitung harian berdasarkan jumlah kehadiran kerja PIHAK KEDUA yakni sejumlah <b>Rp {{ $upahHarianFormatted }} ({{ $upahHarianTerbilang }})</b> untuk setiap hari kehadiran PIHAK KEDUA.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">5.2</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">5.2</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa Pajak atas penghasilan (PPH Pasal 21) PIHAK KEDUA ditanggung oleh PIHAK PERTAMA.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">5.3</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">5.3</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Upah PIHAK KEDUA akan dibayarkan PIHAK PERTAMA melalui transfer ke rekening PIHAK KEDUA yakni pada awal bulan selanjutnya PIHAK KEDUA kepada PIHAK PERTAMA.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:7pt;">5.4</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:7pt;">5.4</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
         PIHAK KEDUA menerima fasilitas BPJS Ketenagakerjaan dengan manfaat Jaminan Kecelakaan Kerja dan Jaminan Kematian yang dibebankan seluruhnya kepada PIHAK PERTAMA.
       </td>
     </tr>
@@ -850,26 +850,26 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">6.1</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">6.1</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Pada saat ditandatanganinya Perjanjian Kerja ini, PIHAK PERTAMA telah memberikan 1 (satu) eksemplar dan menyampaikan Peraturan Perusahaan serta PIHAK KEDUA telah membaca, mengerti dan memahami Peraturan Perusahaan yang berlaku.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">6.2</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">6.2</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa hal-hal lain dalam Peraturan Perusahaan tersebut yang tidak tercantum pada Perjanjian Kerja ini tetap mengikat dan menjadi bagian yang tidak terpisahkan dalam Perjanjian Kerja ini.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">6.3</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">6.3</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Segala hal yang belum diatur dalam Perjanjian Kerja ini baik atas penambahan-penambahan maupun perubahan-perubahan yang disepakati PARA PIHAK akan diatur dalam addendum Perjanjian Kerja dan/atau dokumen lain yang menjadi bagian tidak terpisahkan dalam Perjanjian Kerja ini.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:7pt;">6.4</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:7pt;">6.4</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:7pt;">
         PARA PIHAK menyatakan bahwa data dan keterangan yang disampaikan dalam Perjanjian ini adalah benar adanya dan dapat dipertanggungjawabkan, serta akan saling menginformasikan kepada PIHAK lainnya apabila dalam masa berlakunya Perjanjian Kerja ini ada perubahan terkait data dan keterangan paling lambat 7 (tujuh) hari sejak adanya perubahan data dan keterangan.
       </td>
     </tr>
@@ -881,20 +881,20 @@ $footerPkwtImgSrc = $resolvePkwtMedia($footerMediaPkwt, $b64FooterPkwt, 'png');
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">7.1</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">7.1</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         PARA PIHAK sepakat bahwa perselisihan yang mungkin timbul selama pelaksanaan perjanjian ini akan diselesaikan secara musyawarah mufakat serta diselesaikan melalui Pegawai Mediator di Dinas Ketenagakerjaan Kabupaten Gresik dan apabila tidak tercapai mufakat maka PARA PIHAK memilih menyelesaikan melalui Kepaniteraan Pengadilan Hubungan Industrial pada Pengadilan Negeri Kabupaten Gresik
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">7.2</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">7.2</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Demikian perjanjian kerja ini dibuat, disetujui, dan ditandatangani PARA PIHAK tanpa ada paksaan dari pihak manapun juga serta dibuat rangkap 2 (dua) yang masing-masing PIHAK memiliki 1 (satu) rangkap dengan bunyi yang sama dan memiliki kekuatan pembuktian yang sama juga.
       </td>
     </tr>
     <tr>
-      <td style="width:3.2%; vertical-align:top; white-space:nowrap; padding-left:6px; padding-bottom:6pt;">7.3</td>
-      <td style="width:96.8%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
+      <td style="width:2.6%; vertical-align:top; white-space:nowrap; padding-left:2px; padding-bottom:6pt;">7.3</td>
+      <td style="width:97.4%; vertical-align:top; text-align:justify; text-justify:inter-word; padding-bottom:6pt;">
         Perjanjian Kerja ini berlaku sejak tanggal ditetapkan. Jika di kemudian hari terdapat kesalahan dalam perjanjian kerja ini, maka akan diadakan perbaikan seperlunya.
       </td>
     </tr>
