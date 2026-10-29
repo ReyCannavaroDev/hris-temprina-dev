@@ -1405,6 +1405,7 @@ const landing = reactive({
         headerName: 'No',
         valueGetter: (params) => params.node.rowIndex + 1,
         width: 60,
+        minWidth: 50,
         sortable: true,
         resizable: true,
         filter: true,
@@ -1415,6 +1416,8 @@ const landing = reactive({
         headerName: 'NIP',
         filter: true,
         sortable: true,
+        width: 140,
+        minWidth: 120,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1425,6 +1428,8 @@ const landing = reactive({
         headerName: 'No. KTP',
         filter: true,
         sortable: true,
+        width: 170,
+        minWidth: 150,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1435,6 +1440,8 @@ const landing = reactive({
         field: 'nama_lengkap',
         filter: true,
         sortable: true,
+        width: 200,
+        minWidth: 180,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1445,6 +1452,8 @@ const landing = reactive({
         headerName: 'PT OS',
         filter: true,
         sortable: true,
+        width: 200,
+        minWidth: 180,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1455,6 +1464,8 @@ const landing = reactive({
         headerName: 'SUB',
         filter: true,
         sortable: true,
+        width: 180,
+        minWidth: 160,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1465,6 +1476,8 @@ const landing = reactive({
         headerName: 'Cabang',
         filter: true,
         sortable: true,
+        width: 180,
+        minWidth: 160,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1475,6 +1488,8 @@ const landing = reactive({
         headerName: 'Status Karyawan',
         filter: 'ColFilter',
         sortable: true,
+        width: 170,
+        minWidth: 150,
         flex: 1,
         resizable: true,
         cellClass: ['border-r', '!border-gray-200', 'justify-start'],
@@ -1491,6 +1506,8 @@ const landing = reactive({
         field: 'is_active',
         filter: true,
         sortable: true,
+        width: 110,
+        minWidth: 100,
         flex: 1,
         cellClass: ['border-r', '!border-gray-200', 'justify-center'],
         cellStyle: (params) => {
@@ -1523,14 +1540,56 @@ const landing = reactive({
     ]
 })
 
+const ensureTableScroll = () => {
+    const styleId = 'm_os_kary_scroll_fix';
+    if (typeof document !== 'undefined' && !document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .os-kary-table-container {
+                max-height: calc(100vh - 210px) !important;
+                height: calc(100vh - 210px) !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .os-kary-table-container .ag-theme-alpine {
+                height: 100% !important;
+                max-height: 100% !important;
+            }
+            .os-kary-table-container .ag-root-wrapper {
+                height: 100% !important;
+            }
+            .os-kary-table-container .ag-body-viewport {
+                overflow-x: auto !important;
+                overflow-y: auto !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    const tableEl = apiTable.value?.$el || document.querySelector('.ag-root-wrapper')?.closest('.bg-white') || document.querySelector('.ag-theme-alpine')?.parentElement;
+    if (tableEl) {
+        tableEl.classList.add('os-kary-table-container');
+        tableEl.style.maxHeight = 'calc(100vh - 210px)';
+        tableEl.style.height = 'calc(100vh - 210px)';
+        tableEl.style.overflow = 'auto';
+    }
+};
+
+onMounted(() => {
+    setTimeout(ensureTableScroll, 200);
+    setTimeout(ensureTableScroll, 600);
+});
+
 onActivated(() => {
+    setTimeout(ensureTableScroll, 200);
     //  reload table api landing
     if (apiTable.value) {
         if (route.query.reload) {
-            apiTable.value.reload()
+            apiTable.value.reload();
         }
     }
-})
+});
 
 //  @endif -------------------------------------------------END
 watchEffect(() => store.commit('set', ['isRequesting', isRequesting.value]))
