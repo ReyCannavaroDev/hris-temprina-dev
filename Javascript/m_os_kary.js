@@ -1268,31 +1268,8 @@ async function onSave() {
 //  @else----------------------- LANDING
 
 const activeBtn = ref()
+const statusFilter = ref(null)
 let data = reactive({})
-
-// onBeforeMount(async () => {
-//   try {
-//     const res = await fetch(`${store.server.url_backend}/operation/m_respo/active_respo`, {
-//       headers: {
-//         'Content-Type': 'application/json',
-//         Authorization: `${store.user.token_type} ${store.user.token}`
-//       }
-//     })
-//     if (!res.ok) throw new Error('Gagal fetch m_respo')
-//     const respoJson = await res.json()
-//     const datas = respoJson.data
-//     console.log('ini respo',datas)
-//     data.subcomp_id = datas.m_subcomp_id
-//     data.branch_id = datas.m_branch_id
-//     console.log('jarwok',data.subcomp_id)
-
-//     // const statusList = respoJson.data.map(r => r.status)
-//     // console.log('Daftar status m_respo:', statusList)
-//   } catch (err) {
-//     console.error('Error ambil m_respo:', err)
-//   }
-// })
-
 
 onBeforeMount(async () => {
     console.log('ini user', store.user.data)
@@ -1308,19 +1285,17 @@ onBeforeMount(async () => {
 function filterShowData(params, noBtn) {
     if (activeBtn.value === noBtn) {
         activeBtn.value = null
+        statusFilter.value = null
     } else {
         activeBtn.value = noBtn
-    }
-    if (activeBtn.value == null) {
-        // clear params filter
-        landing.api.params.where = null
-    } else if (params) {
-        landing.api.params.where = `this.is_active=true`
-    } else {
-        landing.api.params.where = `this.is_active=false`
+        if (params) {
+            statusFilter.value = 'this.is_active=true'
+        } else {
+            statusFilter.value = 'this.is_active=false'
+        }
     }
 
-    apiTable.value.reload()
+    apiTable.value?.reload()
 }
 
 const landing = reactive({
@@ -1399,13 +1374,27 @@ const landing = reactive({
             'Content-Type': 'Application/json',
             authorization: `${store.user.token_type} ${store.user.token}`
         },
-        params: computed(() => ({
-            scopes: 'kary_os,respo',
-            m_subcomp_id: `${data.subcomp_id}`,
-            m_branch_id: `${data.branch_id}`,
-            kary_id: store.user.data.m_kary_id ?? 0,
-            os_id: store.user.data.m_os_id ?? null,
-        })),
+        params: computed(() => {
+            const p = {
+                scopes: 'kary_os,respo',
+                kary_id: store.user.data?.m_kary_id ?? 0,
+                join: true,
+                transform: true
+            };
+            if (statusFilter.value) {
+                p.where = statusFilter.value;
+            }
+            if (data.subcomp_id && data.subcomp_id !== 'undefined' && data.subcomp_id !== 'null') {
+                p.m_subcomp_id = data.subcomp_id;
+            }
+            if (data.branch_id && data.branch_id !== 'undefined' && data.branch_id !== 'null') {
+                p.m_branch_id = data.branch_id;
+            }
+            if (store.user?.data?.m_os_id) {
+                p.os_id = store.user.data.m_os_id;
+            }
+            return p;
+        }),
         onsuccess(response) {
             response.page = response.current_page
             response.hasNext = response.has_next

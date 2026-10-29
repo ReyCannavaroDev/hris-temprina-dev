@@ -2730,19 +2730,18 @@ class m_kary extends \App\Models\BasicModels\m_kary
     //filter karyawan reguler (bukan outsource dan bukan harian)
     public function scopenonos($model)
     {
-        $status_os = m_general::where(function ($q) {
-            $q->where("group", "STATUS KARYAWAN OUTSOURCE")
-              ->orWhereRaw("upper(value) like '%HARIAN%'")
-              ->orWhereRaw("upper(code) like '%HARIAN%'")
-              ->orWhereRaw("upper(value) like '%OUTSOURCE%'")
-              ->orWhereRaw("upper(code) like '%OUTSOURCE%'");
-        })->pluck("id")->toArray();
-
-        return $model->where(function ($q) use ($status_os) {
-            if (!empty($status_os)) {
-                $q->whereNotIn("m_kary.status_kary_id", $status_os);
-            }
-            $q->whereNull("m_kary.m_company_outsourcing_id");
+        return $model->where(function ($q) {
+            $q->whereNull("m_kary.m_company_outsourcing_id")
+              ->whereNotExists(function ($sub) {
+                  $sub->select(\DB::raw(1))
+                      ->from('m_general as mg')
+                      ->whereColumn('mg.id', 'm_kary.status_kary_id')
+                      ->where(function ($sub2) {
+                          $sub2->whereRaw("UPPER(mg.value) LIKE '%HARIAN%'")
+                               ->orWhereRaw("UPPER(mg.value) LIKE '%OUTSOURCE%'")
+                               ->orWhere('mg.group', 'STATUS KARYAWAN OUTSOURCE');
+                      });
+              });
         });
     }
 
@@ -2752,10 +2751,10 @@ class m_kary extends \App\Models\BasicModels\m_kary
         $m_subcomp_id = request("m_subcomp_id") ?? null;
         $m_branch_id = request("m_branch_id") ?? null;
 
-        if ($m_subcomp_id === "null") {
+        if ($m_subcomp_id === "null" || $m_subcomp_id === "undefined" || empty($m_subcomp_id) || $m_subcomp_id === "[object Object]") {
             $m_subcomp_id = null;
         }
-        if ($m_branch_id === "null") {
+        if ($m_branch_id === "null" || $m_branch_id === "undefined" || empty($m_branch_id) || $m_branch_id === "[object Object]") {
             $m_branch_id = null;
         }
 
@@ -3343,26 +3342,28 @@ class m_kary extends \App\Models\BasicModels\m_kary
     public function scopekary_os($model)
     {
         $os_id = request("os_id");
-
-        // Karyawan outsourcing mencakup status Outsource dan status Harian
-        $typeIds = m_general::where(function ($q) {
-            $q->where("group", "STATUS KARYAWAN OUTSOURCE")
-              ->orWhereRaw("upper(value) like '%HARIAN%'")
-              ->orWhereRaw("upper(code) like '%HARIAN%'")
-              ->orWhereRaw("upper(value) like '%OUTSOURCE%'")
-              ->orWhereRaw("upper(code) like '%OUTSOURCE%'");
-        })->pluck("id")->toArray();
-
-        if ($os_id) {
-            $model->where("m_company_outsourcing.id", $os_id);
+        if ($os_id === "null" || $os_id === "undefined" || empty($os_id) || !is_numeric($os_id)) {
+            $os_id = null;
         }
 
-        return $model->where(function ($q) use ($typeIds) {
-            if (!empty($typeIds)) {
-                $q->whereIn("m_kary.status_kary_id", $typeIds)
-                  ->orWhereNotNull("m_kary.m_company_outsourcing_id");
+        // Karyawan outsourcing mencakup status Outsource dan status Harian
+        return $model->where(function ($q) use ($os_id) {
+            if ($os_id) {
+                $q->where("m_kary.m_company_outsourcing_id", $os_id);
             } else {
-                $q->whereNotNull("m_kary.m_company_outsourcing_id");
+                $q->where(function ($sub) {
+                    $sub->whereNotNull("m_kary.m_company_outsourcing_id")
+                        ->orWhereExists(function ($sub2) {
+                            $sub2->select(\DB::raw(1))
+                                 ->from('m_general as mg')
+                                 ->whereColumn('mg.id', 'm_kary.status_kary_id')
+                                 ->where(function ($sub3) {
+                                     $sub3->whereRaw("UPPER(mg.value) LIKE '%HARIAN%'")
+                                          ->orWhereRaw("UPPER(mg.value) LIKE '%OUTSOURCE%'")
+                                          ->orWhere('mg.group', 'STATUS KARYAWAN OUTSOURCE');
+                                 });
+                        });
+                });
             }
         });
     }
