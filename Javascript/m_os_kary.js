@@ -1376,7 +1376,7 @@ const landing = reactive({
         },
         params: computed(() => {
             const p = {
-                scopes: 'kary_os,respo',
+                scopes: 'kary_os',
                 kary_id: store.user.data?.m_kary_id ?? 0,
                 join: true,
                 transform: true

@@ -2748,39 +2748,29 @@ class m_kary extends \App\Models\BasicModels\m_kary
     //filter karyawan by respo
     public function scoperespo($model)
     {
-        $m_subcomp_id = request("m_subcomp_id") ?? null;
-        $m_branch_id = request("m_branch_id") ?? null;
+        $m_subcomp_id = request("m_subcomp_id");
+        $m_branch_id = request("m_branch_id");
 
-        if ($m_subcomp_id === "null" || $m_subcomp_id === "undefined" || empty($m_subcomp_id) || $m_subcomp_id === "[object Object]") {
+        if (empty($m_subcomp_id) || $m_subcomp_id === "null" || $m_subcomp_id === "undefined" || $m_subcomp_id === "[object Object]") {
             $m_subcomp_id = null;
         }
-        if ($m_branch_id === "null" || $m_branch_id === "undefined" || empty($m_branch_id) || $m_branch_id === "[object Object]") {
+        if (empty($m_branch_id) || $m_branch_id === "null" || $m_branch_id === "undefined" || $m_branch_id === "[object Object]") {
             $m_branch_id = null;
         }
 
         return $model
             ->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
-                if (is_string($m_subcomp_id) && str_starts_with($m_subcomp_id, '[') && str_ends_with($m_subcomp_id, ']')) {
-                    $m_subcomp_id = json_decode($m_subcomp_id, true);
-                }
-                if (is_array($m_subcomp_id)) {
-                    $q->whereIn("m_kary.m_subcomp_id", $m_subcomp_id);
-                } else if (is_string($m_subcomp_id) && str_contains($m_subcomp_id, ',')) {
-                    $q->whereIn("m_kary.m_subcomp_id", explode(',', $m_subcomp_id));
-                } else {
+                if (is_numeric($m_subcomp_id)) {
                     $q->where("m_kary.m_subcomp_id", $m_subcomp_id);
+                } else if (is_array($m_subcomp_id)) {
+                    $q->whereIn("m_kary.m_subcomp_id", $m_subcomp_id);
                 }
             })
             ->when($m_branch_id, function ($q) use ($m_branch_id) {
-                if (is_string($m_branch_id) && str_starts_with($m_branch_id, '[') && str_ends_with($m_branch_id, ']')) {
-                    $m_branch_id = json_decode($m_branch_id, true);
-                }
-                if (is_array($m_branch_id)) {
-                    $q->whereIn("m_kary.m_branch_id", $m_branch_id);
-                } else if (is_string($m_branch_id) && str_contains($m_branch_id, ',')) {
-                    $q->whereIn("m_kary.m_branch_id", explode(',', $m_branch_id));
-                } else {
+                if (is_numeric($m_branch_id)) {
                     $q->where("m_kary.m_branch_id", $m_branch_id);
+                } else if (is_array($m_branch_id)) {
+                    $q->whereIn("m_kary.m_branch_id", $m_branch_id);
                 }
             });
     }
@@ -3341,29 +3331,27 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
     public function scopekary_os($model)
     {
-        $os_id = request("os_id");
-        if ($os_id === "null" || $os_id === "undefined" || empty($os_id) || !is_numeric($os_id)) {
-            $os_id = null;
-        }
+        // Ambil semua ID m_general yang berkaitan dengan HARIAN dan OUTSOURCE
+        $typeIds = \DB::table('m_general')
+            ->where(function ($q) {
+                $q->where('group', 'STATUS KARYAWAN OUTSOURCE')
+                  ->orWhere('group', 'STATUS KARYAWAN')
+                  ->orWhereRaw("UPPER(value) LIKE '%HARIAN%'")
+                  ->orWhereRaw("UPPER(value) LIKE '%OUTSOURCE%'");
+            })
+            ->where(function ($q) {
+                $q->whereRaw("UPPER(value) LIKE '%HARIAN%'")
+                  ->orWhereRaw("UPPER(value) LIKE '%OUTSOURCE%'");
+            })
+            ->pluck('id')
+            ->toArray();
 
-        // Karyawan outsourcing mencakup status Outsource dan status Harian
-        return $model->where(function ($q) use ($os_id) {
-            if ($os_id) {
-                $q->where("m_kary.m_company_outsourcing_id", $os_id);
+        return $model->where(function ($q) use ($typeIds) {
+            if (!empty($typeIds)) {
+                $q->whereIn('m_kary.status_kary_id', $typeIds)
+                  ->orWhereNotNull('m_kary.m_company_outsourcing_id');
             } else {
-                $q->where(function ($sub) {
-                    $sub->whereNotNull("m_kary.m_company_outsourcing_id")
-                        ->orWhereExists(function ($sub2) {
-                            $sub2->select(\DB::raw(1))
-                                 ->from('m_general as mg')
-                                 ->whereColumn('mg.id', 'm_kary.status_kary_id')
-                                 ->where(function ($sub3) {
-                                     $sub3->whereRaw("UPPER(mg.value) LIKE '%HARIAN%'")
-                                          ->orWhereRaw("UPPER(mg.value) LIKE '%OUTSOURCE%'")
-                                          ->orWhere('mg.group', 'STATUS KARYAWAN OUTSOURCE');
-                                 });
-                        });
-                });
+                $q->whereNotNull('m_kary.m_company_outsourcing_id');
             }
         });
     }
