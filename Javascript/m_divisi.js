@@ -367,7 +367,8 @@ const landing = reactive({
       simplest: true,
       order_by: "nomor",
 		  // order_type: "ASC",
-      searchfield: 'this.id, kategori.value1, this.name, this.nomor, report_group, this.is_active'
+      scopes: 'LandingDivisi',
+      searchfield: 'this.id, this.nomor, m_branch.name, this.is_active'
     },
     onsuccess(response) {
       response.page = response.current_page

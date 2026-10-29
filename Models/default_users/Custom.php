@@ -14,7 +14,7 @@ class default_users extends \App\Models\BasicModels\default_users
         // SELECT * FROM default_users
     }
 
-    protected $hidden = ["password"];
+    protected $hidden = ["password", "remember_token"];
 
     public $fileColumns = [
         /*file_column*/

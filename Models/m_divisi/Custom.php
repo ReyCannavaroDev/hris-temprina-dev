@@ -47,6 +47,16 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
             $concat = ($getData['divisi_name'] ?? '') . (($getData['branch_name'] ?? false) ? ' - ' : '') . ($getData['branch_name'] ?? '');
             $data['concat_divisi_branch'] = $concat;
         }
+        // Keamanan: Batasi kolom default_users (creator & last_editor) hanya ke id dan name saja
+        foreach ($row as $key => $val) {
+            if (strpos($key, 'creator.') === 0 && !in_array($key, ['creator.id', 'creator.name'])) {
+                unset($row[$key]);
+            }
+            if (strpos($key, 'last_editor.') === 0 && !in_array($key, ['last_editor.id', 'last_editor.name'])) {
+                unset($row[$key]);
+            }
+        }
+
         return array_merge( $row, $data );
     }
 
@@ -60,25 +70,61 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
         return $this->hasMany(m_divisi::class, 'parent_id', 'id');
     }
         
+    /**
+     * Scope Landing & Search yang aman (Prepared Statement / Parameter Binding)
+     * Menggunakan operator regex PostgreSQL ~* dengan parameter binding untuk mencegah SQL Injection
+     */
+    public function scopeLandingDivisi($query)
+    {
+        $search = app()->request->search;
+        if (!empty($search)) {
+            $keyword = trim($search);
+            return $query->where(function ($q) use ($keyword) {
+                $q->where('m_divisi.nomor', 'ILIKE', "%{$keyword}%")
+                  ->orWhereRaw('LOWER(COALESCE(m_divisi.name_old, CAST(m_divisi.name AS text), \'\')) ~* ?', [$keyword])
+                  ->orWhereExists(function ($sub) use ($keyword) {
+                      $sub->select(\DB::raw(1))
+                          ->from('m_general')
+                          ->whereRaw('CAST(m_general.id AS text) = CAST(m_divisi.name AS text)')
+                          ->whereRaw('LOWER(name.value::text) ~* ?', [$keyword]);
+                  })
+                  ->orWhereExists(function ($sub) use ($keyword) {
+                      $sub->select(\DB::raw(1))
+                          ->from('m_branch')
+                          ->whereColumn('m_branch.id', 'm_divisi.m_branch_id')
+                          ->whereRaw('LOWER(m_branch.name::text) ~* ?', [$keyword]);
+                  });
+            });
+        }
+        return $query;
+    }
+
     public function scopeName($model){
-        return $model->leftjoin('m_general', \DB::raw('CAST(m_divisi.name AS text)'), '=', \DB::raw('CAST(m_general.id AS text)'))
+        $query = $model->leftjoin('m_general as name', \DB::raw('CAST(m_divisi.name AS text)'), '=', \DB::raw('CAST(name.id AS text)'))
                 ->select(
                     'm_divisi.id',
                     'm_divisi.m_branch_id',
-                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as \"name.value\""),
-                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as value"),
-                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as name"),
-                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as nama"),
-                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as name_old"),
+                    \DB::raw("COALESCE(name.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as \"name.value\""),
+                    \DB::raw("COALESCE(name.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as value"),
+                    \DB::raw("COALESCE(name.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as name"),
+                    \DB::raw("COALESCE(name.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as nama"),
+                    \DB::raw("COALESCE(name.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as name_old"),
                     'm_divisi.nomor'
                 );
+
+        if (request('order_by') == 'name.value' || request('order_by') == 'name') {
+            $query->getQuery()->orders = null;
+            $query->orderByRaw("COALESCE(name.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') ASC");
+        }
+
+        return $query;
     }
 
     public function scopeNames($model){
-        return $model->leftjoin('m_general', \DB::raw('CAST(m_divisi.name AS text)'), '=', \DB::raw('CAST(m_general.id AS text)'))
+        return $model->leftjoin('m_general as name', \DB::raw('CAST(m_divisi.name AS text)'), '=', \DB::raw('CAST(name.id AS text)'))
                 ->select(
                     'm_divisi.id',
-                    \DB::raw("COALESCE(m_general.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as value"),
+                    \DB::raw("COALESCE(name.value, CAST(m_divisi.name AS text), m_divisi.name_old, '') as value"),
                     'm_divisi.nomor'
                 );
     }
