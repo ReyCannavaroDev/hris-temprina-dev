@@ -181,6 +181,11 @@ class m_kary extends \App\Models\BasicModels\m_kary
             // Ini untuk mencegah generator core me-reset false menjadi null!
             if ($karyIdForFix) {
                 \DB::table('m_kary')->where('id', $karyIdForFix)->update(['is_active' => $finalIsActive]);
+
+                // Sinkronisasi status akun user (default_users)
+                // Jika status karyawan di-set Inactive (false), akun user terkait langsung dinonaktifkan
+                // sehingga tidak bisa login ke dalam sistem HRIS.
+                \DB::table('default_users')->where('m_kary_id', $karyIdForFix)->update(['is_active' => $finalIsActive]);
             }
             unset($arrayData['is_active']);
         }
@@ -189,6 +194,41 @@ class m_kary extends \App\Models\BasicModels\m_kary
             "model" => $model,
             "data" => $arrayData,
         ];
+    }
+
+    public function deleteBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $delId = is_object($model) ? ($model->id ?? null) : ($id ?? null);
+        if ($delId) {
+            $this->hapusAkunUserTerkait($delId);
+        }
+        return true;
+    }
+
+    private function hapusAkunUserTerkait($karyId)
+    {
+        if (!$karyId)
+            return;
+
+        try {
+            // Ambil semua akun user yang terhubung ke karyawan ini
+            $userIds = \DB::table('default_users')->where('m_kary_id', $karyId)->pluck('id')->toArray();
+            if (!empty($userIds)) {
+                // Bersihkan relasi anak default_users agar tidak melanggar foreign key constraint
+                \DB::table('default_users_fcm')->whereIn('default_users_id', $userIds)->delete();
+                \DB::table('default_users_respo')->whereIn('default_users_id', $userIds)->delete();
+                \DB::table('m_role_access')->whereIn('user_id', $userIds)->delete();
+
+                // Hapus akun login
+                \DB::table('default_users')->whereIn('id', $userIds)->delete();
+            }
+        } catch (\Throwable $e) {
+            // Fallback jika ada data historis yang terkait foreign key log: nonaktifkan akun dan lepaskan relasi
+            \DB::table('default_users')->where('m_kary_id', $karyId)->update([
+                'is_active' => false,
+                'm_kary_id' => null,
+            ]);
+        }
     }
 
     public function updateAfter($model, $arrayData, $metaData, $id = null)
@@ -202,9 +242,10 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ]);
         }
 
-        if (@$arrayData["is_active"]) {
+        if (array_key_exists('is_active', $arrayData)) {
+            $userActive = filter_var($arrayData['is_active'], FILTER_VALIDATE_BOOLEAN);
             default_users::where("m_kary_id", $karyId)->update([
-                "is_active" => $arrayData["is_active"],
+                "is_active" => $userActive,
             ]);
         }
 
@@ -2652,15 +2693,25 @@ class m_kary extends \App\Models\BasicModels\m_kary
         }
     }
 
-    //filte karyawan yang os
+    //filter karyawan yang os dan harian
     public function scopeos($model)
     {
-        $status_os = m_general::where(
-            "group",
-            "STATUS KARYAWAN OUTSOURCE"
-        )->pluck("id");
+        $status_os = m_general::where(function ($q) {
+            $q->where("group", "STATUS KARYAWAN OUTSOURCE")
+              ->orWhereRaw("upper(value) like '%HARIAN%'")
+              ->orWhereRaw("upper(code) like '%HARIAN%'")
+              ->orWhereRaw("upper(value) like '%OUTSOURCE%'")
+              ->orWhereRaw("upper(code) like '%OUTSOURCE%'");
+        })->pluck("id")->toArray();
 
-        return $model->whereIn("m_kary.status_kary_id", $status_os);
+        return $model->where(function ($q) use ($status_os) {
+            if (!empty($status_os)) {
+                $q->whereIn("m_kary.status_kary_id", $status_os)
+                  ->orWhereNotNull("m_kary.m_company_outsourcing_id");
+            } else {
+                $q->whereNotNull("m_kary.m_company_outsourcing_id");
+            }
+        });
     }
 
     //harian internal
@@ -2676,15 +2727,23 @@ class m_kary extends \App\Models\BasicModels\m_kary
         return $model->whereIn("m_kary.status_kary_id", $status_os);
     }
 
-    //filter karyawan yang bukan os
+    //filter karyawan reguler (bukan outsource dan bukan harian)
     public function scopenonos($model)
     {
-        $status_os = m_general::where(
-            "group",
-            "STATUS KARYAWAN OUTSOURCE"
-        )->pluck("id");
+        $status_os = m_general::where(function ($q) {
+            $q->where("group", "STATUS KARYAWAN OUTSOURCE")
+              ->orWhereRaw("upper(value) like '%HARIAN%'")
+              ->orWhereRaw("upper(code) like '%HARIAN%'")
+              ->orWhereRaw("upper(value) like '%OUTSOURCE%'")
+              ->orWhereRaw("upper(code) like '%OUTSOURCE%'");
+        })->pluck("id")->toArray();
 
-        return $model->whereNotIn("m_kary.status_kary_id", $status_os);
+        return $model->where(function ($q) use ($status_os) {
+            if (!empty($status_os)) {
+                $q->whereNotIn("m_kary.status_kary_id", $status_os);
+            }
+            $q->whereNull("m_kary.m_company_outsourcing_id");
+        });
     }
 
     //filter karyawan by respo
@@ -3285,17 +3344,27 @@ class m_kary extends \App\Models\BasicModels\m_kary
     {
         $os_id = request("os_id");
 
-        $typeIds = m_general::where("group", "STATUS KARYAWAN OUTSOURCE")
-            ->pluck("id")
-            ->toArray();
+        // Karyawan outsourcing mencakup status Outsource dan status Harian
+        $typeIds = m_general::where(function ($q) {
+            $q->where("group", "STATUS KARYAWAN OUTSOURCE")
+              ->orWhereRaw("upper(value) like '%HARIAN%'")
+              ->orWhereRaw("upper(code) like '%HARIAN%'")
+              ->orWhereRaw("upper(value) like '%OUTSOURCE%'")
+              ->orWhereRaw("upper(code) like '%OUTSOURCE%'");
+        })->pluck("id")->toArray();
 
         if ($os_id) {
             $model->where("m_company_outsourcing.id", $os_id);
         }
 
-        $model->whereIn("status_kary.id", $typeIds);
-
-        return $model;
+        return $model->where(function ($q) use ($typeIds) {
+            if (!empty($typeIds)) {
+                $q->whereIn("m_kary.status_kary_id", $typeIds)
+                  ->orWhereNotNull("m_kary.m_company_outsourcing_id");
+            } else {
+                $q->whereNotNull("m_kary.m_company_outsourcing_id");
+            }
+        });
     }
 
     public function custom_syncKary()
@@ -3727,6 +3796,9 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $m_kary->m_kary_det_jabatan()->delete();
             $m_kary->m_kary_det_jobdesc()->delete();
             $m_kary->m_kary_d_lokasi()->delete();
+
+            // Hapus juga akun user login (default_users) terkait
+            $this->hapusAkunUserTerkait($kary_id);
 
             $m_kary->delete();
 

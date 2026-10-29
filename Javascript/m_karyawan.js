@@ -1758,6 +1758,7 @@ const landing = reactive({
     params: computed(() => ({
       page: page.value,
       paginate: 25,
+      scopes: 'nonos',
       kary_id: store.user.data.m_kary_id ?? 0,
       ...(statusFilter.value ? { where: statusFilter.value } : {}),
       join: true,

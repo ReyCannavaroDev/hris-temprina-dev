@@ -279,7 +279,7 @@
                                 Authorization: `${store.user.token_type} ${store.user.token}`
                               },
                               params: {
-                                where: `this.is_active = true AND this.group='STATUS KARYAWAN'`
+                                where: `this.is_active = true AND this.group='STATUS KARYAWAN' AND this.value NOT ILIKE '%HARIAN%' AND this.value NOT ILIKE '%OUTSOURCE%'`
                               }
                             }" :check="false" />
               </div>

@@ -1482,6 +1482,22 @@ const landing = reactive({
         cellClass: ['border-r', '!border-gray-200', 'justify-start']
     },
     {
+        field: 'status_kary.value',
+        headerName: 'Status Karyawan',
+        filter: 'ColFilter',
+        sortable: true,
+        flex: 1,
+        resizable: true,
+        cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+        cellRenderer: (params) => {
+            let val = params.value;
+            if (!val && params.data) {
+                val = params.data['status_kary.value'] || (params.data.status_kary && params.data.status_kary.value);
+            }
+            return val || '-';
+        }
+    },
+    {
         headerName: 'Status',
         field: 'is_active',
         filter: true,
