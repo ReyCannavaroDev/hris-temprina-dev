@@ -455,7 +455,7 @@ const landing = reactive({
         join: true,
         transform: true,
         with: 'm_kary,m_kary.m_posisi,m_branch,t_jadwal_kerja_n',
-        searchfield: 'start_date,status',
+        searchfield: 'm_kary.nama_lengkap, m_branch.name, m_posisi.name, t_jadwal_kerja_n.keterangan, this.start_date, this.status',
         order_by: 'id'
       }
 
@@ -479,37 +479,6 @@ const landing = reactive({
     onsuccess(response) {
       response.page = response.current_page
       response.hasNext = response.has_next
-
-      // Backend API doesn't eager load m_kary, so we fetch names manually in the background
-      try {
-        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-          const ids = [...new Set((response.data || []).map(d => d.m_kary_id).filter(Boolean))]
-          if (ids.length > 0) {
-             const promises = (ids || []).map(id => 
-               fetch(`${store.server.url_backend}/operation/m_kary/${id}?simplest=true`, {
-                 headers: { Authorization: `${store.user.token_type} ${store.user.token}` }
-               }).then(r => r.json())
-             )
-             
-             Promise.all(promises).then(results => {
-               const karyMap = {}
-               results.forEach(res => {
-                 if (res && res.data) {
-                   karyMap[res.data.id] = res.data.nama_lengkap || res.data.nama_depan || '-'
-                 }
-               })
-               
-               // Mutating these objects triggers Vue's reactivity in the grid
-               response.data.forEach(d => {
-                 d.nama_lengkap = karyMap[d.m_kary_id] || '-'
-               })
-             }).catch(e => console.error('Fetch names error:', e))
-          }
-        }
-      } catch (e) {
-        console.error('Manual kary fetch error:', e)
-      }
-
       return response
     }
   },
@@ -522,75 +491,71 @@ const landing = reactive({
     filter: true,
     cellClass: ['justify-center', 'bg-gray-50', 'border-r', '!border-gray-200']
   },
-  // {
-  //   headerName: 'Nama',
-  //   field: 'nama_lengkap',
-  //   filter: true,
-  //   sortable: true,
-  //   flex: 1,
-  //   filter: 'ColFilter',
-  //   resizable: true,
-  //   wrapText: true,
-  //   cellClass: ['border-r', '!border-gray-200', 'justify-start']
-  // },
   {
+    field: 'm_kary.nama_lengkap',
     headerName: 'Nama',
-    valueGetter: (p) => p.data?.['m_kary.nama_lengkap'] || p.data?.m_kary?.nama_lengkap || p.data?.nama_lengkap || p.data?.['karyawan.nama_lengkap'] || '-',
     filter: true,
     sortable: true,
     flex: 1,
     filter: 'ColFilter',
     resizable: true,
     wrapText: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+    valueGetter: (p) => p.data?.['m_kary.nama_lengkap'] || p.data?.nama_lengkap || p.data?.m_kary?.nama_lengkap || '-'
   },
   {
+    field: 'm_branch.name',
     headerName: 'Cabang',
-    valueGetter: (p) => p.data?.['m_branch.name'] || p.data?.m_branch?.name || '-',
     filter: true,
     sortable: true,
     flex: 1,
     filter: 'ColFilter',
     resizable: true,
     wrapText: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+    valueGetter: (p) => p.data?.['m_branch.name'] || p.data?.m_branch?.name || p.data?.branch_name || '-'
   },
   {
+    field: 'm_posisi.name',
     headerName: 'Posisi',
-    valueGetter: (p) => p.data?.['m_posisi.name'] || p.data?.m_posisi?.name || p.data?.m_kary?.m_posisi?.name || '-',
     filter: true,
     sortable: true,
     flex: 1,
     filter: 'ColFilter',
     resizable: true,
     wrapText: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+    valueGetter: (p) => p.data?.['m_posisi.name'] || p.data?.m_posisi?.name || p.data?.posisi_name || '-'
   },
   {
+    field: 't_jadwal_kerja_n.keterangan',
     headerName: 'Jadwal Kerja',
-    valueGetter: (p) => p.data?.['t_jadwal_kerja_n.keterangan'] || p.data?.t_jadwal_kerja_n?.keterangan || p.data?.['t_jadwal_kerja.keterangan'] || p.data?.t_jadwal_kerja?.keterangan || p.data?.t_jadwal_kerja_n?.desc || '-',
     filter: true,
     sortable: true,
     flex: 1,
     filter: 'ColFilter',
     resizable: true,
     wrapText: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+    valueGetter: (p) => p.data?.['t_jadwal_kerja_n.keterangan'] || p.data?.t_jadwal_kerja_n?.keterangan || p.data?.jadwal_kerja || '-'
   },
   {
+    field: 'start_date',
     headerName: 'Tanggal',
-    valueGetter: (p) => p.data?.start_date || p.data?.t_jadwal_kerja_n?.start_date || p.data?.['t_jadwal_kerja_n.start_date'] || p.data?.tanggal || '-',
     filter: true,
     sortable: true,
     flex: 1,
     filter: 'ColFilter',
     resizable: true,
     wrapText: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+    valueGetter: (p) => p.data?.start_date || '-'
   },
   {
     headerName: 'Status',
     field: 'status',
+    filter: true,
+    filter: 'ColFilter',
     sortable: true,
     resizable: true,
     wrapText: true,

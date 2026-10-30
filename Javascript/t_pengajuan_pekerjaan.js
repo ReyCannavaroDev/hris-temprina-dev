@@ -549,6 +549,7 @@ const landing = reactive({
     params: {
       simplest: true,
       join: true,
+      transform: true,
       // where: `${
       //   store.user.data?.user_type?.toLowerCase() === "user"
       //     ? `this.request_id=${store.user.data.m_kary_id}`
@@ -591,6 +592,7 @@ const landing = reactive({
      {
       field: "m_branch.name",
       headerName: "Cabang",
+      valueGetter: (params) => params.data?.['m_branch.name'] || params.data?.m_branch?.name || params.data?.branch_name || '-',
       filter: true,
       sortable: true,
       flex: 1,
@@ -601,6 +603,7 @@ const landing = reactive({
     {
       field: "request.nama_lengkap",
       headerName: "User",
+      valueGetter: (params) => params.data?.['request.nama_lengkap'] || params.data?.request?.nama_lengkap || params.data?.request_nama || '-',
       filter: true,
       sortable: true,
       flex: 1,
@@ -611,6 +614,7 @@ const landing = reactive({
     {
       field: "pic.nama_lengkap",
       headerName: "Pic",
+      valueGetter: (params) => params.data?.['pic.nama_lengkap'] || params.data?.pic?.nama_lengkap || params.data?.pic_nama || '-',
       filter: true,
       sortable: true,
       flex: 1,
@@ -621,6 +625,7 @@ const landing = reactive({
     {
       field: "jenis_pekerjaan.value",
       headerName: "Jenis Pekerjaan",
+      valueGetter: (params) => params.data?.['jenis_pekerjaan.value'] || params.data?.jenis_pekerjaan?.value || params.data?.jenis_pekerjaan_nama || '-',
       filter: true,
       sortable: true,
       flex: 1,
