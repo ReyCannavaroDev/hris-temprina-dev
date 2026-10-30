@@ -57,8 +57,41 @@ class t_pengajuan_pekerjaan extends \App\Models\BasicModels\t_pengajuan_pekerjaa
             // "errors" => ['error1']
         ];
     }
-    
-    
+
+    public function transformRowData(array $row)
+    {
+        $branch = !empty($row['m_branch_id']) ? \DB::table('m_branch')->where('id', $row['m_branch_id'])->first() : null;
+        $requestUser = !empty($row['request_id']) ? \DB::table('m_kary')->where('id', $row['request_id'])->first() : null;
+        $picUser = !empty($row['pic_id']) ? \DB::table('m_kary')->where('id', $row['pic_id'])->first() : null;
+        $jenisPekerjaan = !empty($row['jenis_pekerjaan_id']) ? \DB::table('m_general')->where('id', $row['jenis_pekerjaan_id'])->first() : null;
+
+        $branchName = $branch->name ?? '-';
+        $requestNama = $requestUser->nama_lengkap ?? '-';
+        $picNama = $picUser->nama_lengkap ?? '-';
+        $jenisPekerjaanNama = $jenisPekerjaan->value ?? '-';
+
+        return array_merge($row, [
+            // Cabang
+            'm_branch' => $branch ? (array)$branch : null,
+            'm_branch.name' => $branchName,
+            'branch_name' => $branchName,
+
+            // User / Pemohon
+            'request' => $requestUser ? (array)$requestUser : null,
+            'request.nama_lengkap' => $requestNama,
+            'request_nama' => $requestNama,
+
+            // PIC
+            'pic' => $picUser ? (array)$picUser : null,
+            'pic.nama_lengkap' => $picNama,
+            'pic_nama' => $picNama,
+
+            // Jenis Pekerjaan
+            'jenis_pekerjaan' => $jenisPekerjaan ? (array)$jenisPekerjaan : null,
+            'jenis_pekerjaan.value' => $jenisPekerjaanNama,
+            'jenis_pekerjaan_nama' => $jenisPekerjaanNama,
+        ]);
+    }
 
     public function custom_posted($req)
     {
