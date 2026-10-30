@@ -220,41 +220,16 @@ class m_kary extends \App\Models\BasicModels\m_kary
             return;
 
         try {
-            // Ambil semua akun user yang HANYA terhubung ke karyawan ini
-            $userIds = \DB::table('default_users')->where('m_kary_id', $karyId)->pluck('id')->toArray();
-
-            if (!empty($userIds)) {
-                // 1. Selalu pastikan status akun di-set nonaktif (is_active = false) terlebih dahulu
-                \DB::table('default_users')->whereIn('id', $userIds)->update([
-                    'is_active' => false
-                ]);
-
-                // 2. Bersihkan relasi anak langsung default_users (fcm, respo, role access)
-                try {
-                    \DB::table('default_users_fcm')->whereIn('default_users_id', $userIds)->delete();
-                    \DB::table('default_users_respo')->whereIn('default_users_id', $userIds)->delete();
-                    \DB::table('m_role_access')->whereIn('user_id', $userIds)->delete();
-
-                    // 3. Hapus akun login
-                    \DB::table('default_users')->whereIn('id', $userIds)->delete();
-                } catch (\Throwable $e) {
-                    // Jika ada foreign key di tabel log historis (misal presensi_absensi),
-                    // akun tetap aman dalam kondisi nonaktif (is_active = false) dan lepaskan relasi karyawannya
-                    try {
-                        \DB::table('default_users')->whereIn('id', $userIds)->update([
-                            'is_active' => false,
-                            'm_kary_id' => null,
-                        ]);
-                    } catch (\Throwable $ignored) {}
-                }
-            }
+            // Opsi 1 (Soft Delete / Inactive):
+            // Saat karyawan dihapus, akun usernya hanya di-set is_active = false dan m_kary_id = null.
+            // Akun otomatis terkunci tidak bisa login lagi, sedangkan seluruh riwayat historis
+            // (presensi, approval, log, dll) tetap aman dan tidak melanggar foreign key constraint.
+            \DB::table('default_users')->where('m_kary_id', $karyId)->update([
+                'is_active' => false,
+                'm_kary_id' => null,
+            ]);
         } catch (\Throwable $e) {
-            try {
-                \DB::table('default_users')->where('m_kary_id', $karyId)->update([
-                    'is_active' => false,
-                    'm_kary_id' => null,
-                ]);
-            } catch (\Throwable $ignored) {}
+            // Silently ignore agar proses delete karyawan tetap berjalan lancar
         }
     }
 
