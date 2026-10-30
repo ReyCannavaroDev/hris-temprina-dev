@@ -1,5 +1,5 @@
 import { useRouter, useRoute, RouterLink } from 'vue-router'
-import { ref, readonly, reactive, inject, onMounted, onBeforeMount, watchEffect, onActivated, computed, watch } from 'vue'
+import { ref, readonly, reactive, inject, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, onActivated, computed, watch } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -1269,17 +1269,39 @@ async function onSave() {
 
 const activeBtn = ref()
 const statusFilter = ref(null)
-let data = reactive({})
+
+let initialRespo = {}
+try {
+    initialRespo = JSON.parse(localStorage.getItem('respo') || '{}')
+} catch (e) { }
+
+let initialSub = initialRespo.m_subcomp_id ?? initialRespo.subcomp_id ?? null
+let initialBranch = initialRespo.m_branch_id ?? initialRespo.branch_id ?? null
+
+let data = reactive({
+    subcomp_id: Array.isArray(initialSub) ? initialSub[0] : (typeof initialSub === 'string' && initialSub.startsWith('[') ? JSON.parse(initialSub)[0] : initialSub),
+    branch_id: Array.isArray(initialBranch) ? initialBranch[0] : (typeof initialBranch === 'string' && initialBranch.startsWith('[') ? JSON.parse(initialBranch)[0] : initialBranch),
+    respo_id: initialRespo.id ?? initialRespo.m_respo_id ?? null
+})
+
+const reloadRespo = () => {
+    try {
+        const stored = localStorage.getItem('respo')
+        if (stored) {
+            const respoValues = JSON.parse(stored)
+            let sub = respoValues.m_subcomp_id ?? respoValues.subcomp_id ?? null
+            let branch = respoValues.m_branch_id ?? respoValues.branch_id ?? null
+            data.subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
+            data.branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
+            data.respo_id = respoValues.id ?? respoValues.m_respo_id ?? null
+        }
+    } catch (e) {
+        console.error('Error reloading respo:', e)
+    }
+}
 
 onBeforeMount(async () => {
-    console.log('ini user', store.user.data)
-    if (localStorage.getItem('respo')) {
-        const respoValues = await JSON.parse(localStorage.getItem('respo'))
-        console.log('ini respo coi', respoValues)
-        data.subcomp_id = respoValues.m_subcomp_id
-        data.branch_id = respoValues.m_branch_id
-    }
-    console.log('jarwok', data.subcomp_id)
+    reloadRespo()
 })
 
 function filterShowData(params, noBtn) {
@@ -1376,7 +1398,7 @@ const landing = reactive({
         },
         params: computed(() => {
             const p = {
-                scopes: 'kary_os',
+                scopes: 'kary_os,respo',
                 kary_id: store.user.data?.m_kary_id ?? 0,
                 join: true,
                 transform: true
@@ -1384,14 +1406,13 @@ const landing = reactive({
             if (statusFilter.value) {
                 p.where = statusFilter.value;
             }
-            if (data.subcomp_id && data.subcomp_id !== 'undefined' && data.subcomp_id !== 'null') {
-                p.m_subcomp_id = data.subcomp_id;
-            }
             if (data.branch_id && data.branch_id !== 'undefined' && data.branch_id !== 'null') {
                 p.m_branch_id = data.branch_id;
+            } else if (data.subcomp_id && data.subcomp_id !== 'undefined' && data.subcomp_id !== 'null') {
+                p.m_subcomp_id = data.subcomp_id;
             }
-            if (store.user?.data?.m_os_id) {
-                p.os_id = store.user.data.m_os_id;
+            if (data.respo_id && data.respo_id !== 'undefined' && data.respo_id !== 'null') {
+                p.respo_id = data.respo_id;
             }
             return p;
         }),
@@ -1405,7 +1426,6 @@ const landing = reactive({
         headerName: 'No',
         valueGetter: (params) => params.node.rowIndex + 1,
         width: 60,
-        minWidth: 50,
         sortable: true,
         resizable: true,
         filter: true,
@@ -1416,8 +1436,6 @@ const landing = reactive({
         headerName: 'NIP',
         filter: true,
         sortable: true,
-        width: 140,
-        minWidth: 120,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1428,8 +1446,6 @@ const landing = reactive({
         headerName: 'No. KTP',
         filter: true,
         sortable: true,
-        width: 170,
-        minWidth: 150,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1440,8 +1456,6 @@ const landing = reactive({
         field: 'nama_lengkap',
         filter: true,
         sortable: true,
-        width: 200,
-        minWidth: 180,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1452,8 +1466,6 @@ const landing = reactive({
         headerName: 'PT OS',
         filter: true,
         sortable: true,
-        width: 200,
-        minWidth: 180,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1464,8 +1476,6 @@ const landing = reactive({
         headerName: 'SUB',
         filter: true,
         sortable: true,
-        width: 180,
-        minWidth: 160,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1476,8 +1486,6 @@ const landing = reactive({
         headerName: 'Cabang',
         filter: true,
         sortable: true,
-        width: 180,
-        minWidth: 160,
         flex: 1,
         filter: 'ColFilter',
         resizable: true,
@@ -1488,8 +1496,6 @@ const landing = reactive({
         headerName: 'Status Karyawan',
         filter: 'ColFilter',
         sortable: true,
-        width: 170,
-        minWidth: 150,
         flex: 1,
         resizable: true,
         cellClass: ['border-r', '!border-gray-200', 'justify-start'],
@@ -1506,8 +1512,6 @@ const landing = reactive({
         field: 'is_active',
         filter: true,
         sortable: true,
-        width: 110,
-        minWidth: 100,
         flex: 1,
         cellClass: ['border-r', '!border-gray-200', 'justify-center'],
         cellStyle: (params) => {
@@ -1540,56 +1544,32 @@ const landing = reactive({
     ]
 })
 
-const ensureTableScroll = () => {
-    const styleId = 'm_os_kary_scroll_fix';
-    if (typeof document !== 'undefined' && !document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-            .os-kary-table-container {
-                max-height: calc(100vh - 210px) !important;
-                height: calc(100vh - 210px) !important;
-                display: flex !important;
-                flex-direction: column !important;
-            }
-            .os-kary-table-container .ag-theme-alpine {
-                height: 100% !important;
-                max-height: 100% !important;
-            }
-            .os-kary-table-container .ag-root-wrapper {
-                height: 100% !important;
-            }
-            .os-kary-table-container .ag-body-viewport {
-                overflow-x: auto !important;
-                overflow-y: auto !important;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    const tableEl = apiTable.value?.$el || document.querySelector('.ag-root-wrapper')?.closest('.bg-white') || document.querySelector('.ag-theme-alpine')?.parentElement;
-    if (tableEl) {
-        tableEl.classList.add('os-kary-table-container');
-        tableEl.style.maxHeight = 'calc(100vh - 210px)';
-        tableEl.style.height = 'calc(100vh - 210px)';
-        tableEl.style.overflow = 'auto';
-    }
-};
-
+let respoInterval = null
 onMounted(() => {
-    setTimeout(ensureTableScroll, 200);
-    setTimeout(ensureTableScroll, 600);
-});
+    let lastRespo = localStorage.getItem('respo')
+    respoInterval = setInterval(() => {
+        const currentRespo = localStorage.getItem('respo')
+        if (currentRespo !== lastRespo) {
+            lastRespo = currentRespo
+            reloadRespo()
+            apiTable.value?.reload()
+        }
+    }, 1000)
+})
+
+onBeforeUnmount(() => {
+    if (respoInterval) {
+        clearInterval(respoInterval)
+    }
+})
 
 onActivated(() => {
-    setTimeout(ensureTableScroll, 200);
-    //  reload table api landing
+    //  reload respo dan table api landing
+    reloadRespo()
     if (apiTable.value) {
-        if (route.query.reload) {
-            apiTable.value.reload();
-        }
+        apiTable.value.reload()
     }
-});
+})
 
 //  @endif -------------------------------------------------END
 watchEffect(() => store.commit('set', ['isRequesting', isRequesting.value]))
