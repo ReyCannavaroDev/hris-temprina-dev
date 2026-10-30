@@ -264,7 +264,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
         if (!$karyId)
             return;
 
-        // 1. Sinkronkan foreign key m_kary_id dan m_karyawan_id di detail jabatan
+        // 1. Sinkronkan foreign key m_kary_id dan m_karyawan_id di detail jabatan & jobdesc
         \DB::table('m_kary_det_jabatan')
             ->where('m_karyawan_id', $karyId)
             ->whereNull('m_kary_id')
@@ -275,13 +275,23 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ->whereNull('m_karyawan_id')
             ->update(['m_karyawan_id' => $karyId]);
 
+        \DB::table('m_kary_det_jobdesc')
+            ->where('m_karyawan_id', $karyId)
+            ->whereNull('m_kary_id')
+            ->update(['m_kary_id' => $karyId]);
+
+        \DB::table('m_kary_det_jobdesc')
+            ->where('m_kary_id', $karyId)
+            ->whereNull('m_karyawan_id')
+            ->update(['m_karyawan_id' => $karyId]);
+
         // 2. Sinkronkan ke tabel induk m_kary (posisi, comp, subcomp, branch, divisi)
         $primaryJabatan = \DB::table('m_kary_det_jabatan')
             ->where(function ($q) use ($karyId) {
                 $q->where('m_kary_id', $karyId)->orWhere('m_karyawan_id', $karyId);
             })
             ->where('is_active', true)
-            ->orderBy('is_primary', 'desc')
+            ->orderByRaw('COALESCE(is_primary, false) DESC')
             ->orderBy('id', 'desc')
             ->first();
 

@@ -661,18 +661,19 @@ const loadPosisiLevel = async () => {
 const inDetailArr = ref([]);
 
 watch(inDetailArr, (newVal) => {
-  values.m_company_id = newVal[0]?.m_company_id ?? null
-  values.m_subcomp_id = newVal[0]?.m_subcomp_id ?? null
-  values.m_branch_id = newVal[0]?.m_branch_id ?? null
-  values.m_comp_id = newVal[0]?.m_comp_id ?? null
-  values.m_divisi_id = newVal[0]?.m_divisi_id ?? null
-  values.m_posisi_id = newVal[0]?.m_posisi_id ?? null
+  const primaryItem = newVal.find(item => item.is_primary) || newVal[0];
+  values.m_company_id = primaryItem?.m_company_id ?? null
+  values.m_subcomp_id = primaryItem?.m_subcomp_id ?? null
+  values.m_branch_id = primaryItem?.m_branch_id ?? null
+  values.m_comp_id = primaryItem?.m_comp_id ?? null
+  values.m_divisi_id = primaryItem?.m_divisi_id ?? null
+  values.m_posisi_id = primaryItem?.m_posisi_id ?? null
 }, { deep: true })
 
 // Menambahkan detail item baru
 const addDetail = () => {
   const tempItem = {
-    primary: false,
+    is_primary: inDetailArr.value.length === 0,
     is_active: true,
     m_posisi_id: null,
     subDetails: [
@@ -695,7 +696,7 @@ const hapusDetail = (i) => {
 const addSubDetail = (index) => {
   const detailItem = inDetailArr.value[index];
   const newSubDetail = {
-    m_posisi_id: detailItem.m_posisi_id,
+    m_posisi_id: detailItem?.m_posisi_id ?? null,
     jobdesc: '',
     is_active: true,
   };
@@ -1341,6 +1342,23 @@ function onReset() {
 async function onSave() {
   const detail_filter = inDetailArr.value
 
+  // Pastikan values posisi, sub, dll disinkronkan dengan jabatan utama (is_primary)
+  if (detail_filter && detail_filter.length > 0) {
+    if (!detail_filter.some(item => item.is_primary)) {
+      detail_filter[0].is_primary = true;
+    }
+
+    const primaryItem = detail_filter.find(item => item.is_primary) || detail_filter[0];
+    if (primaryItem) {
+      if (primaryItem.m_company_id) values.m_company_id = primaryItem.m_company_id;
+      if (primaryItem.m_subcomp_id) values.m_subcomp_id = primaryItem.m_subcomp_id;
+      if (primaryItem.m_branch_id) values.m_branch_id = primaryItem.m_branch_id;
+      if (primaryItem.m_comp_id) values.m_comp_id = primaryItem.m_comp_id;
+      if (primaryItem.m_divisi_id) values.m_divisi_id = primaryItem.m_divisi_id;
+      if (primaryItem.m_posisi_id) values.m_posisi_id = primaryItem.m_posisi_id;
+    }
+  }
+
   const requiredFields = [
     { key: 'nama_depan', psn: 'Nama Depan wajib diisi' },
     { key: 'nik', psn: 'No. KTP wajib diisi' },
@@ -1433,9 +1451,32 @@ async function onSave() {
   //   return
   // }
 
-  const detail_Jabatan = detail_filter.map(({ subDetails, ...header }) => header)
+  const detail_Jabatan = detail_filter.map(item => ({
+    ...(item.id ? { id: item.id } : {}),
+    m_kary_id: item.m_kary_id ?? values.id ?? null,
+    m_karyawan_id: item.m_karyawan_id ?? item.m_kary_id ?? values.id ?? null,
+    m_company_id: item.m_company_id ?? null,
+    m_comp_id: item.m_comp_id ?? null,
+    m_subcomp_id: item.m_subcomp_id ?? null,
+    m_branch_id: item.m_branch_id ?? null,
+    m_divisi_id: item.m_divisi_id ?? null,
+    m_posisi_id: item.m_posisi_id ?? null,
+    start_time: item.start_time ?? null,
+    end_time: item.end_time ?? null,
+    desc: item.desc ?? null,
+    is_primary: item.is_primary ? true : (item.primary ? true : false),
+    is_active: item.is_active !== undefined ? (item.is_active ? true : false) : true,
+  }))
+
   const detail_Jobdesk = detail_filter.flatMap(item =>
-    (item.subDetails || []).filter(sub => sub.jobdesc?.trim())
+    (item.subDetails || []).filter(sub => sub.jobdesc?.trim()).map(sub => ({
+      ...(sub.id ? { id: sub.id } : {}),
+      m_kary_id: sub.m_kary_id ?? values.id ?? null,
+      m_karyawan_id: sub.m_karyawan_id ?? sub.m_kary_id ?? values.id ?? null,
+      m_posisi_id: sub.m_posisi_id || item.m_posisi_id,
+      jobdesc: sub.jobdesc?.trim(),
+      is_active: sub.is_active !== undefined ? (sub.is_active ? true : false) : true,
+    }))
   )
 
   values.m_kary_det_jabatan = detail_Jabatan
@@ -1459,7 +1500,7 @@ async function onSave() {
       no_rek: values.no_rek,
       atas_nama_rek: values.atas_nama_rek,
       desc: values.desc,
-      is_active: values.periode_gaji_idtrue
+      is_active: true
     }]
   }
 
