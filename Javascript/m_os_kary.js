@@ -1336,10 +1336,10 @@ const landing = reactive({
                 }).then(async (result) => {
                     if (result.isConfirmed) {
                         try {
-                            const dataURL = `${store.server.url_backend}/operation${endpointApi}/${row.id}`
+                            const dataURL = `${store.server.url_backend}/operation${endpointApi}/destroy?id=${row.id}`
                             isRequesting.value = true
                             const res = await fetch(dataURL, {
-                                method: 'DELETE',
+                                method: 'POST',
                                 headers: {
                                     'Content-Type': 'Application/json',
                                     Authorization: `${store.user.token_type} ${store.user.token}`

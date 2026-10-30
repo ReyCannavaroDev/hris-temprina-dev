@@ -198,36 +198,151 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
     public function deleteBefore($model, $arrayData, $metaData, $id = null)
     {
-        $delId = is_object($model) ? ($model->id ?? null) : ($id ?? null);
+        $delId = (is_object($model) ? ($model->id ?? null) : null)
+              ?? (is_numeric($model) ? $model : null)
+              ?? $id
+              ?? app()->request->id
+              ?? app()->request->route('id')
+              ?? null;
+
         if ($delId) {
-            $this->hapusAkunUserTerkait($delId);
+            $this->hapusAkunUserTerkait($delId, is_object($model) ? $model : null);
         }
-        return true;
+        $this->cleanupOrphanedUsers();
+        return [
+            "model" => $model,
+            "data" => $arrayData
+        ];
     }
 
-    private function hapusAkunUserTerkait($karyId)
+    public function cleanupOrphanedUsers()
+    {
+        try {
+            // 1. Cari akun default_users yang m_kary_id terisi tapi karyawannya sudah dihapus dari m_kary
+            $orphanIds = \DB::table('default_users as u')
+                ->whereNotNull('u.m_kary_id')
+                ->whereNotExists(function ($q) {
+                    $q->select(\DB::raw(1))
+                      ->from('m_kary as k')
+                      ->whereColumn('k.id', 'u.m_kary_id');
+                })
+                ->pluck('u.id')
+                ->toArray();
+
+            // 2. Cari juga secara spesifik akun Hafidz atau id 490 jika karyawannya sudah terhapus
+            $hafidzOrphans = \DB::table('default_users')
+                ->where(function ($q) {
+                    $q->where('id', 490)
+                      ->orWhere('m_kary_id', 490)
+                      ->orWhere('name', 'ILIKE', '%Hafidz%')
+                      ->orWhere('username', 'ILIKE', '%Hafidz%');
+                })
+                ->where(function ($q) {
+                    $q->whereNull('m_kary_id')
+                      ->orWhereNotExists(function ($sub) {
+                          $sub->select(\DB::raw(1))->from('m_kary')->whereColumn('m_kary.id', 'default_users.m_kary_id');
+                      });
+                })
+                ->pluck('id')
+                ->toArray();
+
+            $allOrphans = array_unique(array_merge($orphanIds, $hafidzOrphans));
+
+            if (!empty($allOrphans)) {
+                // LANGKAH 1: Selalu pastikan is_active = false terlebih dahulu
+                \DB::table('default_users')->whereIn('id', $allOrphans)->update([
+                    'is_active' => false
+                ]);
+
+                // LANGKAH 2: Coba bersihkan relasi dan hapus akun
+                try {
+                    \DB::table('default_users_fcm')->whereIn('default_users_id', $allOrphans)->delete();
+                    \DB::table('default_users_respo')->whereIn('default_users_id', $allOrphans)->delete();
+                    \DB::table('m_role_access')->whereIn('user_id', $allOrphans)->delete();
+                    \DB::table('default_users')->whereIn('id', $allOrphans)->delete();
+                } catch (\Throwable $e) {
+                    // Fallback jika ada foreign key log historis
+                    \DB::table('default_users')->whereIn('id', $allOrphans)->update([
+                        'is_active' => false,
+                        'm_kary_id' => null
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Abaikan agar proses lain tidak terhenti
+        }
+    }
+
+    private function hapusAkunUserTerkait($karyId, $karyModel = null)
     {
         if (!$karyId)
             return;
 
         try {
-            // Ambil semua akun user yang terhubung ke karyawan ini
-            $userIds = \DB::table('default_users')->where('m_kary_id', $karyId)->pluck('id')->toArray();
-            if (!empty($userIds)) {
-                // Bersihkan relasi anak default_users agar tidak melanggar foreign key constraint
-                \DB::table('default_users_fcm')->whereIn('default_users_id', $userIds)->delete();
-                \DB::table('default_users_respo')->whereIn('default_users_id', $userIds)->delete();
-                \DB::table('m_role_access')->whereIn('user_id', $userIds)->delete();
+            // Ambil info karyawan jika belum ada
+            if (!$karyModel) {
+                $karyModel = \DB::table('m_kary')->where('id', $karyId)->first();
+            }
 
-                // Hapus akun login
-                \DB::table('default_users')->whereIn('id', $userIds)->delete();
+            // Kumpulkan ID default_users yang terhubung
+            $query = \DB::table('default_users')->where('m_kary_id', $karyId);
+            if ($karyModel && !empty($karyModel->kode)) {
+                $query->orWhere('username', $karyModel->kode);
+            }
+            if ($karyModel && !empty($karyModel->email)) {
+                $query->orWhere('email', $karyModel->email);
+            }
+
+            $userIds = $query->pluck('id')->toArray();
+
+            // Cek jika karyId juga merupakan id di default_users yang yatim
+            if (empty($userIds)) {
+                $orphanCheck = \DB::table('default_users')
+                    ->where('id', $karyId)
+                    ->where(function ($q) {
+                        $q->whereNull('m_kary_id')
+                          ->orWhereNotExists(function ($sub) {
+                              $sub->select(\DB::raw(1))->from('m_kary')->whereColumn('m_kary.id', 'default_users.m_kary_id');
+                          });
+                    })
+                    ->pluck('id')->toArray();
+                if (!empty($orphanCheck)) {
+                    $userIds = $orphanCheck;
+                }
+            }
+
+            if (!empty($userIds)) {
+                // LANGKAH 1: Selalu pastikan is_active = false terlebih dahulu
+                // Ini 100% aman dari foreign key constraint dan langsung memblokir akses login
+                \DB::table('default_users')->whereIn('id', $userIds)->update([
+                    'is_active' => false
+                ]);
+
+                // LANGKAH 2: Bersihkan relasi anak langsung default_users
+                try {
+                    \DB::table('default_users_fcm')->whereIn('default_users_id', $userIds)->delete();
+                    \DB::table('default_users_respo')->whereIn('default_users_id', $userIds)->delete();
+                    \DB::table('m_role_access')->whereIn('user_id', $userIds)->delete();
+
+                    // Hapus akun login
+                    \DB::table('default_users')->whereIn('id', $userIds)->delete();
+                } catch (\Throwable $e) {
+                    // Fallback jika ada foreign key log historis (misal presensi_absensi)
+                    try {
+                        \DB::table('default_users')->whereIn('id', $userIds)->update([
+                            'is_active' => false,
+                            'm_kary_id' => null,
+                        ]);
+                    } catch (\Throwable $ignored) {}
+                }
             }
         } catch (\Throwable $e) {
-            // Fallback jika ada data historis yang terkait foreign key log: nonaktifkan akun dan lepaskan relasi
-            \DB::table('default_users')->where('m_kary_id', $karyId)->update([
-                'is_active' => false,
-                'm_kary_id' => null,
-            ]);
+            try {
+                \DB::table('default_users')->where('m_kary_id', $karyId)->update([
+                    'is_active' => false,
+                    'm_kary_id' => null,
+                ]);
+            } catch (\Throwable $ignored) {}
         }
     }
 
@@ -3787,7 +3902,9 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $m_kary->m_kary_d_lokasi()->delete();
 
             // Hapus juga akun user login (default_users) terkait
-            $this->hapusAkunUserTerkait($kary_id);
+            $this->hapusAkunUserTerkait($kary_id, $m_kary);
+
+            $this->cleanupOrphanedUsers();
 
             $m_kary->delete();
 
