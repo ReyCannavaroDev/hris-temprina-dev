@@ -9,6 +9,18 @@ namespace App\Models\CustomModels;
  */
 class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
 {
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->joins = array_values(array_unique(array_merge($this->joins ?? [], [
+            "m_kary.id=t_jadwal_kerja_d_n.m_kary_id",
+            "m_branch.id=t_jadwal_kerja_d_n.m_branch_id",
+            "m_posisi.id=m_kary.m_posisi_id",
+            "t_jadwal_kerja_n.id=t_jadwal_kerja_d_n.t_jadwal_kerja_n_id",
+        ])));
+    }
+
     public function createBefore($model, $arrayData, $metaData, $id=null)
     {
         $payload = app('request')->all();
@@ -62,39 +74,58 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
         $id = $row['id'] ?? null;
         if (!$id) return $row;
 
+        // Karyawan & Posisi
         if (!empty($row['m_kary_id'])) {
             $kary = \DB::table('m_kary')->where('id', $row['m_kary_id'])->first();
             if ($kary) {
                 $row['m_kary'] = (array)$kary;
                 $row['nama_lengkap'] = $kary->nama_lengkap ?? null;
+                $row['m_kary.nama_lengkap'] = $kary->nama_lengkap ?? null;
                 
-                if (!empty($kary->m_posisi_id)) {
-                    $posisi = \DB::table('m_posisi')->where('id', $kary->m_posisi_id)->first();
+                $posisiId = $kary->m_posisi_id ?? null;
+                if (!empty($posisiId)) {
+                    $posisi = \DB::table('m_posisi')->where('id', $posisiId)->first();
                     if ($posisi) {
                         $row['m_kary']['m_posisi'] = (array)$posisi;
+                        $row['m_posisi'] = (array)$posisi;
+                        $row['m_posisi.name'] = $posisi->name ?? null;
+                        $row['posisi_name'] = $posisi->name ?? null;
                     }
+                }
+
+                // Jika branch belum ada di row, ambil dari karyawan
+                if (empty($row['m_branch_id']) && !empty($kary->m_branch_id)) {
+                    $row['m_branch_id'] = $kary->m_branch_id;
                 }
             }
         }
 
+        // Cabang
         if (!empty($row['m_branch_id'])) {
             $branch = \DB::table('m_branch')->where('id', $row['m_branch_id'])->first();
             if ($branch) {
                 $row['m_branch'] = (array)$branch;
+                $row['m_branch.name'] = $branch->name ?? null;
+                $row['branch_name'] = $branch->name ?? null;
             }
         }
 
+        // Subcomp
         if (!empty($row['m_subcomp_id'])) {
             $subcomp = \DB::table('m_subcomp')->where('id', $row['m_subcomp_id'])->first();
             if ($subcomp) {
                 $row['m_subcomp'] = (array)$subcomp;
+                $row['m_subcomp.name'] = $subcomp->name ?? null;
             }
         }
 
+        // Jadwal Kerja
         if (!empty($row['t_jadwal_kerja_n_id'])) {
             $jadwal = \DB::table('t_jadwal_kerja_n')->where('id', $row['t_jadwal_kerja_n_id'])->first();
             if ($jadwal) {
                 $row['t_jadwal_kerja_n'] = (array)$jadwal;
+                $row['t_jadwal_kerja_n.keterangan'] = $jadwal->keterangan ?? null;
+                $row['jadwal_kerja'] = $jadwal->keterangan ?? null;
             }
         }
 
@@ -111,4 +142,3 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
         return $this->belongsTo(\App\Models\CustomModels\m_kary::class, 'm_kary_id', 'id');
     }
 }
-
