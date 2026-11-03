@@ -327,7 +327,7 @@ const landing = reactive({
     cellClass: [ 'border-r', '!border-gray-200']
   },
   {
-    headerName: 'Status',
+    headerName: 'Status',  
     field: 'is_active',
     filter: true,
     // resizable: true,
