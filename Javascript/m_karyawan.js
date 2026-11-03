@@ -625,18 +625,23 @@ const posisiLevelMap = ref({})
 const posisiSequenceMap = ref({})
 
 const getPosisiRank = (posisiId, posisiName = '') => {
+  const lvlName = String(posisiLevelMap.value[posisiId] || '').trim();
+  const posName = String(posisiName || '').trim();
+  const combined = `${lvlName} ${posName}`.toLowerCase();
+
+  // Keyword check (Prioritas Utama agar akurasi hierarki sesuai standar Temprina)
+  if (/direktur|director|president/i.test(combined)) return 6;
+  if (/general manager|\bgm\b|wadir/i.test(combined)) return 5;
+  if (/manager|asmen|operational manager|\bom\b/i.test(combined)) return 4;
+  if (/kadiv|wakadiv|kepala divisi/i.test(combined)) return 3;
+  if (/karu|wakaru|kepala regu|supervisor|spv|koordinator|foreman|leader/i.test(combined)) return 2;
+  if (/staff|specialist|officer|analyst|programmer|developer|designer|admin|operator|pelaksana|helper|teknisi/i.test(combined)) return 1;
+
+  // Fallback ke sequence database jika ada dan valid
   if (posisiId && posisiSequenceMap.value[posisiId] !== undefined) {
-    return Number(posisiSequenceMap.value[posisiId]);
+    const seq = Number(posisiSequenceMap.value[posisiId]);
+    if (!isNaN(seq) && seq > 0) return seq;
   }
-
-  const name = String(posisiName || posisiLevelMap.value[posisiId] || '').toLowerCase();
-
-  if (/direktur|director|president/i.test(name)) return 6;
-  if (/general manager|gm\b|wadir/i.test(name)) return 5;
-  if (/manager|asmen|operational manager|\bom\b/i.test(name)) return 4;
-  if (/kadiv|wakadiv|kepala divisi/i.test(name)) return 3;
-  if (/karu|wakaru|kepala regu|supervisor|spv|koordinator/i.test(name)) return 2;
-  if (/staff|specialist|officer|analyst|programmer|developer|designer|admin|operator|pelaksana|helper|teknisi/i.test(name)) return 1;
 
   return 1;
 };
@@ -975,9 +980,9 @@ const currentEmployeeLevel = computed(() => {
   const posisiName = primaryJabatan?.posisi_name ?? primaryJabatan?.['m_posisi.name'] ?? primaryJabatan?.name ?? '';
   const rank = getPosisiRank(targetPosId, posisiName);
 
-  const rawLevel = primaryJabatan?.level_name 
-    || posisiLevelMap.value[targetPosId] 
-    || (rank ? getLevelLabel(rank) : null);
+  const rawLevel = (rank >= 2 && primaryJabatan?.level_name && primaryJabatan.level_name.toLowerCase().includes('staff'))
+    ? getLevelLabel(rank)
+    : (primaryJabatan?.level_name || posisiLevelMap.value[targetPosId] || getLevelLabel(rank));
 
   const levelName = rawLevel && rawLevel !== '-' ? rawLevel : getLevelLabel(rank);
 
@@ -998,8 +1003,10 @@ const fetchAtasanByDivisi = async (divisiId, currentKaryId = null, currentPosisi
   try {
     loadingAtasan.value = true;
     const currentId = currentKaryId ?? route.params.id;
-    const posisiTarget = currentPosisiId ?? values.m_posisi_id;
-    const myRank = getPosisiRank(posisiTarget);
+    const primaryJabatan = inDetailArr.value?.find(i => i.is_primary) || inDetailArr.value?.[0];
+    const posisiTarget = currentPosisiId ?? values.m_posisi_id ?? primaryJabatan?.m_posisi_id;
+    const targetPosName = primaryJabatan?.posisi_name ?? primaryJabatan?.['m_posisi.name'] ?? primaryJabatan?.name ?? '';
+    const myRank = getPosisiRank(posisiTarget, targetPosName);
 
     const headers = {
       'Content-Type': 'application/json',
