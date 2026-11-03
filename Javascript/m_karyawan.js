@@ -267,11 +267,11 @@ onBeforeMount(async () => {
           const pId = jabatan.m_posisi_id;
           const pName = jabatan.posisi_name || jabatan['m_posisi.name'] || jabatan.name || '';
           const pRank = getPosisiRank(pId, pName);
-          const resolvedLvl = jabatan.level_name 
-            ?? posisiLevelMap.value[pId] 
-            ?? jabatan['m_level_posisi.level_name'] 
-            ?? jabatan['lp.level_name'] 
-            ?? (pName ? getLevelLabel(pRank) : null) 
+          const resolvedLvl = jabatan.level_name
+            ?? posisiLevelMap.value[pId]
+            ?? jabatan['m_level_posisi.level_name']
+            ?? jabatan['lp.level_name']
+            ?? (pName ? getLevelLabel(pRank) : null)
             ?? '-';
 
           return {
@@ -1073,7 +1073,7 @@ const fetchAtasanByDivisi = async (divisiId, currentKaryId = null, currentPosisi
             data.push(savedKary);
           }
         }
-      } catch (errSaved) {}
+      } catch (errSaved) { }
     }
 
     // Exclude diri sendiri dari calon atasan
