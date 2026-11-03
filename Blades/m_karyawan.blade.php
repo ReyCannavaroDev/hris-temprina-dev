@@ -1411,9 +1411,11 @@
                             @update:valueFull="obj => {
                               if (obj) {
                                 item.m_posisi_id = obj.id;
+                                item.posisi_name = obj.name;
                                 item.level_name = obj.level_name ?? obj['m_level_posisi.level_name'] ?? obj['lp.level_name'] ?? '-';
                               } else {
                                 item.m_posisi_id = null;
+                                item.posisi_name = null;
                                 item.level_name = null;
                               }
                             }"

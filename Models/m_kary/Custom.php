@@ -79,14 +79,55 @@ class m_kary extends \App\Models\BasicModels\m_kary
         $nip = @$this->helper->generateNomor("KODE NIP KARYAWAN");
         @$arrayData['kode'] = null;
 
-        if (empty($arrayData['atasan_id']) && !empty($arrayData['m_divisi_id'])) {
+        if (empty($arrayData['atasan_id'])) {
             try {
-                $divisiId = $arrayData['m_divisi_id'];
-                $atasan = \DB::table('m_kary')
-                    ->where('m_divisi_id', $divisiId)
-                    ->where('is_active', true)
-                    ->orderBy('id', 'asc')
-                    ->first();
+                $divisiId = $arrayData['m_divisi_id'] ?? null;
+                $branchId = $arrayData['m_branch_id'] ?? null;
+                $subcompId = $arrayData['m_subcomp_id'] ?? null;
+                $compId = $arrayData['m_comp_id'] ?? null;
+                $posisiId = $arrayData['m_posisi_id'] ?? null;
+
+                $mySeq = 0;
+                if ($posisiId) {
+                    $mySeq = \DB::table('m_level_posisi_d as ld')
+                        ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                        ->where('ld.m_posisi_id', $posisiId)
+                        ->value('l.sequence') ?? 0;
+                }
+
+                $findAtasan = function ($field, $val) use ($mySeq) {
+                    if (!$val) return null;
+                    return \DB::table('m_kary')
+                        ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'm_kary.m_posisi_id')
+                        ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                        ->where("m_kary.{$field}", $val)
+                        ->where('m_kary.is_active', true)
+                        ->where('l.sequence', '>', $mySeq)
+                        ->orderBy('l.sequence', 'asc')
+                        ->select('m_kary.id')
+                        ->first();
+                };
+
+                // 1. Cek Divisi
+                $atasan = $findAtasan('m_divisi_id', $divisiId);
+                // 2. Jika di divisi tidak ada, cek Cabang
+                if (!$atasan) $atasan = $findAtasan('m_branch_id', $branchId);
+                // 3. Jika di cabang tidak ada, cek SUB
+                if (!$atasan) $atasan = $findAtasan('m_subcomp_id', $subcompId);
+                // 4. Jika di SUB tidak ada, cek SBU
+                if (!$atasan) $atasan = $findAtasan('m_comp_id', $compId);
+                // 5. Pejabat Holding level >= 5
+                if (!$atasan) {
+                    $atasan = \DB::table('m_kary')
+                        ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'm_kary.m_posisi_id')
+                        ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                        ->where('m_kary.is_active', true)
+                        ->where('l.sequence', '>=', 5)
+                        ->orderBy('l.sequence', 'asc')
+                        ->select('m_kary.id')
+                        ->first();
+                }
+
                 if ($atasan) {
                     $arrayData['atasan_id'] = $atasan->id;
                 }
@@ -151,12 +192,15 @@ class m_kary extends \App\Models\BasicModels\m_kary
             } catch (\Throwable $e) {}
         }
 
-        if (empty($arrayData['atasan_id']) && !empty($arrayData['m_divisi_id'])) {
+        if (empty($arrayData['atasan_id'])) {
             try {
-                $divisiId = $arrayData['m_divisi_id'];
+                $divisiId = $arrayData['m_divisi_id'] ?? null;
+                $branchId = $arrayData['m_branch_id'] ?? null;
+                $subcompId = $arrayData['m_subcomp_id'] ?? null;
+                $compId = $arrayData['m_comp_id'] ?? null;
                 $karyId = $id ?? $arrayData['id'] ?? null;
-                
                 $posisiId = $arrayData['m_posisi_id'] ?? null;
+
                 $mySeq = 0;
                 if ($posisiId) {
                     $mySeq = \DB::table('m_level_posisi_d as ld')
@@ -165,12 +209,12 @@ class m_kary extends \App\Models\BasicModels\m_kary
                         ->value('l.sequence') ?? 0;
                 }
 
-                $atasan = null;
-                if ($mySeq < 4) {
-                    $atasan = \DB::table('m_kary')
+                $findAtasan = function ($field, $val) use ($mySeq, $karyId) {
+                    if (!$val) return null;
+                    return \DB::table('m_kary')
                         ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'm_kary.m_posisi_id')
                         ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
-                        ->where('m_kary.m_divisi_id', $divisiId)
+                        ->where("m_kary.{$field}", $val)
                         ->where('m_kary.is_active', true)
                         ->where('l.sequence', '>', $mySeq)
                         ->when($karyId, function ($q) use ($karyId) {
@@ -179,16 +223,23 @@ class m_kary extends \App\Models\BasicModels\m_kary
                         ->orderBy('l.sequence', 'asc')
                         ->select('m_kary.id')
                         ->first();
-                }
+                };
 
-                // Jika level >= 4 (Manager ke atas) atau tidak ada atasan di divisi lokal:
-                // Cari atasan di level SBU / Holding (Level 5 GM / Level 6 Direksi)
-                if (!$atasan && $mySeq >= 4) {
+                // 1. Cek Divisi
+                $atasan = $findAtasan('m_divisi_id', $divisiId);
+                // 2. Jika di divisi tidak ada, cek Cabang
+                if (!$atasan) $atasan = $findAtasan('m_branch_id', $branchId);
+                // 3. Jika di cabang tidak ada, cek SUB
+                if (!$atasan) $atasan = $findAtasan('m_subcomp_id', $subcompId);
+                // 4. Jika di SUB tidak ada, cek SBU
+                if (!$atasan) $atasan = $findAtasan('m_comp_id', $compId);
+                // 5. Pejabat Holding level >= 5
+                if (!$atasan) {
                     $atasan = \DB::table('m_kary')
                         ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'm_kary.m_posisi_id')
                         ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
                         ->where('m_kary.is_active', true)
-                        ->where('l.sequence', '>', $mySeq)
+                        ->where('l.sequence', '>=', 5)
                         ->when($karyId, function ($q) use ($karyId) {
                             $q->where('m_kary.id', '!=', $karyId);
                         })
@@ -312,6 +363,33 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 "is_sync" => false,
             ]),
         ];
+    }
+
+    public function onRetrieved($model)
+    {
+        if (!empty($model->id)) {
+            try {
+                if (isset($model->m_kary_det_jabatan) && is_iterable($model->m_kary_det_jabatan)) {
+                    foreach ($model->m_kary_det_jabatan as $jabatan) {
+                        if (!empty($jabatan->m_posisi_id)) {
+                            $lvl = \DB::table('m_level_posisi_d as lpd')
+                                ->join('m_level_posisi as lp', 'lp.id', '=', 'lpd.m_level_posisi_id')
+                                ->where('lpd.m_posisi_id', $jabatan->m_posisi_id)
+                                ->select('lp.sequence', 'lp.level_name')
+                                ->first();
+                            if ($lvl) {
+                                $jabatan->level_name = $lvl->level_name;
+                                $jabatan->sequence = $lvl->sequence;
+                            }
+                            $posName = \DB::table('m_posisi')->where('id', $jabatan->m_posisi_id)->value('name');
+                            if ($posName) {
+                                $jabatan->posisi_name = $posName;
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
     }
 
     private function syncKaryawanJabatan($karyId)
