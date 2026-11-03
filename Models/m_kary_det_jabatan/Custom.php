@@ -115,6 +115,41 @@ class m_kary_det_jabatan extends \App\Models\BasicModels\m_kary_det_jabatan
         ];
     }
 
+    public function createAfter($model, $arrayData, $metaData, $id = null)
+    {
+        $karyId = $model['m_karyawan_id'] ?? $model['m_kary_id'] ?? $arrayData['m_karyawan_id'] ?? $arrayData['m_kary_id'] ?? null;
+        if ($karyId) {
+            try {
+                \DB::table('m_kary')->where('id', $karyId)->update(['is_sync' => false]);
+                \DB::table('default_users')->where('m_kary_id', $karyId)->update(['is_sync' => false]);
+            } catch (\Throwable $e) {}
+        }
+    }
+
+    public function updateAfter($model, $arrayData, $metaData, $id = null)
+    {
+        $karyId = (is_object($model) ? ($model->m_karyawan_id ?? $model->m_kary_id ?? null) : null)
+            ?? ($arrayData['m_karyawan_id'] ?? $arrayData['m_kary_id'] ?? null);
+        if ($karyId) {
+            try {
+                \DB::table('m_kary')->where('id', $karyId)->update(['is_sync' => false]);
+                \DB::table('default_users')->where('m_kary_id', $karyId)->update(['is_sync' => false]);
+            } catch (\Throwable $e) {}
+        }
+    }
+
+    public function deleteAfter($model, $arrayData, $metaData, $id = null)
+    {
+        $karyId = (is_object($model) ? ($model->m_karyawan_id ?? $model->m_kary_id ?? null) : null)
+            ?? ($arrayData['m_karyawan_id'] ?? $arrayData['m_kary_id'] ?? null);
+        if ($karyId) {
+            try {
+                \DB::table('m_kary')->where('id', $karyId)->update(['is_sync' => false]);
+                \DB::table('default_users')->where('m_kary_id', $karyId)->update(['is_sync' => false]);
+            } catch (\Throwable $e) {}
+        }
+    }
+
     public function m_kary(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(\App\Models\CustomModels\m_kary::class, 'm_karyawan_id', 'id');

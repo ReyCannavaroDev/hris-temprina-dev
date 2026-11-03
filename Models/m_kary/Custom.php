@@ -127,6 +127,13 @@ class m_kary extends \App\Models\BasicModels\m_kary
             }
         }
 
+        if ($karyId) {
+            try {
+                \DB::table('m_kary')->where('id', $karyId)->update(['is_sync' => false]);
+                \DB::table('default_users')->where('m_kary_id', $karyId)->update(['is_sync' => false]);
+            } catch (\Throwable $e) {}
+        }
+
         return [
             "model" => $model,
             "data" => $arrayData,
@@ -136,19 +143,60 @@ class m_kary extends \App\Models\BasicModels\m_kary
     public function updateBefore($model, $arrayData, $metaData, $id = null)
     {
         $arrayData['is_sync'] = false;
+        $karyIdForFix = $id ?? $arrayData['id'] ?? null;
+        if ($karyIdForFix) {
+            try {
+                \DB::table('m_kary')->where('id', $karyIdForFix)->update(['is_sync' => false]);
+                \DB::table('default_users')->where('m_kary_id', $karyIdForFix)->update(['is_sync' => false]);
+            } catch (\Throwable $e) {}
+        }
 
         if (empty($arrayData['atasan_id']) && !empty($arrayData['m_divisi_id'])) {
             try {
                 $divisiId = $arrayData['m_divisi_id'];
                 $karyId = $id ?? $arrayData['id'] ?? null;
-                $atasan = \DB::table('m_kary')
-                    ->where('m_divisi_id', $divisiId)
-                    ->where('is_active', true)
-                    ->when($karyId, function ($q) use ($karyId) {
-                        $q->where('id', '!=', $karyId);
-                    })
-                    ->orderBy('id', 'asc')
-                    ->first();
+                
+                $posisiId = $arrayData['m_posisi_id'] ?? null;
+                $mySeq = 0;
+                if ($posisiId) {
+                    $mySeq = \DB::table('m_level_posisi_d as ld')
+                        ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                        ->where('ld.m_posisi_id', $posisiId)
+                        ->value('l.sequence') ?? 0;
+                }
+
+                $atasan = null;
+                if ($mySeq < 4) {
+                    $atasan = \DB::table('m_kary')
+                        ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'm_kary.m_posisi_id')
+                        ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                        ->where('m_kary.m_divisi_id', $divisiId)
+                        ->where('m_kary.is_active', true)
+                        ->where('l.sequence', '>', $mySeq)
+                        ->when($karyId, function ($q) use ($karyId) {
+                            $q->where('m_kary.id', '!=', $karyId);
+                        })
+                        ->orderBy('l.sequence', 'asc')
+                        ->select('m_kary.id')
+                        ->first();
+                }
+
+                // Jika level >= 4 (Manager ke atas) atau tidak ada atasan di divisi lokal:
+                // Cari atasan di level SBU / Holding (Level 5 GM / Level 6 Direksi)
+                if (!$atasan && $mySeq >= 4) {
+                    $atasan = \DB::table('m_kary')
+                        ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'm_kary.m_posisi_id')
+                        ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                        ->where('m_kary.is_active', true)
+                        ->where('l.sequence', '>', $mySeq)
+                        ->when($karyId, function ($q) use ($karyId) {
+                            $q->where('m_kary.id', '!=', $karyId);
+                        })
+                        ->orderBy('l.sequence', 'asc')
+                        ->select('m_kary.id')
+                        ->first();
+                }
+
                 if ($atasan) {
                     $arrayData['atasan_id'] = $atasan->id;
                 }
@@ -237,6 +285,13 @@ class m_kary extends \App\Models\BasicModels\m_kary
     {
         $karyId = $id ?? $model->id ?? null;
         $this->syncKaryawanJabatan($karyId);
+
+        if ($karyId) {
+            try {
+                \DB::table('m_kary')->where('id', $karyId)->update(['is_sync' => false]);
+                \DB::table('default_users')->where('m_kary_id', $karyId)->update(['is_sync' => false]);
+            } catch (\Throwable $e) {}
+        }
 
         if (@$arrayData["m_dir_id"]) {
             default_users::where("m_kary_id", $karyId)->update([
@@ -2931,7 +2986,14 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ->when(!empty($divisiIds), function ($q) use ($divisiIds) {
                 $q->where(function ($subQ) use ($divisiIds) {
                     $subQ->whereIn("m_kary.m_divisi_id", $divisiIds)
-                        ->orWhereNull("m_kary.m_divisi_id");
+                        ->orWhereNull("m_kary.m_divisi_id")
+                        ->orWhereExists(function ($query) {
+                            $query->select(\DB::raw(1))
+                                ->from('m_level_posisi_d as ld_h')
+                                ->join('m_level_posisi as l_h', 'l_h.id', '=', 'ld_h.m_level_posisi_id')
+                                ->whereColumn('ld_h.m_posisi_id', 'm_kary.m_posisi_id')
+                                ->where('l_h.sequence', '>=', 5);
+                        });
                 });
             })
             ->when($level && $level->sequence < $maxLevel, function ($q) use ($level) {

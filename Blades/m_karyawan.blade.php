@@ -339,6 +339,24 @@
                 <div v-else-if="!loadingAtasan" class="text-xs text-gray-500 italic py-1">
                   Pilih Divisi dan Jabatan pada tab Jabatan untuk melihat struktur hierarki
                 </div>
+
+                <!-- PILIH ATASAN LANGSUNG -->
+                <div class="mt-3 pt-3 border-t border-gray-200" v-if="listAtasan.length > 0 || values.atasan_id">
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-xs font-bold text-gray-700">Atasan Langsung (Penetapan Hierarki Pegawai)</label>
+                    <span class="text-[11px] text-gray-500">Pilih atasan langsung sesuai struktur organisasi</span>
+                  </div>
+                  <select 
+                    v-model="values.atasan_id" 
+                    :disabled="!actionText"
+                    class="block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-xs p-2 bg-white"
+                  >
+                    <option :value="null">-- Belum Ditentukan / Tidak Ada Atasan --</option>
+                    <option v-for="atasan in listAtasan" :key="atasan.id" :value="atasan.id">
+                      {{ atasan.display_text }}
+                    </option>
+                  </select>
+                </div>
               </div>
 
               <div>

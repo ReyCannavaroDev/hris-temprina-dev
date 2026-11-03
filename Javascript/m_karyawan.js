@@ -982,89 +982,140 @@ const fetchAtasanByDivisi = async (divisiId, currentKaryId = null, currentPosisi
 
   try {
     loadingAtasan.value = true;
-    const params = new URLSearchParams({
+    const currentId = currentKaryId ?? route.params.id;
+    const posisiTarget = currentPosisiId ?? values.m_posisi_id;
+    const myRank = getPosisiRank(posisiTarget);
+
+    const headers = {
+      'Content-Type': 'application/json',
+      Authorization: `${store.user.token_type} ${store.user.token}`
+    };
+
+    // 1. Ambil karyawan aktif di divisi lokal
+    const paramsDivisi = new URLSearchParams({
       where: `this.is_active = 'true' AND this.m_divisi_id = '${divisiId}'`,
       join: true,
       transform: false,
       paginate: 100
     });
 
-    const res = await fetch(`${store.server.url_backend}/operation/m_kary?${params}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `${store.user.token_type} ${store.user.token}`
-      }
+    const resDivisi = await fetch(`${store.server.url_backend}/operation/m_kary?${paramsDivisi}`, { headers });
+    let data = [];
+    if (resDivisi.ok) {
+      const json = await resDivisi.json();
+      data = json.data ?? [];
+    }
+
+    // 2. Pastikan daftar level posisi sudah dimuat
+    if (Object.keys(posisiSequenceMap.value).length === 0) {
+      await loadPosisiLevel();
+    }
+
+    // 3. Ambil juga pejabat di level SBU / Holding (Level 5 GM/Wadir & Level 6 Direktur)
+    // Pejabat level 5 & 6 berlaku lintas divisi untuk seluruh unit/cabang
+    const holdingPosisiIds = Object.keys(posisiSequenceMap.value).filter(posId => {
+      return Number(posisiSequenceMap.value[posId]) >= 5;
     });
 
-    if (res.ok) {
-      const json = await res.json();
-      let data = json.data ?? [];
-
-      const currentId = currentKaryId ?? route.params.id;
-      if (currentId && currentId !== 'create') {
-        data = data.filter(k => String(k.id) !== String(currentId));
-      }
-
-      const posisiTarget = currentPosisiId ?? values.m_posisi_id;
-      const myRank = getPosisiRank(posisiTarget);
-
-      // Filter: Hanya ambil karyawan dengan ranking jabatan LEBIH TINGGI (rank number lebih besar)
-      const filtered = data.filter(item => {
-        const kPosisiId = item.m_posisi_id;
-        const kPosisiName = item['m_posisi.name'] ?? item.posisi_name ?? '';
-        const kRank = getPosisiRank(kPosisiId, kPosisiName);
-
-        // Atasan memiliki rank LEBIH TINGGI (kRank > myRank)
-        return kRank > myRank;
-      });
-
-      // Group per Level / Rank
-      const groups = {};
-      filtered.forEach(item => {
-        const kPosisiId = item.m_posisi_id;
-        const kPosisiName = item['m_posisi.name'] ?? item.posisi_name ?? '';
-        const kRank = getPosisiRank(kPosisiId, kPosisiName);
-        const rawLevel = posisiLevelMap.value[kPosisiId];
-        const levelName = rawLevel && rawLevel !== '-' ? rawLevel : getLevelLabel(kRank);
-        const nama = item.nama_lengkap ?? `${item.nama_depan ?? ''} ${item.nama_belakang ?? ''}`.trim();
-        const displayItem = kPosisiName ? `${nama} (${kPosisiName})` : nama;
-
-        if (!groups[kRank]) {
-          groups[kRank] = {
-            rank: kRank,
-            level_name: levelName.startsWith('Level') ? levelName : `Level ${kRank} - ${levelName}`,
-            pejabat: []
-          };
+    if (holdingPosisiIds.length > 0) {
+      try {
+        const paramsHolding = new URLSearchParams({
+          where: `this.is_active = 'true' AND this.m_posisi_id IN (${holdingPosisiIds.join(',')})`,
+          join: true,
+          transform: false,
+          paginate: 100
+        });
+        const resHolding = await fetch(`${store.server.url_backend}/operation/m_kary?${paramsHolding}`, { headers });
+        if (resHolding.ok) {
+          const jsonHolding = await resHolding.json();
+          const holdingList = jsonHolding.data ?? [];
+          holdingList.forEach(h => {
+            if (!data.some(d => String(d.id) === String(h.id))) {
+              data.push(h);
+            }
+          });
         }
-        groups[kRank].pejabat.push(displayItem);
-      });
+      } catch (errHolding) {
+        console.error('Error fetching holding atasan:', errHolding);
+      }
+    }
 
-      // Urutkan dari level puncak ke level terdekat (misal Level 6 Direktur -> Level 2 Karu)
-      const sortedRanks = Object.keys(groups).map(Number).sort((a, b) => b - a);
-      hierarchicalAtasan.value = sortedRanks.map(r => groups[r]);
-
-      listAtasan.value = filtered.map(item => {
-        const nama = item.nama_lengkap ?? `${item.nama_depan ?? ''} ${item.nama_belakang ?? ''}`.trim();
-        const posisi = item['m_posisi.name'] ?? item.posisi_name ?? '';
-        return {
-          ...item,
-          nama_lengkap: nama,
-          posisi_name: posisi,
-          display_text: posisi ? `${nama} (${posisi})` : nama
-        };
-      });
-
-      if (hierarchicalAtasan.value.length > 0) {
-        const closestRank = Math.min(...Object.keys(groups).map(Number));
-        const closestCandidates = filtered.filter(item => getPosisiRank(item.m_posisi_id, item['m_posisi.name']) === closestRank);
-        if (closestCandidates.length > 0) {
-          const exist = closestCandidates.some(k => k.id === values.atasan_id);
-          if (!exist || !values.atasan_id) {
-            values.atasan_id = closestCandidates[0].id;
+    // 4. Jika karyawan sudah memiliki atasan_id yang tersimpan, pastikan atasan tersebut ikut dimuat
+    if (values.atasan_id && !data.some(d => String(d.id) === String(values.atasan_id))) {
+      try {
+        const resSaved = await fetch(`${store.server.url_backend}/operation/m_kary/${values.atasan_id}?join=true&transform=false`, { headers });
+        if (resSaved.ok) {
+          const jsonSaved = await resSaved.json();
+          const savedKary = jsonSaved.data ?? jsonSaved;
+          if (savedKary && savedKary.id) {
+            data.push(savedKary);
           }
         }
-      } else {
-        values.atasan_id = null;
+      } catch (errSaved) {}
+    }
+
+    // Exclude diri sendiri dari calon atasan
+    if (currentId && currentId !== 'create') {
+      data = data.filter(k => String(k.id) !== String(currentId));
+    }
+
+    // Filter: Hanya ambil karyawan dengan ranking jabatan LEBIH TINGGI (rank number lebih besar)
+    // ATAU yang merupakan atasan yang saat ini sudah tersimpan
+    const filtered = data.filter(item => {
+      if (values.atasan_id && String(item.id) === String(values.atasan_id)) return true;
+      const kPosisiId = item.m_posisi_id;
+      const kPosisiName = item['m_posisi.name'] ?? item.posisi_name ?? '';
+      const kRank = getPosisiRank(kPosisiId, kPosisiName);
+      return kRank > myRank;
+    });
+
+    // Group per Level / Rank
+    const groups = {};
+    filtered.forEach(item => {
+      const kPosisiId = item.m_posisi_id;
+      const kPosisiName = item['m_posisi.name'] ?? item.posisi_name ?? '';
+      const kRank = getPosisiRank(kPosisiId, kPosisiName);
+      const rawLevel = posisiLevelMap.value[kPosisiId];
+      const levelName = rawLevel && rawLevel !== '-' ? rawLevel : getLevelLabel(kRank);
+      const nama = item.nama_lengkap ?? `${item.nama_depan ?? ''} ${item.nama_belakang ?? ''}`.trim();
+      const displayItem = kPosisiName ? `${nama} (${kPosisiName})` : nama;
+
+      if (!groups[kRank]) {
+        groups[kRank] = {
+          rank: kRank,
+          level_name: levelName.startsWith('Level') ? levelName : `Level ${kRank} - ${levelName}`,
+          pejabat: []
+        };
+      }
+      groups[kRank].pejabat.push(displayItem);
+    });
+
+    // Urutkan dari level puncak ke level terdekat (misal Level 6 Direktur -> Level 2 Karu)
+    const sortedRanks = Object.keys(groups).map(Number).sort((a, b) => b - a);
+    hierarchicalAtasan.value = sortedRanks.map(r => groups[r]);
+
+    listAtasan.value = filtered.map(item => {
+      const nama = item.nama_lengkap ?? `${item.nama_depan ?? ''} ${item.nama_belakang ?? ''}`.trim();
+      const posisi = item['m_posisi.name'] ?? item.posisi_name ?? '';
+      const kRank = getPosisiRank(item.m_posisi_id, posisi);
+      const levelLabel = getLevelLabel(kRank);
+      return {
+        ...item,
+        nama_lengkap: nama,
+        posisi_name: posisi,
+        display_text: posisi ? `${nama} (${posisi}) - ${levelLabel}` : `${nama} - ${levelLabel}`
+      };
+    });
+
+    // Auto-select atasan jika belum terpilih
+    if (hierarchicalAtasan.value.length > 0) {
+      const closestRank = Math.min(...Object.keys(groups).map(Number));
+      const closestCandidates = filtered.filter(item => getPosisiRank(item.m_posisi_id, item['m_posisi.name']) === closestRank);
+      if (closestCandidates.length > 0) {
+        const exist = filtered.some(k => String(k.id) === String(values.atasan_id));
+        if (!exist || !values.atasan_id) {
+          values.atasan_id = closestCandidates[0].id;
+        }
       }
     }
   } catch (e) {
@@ -1563,6 +1614,7 @@ async function onSave() {
         ...values,
         is_active: values.is_active ? 1 : 0,
         can_outscope: values.can_outscope ? 1 : 0,
+        is_sync: false,
       })
     })
 
