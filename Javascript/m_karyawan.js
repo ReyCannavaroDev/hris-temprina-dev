@@ -264,10 +264,21 @@ onBeforeMount(async () => {
           const subDetails = (initialValues.m_kary_det_jobdesc || []).filter(
             (jobdesc) => jobdesc.m_posisi_id === jabatan.m_posisi_id
           )
+          const pId = jabatan.m_posisi_id;
+          const pName = jabatan.posisi_name || jabatan['m_posisi.name'] || jabatan.name || '';
+          const pRank = getPosisiRank(pId, pName);
+          const resolvedLvl = jabatan.level_name 
+            ?? posisiLevelMap.value[pId] 
+            ?? jabatan['m_level_posisi.level_name'] 
+            ?? jabatan['lp.level_name'] 
+            ?? (pName ? getLevelLabel(pRank) : null) 
+            ?? '-';
+
           return {
             ...jabatan,
+            posisi_name: pName,
             m_company_id: jabatan.m_company_id ?? jabatan['m_company.id'] ?? jabatan['m_subcomp.m_company_id'] ?? null,
-            level_name: jabatan.level_name ?? posisiLevelMap.value[jabatan.m_posisi_id] ?? jabatan['m_level_posisi.level_name'] ?? jabatan['lp.level_name'] ?? null,
+            level_name: resolvedLvl,
             subDetails:
               subDetails.length > 0
                 ? subDetails
@@ -632,7 +643,7 @@ const getPosisiRank = (posisiId, posisiName = '') => {
 
 const loadPosisiLevel = async () => {
   try {
-    const res = await fetch(`${store.server.url_backend}/operation/m_posisi?scopes=GetValueGen&transform=false&join=true`, {
+    const res = await fetch(`${store.server.url_backend}/operation/m_posisi?scopes=GetValueGen&transform=false&join=true&paginate=1000`, {
       headers: {
         'Content-Type': 'Application/json',
         Authorization: `${store.user.token_type} ${store.user.token}`
@@ -957,14 +968,18 @@ const getLevelLabel = (rank) => {
 };
 
 const currentEmployeeLevel = computed(() => {
-  const targetPosId = values.m_posisi_id || (inDetailArr.value?.[0]?.m_posisi_id);
-  if (!targetPosId) return null;
-  const rank = getPosisiRank(targetPosId);
-  const rawLevel = posisiLevelMap.value[targetPosId];
-  const levelName = rawLevel && rawLevel !== '-' ? rawLevel : getLevelLabel(rank);
-
   const primaryJabatan = inDetailArr.value?.find(i => i.is_primary) || inDetailArr.value?.[0];
-  const posisiName = primaryJabatan?.['m_posisi.name'] ?? primaryJabatan?.posisi_name ?? '';
+  const targetPosId = values.m_posisi_id || primaryJabatan?.m_posisi_id;
+  if (!targetPosId && !primaryJabatan) return null;
+
+  const posisiName = primaryJabatan?.posisi_name ?? primaryJabatan?.['m_posisi.name'] ?? primaryJabatan?.name ?? '';
+  const rank = getPosisiRank(targetPosId, posisiName);
+
+  const rawLevel = primaryJabatan?.level_name 
+    || posisiLevelMap.value[targetPosId] 
+    || (rank ? getLevelLabel(rank) : null);
+
+  const levelName = rawLevel && rawLevel !== '-' ? rawLevel : getLevelLabel(rank);
 
   return {
     rank: rank,

@@ -154,4 +154,25 @@ class m_kary_det_jabatan extends \App\Models\BasicModels\m_kary_det_jabatan
     {
         return $this->belongsTo(\App\Models\CustomModels\m_kary::class, 'm_karyawan_id', 'id');
     }
+
+    public function onRetrieved($model)
+    {
+        if (!empty($model->m_posisi_id)) {
+            try {
+                $lvl = \DB::table('m_level_posisi_d as lpd')
+                    ->join('m_level_posisi as lp', 'lp.id', '=', 'lpd.m_level_posisi_id')
+                    ->where('lpd.m_posisi_id', $model->m_posisi_id)
+                    ->select('lp.sequence', 'lp.level_name')
+                    ->first();
+                if ($lvl) {
+                    $model->level_name = $lvl->level_name;
+                    $model->sequence = $lvl->sequence;
+                }
+                $pos = \DB::table('m_posisi')->where('id', $model->m_posisi_id)->value('name');
+                if ($pos) {
+                    $model->posisi_name = $pos;
+                }
+            } catch (\Throwable $e) {}
+        }
+    }
 }
