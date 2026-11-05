@@ -57,6 +57,15 @@ class m_kary_det_jabatan extends \App\Models\BasicModels\m_kary_det_jabatan
             'is_active'     => $is_active
         ] );
 
+        if (is_object($model)) {
+            unset($model->level_name, $model->sequence, $model->posisi_name);
+            foreach (array_keys($model->getAttributes()) as $key) {
+                if (!in_array($key, $this->allowedColumns)) {
+                    unset($model->$key);
+                }
+            }
+        }
+
         $filteredData = array_intersect_key($newArrayData, array_flip($this->allowedColumns));
         
         return [
@@ -105,6 +114,15 @@ class m_kary_det_jabatan extends \App\Models\BasicModels\m_kary_det_jabatan
                 ]);
             }
             unset($arrayData['is_active']);
+        }
+
+        if (is_object($model)) {
+            unset($model->level_name, $model->sequence, $model->posisi_name);
+            foreach (array_keys($model->getAttributes()) as $key) {
+                if (!in_array($key, $this->allowedColumns)) {
+                    unset($model->$key);
+                }
+            }
         }
 
         $filteredData = array_intersect_key($arrayData, array_flip($this->allowedColumns));
