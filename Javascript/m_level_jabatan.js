@@ -59,7 +59,7 @@ onBeforeMount(async () => {
       const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
       isRequesting.value = true
 
-      const params = { join: true, transform: false }
+      const params = { join: true, transform: true }
       const fixedParams = new URLSearchParams(params)
       const res = await fetch(dataURL + '?' + fixedParams, {
         headers: {
@@ -74,9 +74,10 @@ onBeforeMount(async () => {
 
       if (Array.isArray(initialValues.m_level_posisi_d)) {
         detailArr.value = initialValues.m_level_posisi_d.map((item) => ({
+          id: item.id,
           m_posisi_id: item.m_posisi_id || 0,
           m_level_posisi_id: item.m_level_posisi_id || 0,
-          
+          name: item.name || item.posisi_name || '',
         }));
       }
 
@@ -105,7 +106,7 @@ const detailArr = ref([
 const onDetailAdd = async (e) => {
   // Tambahkan item-item ke detailArr
   e.forEach(row => {
-    row.m_level_posisi_id = 0
+    row.m_level_posisi_id = route.params.id && route.params.id !== 'create' ? parseInt(route.params.id) : 0
     row.m_posisi_id = row.id
     detailArr.value.push(row);
   });

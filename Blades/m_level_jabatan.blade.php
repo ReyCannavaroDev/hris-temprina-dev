@@ -150,7 +150,7 @@
           </thead>
 
           <tbody>
-            <tr v-for="(item, i) in detailArr" :key="item.id" class="border-t" v-if="detailArr.length > 0">
+            <tr v-for="(item, i) in detailArr" :key="item.id || item.m_posisi_id || i" class="border-t" v-if="detailArr.length > 0">
               <td class="p-2 text-center border border-[#CACACA]">
                 {{ i + 1 }}.
               </td>
@@ -158,7 +158,7 @@
                 <FieldSelect :bind="{ disabled: !actionText}" class="w-full !mt-0" :value="item.m_posisi_id" 
                 @input="v => item.m_posisi_id= v" 
                 @update:valueFull="(objVal) => {
-                        detail_item(objVal);
+                        if (objVal) item.name = objVal.name;
                       }
                       " :errorText="formErrors.m_posisi_id
                        ? 'failed' : ''" :hints="formErrors.m_posisi_id
