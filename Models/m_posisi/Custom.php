@@ -9,6 +9,11 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
     {
         parent::__construct();
         $this->helper = getCore("Helper");
+        $this->joins = [
+            "default_users.id=m_posisi.creator_id",
+            "default_users.id=m_posisi.last_editor_id",
+            "m_divisi.id=m_posisi.m_divisi_id"
+        ];
     }
 
     public $fileColumns = [
@@ -29,6 +34,11 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
             "data" => $newArrayData,
             // "errors" => ['error1']
         ];
+    }
+
+    public function m_divisi() :\Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo('\App\Models\BasicModels\m_divisi', 'm_divisi_id', 'id');
     }
 
     public function m_level_posisi_d()
@@ -86,12 +96,41 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
 
     public function scopeGetValueGen($model)
     {
-
         return $model
-            ->leftJoin("m_general as m_gen","m_gen.id","=","m_posisi.m_divisi_id")
-            ->leftjoin('m_level_posisi_d as lpd', 'lpd.m_posisi_id', 'm_posisi.id')
-            ->leftjoin('m_level_posisi as lp', 'lpd.m_level_posisi_id', 'lp.id')
-            ->select('m_posisi.*', 'lp.level_name', 'lp.sequence', 'm_gen.value');
+            ->leftJoin("m_divisi as d", "d.id", "=", "m_posisi.m_divisi_id")
+            ->leftJoin("m_general as m_gen", function ($join) {
+                $join->on(\DB::raw('CAST(d.name AS text)'), '=', \DB::raw('CAST(m_gen.id AS text)'));
+            })
+            ->leftJoin("m_general as gen_direct", "gen_direct.id", "=", "m_posisi.m_divisi_id")
+            ->leftJoin("m_level_posisi_d as lpd", "lpd.m_posisi_id", "=", "m_posisi.id")
+            ->leftJoin("m_level_posisi as lp", "lpd.m_level_posisi_id", "=", "lp.id")
+            ->select(
+                "m_posisi.*",
+                "lp.level_name",
+                "lp.sequence",
+                \DB::raw("COALESCE(m_gen.value, CAST(d.name AS text), d.name_old, gen_direct.value, '') as value"),
+                \DB::raw("COALESCE(m_gen.value, CAST(d.name AS text), d.name_old, gen_direct.value, '') as divisi_name")
+            );
+    }
+
+    public function transformRowData(array $row)
+    {
+        if (!empty($row['m_divisi_id'])) {
+            $div = \DB::table('m_divisi')->where('id', $row['m_divisi_id'])->first();
+            if ($div) {
+                $divName = $div->name;
+                $gen = \DB::table('m_general')->whereRaw('CAST(id AS text) = ?', [strval($div->name)])->first();
+                if ($gen && !empty($gen->value)) {
+                    $divName = $gen->value;
+                } elseif (!empty($div->name_old)) {
+                    $divName = $div->name_old;
+                }
+                $row['divisi_name'] = $divName;
+                $row['m_divisi.name'] = $divName;
+                $row['value'] = $divName;
+            }
+        }
+        return $row;
     }
 
     public function custom_join_child()

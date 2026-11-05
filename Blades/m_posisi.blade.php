@@ -60,15 +60,10 @@
             values.level = 0
           }" :errorText="formErrors.m_divisi_id?'failed':''" :hints="formErrors.m_divisi_id" valueField="id"
         displayField="value" :api="{          
-              url: `${store.server.url_backend}/operation/m_general`,
+              url: `${store.server.url_backend}/operation/m_divisi`,
               headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
               params: {
-                //concat_branch : true,
-                //simplest:true,
-                //scopes: 'Names',
-                where: `this.group='MASTER_DIVISI'`,
-                selectfield: 'this.id, this.value',
-                searchfield: 'this.value',
+                scopes: 'Name',
               }
           }" placeholder="Pilih Divisi" label="Divisi" :check="false" />
     </div>
