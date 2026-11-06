@@ -4,7 +4,7 @@ use Laravel\Lumen\Testing\DatabaseTransactions;
 use Laravel\Passport\Passport;
 use App\Models\Defaults\User;
 
-class mAssessmentKaryDTest extends TestCase
+class tAssessmentKaryDTest extends TestCase
 {
     use DatabaseTransactions;
 
@@ -15,7 +15,7 @@ class mAssessmentKaryDTest extends TestCase
             'paginate' => 25
         ];
 
-        $this->call('GET', '/operation/m_assessment_kary_d', $payload);
+        $this->call('GET', '/operation/t_assessment_kary_d', $payload);
 
         $responseArr = json_decode( $this->response->getContent(),true );
         ff( $responseArr, 'dump data' );
@@ -32,29 +32,31 @@ class mAssessmentKaryDTest extends TestCase
 
         $payload = [
 		    "id" => "bigint:optional:autocreate",
-		    "m_assessment_kary_id" => "bigint:required",
+		    "t_assessment_kary_id" => "bigint:required",
 		    "nama_assessment" => "string:191:required",
-		    "kategori" => "bigint:required",
+		    "nama_kategori" => "string:191:required",
+		    "total_nilai" => "integer:required",
 		    "bobot" => "integer:required",
 		    "creator_id" => "integer:optional",
 		    "last_editor_id" => "integer:optional",
 		    "created_at" => "datetime:optional:autocreate",
 		    "updated_at" => "datetime:optional:autocreate",
-		    "m_assessment_kary_sub_d" => [
+		    "t_assessment_kary_sub_d" => [
 		        [
 		            "id" => "bigint:optional:autocreate",
-		            "m_assessment_kary_d_id" => "bigint:required:autocreate",
-		            "keterangan" => "string:191:required",
+		            "t_assessment_kary_d_id" => "bigint:required:autocreate",
+		            "nama_keterangan" => "string:191:required",
+		            "nilai" => "integer:required",
+		            "is_selected" => "boolean:optional",
 		            "creator_id" => "integer:optional",
 		            "last_editor_id" => "integer:optional",
 		            "created_at" => "datetime:optional:autocreate",
-		            "updated_at" => "datetime:optional:autocreate",
-		            "nilai" => "integer:required"
+		            "updated_at" => "datetime:optional:autocreate"
 		        ]
 		    ]
 		];
 
-        $this->call('POST', '/operation/m_assessment_kary_d', $payload);
+        $this->call('POST', '/operation/t_assessment_kary_d', $payload);
 
         $responseArr = json_decode( $this->response->getContent(),true );
         // ff( $responseArr, 'dump data' );
@@ -62,7 +64,7 @@ class mAssessmentKaryDTest extends TestCase
         $this->assertEquals( 200, $this->response->status() );
         // $this->seeJsonStructure( ['status'] );
 
-        $this->seeInDatabase('m_assessment_kary_d', array_filter($payload, function($dt){
+        $this->seeInDatabase('t_assessment_kary_d', array_filter($payload, function($dt){
             return !is_array($dt);
         } ));
     }

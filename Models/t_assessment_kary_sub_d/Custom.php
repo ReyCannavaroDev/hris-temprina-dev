@@ -2,7 +2,7 @@
 
 namespace App\Models\CustomModels;
 
-class m_assessment_kary_sub_d extends \App\Models\BasicModels\m_assessment_kary_sub_d
+class t_assessment_kary_sub_d extends \App\Models\BasicModels\t_assessment_kary_sub_d
 {    
     public function __construct()
     {

@@ -1,7 +1,18 @@
 <?php
 
-/**
- * placeholder model: m_periode
- * bagian: Custom
- * tempel source code dari generator lama di file ini.
- */
+namespace App\Models\CustomModels;
+
+class m_periode extends \App\Models\BasicModels\m_periode
+{    
+    public function __construct()
+    {
+        parent::__construct();
+    }
+    
+    public $fileColumns    = [ /*file_column*/ ];
+
+    //public $createAdditionalData = ["creator_id"=>"auth:id"];
+    //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
+
+    
+}

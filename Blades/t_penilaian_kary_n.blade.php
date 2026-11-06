@@ -1,6 +1,6 @@
 <!-- LANDING -->
 @if(!$req->has('id'))
-<div class="bg-white p-1 rounded-md min-h-[520px] border-t-10 border-gray-500">
+<div class="bg-white p-1 rounded-md border-t-10 border-gray-500">
   <div class="flex justify-between items-center px-2.5 py-1">
     <div class="flex items-center gap-x-4">
       <p>Filter Status :</p>
@@ -20,10 +20,24 @@
     </div>
   </div>
 
+  <!-- Filter Divisi -->
+  <div class="px-2.5 py-1 mb-2 w-1/3">
+    <FieldSelect class="w-full" :bind="{ clearable: true }" :value="data.filter_divisi_id"
+      @input="v => { data.filter_divisi_id = v; onFilterDivisiChange() }" valueField="id" displayField="name" :api="{
+            url: `${store.server.url_backend}/operation/m_divisi`,
+            headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+            params: {
+              simplest: true,
+              transform: false,
+              join: false
+            }
+        }" placeholder="Filter Berdasarkan Divisi" label="Divisi" fa-icon="building" :check="false" />
+  </div>
+
 
   <hr>
   <TableApi ref='apiTable' :api="landing.api" :columns="landing.columns" :actions="landing.actions"
-    class="max-h-[450px]">
+    class="">
     <!-- <template #header>
     </template> -->
   </TableApi>
@@ -48,25 +62,25 @@
   <div class="p-4 grid <md:grid-cols-1 grid-cols-3 gap-2 ">
     <div>
       <FieldPopup
-      class="w-full col-span-9 !mt-3"
-        :bind="{ readonly: !actionText }"
+        class="w-full col-span-9 !mt-3"
+        :bind="{ readonly: !actionText || actionText === 'Read' }"
         :value="values.m_kary_id" @input="(v)=>values.m_kary_id=v"
+        @update:valueFull="(response)=>{
+          if(response) {
+            onKaryawanSelected(response);
+          } else {
+            values.m_kary_id = null;
+            values.nama = '';
+            values.nama_jabatan = '';
+            values.nama_divisi = '';
+            values.nama_level = '';
+          }
+        }"
         :errorText="formErrors.m_kary_id?'failed':''" 
         :hints="formErrors.m_kary_id" 
         valueField="id" displayField="nama_lengkap"
         label="Karyawan" placeholder="Pilih Karyawan" 
-        :api="{
-           url:  `${store.server.url_backend}/operation/m_kary`,
-              headers: {
-                'Content-Type': 'Application/json',
-                Authorization: `${store.user.token_type} ${store.user.token}`
-              },
-              params: {
-                kary_id : `${store.user.data.m_kary_id ?? 0}`,            
-                scopes :'Subordinate',
-                searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name'
-              }
-        }"
+        :api="apiKary"
         placeholder="" fa-icon="" :check="false" 
         :columns="[{
           headerName: 'No',
@@ -75,42 +89,69 @@
           sortable: false, resizable: false, filter: false,
           cellClass: ['justify-center', 'bg-gray-50']
         },
-         {
-              flex: 1,
-              field: 'kode',
-              headerName: 'Kode',
-              sortable: false, resizable: true, filter: false,
-              cellClass: ['border-r', '!border-gray-200', 'justify-start']
-            },
-            {
-              flex: 1,
-              field: 'nama_lengkap',
-              headerName: 'Nama',
-              sortable: false, resizable: true, filter: false,
-              cellClass: ['border-r', '!border-gray-200', 'justify-start']
-            },
-            {
-              flex: 1,
-              field: 'atasan.nama_lengkap',
-              headerName: 'Atasan',
-              sortable: false, resizable: true, filter: false,
-              cellClass: ['border-r', '!border-gray-200', 'justify-end']
-            },
-            {
-              flex: 1,
-              field: 'm_posisi.name',
-              headerName: 'Posisi',
-              sortable: false, resizable: true, filter: false,
-              cellClass: ['border-r', '!border-gray-200', 'justify-end']
-            },]"
+        {
+          flex: 1,
+          field: 'kode',
+          headerName: 'Kode',
+          sortable: false, resizable: true, filter: false,
+          cellClass: ['border-r', '!border-gray-200', 'justify-start']
+        },
+        {
+          flex: 1,
+          field: 'nama_lengkap',
+          headerName: 'Nama',
+          sortable: false, resizable: true, filter: false,
+          cellClass: ['border-r', '!border-gray-200', 'justify-start']
+        },
+        {
+          flex: 1,
+          field: 'atasan.nama_lengkap',
+          headerName: 'Atasan',
+          valueGetter: (p) => p.data?.['atasan.nama_lengkap'] || p.data?.atasan?.nama_lengkap || p.data?.['atasan.nama_depan'] || p.data?.atasan?.nama_depan || p.data?.atasan || '-',
+          sortable: false, resizable: true, filter: false,
+          cellClass: ['border-r', '!border-gray-200', 'justify-start']
+        },
+        {
+          flex: 1,
+          field: 'm_posisi.name',
+          headerName: 'Posisi',
+          valueGetter: (p) => p.data?.['m_posisi.name'] || p.data?.m_posisi?.name || p.data?.posisi || p.data?.jabatan || '-',
+          sortable: false, resizable: true, filter: false,
+          cellClass: ['border-r', '!border-gray-200', 'justify-start']
+        },
+        {
+          flex: 1,
+          field: 'm_divisi.name_old',
+          headerName: 'Divisi',
+          valueGetter: (p) => p.data?.['m_divisi.name_old'] || p.data?.['m_divisi.nama'] || (p.data?.nama_divisi && isNaN(p.data.nama_divisi) ? p.data.nama_divisi : null) || (p.data?.['m_divisi.name'] && isNaN(p.data['m_divisi.name']) ? p.data['m_divisi.name'] : null) || p.data?.divisi || '-',
+          sortable: false, resizable: true, filter: false,
+          cellClass: ['border-r', '!border-gray-200', 'justify-start']
+        }]"
       />
-      
+    </div>
+
+    <div>
+      <FieldX class="w-full !mt-3" :bind="{ readonly: true }" :value="values.nama_jabatan"
+        :errorText="formErrors.nama_jabatan?'failed':''" @input="v=>values.nama_jabatan=v" :hints="formErrors.nama_jabatan"
+        placeholder="Jabatan Terisi Otomatis" label="Jabatan Karyawan" fa-icon="user-tie" :check="false" />
+    </div>
+
+    <div>
+      <FieldX class="w-full !mt-3" :bind="{ readonly: true }" :value="values.nama_divisi"
+        :errorText="formErrors.nama_divisi?'failed':''" @input="v=>values.nama_divisi=v" :hints="formErrors.nama_divisi"
+        placeholder="Divisi Terisi Otomatis" label="Divisi" fa-icon="building" :check="false" />
+    </div>
+
+    <div>
+      <FieldX class="w-full !mt-3" :bind="{ readonly: true }" :value="values.nama_level"
+        :errorText="formErrors.nama_level?'failed':''" @input="v=>values.nama_level=v" :hints="formErrors.nama_level"
+        placeholder="Level Terisi Otomatis" label="Level Karyawan" fa-icon="layer-group" :check="false" />
     </div>
 
     <div>
       <FieldX type="date" class="w-full !mt-3" :bind="{ readonly: !actionText }" :value="values.tanggal"
         :errorText="formErrors.tanggal ? 'failed' : ''" @input="v => values.tanggal = v" :options="yearOptions"
-        :key="'value'" :displayField="'label'" :hints="formErrors.tanggal" label="Tahun" placeholder="Pilih Tahun"
+        :key="'value'" :displayField="'label'" :hints="formErrors.tanggal" label="Periode" placeholder="Pilih Periode"
         :check="true" />
     </div>
 
@@ -121,22 +162,42 @@
               url: `${store.server.url_backend}/operation/m_kary`,
               headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
               params: {
-                //where: `this.group = 'TIPE PURCHASE REQUEST'`,
                 simplest:true,
                 transform:false,
                 join:false
               }
-          }" fa-icon="caret-down" label="Atasan" placeholder="tulis" :check="false" />
+          }" fa-icon="caret-down" label="Atasan" placeholder="Atasan" :check="false" />
     </div>
+
     <div>
-      <FieldSelect class="w-full col-span-9 !mt-3" :bind="{ disabled: actionText !== 'Tambah', clearable:true }"
-        :value="values.tipe_penilaian" @input="v=>values.tipe_penilaian=v"
-        :errorText="formErrors.tipe_penilaian?'failed':''" :hints="formErrors.tipe_penilaian" valueField="value"
+      <FieldSelect class="w-full col-span-9 !mt-3" :bind="{ disabled: !['Tambah', 'Edit', 'Copy'].includes(actionText), clearable:true }"
+        :value="values.tipe_penilaian_id" 
+        @input="v => { 
+          values.tipe_penilaian_id = v; 
+          values.m_assessment_kary_id = null; 
+          values.penilaian = ''; 
+          detailArr = []; 
+          selectedSeq = {};
+        }"
+        @update:valueFull="obj => {
+          if (obj) {
+            values.tipe_penilaian_id = obj.id;
+            values.tipe_penilaian = obj.value;
+          } else {
+            values.tipe_penilaian_id = null;
+            values.tipe_penilaian = null;
+            values.m_assessment_kary_id = null;
+            values.penilaian = '';
+            detailArr = [];
+            selectedSeq = {};
+          }
+        }"
+        :errorText="formErrors.tipe_penilaian?'failed':''" :hints="formErrors.tipe_penilaian" valueField="id"
         displayField="value" :api="{
               url: `${store.server.url_backend}/operation/m_general`,
               headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
               params: {
-                where: `this.group = 'TIPE_PENILAIAN'`,
+                where: `this.group = 'TIPE_PENILAIAN' AND this.is_active='true'`,
                 simplest:true,
                 transform:false,
                 join:false
@@ -145,25 +206,51 @@
     </div>
 
     <div>
-      <FieldSelect class="w-full col-span-9 !mt-3" :bind="{ disabled: actionText !== 'Tambah' , clearable:true }"
-        :value="values.m_assessment_kary_id" @input="v=>values.m_assessment_kary_id=v"
+      <FieldSelect class="w-full col-span-9 !mt-3" :bind="{ disabled: !['Tambah', 'Edit', 'Copy'].includes(actionText) || !values.tipe_penilaian_id, clearable:true }"
+        :value="values.m_assessment_kary_id" 
+        @input="v => {
+          values.m_assessment_kary_id = v;
+          if (['Tambah', 'Edit', 'Copy'].includes(actionText)) {
+            if (v) {
+              onTipePenilaianSelected(v);
+            } else {
+              detailArr = [];
+              selectedSeq = {};
+            }
+          }
+        }"
         :errorText="formErrors.m_assessment_kary_id?'failed':''" :hints="formErrors.m_assessment_kary_id"
-        valueField="id" displayField="deskripsi" @update:valueFull="(response)=>{
-          onTipePenilaianSelected(response.id)}" :api="{
-    url: `${store.server.url_backend}/operation/m_assessment_kary`,
-    headers: {
-      'Content-Type': 'Application/json',
-      Authorization: `${store.user.token_type} ${store.user.token}`
-    },
-    params: isRead ? {} : { where: `type.value = '${values.tipe_penilaian}'`, transform: true }
-    }" fa-icon="caret-down" label="Penilaian" placeholder="tulis" :check="false" />
+        valueField="id" displayField="deskripsi" 
+        @update:valueFull="(response)=>{
+          if (response && response.id) {
+            values.penilaian = response.deskripsi || values.tipe_penilaian || '';
+            if (['Tambah', 'Edit', 'Copy'].includes(actionText)) {
+              onTipePenilaianSelected(response.id);
+            }
+          } else {
+            values.penilaian = '';
+            detailArr = [];
+            selectedSeq = {};
+          }
+        }" 
+        :api="{
+          url: `${store.server.url_backend}/operation/m_assessment_kary`,
+          headers: {
+            'Content-Type': 'Application/json',
+            Authorization: `${store.user.token_type} ${store.user.token}`
+          },
+          params: { 
+            where: values.tipe_penilaian_id ? `this.type = '${values.tipe_penilaian_id}' AND this.is_active='true'` : `this.is_active='true'`, 
+            transform: false,
+            simplest: true 
+          }
+        }" fa-icon="caret-down" label="Penilaian" placeholder="Pilih Penilaian Karyawan" :check="false" />
     </div>
 
-
-    <!-- Penilaian -->
+    <!-- Penilaian Terisi Otomatis -->
     <div>
       <FieldX :bind="{ readonly: true }" class="w-full mt-3" :value="values.penilaian" label="Penilaian"
-        placeholder="Tuliskan Penilaian" :errorText="formErrors.penilaian ? 'failed' : ''"
+        placeholder="Penilaian Terisi Otomatis" :errorText="formErrors.penilaian ? 'failed' : ''"
         @input="v => values.penilaian = v" :hints="formErrors.penilaian" :check="false" />
     </div>
   </div>
@@ -180,10 +267,10 @@
             {{ values.nama }}
           </div>
           <div class="text-[10px] text-gray-500 leading-3">
-            {{ values.Jabatan }} jabatan sementara
+            {{ values.nama_jabatan || values.jabatan || 'Jabatan' }}
           </div>
         </div>
-        <div class="px-2 py-1 text-sm bg-blue-50 border border-blue-300 rounded text-blue-600">
+        <div class="px-2 py-1 text-sm bg-blue-50 border border-blue-300 rounded text-blue-600 font-bold">
           {{ values.rata_rata || '0.00' }}
         </div>
       </div>
@@ -200,51 +287,56 @@
         <div class="flex space-x-2 items-center">
           <h2 class="font-semibold">Total Nilai</h2>
           <h2
-            class="w-6 h-6 flex items-center justify-center font-semibold rounded-full bg-white text-[#128AE9] text-xs">
+            class="min-w-6 h-6 px-1.5 flex items-center justify-center font-semibold rounded-full bg-white text-[#128AE9] text-xs">
             {{ item.total_nilai ?? 0 }}
           </h2>
         </div>
       </div>
 
-      <div class="flex bg-[#F6F7FF] justify-between py-2 px-4">
-        <div class="text-[#128AE9]">
-          {{item.nama_assessment??'-'}}
+      <div class="flex bg-[#F6F7FF] justify-between py-2 px-4 items-center">
+        <div class="text-[#128AE9] font-medium text-sm">
+          {{ item.nama_assessment ?? '-' }}
         </div>
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-3 text-xs">
           <div class="flex items-center space-x-1">
-            <h2 class="">Bobot</h2>
-            <h2 class="w-6 h-6 flex items-center justify-center  rounded-full bg-[#49525D] text-white text-xs">
-              {{item.bobot}}</h2>
+            <span>Bobot</span>
+            <span class="w-6 h-6 flex items-center justify-center rounded-full bg-[#49525D] text-white text-xs font-semibold">
+              {{ item.bobot }}
+            </span>
           </div>
           <div class="flex items-center space-x-1">
-            <h2 class="">Rating</h2>
-            <h2 class="w-6 h-6 flex items-center justify-center  rounded-full bg-[#49525D] text-white text-xs">4</h2>
+            <span>Rating</span>
+            <span class="w-6 h-6 flex items-center justify-center rounded-full bg-[#49525D] text-white text-xs font-semibold">
+              {{ selectedSeq[index] || 0 }}
+            </span>
           </div>
           <div class="flex items-center space-x-1">
-            <h2 class="">Nilai</h2>
-            <h2
-              class="w-6 h-6 flex items-center justify-center font-semibold rounded-full bg-[#49525D] text-white text-xs">
+            <span>Nilai</span>
+            <span
+              class="min-w-6 h-6 px-1.5 flex items-center justify-center font-semibold rounded-full bg-[#49525D] text-white text-xs">
               {{ item.total_nilai ?? 0 }}
-            </h2>
+            </span>
           </div>
         </div>
       </div>
 
       <div class="grid grid-cols-5 text-xs text-center">
         <div v-for="(sub, subIndex) in item.t_assessment_kary_sub_d" :key="`sub-${index}-${subIndex}`"
-          class="relative border pt-3 min-h-[100px] bg-white flex flex-col justify-between"
-          :class="{ 'bg-blue-50 border-blue-500': sub.is_selected }">
-          <div class="flex-1 flex items-start justify-start px-4 text-[12px] text-[#333333] text-left min-h-24">
+          class="relative border pt-3 min-h-[100px] bg-white flex flex-col justify-between cursor-pointer transition-colors duration-150"
+          :class="{ 'bg-blue-50 !border-blue-500 ring-1 ring-blue-500': isNilaiMatch(selectedSeq[index], sub.nilai) }"
+          @click="selectedSeq[index] = sub.nilai">
+          <div class="flex-1 flex items-start justify-start px-4 text-[12px] text-[#333333] text-left min-h-24 leading-relaxed">
             {{ sub.nama_keterangan }}
           </div>
-          <div class="flex justify-between items-center mt-2 px-4 border-t py-2">
-            <span class="text-[11px] font-semibold">{{sub.nilai }}</span>
+          <div class="flex justify-between items-center mt-2 px-4 border-t py-2 bg-gray-50/50">
+            <span class="text-[11px] font-semibold text-gray-700">{{ sub.nilai }}</span>
             <input
               type="radio"
               :name="'group-' + index"
               :value="sub.nilai"
-              v-model="selectedSeq[index]"
-              class="appearance-none w-4 h-4 border border-gray-400 rounded-sm checked:bg-blue-600 checked:border-blue-600 cursor-pointer"
+              :checked="isNilaiMatch(selectedSeq[index], sub.nilai)"
+              @change="selectedSeq[index] = sub.nilai"
+              class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer accent-blue-600"
             />
           </div>
         </div>
@@ -304,6 +396,7 @@
       </button>
     <button
         class="bg-green-600 text-white font-semibold hover:bg-green-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
+        v-show="currentMenu?.can_create || currentMenu?.can_update"
         @click="onSave"
       >
         <icon fa="save" />

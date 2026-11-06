@@ -79,13 +79,13 @@ $signatureJabatan = $t_mutasi?->signature?->m_posisi?->name ?? 'Direktur Utama';
 // PENGATUR MARGIN KERTAS (Semua 3 cm: Atas 3cm, Kiri 3cm, Kanan 3cm, Bawah 3cm)
 $jarakAtas = '3cm';
 // Untuk kertas A4 (lebar 21cm): Margin Kiri 3cm (14.3%), Konten 15cm (71.4%), Margin Kanan 3cm (14.3%)
-$lebarSpacerKiri = '14.3%';
-$lebarKonten = '71.4%';
-$lebarSpacerKanan = '14.3%';
+$lebarSpacerKiri = '4.3%';
+$lebarKonten = '83.4%';
+$lebarSpacerKanan = '12.3%';
 
 // PENGATUR JUMLAH ENTER TANDA TANGAN (Antara PT Temprina dan Nama/Jabatan Direktur)
 // Default: '<br><br>' (2 enter) atau '<br><br><br>' (3 enter)
-$enterTtd = '<br><br>';
+$enterTtd = '<br><br><br><br><br>';
 
 // PENGATUR JARAK ANTARA "PADA TANGGAL" DENGAN NAMA PERUSAHAAN (Bisa diubah manual: '2px', '4px', dll)
 $jarakTanggalKePt = '2px';

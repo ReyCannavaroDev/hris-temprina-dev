@@ -51,7 +51,8 @@ class tLokerTest extends TestCase
 		    "updated_at" => "datetime:optional:autocreate",
 		    "jk_id" => "bigint:optional",
 		    "status_kary_id" => "bigint:optional",
-		    "jumlah" => "bigint:optional"
+		    "jumlah" => "bigint:optional",
+		    "t_req_recruitment_id" => "bigint:optional"
 		];
 
         $this->call('POST', '/operation/t_loker', $payload);

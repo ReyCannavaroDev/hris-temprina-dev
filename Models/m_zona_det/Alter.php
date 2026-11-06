@@ -1,7 +1,19 @@
 <?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-/**
- * placeholder model: m_zona_det
- * bagian: Alter
- * tempel source code dari generator lama di file ini.
- */
+class mzonadet extends Migration
+{
+    protected $tableName = "m_zona_det";
+    
+    public function up()
+    {
+        Schema::table($this->tableName, function (Blueprint $table) {
+            //$table->string('_existColumnName_')->change();
+            //$table->string('_columnName_');
+            $table->dropColumn([ 'm_comp_id']);
+            
+        });
+    }
+}

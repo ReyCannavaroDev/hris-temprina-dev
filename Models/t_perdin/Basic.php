@@ -14,10 +14,10 @@ class t_perdin extends Model
     protected $table    = 't_perdin';
     protected $guarded  = ['id'];
     protected $casts    = ['created_at'=> 'datetime:d-m-Y','updated_at'=>'datetime:d-m-Y'];
-    protected $fillable = ["m_kary_id","date_from","date_to","tugas","tempat_tujuan","provinsi_id","kota_id","kecamatan_id","alamat_tujuan","creator_id","status","created_at","updated_at","nomor","m_posisi_id","m_atasan_id"];
+    protected $fillable = ["m_kary_id","date_from","date_to","tugas","tempat_tujuan","provinsi_id","kota_id","kecamatan_id","alamat_tujuan","creator_id","status","created_at","updated_at","nomor","m_posisi_id","m_atasan_id","tanggal_surat_tugas","tanggal_rencana_biaya"];
 
-    public $columns     = ["id","m_kary_id","date_from","date_to","tugas","tempat_tujuan","provinsi_id","kota_id","kecamatan_id","alamat_tujuan","creator_id","status","created_at","updated_at","nomor","m_posisi_id","m_atasan_id"];
-    public $columnsFull = ["id:bigint","m_kary_id:bigint","date_from:date","date_to:date","tugas:string:191","tempat_tujuan:string:191","provinsi_id:bigint","kota_id:bigint","kecamatan_id:bigint","alamat_tujuan:string:191","creator_id:integer","status:string:191","created_at:datetime","updated_at:datetime","nomor:string","m_posisi_id:bigint","m_atasan_id:bigint"];
+    public $columns     = ["id","m_kary_id","date_from","date_to","tugas","tempat_tujuan","provinsi_id","kota_id","kecamatan_id","alamat_tujuan","creator_id","status","created_at","updated_at","nomor","m_posisi_id","m_atasan_id","tanggal_surat_tugas","tanggal_rencana_biaya"];
+    public $columnsFull = ["id:bigint","m_kary_id:bigint","date_from:date","date_to:date","tugas:string:191","tempat_tujuan:string:191","provinsi_id:bigint","kota_id:bigint","kecamatan_id:bigint","alamat_tujuan:string:191","creator_id:integer","status:string:191","created_at:datetime","updated_at:datetime","nomor:string","m_posisi_id:bigint","m_atasan_id:bigint","tanggal_surat_tugas:date","tanggal_rencana_biaya:date"];
     public $rules       = [];
     public $joins       = ["m_posisi.id=t_perdin.m_posisi_id","m_kary.id=t_perdin.m_atasan_id"];
     public $details     = [];
@@ -26,9 +26,9 @@ class t_perdin extends Model
     public $detailsHeirs= [];
     public $unique      = [];
     public $required    = ["date_from","date_to","tugas","tempat_tujuan","alamat_tujuan"];
-    public $createable  = ["m_kary_id","date_from","date_to","tugas","tempat_tujuan","provinsi_id","kota_id","kecamatan_id","alamat_tujuan","creator_id","status","created_at","updated_at","nomor","m_posisi_id","m_atasan_id"];
-    public $updateable  = ["m_kary_id","date_from","date_to","tugas","tempat_tujuan","provinsi_id","kota_id","kecamatan_id","alamat_tujuan","creator_id","status","created_at","updated_at","nomor","m_posisi_id","m_atasan_id"];
-    public $searchable  = ["m_kary_id","date_from","date_to","tugas","tempat_tujuan","provinsi_id","kota_id","kecamatan_id","alamat_tujuan","creator_id","status","created_at","updated_at","nomor","m_posisi_id","m_atasan_id"];
+    public $createable  = ["m_kary_id","date_from","date_to","tugas","tempat_tujuan","provinsi_id","kota_id","kecamatan_id","alamat_tujuan","creator_id","status","created_at","updated_at","nomor","m_posisi_id","m_atasan_id","tanggal_surat_tugas","tanggal_rencana_biaya"];
+    public $updateable  = ["m_kary_id","date_from","date_to","tugas","tempat_tujuan","provinsi_id","kota_id","kecamatan_id","alamat_tujuan","creator_id","status","created_at","updated_at","nomor","m_posisi_id","m_atasan_id","tanggal_surat_tugas","tanggal_rencana_biaya"];
+    public $searchable  = ["m_kary_id","date_from","date_to","tugas","tempat_tujuan","provinsi_id","kota_id","kecamatan_id","alamat_tujuan","creator_id","status","created_at","updated_at","nomor","m_posisi_id","m_atasan_id","tanggal_surat_tugas","tanggal_rencana_biaya"];
     public $deleteable  = true;
     public $cascade     = true;
     public $deleteOnUse = false;

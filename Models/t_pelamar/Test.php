@@ -53,6 +53,9 @@ class tPelamarTest extends TestCase
 		    "created_at" => "datetime:optional:autocreate",
 		    "updated_at" => "datetime:optional:autocreate",
 		    "nama_panggilan" => "string:191:optional",
+		    "t_loker_id" => "bigint:optional",
+		    "file_cv" => "string:191:optional",
+		    "file_dokumen" => "string:191:optional",
 		    "t_pelamar_det_pres" => [
 		        [
 		            "id" => "bigint:optional:autocreate",

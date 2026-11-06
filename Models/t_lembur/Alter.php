@@ -1,7 +1,20 @@
 <?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-/**
- * placeholder model: t_lembur
- * bagian: Alter
- * tempel source code dari generator lama di file ini.
- */
+class tlembur extends Migration
+{
+    protected $tableName = "t_lembur";
+    
+    public function up()
+    {
+        Schema::table($this->tableName, function (Blueprint $table) {
+            //$table->string('_existColumnName_')->change();
+            //$table->string('_columnName_');
+            //$table->dropColumn([ ]);
+            // $table->integer('interval_min')->nullable();
+            $table->bigInteger('pic_id')->comment('{"src":"default_users.id"}')->nullable()->change();
+        });
+    }
+}

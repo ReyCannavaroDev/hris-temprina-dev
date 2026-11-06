@@ -1,7 +1,29 @@
 <?php
 
-/**
- * placeholder model: m_tunjangan_fungsional
- * bagian: Custom
- * tempel source code dari generator lama di file ini.
- */
+namespace App\Models\CustomModels;
+
+class m_tunjangan_fungsional extends \App\Models\BasicModels\m_tunjangan_fungsional
+{    
+    private $helper;
+    public function __construct()
+    {
+        parent::__construct();
+        $this->helper = getCore('Helper');
+    }
+        
+    public $fileColumns    = [ /*file_column*/ ];
+
+    public $createAdditionalData = ["creator_id"=>"auth:id"];
+    public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
+
+    public function createBefore( $model, $arrayData, $metaData, $id=null )
+    {
+        return [
+            "model"  => $model,
+            "data"   => array_merge($arrayData,[
+                'kode' =>  $this->helper->generateNomor('KODE TUNJANGAN FUNGSIONAL'),
+                //'m_dir_id' =>  $m_dir_id
+            ])
+        ];
+    }
+}

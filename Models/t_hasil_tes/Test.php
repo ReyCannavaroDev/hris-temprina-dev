@@ -40,7 +40,8 @@ class tHasilTesTest extends TestCase
 		    "creator_id" => "bigint:optional",
 		    "last_editor_id" => "bigint:optional",
 		    "created_at" => "datetime:optional:autocreate",
-		    "updated_at" => "datetime:optional:autocreate"
+		    "updated_at" => "datetime:optional:autocreate",
+		    "tahapan_id" => "bigint:optional"
 		];
 
         $this->call('POST', '/operation/t_hasil_tes', $payload);

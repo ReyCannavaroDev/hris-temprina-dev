@@ -24,7 +24,7 @@ class m_dept extends Model
     public $rules       = [];
     public $joins       = ["m_dir.id=m_dept.m_dir_id","m_divisi.id=m_dept.m_divisi_id","default_users.id=m_dept.creator_id","default_users.id=m_dept.last_editor_id"];
     public $details     = [];
-    public $heirs       = ["m_tunj_kemahalan","t_final_gaji_det","t_perhitungan_gaji","m_kary","m_lembur","m_spd","m_standart_gaji","t_grup_kerja","t_jadwal_kerja","t_jadwal_kerja_det","t_spd"];
+    public $heirs       = ["m_tunj_kemahalan","t_final_gaji_det","t_perhitungan_gaji","m_kary","m_lembur","m_spd","m_standart_gaji","t_grup_kerja","t_jadwal_kerja","t_jadwal_kerja_det","t_spd","t_req_recruitment"];
     public $detailsChild= [];
     public $detailsHeirs= [];
     public $unique      = [];

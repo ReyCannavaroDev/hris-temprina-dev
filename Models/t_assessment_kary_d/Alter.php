@@ -3,9 +3,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class massessmentkaryd extends Migration
+class tassessmentkaryd extends Migration
 {
-    protected $tableName = "m_assessment_kary_d";
+    protected $tableName = "t_assessment_kary_d";
     
     public function up()
     {

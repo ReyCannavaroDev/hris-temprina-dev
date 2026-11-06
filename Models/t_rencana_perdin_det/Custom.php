@@ -9,8 +9,10 @@ class t_rencana_perdin_det extends \App\Models\BasicModels\t_rencana_perdin_det
         parent::__construct();
     }
     
-    public function t_rencana_perdin()
-    {
-        return $this->belongsTo('App\Models\BasicModels\t_rencana_perdin', 't_rencana_perdin_id', 'id');
-    }
+    public $fileColumns    = [ /*file_column*/ ];
+
+    //public $createAdditionalData = ["creator_id"=>"auth:id"];
+    //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
+
+    
 }

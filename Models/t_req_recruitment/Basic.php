@@ -26,7 +26,7 @@ class t_req_recruitment extends Model
     public $rules       = [];
     public $joins       = ["m_kary.id=t_req_recruitment.m_kary_id","m_comp.id=t_req_recruitment.m_comp_id","m_subcomp.id=t_req_recruitment.m_subcomp_id","m_branch.id=t_req_recruitment.m_branch_id","m_divisi.id=t_req_recruitment.m_divisi_id","m_dept.id=t_req_recruitment.m_dept_id","m_posisi.id=t_req_recruitment.m_posisi_id","m_general.id=t_req_recruitment.status_kary_id","m_general.id=t_req_recruitment.jenis_permintaan_id","m_kary.id=t_req_recruitment.karyawan_digantikan_id","m_general.id=t_req_recruitment.prioritas_id","t_loker.id=t_req_recruitment.t_loker_id","default_users.id=t_req_recruitment.creator_id","default_users.id=t_req_recruitment.last_editor_id"];
     public $details     = [];
-    public $heirs       = [];
+    public $heirs       = ["t_loker"];
     public $detailsChild= [];
     public $detailsHeirs= [];
     public $unique      = [];

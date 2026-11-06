@@ -47,7 +47,9 @@ class tPerdinTest extends TestCase
 		    "updated_at" => "datetime:optional:autocreate",
 		    "nomor" => "string:optional",
 		    "m_posisi_id" => "bigint:optional",
-		    "m_atasan_id" => "bigint:optional"
+		    "m_atasan_id" => "bigint:optional",
+		    "tanggal_surat_tugas" => "date:optional",
+		    "tanggal_rencana_biaya" => "date:optional"
 		];
 
         $this->call('POST', '/operation/t_perdin', $payload);

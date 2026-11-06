@@ -4,7 +4,7 @@ use Laravel\Lumen\Testing\DatabaseTransactions;
 use Laravel\Passport\Passport;
 use App\Models\Defaults\User;
 
-class mAssessmentKarySubDTest extends TestCase
+class tAssessmentKarySubDTest extends TestCase
 {
     use DatabaseTransactions;
 
@@ -15,7 +15,7 @@ class mAssessmentKarySubDTest extends TestCase
             'paginate' => 25
         ];
 
-        $this->call('GET', '/operation/m_assessment_kary_sub_d', $payload);
+        $this->call('GET', '/operation/t_assessment_kary_sub_d', $payload);
 
         $responseArr = json_decode( $this->response->getContent(),true );
         ff( $responseArr, 'dump data' );
@@ -32,16 +32,17 @@ class mAssessmentKarySubDTest extends TestCase
 
         $payload = [
 		    "id" => "bigint:optional:autocreate",
-		    "m_assessment_kary_d_id" => "bigint:required",
-		    "keterangan" => "string:191:required",
+		    "t_assessment_kary_d_id" => "bigint:required",
+		    "nama_keterangan" => "string:191:required",
+		    "nilai" => "integer:required",
+		    "is_selected" => "boolean:optional",
 		    "creator_id" => "integer:optional",
 		    "last_editor_id" => "integer:optional",
 		    "created_at" => "datetime:optional:autocreate",
-		    "updated_at" => "datetime:optional:autocreate",
-		    "nilai" => "integer:required"
+		    "updated_at" => "datetime:optional:autocreate"
 		];
 
-        $this->call('POST', '/operation/m_assessment_kary_sub_d', $payload);
+        $this->call('POST', '/operation/t_assessment_kary_sub_d', $payload);
 
         $responseArr = json_decode( $this->response->getContent(),true );
         // ff( $responseArr, 'dump data' );
@@ -49,7 +50,7 @@ class mAssessmentKarySubDTest extends TestCase
         $this->assertEquals( 200, $this->response->status() );
         // $this->seeJsonStructure( ['status'] );
 
-        $this->seeInDatabase('m_assessment_kary_sub_d', array_filter($payload, function($dt){
+        $this->seeInDatabase('t_assessment_kary_sub_d', array_filter($payload, function($dt){
             return !is_array($dt);
         } ));
     }

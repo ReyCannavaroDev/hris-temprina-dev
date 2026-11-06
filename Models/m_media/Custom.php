@@ -113,4 +113,4 @@ class m_media extends \App\Models\BasicModels\m_media
 
         return self::formatMediaUrl('images/logo.png');
     }
-}
+}

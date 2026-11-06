@@ -119,7 +119,7 @@ $jarakPihak2KeParagraf = '16px';   // Spasi antara Pihak 2 (Menerangkan bahwa) d
 
 // PENGATUR JUMLAH ENTER TANDA TANGAN (Antara PT dan Nama Penandatangan)
 // Default 3 enter: '<br><br><br>' (jika ingin 2 enter: '<br><br>', 4 enter: '<br><br><br><br>')
-$enterTtd = '<br><br><br>';
+$enterTtd = '<br><br><br><br><br>';
 
 // Icon Pointer Panah 3D Wingdings Base64 (100% identik dengan PDF acuan resmi)
 $arrowIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAF4SURBVFhHxZehb4NAGMVfTjQoUtVUkckqMjnVICcnJ5GTkzjmkJOd25/An4CcJFPIZWqZIpshE4TlNdC0X2gDtHf3S56ivPea47sDAFjCMisAbwDu5AWTRAAaALmtIo5S6r0tYa3INcMdx2lc161tFUkYvNlsmjiOrRThUnwuFou6LMuGslEkYFgYhk2HjSKvDMqybFfCdJG5Uurb87y6qqqDEiaL3NM8iiKZv8NEkZTGeZ7L7AN0FlkqpX583+9dComuIg80S5JE5h1FR5FsNpvVRVHIrJNcsshKKfW3Xq9rjuZYpWnaBEHQnTOTi3Qn5iXFIoOZA/jtMRmrAsALgKdWg9keVGcoa0/cSfC1reoxHSIG83w5i+2GNFJc31tpNIWbHvNTmvSEn4KGMqRPHwBCefO50FAGSX3pCCZOay4D94Mf299p4djYle2mpC2Y9I0dg7lxcEPSzv7YscizqWDSjV0XbPzbkWPHl9IrecEE/LdWgq3xD8U6LuwJEeE6AAAAAElFTkSuQmCC';

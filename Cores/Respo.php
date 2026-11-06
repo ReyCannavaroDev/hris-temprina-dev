@@ -57,11 +57,11 @@ class Respo
             [
                 "modul" => "Absensi Online",
                 "text" => "Absensi Online",
-                "path" => "/presensi_absensi_online",
+                "path" => "/absensi_online",
                 "truncatable" => false,
                 "icon" => "camera",
                 "description" => null,
-                "endpoint" => "/presensi_absensi_online",
+                "endpoint" => "/absensi_online",
             ],
             ["separator" => true],
             // [
@@ -263,7 +263,7 @@ class Respo
                         end
                     from m_menu a where a.$type = b.$type $parent_condition group by a.$type limit 2) icon
                 from m_menu b where b.is_active = true  $where $respo_condition
-                group by $type order by 3
+                group by $type order by lower(b.$type) asc
         ");
 
         return $this->transformFormatSupportFronted($data);
@@ -339,9 +339,9 @@ class Respo
                 b.truncatable
             from m_menu b
             where b.is_active = true 
-              and b.modul = ? 
+              and b.modul = ?
               $respo_condition
-            order by b.sequence asc, b.id asc
+            order by lower(b.menu) asc, b.id asc
         ", [$modulName]);
 
         if (empty($rows)) {
@@ -434,6 +434,9 @@ class Respo
         foreach ($standalone as $st) {
             $resultChildren[] = $st;
         }
+
+        // urutkan grup submodul & menu tunggal bersama-sama secara A-Z
+        usort($resultChildren, fn($a, $b) => strcasecmp($a['text'], $b['text']));
 
         return $resultChildren;
     }

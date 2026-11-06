@@ -27,7 +27,7 @@ class Response
             }
             $model['company'] = m_comp::where('id', @$model['m_comp_id'] ?? 9)->pluck('nama')->first();
             $model['m_kary_id'] = default_users::where('id', $model['id'])->pluck('m_kary_id')->first();
-            $model['avatar'] = url('')."/sjg.png";
+            $model['avatar'] = "/ms-icon-310x310.png";
           
         }
         return $model;
