@@ -2,9 +2,13 @@
   $req = app()->request;
   $periode_from = $req->periode_from ?? date('Y-m').'-01';
   $periode_to = $req->periode_to ?? date('Y-m-d');
+  $hasTglSelesai = \Schema::hasColumn('t_lembur', 'tanggal_selesai');
+  $selectTglSelesai = $hasTglSelesai
+    ? 'COALESCE(tl.tanggal_selesai, tl.tanggal) as tanggal_selesai'
+    : 'tl.tanggal as tanggal_selesai';
   $raw = \DB::select("
     select 
-    tl.tanggal, tl.jam_mulai, tl.jam_selesai, tl.nomor,tl.keterangan,tl.status,tl.no_doc, k.nik, k.nama_lengkap, kd.nama dir, kdi.nama div,kde.nama dept, mg.value tipe_lembur, mg1.value alasan  
+    tl.tanggal, {$selectTglSelesai}, tl.jam_mulai, tl.jam_selesai, tl.nomor,tl.keterangan,tl.status,tl.no_doc, k.nik, k.nama_lengkap, kd.nama dir, kdi.nama div,kde.nama dept, mg.value tipe_lembur, mg1.value alasan  
     from t_lembur tl
       join m_kary k on k.id = tl.m_kary_id 
       join m_general mg on mg.id = tl.tipe_lembur_id
@@ -28,7 +32,8 @@
   <thead style="font-weight:semibold;">
     <tr style="">
       <td style="border:0.5px solid black; font-weight: bold; line-height: 20px;text-align:center; background-color: #c6c6c6;">No</td>
-      <td style="border:0.5px solid black; font-weight: bold; line-height: 20px;text-align:center; background-color: #c6c6c6;">Tanggal</td>
+      <td style="border:0.5px solid black; font-weight: bold; line-height: 20px;text-align:center; background-color: #c6c6c6;">Tanggal Mulai</td>
+      <td style="border:0.5px solid black; font-weight: bold; line-height: 20px;text-align:center; background-color: #c6c6c6;">Tanggal Selesai</td>
       <td style="border:0.5px solid black; font-weight: bold; line-height: 20px;text-align:center; background-color: #c6c6c6;">No Lembur</td>
       <td style="border:0.5px solid black; font-weight: bold; line-height: 20px;text-align:center; background-color: #c6c6c6;">NIK</td>
       <td style="border:0.5px solid black; font-weight: bold; line-height: 20px;text-align:center; background-color: #c6c6c6;">Nama Karyawan</td>
@@ -52,6 +57,7 @@
     <tr style="background-color: {{$backgroundColor}}">
       <td style="border:0.5px solid black;text-align:center;">{{ $i+1 }}</td>
       <td style="border:0.5px solid black;text-align:left;">{{ $d->tanggal }}</td>
+      <td style="border:0.5px solid black;text-align:left;">{{ $d->tanggal_selesai ?? $d->tanggal }}</td>
       <td style="border:0.5px solid black;text-align:left;">{{ $d->nomor }}</td>
       <td style="border:0.5px solid black;text-align:left;">{{ $d->nik }}</td>
       <td style="border:0.5px solid black;text-align:left;">{{ $d->nama_lengkap }}</td>

@@ -162,14 +162,29 @@ onBeforeMount(async () => {
         initialValues.date = formattedDate
       }
 
-      if (Array.isArray(initialValues.t_jadwal_kerja_det_hari) && initialValues.t_jadwal_kerja_det_hari.length > 0) {
-        detailArr.value = initialValues.t_jadwal_kerja_det_hari.map((dt) => {
+      const rawDetails = (Array.isArray(initialValues.t_jadwal_kerja_det_hari) && initialValues.t_jadwal_kerja_det_hari.length > 0)
+        ? initialValues.t_jadwal_kerja_det_hari
+        : (Array.isArray(initialValues.t_jadwal_kerja_d_hari_n) ? initialValues.t_jadwal_kerja_d_hari_n : []);
+
+      if (rawDetails.length > 0) {
+        const dayOrder = {
+          senin: 1, monday: 1,
+          selasa: 2, tuesday: 2,
+          rabu: 3, wednesday: 3,
+          kamis: 4, thursday: 4,
+          jumat: 5, "jum'at": 5, friday: 5,
+          sabtu: 6, saturday: 6,
+          minggu: 7, ahad: 7, sunday: 7,
+        };
+        const getNum = (row) => Number(row?.day_num) || dayOrder[String(row?.day || row?.hari || '').trim().toLowerCase()] || 99;
+        detailArr.value = rawDetails.slice().sort((a, b) => getNum(a) - getNum(b)).map((dt) => {
           if (actionText.value?.toLowerCase() === 'copy' && dt.id) {
             delete dt.id;
             delete dt.no;
           }
           return {
             ...dt,
+            day_num: getNum(dt),
             code: dt['m_sortir.code'],
             nama: dt['m_sortir.name']
           };
@@ -261,14 +276,17 @@ async function onSave() {
     if (!res.ok) {
       const responseJson = await res.json();
       formErrors.value = responseJson.errors || {};
-      throw new Error(responseJson.message || "Failed when trying to post data");
+      const errList = Array.isArray(responseJson.errors)
+        ? responseJson.errors
+        : Object.values(responseJson.errors || {}).flat();
+      throw (errList[0] || responseJson.message || "Failed when trying to post data");
     }
 
     router.replace(`/${modulPath}?reload=${Date.now()}`);
   } catch (err) {
     isBadForm.value = true;
     console.log(err)
-    swal.fire({ icon: 'error', text: err });
+    swal.fire({ icon: 'error', text: err?.message || err });
   } finally {
     isRequesting.value = false;
   }

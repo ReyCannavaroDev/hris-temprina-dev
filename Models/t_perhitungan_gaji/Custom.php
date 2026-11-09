@@ -745,10 +745,107 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
       return $defaultColumns;
     }
 
+    private function matchDayRowGaji($detailsCollection, Carbon $dateObj)
+    {
+        if (!$detailsCollection || $detailsCollection->isEmpty()) {
+            return null;
+        }
+
+        $dayMap = [
+            'senin' => 1, 'monday' => 1,
+            'selasa' => 2, 'tuesday' => 2,
+            'rabu' => 3, 'wednesday' => 3,
+            'kamis' => 4, 'thursday' => 4,
+            'jumat' => 5, "jum'at" => 5, 'friday' => 5,
+            'sabtu' => 6, 'saturday' => 6,
+            'minggu' => 7, 'ahad' => 7, 'sunday' => 7,
+        ];
+
+        $dayNumIso = (int)$dateObj->dayOfWeekIso;
+        $namaHariId = strtolower(trim($dateObj->translatedFormat('l')));
+        $namaHariEn = strtolower(trim($dateObj->format('l')));
+
+        return $detailsCollection->first(function ($row) use ($dayNumIso, $namaHariId, $namaHariEn, $dayMap) {
+            $rDayNum = !empty($row->day_num) ? (int)$row->day_num : 0;
+            $rDayLower = strtolower(trim((string)($row->day ?? $row->hari ?? '')));
+            $calcDayNum = $dayMap[$rDayLower] ?? 0;
+
+            if ($rDayNum > 0 && $rDayNum === $dayNumIso) return true;
+            if ($calcDayNum > 0 && $calcDayNum === $dayNumIso) return true;
+            if ($rDayLower === $namaHariId || $rDayLower === $namaHariEn) return true;
+            return false;
+        });
+    }
+
+    private function preloadJadwalGaji($karyId, Carbon $end): array
+    {
+        $jadwals = \DB::table("t_jadwal_kerja_d_n as d")
+            ->leftJoin("t_jadwal_kerja_n as j", "j.id", "=", "d.t_jadwal_kerja_n_id")
+            ->select("d.*", "j.status as master_status")
+            ->where("d.m_kary_id", $karyId)
+            ->where(function ($q) use ($end) {
+                $q->whereNull("d.start_date")
+                  ->orWhereDate("d.start_date", "<=", $end->format("Y-m-d"));
+            })
+            ->orderByRaw("CASE WHEN UPPER(COALESCE(d.status, '')) = 'AKTIF' AND UPPER(COALESCE(j.status, 'AKTIF')) = 'AKTIF' THEN 0 WHEN UPPER(COALESCE(d.status, '')) = 'AKTIF' THEN 1 ELSE 2 END ASC")
+            ->orderByDesc("d.start_date")
+            ->orderByDesc("d.id")
+            ->get();
+
+        $jadwalIds = $jadwals->pluck("t_jadwal_kerja_n_id")->filter()->unique()->values();
+        $jadwalHarisMap = $jadwalIds->isNotEmpty()
+            ? \DB::table("t_jadwal_kerja_d_hari_n")
+                ->whereIn("t_jadwal_kerja_n_id", $jadwalIds)
+                ->get()
+                ->groupBy("t_jadwal_kerja_n_id")
+            : collect();
+        $legacyHarisMap = $jadwalIds->isNotEmpty()
+            ? \DB::table("t_jadwal_kerja_det_hari")
+                ->whereIn("t_jadwal_kerja_id", $jadwalIds)
+                ->get()
+                ->groupBy("t_jadwal_kerja_id")
+            : collect();
+        $legacyDet = $jadwals->isEmpty()
+            ? \DB::table("t_jadwal_kerja_det")->where("m_kary_id", $karyId)->orderByDesc("id")->first()
+            : null;
+        $legacyFallbackRows = ($legacyDet && !empty($legacyDet->t_jadwal_kerja_id))
+            ? \DB::table("t_jadwal_kerja_det_hari")->where("t_jadwal_kerja_id", $legacyDet->t_jadwal_kerja_id)->get()
+            : collect();
+
+        return compact("jadwals", "jadwalHarisMap", "legacyHarisMap", "legacyFallbackRows");
+    }
+
+    private function resolveDetailHariGaji(array $preloaded, Carbon $tanggal, $presensiRow = null)
+    {
+        if ($presensiRow && $presensiRow->t_jadwal_kerja_d_hari_n) {
+            return $presensiRow->t_jadwal_kerja_d_hari_n;
+        }
+
+        $key = $tanggal->format("Y-m-d");
+        $activeJadwal = $preloaded["jadwals"]->first(function ($j) use ($key) {
+            return empty($j->start_date) || Carbon::parse($j->start_date)->format("Y-m-d") <= $key;
+        });
+
+        if ($activeJadwal) {
+            $rows = $preloaded["jadwalHarisMap"]->get($activeJadwal->t_jadwal_kerja_n_id);
+            if ($rows && $rows->isNotEmpty()) {
+                return $this->matchDayRowGaji($rows, $tanggal);
+            }
+            $legRows = $preloaded["legacyHarisMap"]->get($activeJadwal->t_jadwal_kerja_n_id);
+            if ($legRows && $legRows->isNotEmpty()) {
+                return $this->matchDayRowGaji($legRows, $tanggal);
+            }
+        } elseif ($preloaded["legacyFallbackRows"]->isNotEmpty()) {
+            return $this->matchDayRowGaji($preloaded["legacyFallbackRows"], $tanggal);
+        }
+
+        return null;
+    }
+
     private function hitungRekap($kary_id, $start, $end): array
     {
-        $start = Carbon::parse($start);
-        $end = Carbon::parse($end);
+        $start = Carbon::parse($start)->startOfDay();
+        $end = Carbon::parse($end)->startOfDay();
         $period = CarbonPeriod::create($start, $end);
         // dd($start, $end);
 
@@ -758,9 +855,9 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
             ->pluck("id")
             ->first();
 
-        $presensi = presensi_absensi::with("t_jadwal_kerja_d_hari_n")
+        $presensi = presensi_absensi::with(["t_jadwal_kerja_d_hari_n.m_jam_kerja", "m_jam_kerja"])
             ->where("default_user_id", $userId)
-            ->whereBetween("tanggal", [$start, $end])
+            ->whereBetween("tanggal", [$start->format("Y-m-d"), $end->format("Y-m-d")])
             ->get()
             ->keyBy(
                 fn($item) => Carbon::parse($item->tanggal)->format("Y-m-d")
@@ -768,13 +865,13 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
 
         $cuti = t_cuti::where("m_kary_id", $kary_id)
             ->where(function ($q) use ($start, $end) {
-                $q->whereBetween("date_from", [$start, $end])
-                    ->orWhereBetween("date_to", [$start, $end])
+                $q->whereBetween("date_from", [$start->format("Y-m-d"), $end->format("Y-m-d")])
+                    ->orWhereBetween("date_to", [$start->format("Y-m-d"), $end->format("Y-m-d")])
                     ->orWhere(function ($q2) use ($start, $end) {
-                        $q2->where("date_from", "<=", $start)->where(
+                        $q2->where("date_from", "<=", $start->format("Y-m-d"))->where(
                             "date_to",
                             ">=",
-                            $end
+                            $end->format("Y-m-d")
                         );
                     });
             })
@@ -784,10 +881,18 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
 
         $cutiDates = [];
         foreach ($cuti as $c) {
-            foreach (CarbonPeriod::create($c->date_from, $c->date_to) as $tgl) {
-                $cutiDates[$tgl->format("Y-m-d")] = $c->keterangan ?? "CUTI";
+            $cutiStart = Carbon::parse($c->date_from)->startOfDay();
+            $cutiEnd = Carbon::parse($c->date_to)->startOfDay();
+            if ($cutiStart->lessThan($start)) $cutiStart = $start->copy();
+            if ($cutiEnd->greaterThan($end)) $cutiEnd = $end->copy();
+            if ($cutiStart->lte($cutiEnd)) {
+                foreach (CarbonPeriod::create($cutiStart, $cutiEnd) as $tgl) {
+                    $cutiDates[$tgl->format("Y-m-d")] = $c->keterangan ?? "CUTI";
+                }
             }
         }
+
+        $preloadedJadwal = $this->preloadJadwalGaji($m_kary->id, $end);
 
         // --- Hitung Rekap ---
         $hasil = [];
@@ -801,7 +906,7 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
 
         // ambil data lembur dalam periode
         $lembur = t_lembur::where("m_kary_id", $kary_id)
-            ->whereBetween("tanggal", [$start, $end])
+            ->whereBetween("tanggal", [$start->format("Y-m-d"), $end->format("Y-m-d")])
             // ->where("status", "POSTED")
             ->where("status", "APPROVED")
             ->get()
@@ -810,8 +915,8 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
             );
 
         $liburNasional = m_libur_nasional::whereBetween("tanggal", [
-            $start,
-            $end,
+            $start->format("Y-m-d"),
+            $end->format("Y-m-d"),
         ])->get();
         $liburDates = $liburNasional
             ->pluck("keterangan", "tanggal")
@@ -825,35 +930,37 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
         foreach ($period as $tanggal) {
             $key = $tanggal->format("Y-m-d");
             $data = $presensi[$key] ?? null;
-            $tipe = null;
+            $tipe = "KERJA";
 
             $status = $data?->status ?? "NOT ATTEND";
             if (isset($cutiDates[$key])) {
                 $status = $cutiDates[$key];
             }
 
-            $jadwal = t_jadwal_kerja_d_n::where('m_kary_id', $m_kary->id)
-                    ->whereDate('start_date', '<=', $key)
-                    ->orderByDesc('start_date')
-                    ->first();
+            $detail_hari = $this->resolveDetailHariGaji($preloadedJadwal, $tanggal, $data);
             $jadwalMulai = null;
             $jadwalSelesai = null;
-            
-            if ($jadwal && $jadwal->t_jadwal_kerja_n) {
-                $hariName = $tanggal->translatedFormat("l");
-                $detail_hari = $jadwal->t_jadwal_kerja_n->t_jadwal_kerja_d_hari_n->firstWhere(
-                    "day",
-                    $hariName
-                );
-                $tipe = $detail_hari?->tipe_hari ?? "KERJA"; 
-                $jadwalMulai = Carbon::parse(
-                    $detail_hari?->waktu_mulai
-                );
 
-                $jadwalSelesai = Carbon::parse(
-                    $detail_hari?->waktu_selesai
-                );
-                
+            if ($detail_hari) {
+                $tipe = strtoupper(trim((string)($detail_hari->tipe_hari ?? "KERJA")));
+                if (empty($tipe)) $tipe = "KERJA";
+            }
+
+            $wMulaiStr = $detail_hari?->waktu_mulai ?? ($data?->m_jam_kerja?->waktu_mulai ?? null);
+            $wAkhirStr = $detail_hari?->waktu_akhir ?? ($data?->m_jam_kerja?->waktu_akhir ?? null);
+            $isValidJamKerja = !empty($wMulaiStr)
+                && !empty($wAkhirStr)
+                && !($wMulaiStr === "00:00:00" && $wAkhirStr === "00:00:00")
+                && !($wMulaiStr === "00:00" && $wAkhirStr === "00:00");
+
+            if (!empty($wMulaiStr) && $wMulaiStr !== "00:00:00") {
+                $jadwalMulai = Carbon::parse($key . " " . $wMulaiStr);
+            }
+            if (!empty($wAkhirStr) && $wAkhirStr !== "00:00:00") {
+                $jadwalSelesai = Carbon::parse($key . " " . $wAkhirStr);
+                if ($jadwalMulai && $jadwalSelesai->lessThan($jadwalMulai)) {
+                    $jadwalSelesai->addDay();
+                }
             }
 
             if (isset($liburDates[$key])) {
@@ -869,9 +976,16 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
             // --- hitung lembur ---
             if (isset($lembur[$key])) {
                 foreach ($lembur[$key] as $l) {
-                    $mulai = Carbon::parse($l->jam_mulai);
-                    $selesai = Carbon::parse($l->jam_selesai);
-                    $menit = $selesai->diffInMinutes($mulai);
+                    $tglMulaiL = Carbon::parse($l->tanggal)->format("Y-m-d");
+                    $tglSelesaiL = !empty($l->tanggal_selesai)
+                        ? Carbon::parse($l->tanggal_selesai)->format("Y-m-d")
+                        : $tglMulaiL;
+                    $mulai = Carbon::parse($tglMulaiL . " " . $l->jam_mulai);
+                    $selesai = Carbon::parse($tglSelesaiL . " " . $l->jam_selesai);
+                    if ($tglSelesaiL === $tglMulaiL && $selesai->lessThan($mulai)) {
+                        $selesai->addDay();
+                    }
+                    $menit = $selesai->greaterThan($mulai) ? $selesai->diffInMinutes($mulai) : 0;
 
                     if ($tipe === "KERJA") {
                         $total_menit_lembur_kerja += $menit;
@@ -882,8 +996,8 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
             }
 
             // --- hitung terlambat ---
-            if ($data && $data->checkin_time && $jadwalMulai) {
-                $checkin = Carbon::parse($data->checkin_time);
+            if ($tipe === "KERJA" && !isset($cutiDates[$key]) && !isset($liburDates[$key]) && $data && $data->checkin_time && $jadwalMulai) {
+                $checkin = Carbon::parse($key . " " . $data->checkin_time);
 
                 // Tetap cek apakah checkin lebih besar dari jadwal mulai
                 if ($checkin->greaterThan($jadwalMulai)) {
@@ -910,29 +1024,10 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
                     }
                 }
             }
-            // if($data && $data->checkin_time && $jadwalMulai) {
-            //     // dd($m_kary, $key);    
-            //     $checkin = Carbon::parse($data->checkin_time);
-
-            //     if ($checkin->greaterThan($jadwalMulai)) {
-            //         $menit_terlambat = $jadwalMulai->diffInMinutes(
-            //             $checkin
-            //         );
-                    
-            //         $total_menit_terlambat += $jadwalMulai->diffInMinutes(
-            //             $checkin
-            //         );
-
-            //         $total_jam_terlambat += ceil($menit_terlambat / 60);
-            //         $detail_menit_terlambat[] = ceil($menit_terlambat / 60);
-            //     }
-            // }
-
-           
 
             // --- hitung tidak hadir ---
             if ($tipe === "KERJA" && $status === "NOT ATTEND") {
-                if ($jadwalMulai && $jadwalSelesai) {
+                if ($isValidJamKerja && $jadwalMulai && $jadwalSelesai) {
                     // Gunakan max(0, ...) untuk menghindari angka negatif jika selisih < 1 jam
                     $selisih = $jadwalSelesai->diffInHours($jadwalMulai);
                     $total_jam_tidak_hadir += ($selisih > 0) ? $selisih - 1 : 0;
@@ -965,8 +1060,8 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
 
     public function hitungRekapHarian($kary_id, $start, $end): array
     {
-        $start = Carbon::parse($start);
-        $end = Carbon::parse($end);
+        $start = Carbon::parse($start)->startOfDay();
+        $end = Carbon::parse($end)->startOfDay();
         $period = CarbonPeriod::create($start, $end);
 
         $m_kary = m_kary::findOrFail($kary_id);
@@ -976,36 +1071,53 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
             ->first();
 
         // 1. Ambil data Presensi
-        $presensi = presensi_absensi::where("default_user_id", $userId)
-        ->whereBetween("tanggal", [$start, $end])
+        $presensi = presensi_absensi::with("t_jadwal_kerja_d_hari_n")
+        ->where("default_user_id", $userId)
+        ->whereBetween("tanggal", [$start->format("Y-m-d"), $end->format("Y-m-d")])
         ->get()
         ->keyBy(fn($item) => Carbon::parse($item->tanggal)->format("Y-m-d"));
 
         // 2. Ambil data Lembur (Hanya yang APPROVED)
         $lembur = t_lembur::where("m_kary_id", $kary_id)
-            ->whereBetween("tanggal", [$start, $end])
+            ->whereBetween("tanggal", [$start->format("Y-m-d"), $end->format("Y-m-d")])
             ->where("status", "APPROVED")
             ->get()
             ->groupBy(fn($item) => Carbon::parse($item->tanggal)->format("Y-m-d"));
 
-        // 3. Ambil data Cuti
+        // 3. Ambil data Cuti (filter periode + clamp agar cuti lintas periode terhitung akurat)
         $cuti = t_cuti::where("m_kary_id", $kary_id)
+            ->where(function ($q) use ($start, $end) {
+                $q->whereBetween("date_from", [$start->format("Y-m-d"), $end->format("Y-m-d")])
+                    ->orWhereBetween("date_to", [$start->format("Y-m-d"), $end->format("Y-m-d")])
+                    ->orWhere(function ($q2) use ($start, $end) {
+                        $q2->where("date_from", "<=", $start->format("Y-m-d"))
+                           ->where("date_to", ">=", $end->format("Y-m-d"));
+                    });
+            })
             ->where("status", "APPROVED")
             ->get();
 
         $cutiDates = [];
         foreach ($cuti as $c) {
-            foreach (CarbonPeriod::create($c->date_from, $c->date_to) as $tgl) {
-                $cutiDates[$tgl->format("Y-m-d")] = $c->keterangan ?? "CUTI";
+            $cutiStart = Carbon::parse($c->date_from)->startOfDay();
+            $cutiEnd = Carbon::parse($c->date_to)->startOfDay();
+            if ($cutiStart->lessThan($start)) $cutiStart = $start->copy();
+            if ($cutiEnd->greaterThan($end)) $cutiEnd = $end->copy();
+            if ($cutiStart->lte($cutiEnd)) {
+                foreach (CarbonPeriod::create($cutiStart, $cutiEnd) as $tgl) {
+                    $cutiDates[$tgl->format("Y-m-d")] = $c->keterangan ?? "CUTI";
+                }
             }
         }
 
         // 4. Ambil data Libur Nasional
-        $liburDates = m_libur_nasional::whereBetween("tanggal", [$start, $end])
+        $liburDates = m_libur_nasional::whereBetween("tanggal", [$start->format("Y-m-d"), $end->format("Y-m-d")])
             ->get()
             ->mapWithKeys(function ($item) {
                 return [Carbon::parse($item->tanggal)->format("Y-m-d") => $item->keterangan ?? "LIBUR NASIONAL"];
             });
+
+        $preloadedJadwal = $this->preloadJadwalGaji($m_kary->id, $end);
 
         $dailyDetails = [];
         
@@ -1021,18 +1133,10 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
             // Cek apakah tanggal ini ada di tabel libur nasional
             $is_libur_nasional = isset($liburDates[$key]);
 
-            // Tentukan Tipe Hari dari Jadwal
-            $jadwal = t_jadwal_kerja_d_n::where('m_kary_id', $m_kary->id)
-                        ->whereDate('start_date', '<=', $key)
-                        ->orderByDesc('start_date')
-                        ->first();
-            
-            $tipe = "KERJA"; 
-            if ($jadwal && $jadwal->t_jadwal_kerja_n) {
-                $hariName = $tanggal->translatedFormat("l");
-                $detail_hari = $jadwal->t_jadwal_kerja_n->t_jadwal_kerja_d_hari_n->firstWhere("day", $hariName);
-                $tipe = $detail_hari?->tipe_hari ?? "KERJA";
-            }
+            // Tentukan Tipe Hari dari snapshot atau jadwal karyawan
+            $detail_hari = $this->resolveDetailHariGaji($preloadedJadwal, $tanggal, $data);
+            $tipe = strtoupper(trim((string)($detail_hari?->tipe_hari ?? "KERJA")));
+            if (empty($tipe)) $tipe = "KERJA";
 
             // Overwrite status/tipe jika libur nasional
             $status = $data?->status ?? "NOT ATTEND";
@@ -1047,7 +1151,16 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
             $menit_lembur_hari_ini = 0;
             if (isset($lembur[$key])) {
                 foreach ($lembur[$key] as $l) {
-                    $menit_lembur_hari_ini += Carbon::parse($l->jam_selesai)->diffInMinutes(Carbon::parse($l->jam_mulai));
+                    $tglMulaiL = Carbon::parse($l->tanggal)->format("Y-m-d");
+                    $tglSelesaiL = !empty($l->tanggal_selesai)
+                        ? Carbon::parse($l->tanggal_selesai)->format("Y-m-d")
+                        : $tglMulaiL;
+                    $mulaiL = Carbon::parse($tglMulaiL . " " . $l->jam_mulai);
+                    $selesaiL = Carbon::parse($tglSelesaiL . " " . $l->jam_selesai);
+                    if ($tglSelesaiL === $tglMulaiL && $selesaiL->lessThan($mulaiL)) {
+                        $selesaiL->addDay();
+                    }
+                    $menit_lembur_hari_ini += $selesaiL->greaterThan($mulaiL) ? $selesaiL->diffInMinutes($mulaiL) : 0;
                 }
             }
 
@@ -1061,6 +1174,20 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
                 $total_menit_lembur_libur += $menit_lembur_hari_ini;
             }
 
+            $jamKerjaHarian = 0;
+            if (!empty($data?->jam_kerja_diakui)) {
+                $jamKerjaHarian = (float) $data->jam_kerja_diakui;
+            } elseif ($data?->checkin_time && $data?->checkout_time) {
+                $inDate = Carbon::parse($data->tanggal ?? $key)->format("Y-m-d");
+                $outDate = !empty($data->checkout_date) ? Carbon::parse($data->checkout_date)->format("Y-m-d") : $inDate;
+                $inDt = Carbon::parse($inDate . " " . $data->checkin_time);
+                $outDt = Carbon::parse($outDate . " " . $data->checkout_time);
+                if ($outDate === $inDate && $outDt->lessThan($inDt)) {
+                    $outDt->addDay();
+                }
+                $jamKerjaHarian = $outDt->greaterThan($inDt) ? (float) round($inDt->diffInMinutes($outDt) / 60, 2) : 0;
+            }
+
             $dailyDetails[] = [
                 "tanggal"           => $key,
                 "hari"              => $tanggal->translatedFormat("l"),
@@ -1071,9 +1198,7 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
                 "jam_pulang"        => $data?->checkout_time ? Carbon::parse($data->checkout_time)->format('H:i') : '-',
                 "menit_lembur"      => $menit_lembur_hari_ini,
                 "jam_lembur"        => round($menit_lembur_hari_ini / 60, 2),
-                // "jam_kerja"         => ($data?->checkin_time && $data?->checkout_time) ? round(Carbon::parse($data->checkout_time)->diffInMinutes(Carbon::parse($data->checkin_time)) / 60, 2) : 0,
-                // "jam_kerja"         => $data?->jam_kerja_diakui ?? 0,
-                "jam_kerja" => $data?->jam_kerja_diakui ? (float) $data->jam_kerja_diakui : (($data?->checkin_time && $data?->checkout_time) ? (float) round(Carbon::parse($data->checkout_time)->diffInMinutes(Carbon::parse($data->checkin_time)) / 60, 2) : 0),
+                "jam_kerja"         => $jamKerjaHarian,
             ];
         }
 

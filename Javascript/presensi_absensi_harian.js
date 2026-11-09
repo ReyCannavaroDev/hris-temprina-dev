@@ -25,19 +25,19 @@ const dataDetail = ref([])
 const isCheckin = ref()
 const isCheckout = ref(false)
 const openDateDetail = (e, item, check, data) => {
-  if (!item.checkin_foto?.includes(`http`)) {
+  if (item && !item.checkin_foto?.includes(`http`)) {
     if (item.checkin_foto) {
       item.checkin_foto = `${store.server.url_backend}/${item.checkin_foto}`
     }
 
   }
-  if (!item.checkout_foto?.includes(`http`)) {
+  if (item && !item.checkout_foto?.includes(`http`)) {
     if (item.checkout_foto) {
       item.checkout_foto = `${store.server.url_backend}/${item.checkout_foto}`
     }
   }
   check === 'checkin' ? isCheckin.value = true : isCheckin.value = false
-  dataDetail.value = item
+  dataDetail.value = item || {}
   dataDetail.value = {
     ...dataDetail.value,
     ...data
@@ -517,12 +517,15 @@ function onSave() {
           body: JSON.stringify(values)
         })
         if (!res.ok) {
+          const responseJson = await res.json().catch(() => ({}))
           if ([400, 422].includes(res.status)) {
-            const responseJson = await res.json()
             formErrors.value = responseJson.errors || {}
-            throw new Error(responseJson.message || "Failed when trying to post data")
+            const errList = Array.isArray(responseJson.errors)
+              ? responseJson.errors
+              : Object.values(responseJson.errors || {}).flat()
+            throw new Error(errList[0] || responseJson.message || "Failed when trying to post data")
           } else {
-            throw new Error("Failed when trying to post data")
+            throw new Error(responseJson.message || "Failed when trying to post data")
           }
         }
         onBack()
@@ -530,7 +533,7 @@ function onSave() {
         isBadForm.value = true
         swal.fire({
           icon: 'error',
-          text: err
+          text: err?.message || err
         })
       }
       isRequesting.value = false

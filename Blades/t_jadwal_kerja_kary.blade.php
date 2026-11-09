@@ -180,8 +180,11 @@
         label="" fa-icon="" :check="false" />
     </div>
 
-    <div class="font- text-20px col-span-2 mt-5 mb-3">
-      <h2>Detail Jadwal kerja</h2>
+    <div class="col-span-2 mt-5 mb-3">
+      <div class="text-20px font-semibold">
+        <h2>Detail Jadwal kerja</h2>
+      </div>
+      <p class="text-xs text-gray-500">Preview jam kerja dari Master Jadwal Kerja terpilih (read-only).</p>
     </div>
 
     <div class="col-span-2">
@@ -197,41 +200,29 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(item, i) in detailArr" :key="item.id" class="border-t" v-if="detailArr.length > 0">
+          <tr v-for="(item, i) in detailArr" :key="item.id || i" class="border-t" v-if="detailArr.length > 0">
             <td class="text-[12px] text-center border border-[#CACACA]">{{ i + 1 }}.</td>
             <td class="text-[12px] text-center border border-[#CACACA]">{{item.day}}</td>
             <td>
-              <FieldSelect :bind="{ disabled: !actionText, clearable: false }" :value="item.tipe_hari"
-                @input="v => {
-                  item.tipe_hari = v;
-                  if (v === 'LIBUR') {
-                    item.m_jam_kerja_id = null;
-                    item.waktu_mulai = '00:00:00';
-                    item.waktu_akhir = '00:00:00';
-                    item.waktu_mulai = '00:00';
-                    item.waktu_akhir = '00:00';
-                  }
-                }" valueField="name" displayField="name"
+              <FieldSelect :bind="{ disabled: true, clearable: false }" :value="item.tipe_hari"
+                valueField="name" displayField="name"
                 :options="[ { id: 'KERJA', name: 'KERJA' }, { id: 'LIBUR', name: 'LIBUR' } ]" placeholder="" label="" :check="false" />
             </td>
             <td class="text-[12px] text-left border border-[#CACACA]">
-              <FieldSelect :bind="{ disabled: !actionText || item.tipe_hari === 'LIBUR', clearable: false }" :value="item.m_jam_kerja_id"
-                @input="v => item.m_jam_kerja_id = v" valueField="id" displayField="desc" @update:valueFull="(response) => {
-                    item.waktu_mulai = response?.waktu_mulai
-                    item.waktu_akhir = response?.waktu_akhir
-                    }" :api="{
+              <FieldSelect :bind="{ disabled: true, clearable: false }" :value="item.m_jam_kerja_id"
+                valueField="id" displayField="desc" :api="{
                         url: `${store.server.url_backend}/operation/m_jam_kerja`,
                         headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                         params: { transform:false, join:false, selectfield:'id,waktu_akhir,waktu_mulai,this.desc' }
                     }" placeholder="" label="" fa-icon="" :check="false" />
             </td>
             <td>
-              <FieldX type="time" :bind="{ readonly: !actionText || item.tipe_hari === 'LIBUR' }" :value="item.waktu_mulai"
-                @input="v => item.waktu_mulai = v" placeholder="" label="" fa-icon="" :check="false" />
+              <FieldX type="time" :bind="{ readonly: true }" :value="item.waktu_mulai"
+                placeholder="" label="" fa-icon="" :check="false" />
             </td>
             <td>
-              <FieldX type="time" :bind="{ readonly: !actionText || item.tipe_hari === 'LIBUR' }" :value="item.waktu_akhir"
-                @input="v => item.waktu_akhir = v" placeholder="" label="" fa-icon="" :check="false" />
+              <FieldX type="time" :bind="{ readonly: true }" :value="item.waktu_akhir"
+                placeholder="" label="" fa-icon="" :check="false" />
             </td>
           </tr>
           <tr v-else class="text-center">

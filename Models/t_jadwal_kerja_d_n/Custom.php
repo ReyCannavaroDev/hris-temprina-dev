@@ -31,40 +31,33 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
             $karyawanIds = json_last_error() === JSON_ERROR_NONE ? $decoded : explode(',', $karyawanIds);
         }
 
-        if (empty($karyawanIds) || !is_array($karyawanIds)) {
-            // Jika kosong atau bukan array (hanya 1), biarkan saja lewat
-            return [
-                "model" => $model,
-                "data"  => $arrayData
-            ];
-        }
+        if (!empty($karyawanIds) && is_array($karyawanIds)) {
+            // Ambil ID pertama untuk di-insert oleh generator native
+            $firstKaryId = array_shift($karyawanIds);
+            $arrayData['m_kary_id'] = is_array($firstKaryId) ? ($firstKaryId['id'] ?? $firstKaryId['m_kary_id']) : $firstKaryId;
 
-        // Ambil ID pertama untuk di-insert oleh generator native
-        $firstKaryId = array_shift($karyawanIds);
-        $arrayData['m_kary_id'] = is_array($firstKaryId) ? ($firstKaryId['id'] ?? $firstKaryId['m_kary_id']) : $firstKaryId;
+            // Jika masih ada sisa karyawan yang dipilih, insert manual sisanya
+            if (count($karyawanIds) > 0) {
+                $table = $model->getTable();
+                $baseData = $arrayData;
+                $baseData['created_at'] = \Carbon\Carbon::now();
+                $baseData['updated_at'] = \Carbon\Carbon::now();
 
-        // Jika masih ada sisa karyawan yang dipilih, insert manual sisanya
-        if (count($karyawanIds) > 0) {
-            $table = $model->getTable();
-            $baseData = $arrayData;
-            $baseData['created_at'] = \Carbon\Carbon::now();
-            $baseData['updated_at'] = \Carbon\Carbon::now();
-            
-            // Hapus detailArr dari baseData agar tidak error column not found
-            unset($baseData['t_jadwal_kerja_d_hari_n']);
-            unset($baseData['t_jadwal_kerja_det_hari']);
-            unset($baseData['detailArr']);
+                unset($baseData['t_jadwal_kerja_d_hari_n']);
+                unset($baseData['t_jadwal_kerja_det_hari']);
+                unset($baseData['detailArr']);
 
-            foreach ($karyawanIds as $kId) {
-                if (empty($kId)) continue;
-                $insertData = $baseData;
-                $insertData['m_kary_id'] = is_array($kId) ? ($kId['id'] ?? $kId['m_kary_id']) : $kId;
-                
-                \DB::table($table)->insert($insertData);
+                foreach ($karyawanIds as $kId) {
+                    if (empty($kId)) continue;
+                    $insertData = $baseData;
+                    $insertData['m_kary_id'] = is_array($kId) ? ($kId['id'] ?? $kId['m_kary_id']) : $kId;
+
+                    \DB::table($table)->insert($insertData);
+                }
             }
         }
 
-        $this->saveJadwalDetails($arrayData, $id);
+        // Hapus payload detail read-only agar tidak memodifikasi master jadwal kerja bersama
         unset($arrayData['t_jadwal_kerja_d_hari_n']);
         unset($arrayData['t_jadwal_kerja_det_hari']);
         unset($arrayData['detailArr']);
@@ -77,7 +70,39 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
 
     public function updateBefore($model, $arrayData, $metaData, $id=null)
     {
-        $this->saveJadwalDetails($arrayData, $id);
+        $targetId = $id ?: ($model->id ?? null);
+        if ($targetId) {
+            $isUsedInPresensi = \DB::table('presensi_absensi')
+                ->where('t_jadwal_kerja_d_n_id', $targetId)
+                ->exists();
+
+            if ($isUsedInPresensi) {
+                $existing = \DB::table('t_jadwal_kerja_d_n')->where('id', $targetId)->first();
+                if ($existing) {
+                    $oldStartDate = !empty($existing->start_date) ? \Carbon\Carbon::parse($existing->start_date)->format('Y-m-d') : null;
+                    $newStartDate = array_key_exists('start_date', $arrayData) && !empty($arrayData['start_date'])
+                        ? \Carbon\Carbon::parse($arrayData['start_date'])->format('Y-m-d')
+                        : $oldStartDate;
+
+                    $karyChanged = array_key_exists('m_kary_id', $arrayData)
+                        && (string)$arrayData['m_kary_id'] !== (string)$existing->m_kary_id;
+                    $masterChanged = array_key_exists('t_jadwal_kerja_n_id', $arrayData)
+                        && (string)$arrayData['t_jadwal_kerja_n_id'] !== (string)$existing->t_jadwal_kerja_n_id;
+                    $dateChanged = array_key_exists('start_date', $arrayData)
+                        && (string)$newStartDate !== (string)$oldStartDate;
+
+                    if ($karyChanged || $masterChanged || $dateChanged) {
+                        return [
+                            "model" => $model,
+                            "data" => $arrayData,
+                            "errors" => ["Penugasan jadwal kerja tidak dapat diubah (karyawan, master jadwal, atau start date) karena sudah memiliki riwayat absensi. Silakan buat penugasan jadwal baru dengan start date baru."],
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Hapus payload detail read-only agar tidak memodifikasi master jadwal kerja bersama
         unset($arrayData['t_jadwal_kerja_d_hari_n']);
         unset($arrayData['t_jadwal_kerja_det_hari']);
         unset($arrayData['detailArr']);
@@ -85,6 +110,24 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
         return [
             "model" => $model,
             "data"  => $arrayData
+        ];
+    }
+
+    public function deleteBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $targetId = $id ?: ($model->id ?? null);
+        if ($targetId) {
+            $isUsed = \DB::table('presensi_absensi')
+                ->where('t_jadwal_kerja_d_n_id', $targetId)
+                ->exists();
+            if ($isUsed) {
+                throw new \Exception("Jadwal kerja karyawan tidak dapat dihapus karena sudah memiliki riwayat absensi. Silakan nonaktifkan jadwal ini dan buat jadwal baru dengan start date baru.");
+            }
+        }
+
+        return [
+            "model" => $model,
+            "data" => $arrayData,
         ];
     }
 
@@ -96,157 +139,6 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
     public function updateAfter($model, $arrayData, $metaData, $id = null)
     {
         return $arrayData;
-    }
-
-    private function saveJadwalDetails($arrayData, $id = null)
-    {
-        $payload = app('request')->all();
-        $jadwalId = $arrayData['t_jadwal_kerja_n_id'] ?? $payload['t_jadwal_kerja_n_id'] ?? null;
-
-        if (!$jadwalId && $id) {
-            $jadwalId = \DB::table('t_jadwal_kerja_d_n')->where('id', $id)->value('t_jadwal_kerja_n_id');
-        }
-
-        if (!$jadwalId) return;
-
-        $details = $arrayData['t_jadwal_kerja_d_hari_n'] 
-            ?? $arrayData['t_jadwal_kerja_det_hari'] 
-            ?? $payload['t_jadwal_kerja_d_hari_n'] 
-            ?? $payload['t_jadwal_kerja_det_hari'] 
-            ?? $payload['detailArr'] 
-            ?? null;
-
-        if (empty($details) || !is_array($details)) return;
-
-        $dayMap = [
-            'senin' => 1, 'monday' => 1,
-            'selasa' => 2, 'tuesday' => 2,
-            'rabu' => 3, 'wednesday' => 3,
-            'kamis' => 4, 'thursday' => 4,
-            'jumat' => 5, 'jum\'at' => 5, 'friday' => 5,
-            'sabtu' => 6, 'saturday' => 6,
-            'minggu' => 7, 'sunday' => 7,
-        ];
-
-        $nameMap = [
-            1 => 'Senin',
-            2 => 'Selasa',
-            3 => 'Rabu',
-            4 => 'Kamis',
-            5 => 'Jumat',
-            6 => 'Sabtu',
-            7 => 'Minggu',
-        ];
-
-        try {
-            $existingNew = \DB::table('t_jadwal_kerja_d_hari_n')
-                ->where('t_jadwal_kerja_n_id', $jadwalId)
-                ->get();
-        } catch (\Throwable $e) {
-            $existingNew = collect();
-        }
-
-        try {
-            $existingLegacy = \DB::table('t_jadwal_kerja_det_hari')
-                ->where('t_jadwal_kerja_id', $jadwalId)
-                ->get();
-        } catch (\Throwable $e) {
-            $existingLegacy = collect();
-        }
-
-        foreach ($details as $idx => $d) {
-            $d = (array) $d;
-            $rawDay = trim((string)($d['day'] ?? $d['hari'] ?? ''));
-            $dayNum = !empty($d['day_num']) ? (int)$d['day_num'] : ($dayMap[strtolower($rawDay)] ?? ($idx + 1));
-            $dayName = $rawDay ?: ($nameMap[$dayNum] ?? 'Senin');
-
-            $tipeHari = strtoupper(trim((string)($d['tipe_hari'] ?? 'KERJA')));
-            $isLibur = ($tipeHari === 'LIBUR');
-
-            $waktuMulai = $d['waktu_mulai'] ?? $d['start'] ?? null;
-            $waktuAkhir = $d['waktu_akhir'] ?? $d['end'] ?? null;
-            if ($isLibur || empty($waktuMulai) || $waktuMulai === '--:--' || $waktuMulai === '00:00') {
-                $waktuMulai = '00:00:00';
-            }
-            if ($isLibur || empty($waktuAkhir) || $waktuAkhir === '--:--' || $waktuAkhir === '00:00') {
-                $waktuAkhir = '00:00:00';
-            }
-            $jamKerjaId = $isLibur ? null : ($d['m_jam_kerja_id'] ?? null);
-
-            // Update atau insert ke t_jadwal_kerja_d_hari_n (in-place update, jangan delete agar tidak melanggar foreign key)
-            try {
-                $matchedNew = $existingNew->first(function($row) use ($dayNum, $dayName, $d) {
-                    if (!empty($d['id']) && $row->id == $d['id']) return true;
-                    if (!empty($row->day_num) && $row->day_num == $dayNum) return true;
-                    return strtolower(trim((string)$row->day)) === strtolower(trim((string)$dayName));
-                });
-
-                if ($matchedNew) {
-                    \DB::table('t_jadwal_kerja_d_hari_n')
-                        ->where('id', $matchedNew->id)
-                        ->update([
-                            'm_jam_kerja_id' => $jamKerjaId,
-                            'day'            => $dayName,
-                            'day_num'        => $dayNum,
-                            'tipe_hari'      => $tipeHari,
-                            'waktu_mulai'    => $waktuMulai,
-                            'waktu_akhir'    => $waktuAkhir,
-                            'updated_at'     => \Carbon\Carbon::now(),
-                        ]);
-                } else {
-                    \DB::table('t_jadwal_kerja_d_hari_n')->insert([
-                        't_jadwal_kerja_n_id' => $jadwalId,
-                        'm_jam_kerja_id'      => $jamKerjaId,
-                        'day'                 => $dayName,
-                        'day_num'             => $dayNum,
-                        'tipe_hari'           => $tipeHari,
-                        'waktu_mulai'         => $waktuMulai,
-                        'waktu_akhir'         => $waktuAkhir,
-                        'created_at'          => \Carbon\Carbon::now(),
-                        'updated_at'          => \Carbon\Carbon::now(),
-                    ]);
-                }
-            } catch (\Throwable $e) {
-                \Log::error('Error saving t_jadwal_kerja_d_hari_n: ' . $e->getMessage());
-            }
-
-            // Update atau insert ke t_jadwal_kerja_det_hari (in-place update, jangan delete agar tidak melanggar foreign key)
-            try {
-                $matchedLeg = $existingLegacy->first(function($row) use ($dayNum, $dayName, $d) {
-                    if (!empty($d['id']) && $row->id == $d['id']) return true;
-                    if (!empty($row->day_num) && $row->day_num == $dayNum) return true;
-                    return strtolower(trim((string)$row->day)) === strtolower(trim((string)$dayName));
-                });
-
-                if ($matchedLeg) {
-                    \DB::table('t_jadwal_kerja_det_hari')
-                        ->where('id', $matchedLeg->id)
-                        ->update([
-                            'm_jam_kerja_id' => $jamKerjaId,
-                            'day'            => $dayName,
-                            'day_num'        => $dayNum,
-                            'tipe_hari'      => $tipeHari,
-                            'waktu_mulai'    => $waktuMulai,
-                            'waktu_akhir'    => $waktuAkhir,
-                            'updated_at'     => \Carbon\Carbon::now(),
-                        ]);
-                } else {
-                    \DB::table('t_jadwal_kerja_det_hari')->insert([
-                        't_jadwal_kerja_id' => $jadwalId,
-                        'm_jam_kerja_id'    => $jamKerjaId,
-                        'day'               => $dayName,
-                        'day_num'           => $dayNum,
-                        'tipe_hari'         => $tipeHari,
-                        'waktu_mulai'       => $waktuMulai,
-                        'waktu_akhir'       => $waktuAkhir,
-                        'created_at'        => \Carbon\Carbon::now(),
-                        'updated_at'        => \Carbon\Carbon::now(),
-                    ]);
-                }
-            } catch (\Throwable $e) {
-                \Log::error('Error saving t_jadwal_kerja_det_hari: ' . $e->getMessage());
-            }
-        }
     }
     
     public function transformRowData(array $row)

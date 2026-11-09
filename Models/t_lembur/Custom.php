@@ -7,10 +7,32 @@ use Carbon\CarbonPeriod;
 class t_lembur extends \App\Models\BasicModels\t_lembur
 {
     private $helper;
+    protected static ?bool $hasTanggalSelesaiColumn = null;
+
     public function __construct()
     {
         parent::__construct();
         $this->helper = getCore("Helper");
+
+        if ($this->hasTanggalSelesaiColumn()) {
+            foreach (['fillable', 'columns', 'createable', 'updateable', 'searchable'] as $prop) {
+                if (isset($this->{$prop}) && is_array($this->{$prop}) && !in_array('tanggal_selesai', $this->{$prop})) {
+                    $this->{$prop}[] = 'tanggal_selesai';
+                }
+            }
+        }
+    }
+
+    protected function hasTanggalSelesaiColumn(): bool
+    {
+        if (self::$hasTanggalSelesaiColumn === null) {
+            try {
+                self::$hasTanggalSelesaiColumn = \Schema::hasColumn($this->getTable(), 'tanggal_selesai');
+            } catch (\Throwable $e) {
+                self::$hasTanggalSelesaiColumn = false;
+            }
+        }
+        return self::$hasTanggalSelesaiColumn;
     }
 
     public $fileColumns = ["doc"];
@@ -44,35 +66,101 @@ class t_lembur extends \App\Models\BasicModels\t_lembur
         ] );
     }
 
-    public function hitungMenit($jamMulai, $jamSelesai)
+    protected function normalizeDate(?string $value): ?string
     {
-        $start = Carbon::parse($jamMulai);
-        $end   = Carbon::parse($jamSelesai);
+        if ($value === null) {
+            return null;
+        }
+        $trimmed = trim((string)$value);
+        if ($trimmed === '') {
+            return null;
+        }
 
-        if ($end->lessThan($start)) {
+        foreach (['Y-m-d', 'd/m/Y', 'd-m-Y'] as $format) {
+            try {
+                return Carbon::createFromFormat($format, $trimmed)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                // coba format berikutnya
+            }
+        }
+
+        try {
+            return Carbon::parse($trimmed)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    public function hitungMenit($jamMulai, $jamSelesai, $tglMulai = null, $tglSelesai = null)
+    {
+        $baseStart = $this->normalizeDate($tglMulai) ?? date('Y-m-d');
+        $baseEnd = $this->normalizeDate($tglSelesai) ?? $baseStart;
+
+        $start = Carbon::parse($baseStart . ' ' . $jamMulai);
+        $end   = Carbon::parse($baseEnd . ' ' . $jamSelesai);
+
+        if ($baseEnd === $baseStart && $end->lessThan($start)) {
             $end->addDay();
         }
 
         // Mengembalikan total selisih dalam menit
-        return $end->diffInMinutes($start);
+        return $end->greaterThan($start) ? $end->diffInMinutes($start) : 0;
     }
 
     public function createBefore($model, $arrayData, $metaData, $id = null)
     {
+        $jamMulai = $arrayData['jam_mulai'] ?? null;
+        $jamSelesai = $arrayData['jam_selesai'] ?? null;
+        $tglMulai = $this->normalizeDate($arrayData['tanggal'] ?? null) ?? date('Y-m-d');
+        $tglSelesaiInput = $arrayData['tanggal_selesai'] ?? null;
+        $hasExplicitTglSelesai = $tglSelesaiInput !== null && trim((string)$tglSelesaiInput) !== '';
+        $tglSelesai = $hasExplicitTglSelesai
+            ? ($this->normalizeDate((string)$tglSelesaiInput) ?? $tglMulai)
+            : $tglMulai;
+
+        if ($hasExplicitTglSelesai && $tglSelesai < $tglMulai) {
+            return [
+                "model" => $model,
+                "data" => $arrayData,
+                "errors" => ["Tanggal selesai lembur tidak boleh lebih kecil dari tanggal mulai lembur."]
+            ];
+        }
+
+        if ((!$hasExplicitTglSelesai || $tglSelesai === $tglMulai) && $jamMulai !== null && $jamSelesai !== null) {
+            $startProbe = Carbon::parse($tglMulai . ' ' . $jamMulai);
+            $endProbe = Carbon::parse($tglMulai . ' ' . $jamSelesai);
+            if ($endProbe->lessThan($startProbe)) {
+                $tglSelesai = Carbon::parse($tglMulai)->addDay()->format('Y-m-d');
+            }
+        }
+
+        $intervalMin = ($jamMulai !== null && $jamSelesai !== null)
+            ? $this->hitungMenit($jamMulai, $jamSelesai, $tglMulai, $tglSelesai)
+            : null;
+
         $newArrayData = array_merge($arrayData, [
             "nomor" => $this->helper->generateNomor("KODE LEMBUR"),
-            "interval_min" => ($arrayData['jam_mulai'] !== null && $arrayData['jam_selesai'] !== null ) ? $this->hitungMenit($arrayData['jam_mulai'], $arrayData['jam_selesai']) : null,
+            "interval_min" => $intervalMin,
         ]);
+        if (!empty($arrayData['tanggal']) && $tglMulai) {
+            $newArrayData["tanggal"] = $tglMulai;
+        }
         if (app()->request->header("Source") == "mobile") {
             $newArrayData = array_merge($newArrayData, [
                 "nomor" => $this->helper->generateNomor("KODE LEMBUR"),
-                "interval_min" => ($arrayData['jam_mulai'] !== null && $arrayData['jam_selesai'] !== null ) ? $this->hitungMenit($arrayData['jam_mulai'], $arrayData['jam_selesai']) : null,
+                "interval_min" => $intervalMin,
                 "status" => "IN APPROVAL",
             ]);
         }
         $newArrayData = array_merge($newArrayData, [
             "pic_id" => @app()->request->pic_id ?? auth()->user()->id,
         ]);
+
+        if ($this->hasTanggalSelesaiColumn()) {
+            $newArrayData["tanggal_selesai"] = $tglSelesai;
+        } else {
+            unset($newArrayData["tanggal_selesai"]);
+        }
 
         return [
             "model" => $model,
@@ -85,22 +173,63 @@ class t_lembur extends \App\Models\BasicModels\t_lembur
     {
         if (app()->request->header("Source") == "mobile") {
             $data = \DB::table('t_lembur')->where('id', $id)->first();
-            if($data->status === 'REVISED'){
+            if($data && $data->status === 'REVISED'){
                 $status = 'IN APPROVAL';
             }
         }
         $data = \DB::table('t_lembur')->where('id', $id)->first();
 
-        if (isset($arrayData['jam_mulai']) && isset($arrayData['jam_selesai']) ) {
-            $interval = $this->hitungMenit($arrayData['jam_mulai'], $arrayData['jam_selesai']);
+        $jamMulai = $arrayData['jam_mulai'] ?? ($data->jam_mulai ?? null);
+        $jamSelesai = $arrayData['jam_selesai'] ?? ($data->jam_selesai ?? null);
+        $tglMulai = !empty($arrayData['tanggal'])
+            ? ($this->normalizeDate($arrayData['tanggal']) ?? date('Y-m-d'))
+            : (!empty($data->tanggal) ? ($this->normalizeDate((string)$data->tanggal) ?? date('Y-m-d')) : date('Y-m-d'));
+
+        $hasExplicitTglSelesai = array_key_exists('tanggal_selesai', $arrayData)
+            && $arrayData['tanggal_selesai'] !== null
+            && trim((string)$arrayData['tanggal_selesai']) !== '';
+        $tglSelesaiRaw = array_key_exists('tanggal_selesai', $arrayData)
+            ? $arrayData['tanggal_selesai']
+            : ($data->tanggal_selesai ?? null);
+        $hasAnyTglSelesai = $tglSelesaiRaw !== null && trim((string)$tglSelesaiRaw) !== '';
+        $tglSelesai = $hasAnyTglSelesai
+            ? ($this->normalizeDate((string)$tglSelesaiRaw) ?? $tglMulai)
+            : $tglMulai;
+
+        if ($hasExplicitTglSelesai && $tglSelesai < $tglMulai) {
+            return [
+                "model" => $model,
+                "data" => $arrayData,
+                "errors" => ["Tanggal selesai lembur tidak boleh lebih kecil dari tanggal mulai lembur."]
+            ];
+        }
+
+        if ((!$hasExplicitTglSelesai || $tglSelesai === $tglMulai) && $jamMulai !== null && $jamSelesai !== null) {
+            $startProbe = Carbon::parse($tglMulai . ' ' . $jamMulai);
+            $endProbe = Carbon::parse($tglMulai . ' ' . $jamSelesai);
+            if ($endProbe->lessThan($startProbe)) {
+                $tglSelesai = Carbon::parse($tglMulai)->addDay()->format('Y-m-d');
+            }
+        }
+
+        if ($jamMulai !== null && $jamSelesai !== null) {
+            $interval = $this->hitungMenit($jamMulai, $jamSelesai, $tglMulai, $tglSelesai);
         }
 
         $newArrayData  = array_merge( $arrayData,[
-            'status' => $status ?? $data->status,
-            'interval_min' => @$interval ?? $data->interval_min,
+            'status' => $status ?? ($data->status ?? 'DRAFT'),
+            'interval_min' => @$interval ?? ($data->interval_min ?? null),
             "pic_id" => @app()->request->pic_id ?? auth()->user()->id,
         ]);
+        if (!empty($arrayData['tanggal']) && $tglMulai) {
+            $newArrayData['tanggal'] = $tglMulai;
+        }
 
+        if ($this->hasTanggalSelesaiColumn()) {
+            $newArrayData["tanggal_selesai"] = $tglSelesai;
+        } else {
+            unset($newArrayData["tanggal_selesai"]);
+        }
 
         return [
             "model"  => $model,

@@ -304,12 +304,15 @@ function onSave() {
       body: JSON.stringify(values)
     }).then(async (res) => {
       if (!res.ok) {
+        const responseJson = await res.json().catch(() => ({}))
         if ([400, 422].includes(res.status)) {
-          const responseJson = await res.json()
           formErrors.value = responseJson.errors || {}
-          throw new Error(responseJson.message || "Failed when trying to post data")
+          const errList = Array.isArray(responseJson.errors)
+            ? responseJson.errors
+            : Object.values(responseJson.errors || {}).flat()
+          throw new Error(errList[0] || responseJson.message || "Harap Lengkapi Data")
         } else {
-          throw new Error("Failed when trying to post data")
+          throw new Error(responseJson.message || "Failed when trying to post data")
         }
       }
       router.replace('/' + modulPath + '?reload=' + (Date.parse(new Date())))
@@ -317,7 +320,7 @@ function onSave() {
       isBadForm.value = true
       swal.fire({
         icon: 'error',
-        text: 'Harap Lengkapi Data'
+        text: err?.message || 'Harap Lengkapi Data'
       })
     }).finally(() => {
       isRequesting.value = false
@@ -326,7 +329,7 @@ function onSave() {
     isBadForm.value = true
     swal.fire({
       icon: 'error',
-      text: 'Harap Lengkapi Data'
+      text: err?.message || 'Harap Lengkapi Data'
     })
     isRequesting.value = false
   }
@@ -806,6 +809,17 @@ const landing = reactive({
     filter: 'ColFilter',
     resizable: true,
     cellClass: ['border-r', '!border-gray-200', 'justify-left']
+  },
+  {
+    field: 'tanggal_selesai',
+    headerName: 'Tanggal Selesai',
+    filter: true,
+    sortable: true,
+    flex: 1,
+    filter: 'ColFilter',
+    resizable: true,
+    cellClass: ['border-r', '!border-gray-200', 'justify-left'],
+    valueGetter: (params) => params.data?.tanggal_selesai || params.data?.tanggal || '-'
   },
   {
     field: 'jam_mulai',

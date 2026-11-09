@@ -230,7 +230,7 @@
 
         <div>
       <label class="col-span-12">Karyawan</label>
-      <FieldSelect :bind="{ clearable:false, multiple:true }" :value="values.m_kary_id"
+      <FieldSelect :bind="{ disabled: !actionText, clearable:false, multiple:true }" :value="values.m_kary_id"
         @input="v => values.m_kary_id = v" valueField="id" displayField="nama_lengkap" :options="karyOptions" placeholder="" label=""
         :check="false"/>
     </div>
@@ -242,8 +242,11 @@
         label="" fa-icon="" :check="false" />
     </div>
 
-    <div class="font-semibold text-20px col-span-2 mt-5 mb-3">
-      <h2>Detail Jadwal kerja</h2>
+    <div class="col-span-2 mt-5 mb-3">
+      <div class="font-semibold text-20px">
+        <h2>Detail Jadwal kerja</h2>
+      </div>
+      <p class="text-xs text-gray-500">Preview jam kerja dari Master Jadwal Kerja terpilih (read-only).</p>
     </div>
 
     <div class="col-span-2">
@@ -271,7 +274,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(item, i) in detailArr" :key="item.id" class="border-t" v-if="detailArr.length > 0">
+          <tr v-for="(item, i) in detailArr" :key="item.id || i" class="border-t" v-if="detailArr.length > 0">
             <td class="text-[12px] text-center border border-[#CACACA]">
               {{ i + 1 }}.
             </td>
@@ -279,30 +282,17 @@
               {{item.day}}
             </td>
             <td>
-              <FieldSelect :bind="{ disabled: !actionText, clearable: false }" :value="item.tipe_hari"
-                @input="v => {
-                  item.tipe_hari = v;
-                  if (v === 'LIBUR') {
-                    item.m_jam_kerja_id = null;
-                    item.waktu_mulai = '00:00:00';
-                    item.waktu_akhir = '00:00:00';
-                    item.waktu_mulai = '00:00';
-                    item.waktu_akhir = '00:00';
-                  }
-                }" :errorText="formErrors.tipe_hari ? 'failed' : ''"
+              <FieldSelect :bind="{ disabled: true, clearable: false }" :value="item.tipe_hari"
+                :errorText="formErrors.tipe_hari ? 'failed' : ''"
                 :hints="formErrors.tipe_hari" valueField="name" displayField="name"
                 :options="[ { id: 'KERJA', name: 'KERJA' }, { id: 'LIBUR', name: 'LIBUR' } ]" placeholder="" label=""
                 :check="false" />
             </td>
 
             <td class="text-[12px] text-left border border-[#CACACA]">
-              <FieldSelect :bind="{ disabled: !actionText || item.tipe_hari === 'LIBUR', clearable: false }" :value="item.m_jam_kerja_id"
-                @input="v=>item.m_jam_kerja_id=v" :errorText="formErrors.m_jam_kerja_id?'failed':''"
-                :hints="formErrors.m_jam_kerja_id" valueField="id" displayField="desc" @update:valueFull="(response) => {
-                    item.waktu_mulai = response?.waktu_mulai
-                    item.waktu_akhir = response?.waktu_akhir
-                    $log(response);
-                    }" :api="{
+              <FieldSelect :bind="{ disabled: true, clearable: false }" :value="item.m_jam_kerja_id"
+                :errorText="formErrors.m_jam_kerja_id?'failed':''"
+                :hints="formErrors.m_jam_kerja_id" valueField="id" displayField="desc" :api="{
                         url: `${store.server.url_backend}/operation/m_jam_kerja`,
                         headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                         params: {
@@ -314,18 +304,18 @@
             </td>
 
             <td>
-              <FieldX type="time" :bind="{ readonly: !actionText || item.tipe_hari === 'LIBUR' }" :value="item.waktu_mulai"
-                :errorText="formErrors.waktu_mulai?'failed':''" @input="v=>item.waktu_mulai=v"
+              <FieldX type="time" :bind="{ readonly: true }" :value="item.waktu_mulai"
+                :errorText="formErrors.waktu_mulai?'failed':''"
                 :hints="formErrors.waktu_mulai" placeholder="" label="" fa-icon="" :check="false" />
             </td>
             <td>
-              <FieldX type="time" :bind="{ readonly: !actionText || item.tipe_hari === 'LIBUR' }" :value="item.waktu_akhir"
-                :errorText="formErrors.waktu_akhir?'failed':''" @input="v=>item.waktu_akhir=v"
+              <FieldX type="time" :bind="{ readonly: true }" :value="item.waktu_akhir"
+                :errorText="formErrors.waktu_akhir?'failed':''"
                 :hints="formErrors.waktu_akhir" placeholder="" label="" fa-icon="" :check="false" />
             </td>
           </tr>
           <tr v-else class="text-center">
-            <td colspan="7" class="py-[20px]">
+            <td colspan="6" class="py-[20px]">
               No data to show
             </td>
           </tr>

@@ -18,12 +18,14 @@
   $tipe = $req->tipe_report;
 
   Carbon::setLocale('id');
-  $start = Carbon::parse($req->periode_awal);
-  $end   = Carbon::parse($req->periode_akhir);
+  $start = Carbon::parse($req->periode_awal)->startOfDay();
+  $end   = Carbon::parse($req->periode_akhir)->startOfDay();
   $period = CarbonPeriod::create($start, $end);
+  $startStr = $start->format('Y-m-d');
+  $endStr   = $end->format('Y-m-d');
 
   // 🟢 BARIS BARU: Ambil list hari libur nasional (ditaruh di sini agar query-nya cepat)
-  $liburNasional = m_libur_nasional::whereBetween('tanggal', [$start, $end])->get();
+  $liburNasional = m_libur_nasional::whereBetween('tanggal', [$startStr, $endStr])->get();
   $liburDates = $liburNasional->pluck('keterangan', 'tanggal')->mapWithKeys(
   fn($keterangan, $tgl) => [Carbon::parse($tgl)->format('Y-m-d') => $keterangan ?? 'LIBUR']
   );
@@ -113,82 +115,93 @@
 
           if($user) {
             // 1. Ambil Data Presensi & Cuti (Tetap di luar loop harian)
-            $presensi = presensi_absensi::with('t_jadwal_kerja_d_hari_n')
+            $presensi = presensi_absensi::with(['t_jadwal_kerja_d_hari_n.m_jam_kerja', 'm_jam_kerja'])
             ->where('default_user_id', $user->id)
-            ->whereBetween('tanggal', [$start, $end])
+            ->whereBetween('tanggal', [$startStr, $endStr])
             ->get()
             ->keyBy(fn($item) => Carbon::parse($item->tanggal)->format('Y-m-d'));
 
             $cuti = t_cuti::where('m_kary_id', $dt->id)
             ->where("status", "APPROVED")
-            ->where(fn($q) =>
-            $q->whereBetween('date_from', [$start, $end])
-            ->orWhereBetween('date_to', [$start, $end])
-            )->get();
+            ->where(function ($q) use ($startStr, $endStr) {
+                $q->whereBetween('date_from', [$startStr, $endStr])
+                  ->orWhereBetween('date_to', [$startStr, $endStr])
+                  ->orWhere(function ($q2) use ($startStr, $endStr) {
+                      $q2->where('date_from', '<=', $startStr)
+                         ->where('date_to', '>=', $endStr);
+                  });
+            })->get();
 
             $cutiDates = [];
             foreach ($cuti as $c) {
-            foreach (CarbonPeriod::create($c->date_from, $c->date_to) as $tgl) {
-            $cutiDates[$tgl->format('Y-m-d')] = $c->keterangan ?? 'CUTI';
-            }
+                $cStart = Carbon::parse($c->date_from)->startOfDay();
+                $cEnd = Carbon::parse($c->date_to)->startOfDay();
+                if ($cStart->lessThan($start)) $cStart = $start->copy();
+                if ($cEnd->greaterThan($end)) $cEnd = $end->copy();
+                if ($cStart->lte($cEnd)) {
+                    foreach (CarbonPeriod::create($cStart, $cEnd) as $tgl) {
+                        $cutiDates[$tgl->format('Y-m-d')] = $c->keterangan ?? 'CUTI';
+                    }
+                }
             }
 
             // ==============================================================
             // 🚀 OPTIMASI: PINDAHKAN QUERY DATABASE KE LUAR LOOPING HARIAN
             // ==============================================================
 
-            // A. Query Jadwal Induk (cukup 1x per karyawan)
-            $jadwal = t_jadwal_kerja_d_n::where(function($q) use ($dt) {
-                    $q->where('m_kary_id', $dt->id)
-                      ->orWhere('m_kary_id', (string)$dt->id)
-                      ->orWhere('m_kary_id', 'like', '%"' . $dt->id . '"%')
-                      ->orWhere('m_kary_id', 'like', '%[' . $dt->id . ']%');
+            // A. Query Semua Jadwal Karyawan (tanpa LIKE pada bigint m_kary_id)
+            $jadwals = \DB::table('t_jadwal_kerja_d_n as d')
+                ->leftJoin('t_jadwal_kerja_n as j', 'j.id', '=', 'd.t_jadwal_kerja_n_id')
+                ->select('d.*', 'j.status as master_status')
+                ->where('d.m_kary_id', (int)$dt->id)
+                ->where(function ($q) use ($endStr) {
+                    $q->whereNull('d.start_date')
+                      ->orWhereDate('d.start_date', '<=', $endStr);
                 })
-                ->where(function($q) use ($end) {
-                    $q->whereNull('start_date')
-                      ->orWhereDate('start_date', '<=', $end);
-                })
-                ->orderByDesc('start_date')
-                ->orderByDesc('id')
-                ->first();
+                ->orderByRaw("CASE WHEN UPPER(COALESCE(d.status, '')) = 'AKTIF' AND UPPER(COALESCE(j.status, 'AKTIF')) = 'AKTIF' THEN 0 WHEN UPPER(COALESCE(d.status, '')) = 'AKTIF' THEN 1 ELSE 2 END ASC")
+                ->orderByDesc('d.start_date')
+                ->orderByDesc('d.id')
+                ->get();
 
-            if (!$jadwal) {
-                $jadwal = t_jadwal_kerja_d_n::where(function($q) use ($dt) {
-                        $q->where('m_kary_id', $dt->id)
-                          ->orWhere('m_kary_id', (string)$dt->id)
-                          ->orWhere('m_kary_id', 'like', '%"' . $dt->id . '"%');
-                    })
-                    ->orderByDesc('id')
-                    ->first();
+            if ($jadwals->isEmpty()) {
+                $jadwals = \DB::table('t_jadwal_kerja_d_n as d')
+                    ->leftJoin('t_jadwal_kerja_n as j', 'j.id', '=', 'd.t_jadwal_kerja_n_id')
+                    ->select('d.*', 'j.status as master_status')
+                    ->where('d.m_kary_id', (int)$dt->id)
+                    ->orderByRaw("CASE WHEN UPPER(COALESCE(d.status, '')) = 'AKTIF' AND UPPER(COALESCE(j.status, 'AKTIF')) = 'AKTIF' THEN 0 WHEN UPPER(COALESCE(d.status, '')) = 'AKTIF' THEN 1 ELSE 2 END ASC")
+                    ->orderByDesc('d.id')
+                    ->get();
             }
 
-            $masterJadwalId = $jadwal?->t_jadwal_kerja_n_id ?? $jadwal?->jadwal_kerja_id ?? null;
-            if (!$masterJadwalId) {
+            $masterJadwalIds = $jadwals->map(fn($j) => $j->t_jadwal_kerja_n_id ?? ($j->jadwal_kerja_id ?? null))
+                ->filter()
+                ->unique()
+                ->values();
+
+            if ($masterJadwalIds->isEmpty()) {
                 $legacyDet = \DB::table('t_jadwal_kerja_det')
-                    ->where('m_kary_id', $dt->id)
+                    ->where('m_kary_id', (int)$dt->id)
                     ->orderByDesc('id')
                     ->first();
-                if ($legacyDet) {
-                    $masterJadwalId = $legacyDet->t_jadwal_kerja_id ?? null;
+                if ($legacyDet && !empty($legacyDet->t_jadwal_kerja_id)) {
+                    $masterJadwalIds = collect([(int)$legacyDet->t_jadwal_kerja_id]);
                 }
             }
 
             // B. Simpan Jadwal Harian ke dalam Collection memory
-            $jadwal_hari_collection = collect();
-            if ($masterJadwalId) {
-                $jadwal_hari_collection = \DB::table('t_jadwal_kerja_d_hari_n')
-                    ->where('t_jadwal_kerja_n_id', $masterJadwalId)
-                    ->get();
+            $jadwalHarisMap = $masterJadwalIds->isNotEmpty()
+                ? \DB::table('t_jadwal_kerja_d_hari_n')
+                    ->whereIn('t_jadwal_kerja_n_id', $masterJadwalIds)
+                    ->get()
+                    ->groupBy('t_jadwal_kerja_n_id')
+                : collect();
 
-                if ($jadwal_hari_collection->isEmpty()) {
-                    $jadwal_hari_collection = \DB::table('t_jadwal_kerja_det_hari')
-                        ->where(function($q) use ($masterJadwalId) {
-                            $q->where('t_jadwal_kerja_id', $masterJadwalId)
-                              ->orWhere('t_jadwal_kerja_n_id', $masterJadwalId);
-                        })
-                        ->get();
-                }
-            }
+            $legacyHarisMap = $masterJadwalIds->isNotEmpty()
+                ? \DB::table('t_jadwal_kerja_det_hari')
+                    ->whereIn('t_jadwal_kerja_id', $masterJadwalIds)
+                    ->get()
+                    ->groupBy('t_jadwal_kerja_id')
+                : collect();
 
             $dayMap = [
                 'senin' => 1, 'monday' => 1,
@@ -200,15 +213,15 @@
                 'minggu' => 7, 'ahad' => 7, 'sunday' => 7,
             ];
 
-            // C. Query Standar Gaji (cukup 1x per karyawan)
-            $standart_gaji = m_standart_gaji::where("m_kary_id", $dt->id)
-            ->whereDate('start_date', '<=', $end)
-            ->orderByDesc("start_date")
-            ->first();
-
-            $transport = $standart_gaji?->tunjangan_transport ?? 0;
-            $produktifitas = $standart_gaji?->tunjangan_produktifitas ?? 0;
-            $pokok = $standart_gaji?->gaji_pokok ?? 0;
+            // C. Query Standar Gaji (preload sekali per karyawan, pilih per tanggal di loop)
+            $standartGajiList = m_standart_gaji::where("m_kary_id", $dt->id)
+                ->where(function ($q) use ($endStr) {
+                    $q->whereNull('start_date')
+                      ->orWhereDate('start_date', '<=', $endStr);
+                })
+                ->orderByDesc("start_date")
+                ->orderByDesc("id")
+                ->get();
             // ==============================================================
 
             // LOOPING HARIAN SEKARANG BEBAS DARI QUERY DATABASE
@@ -219,28 +232,35 @@
             $nama_hari_en = strtolower(trim($tanggal->format('l')));
             $data_presensi = $presensi[$key] ?? null;
 
-            // Ambil jadwal harian dari Collection memory dengan fallback ISO day_num -> hari indo -> hari english
-            $jam_kerja_row = $jadwal_hari_collection->first(function($row) use ($dayNumIso, $nama_hari_id, $nama_hari_en, $dayMap) {
-                $rDayNum = !empty($row->day_num) ? (int)$row->day_num : 0;
-                $rDayLower = strtolower(trim((string)($row->day ?? $row->hari ?? '')));
-                $calcDayNum = $dayMap[$rDayLower] ?? 0;
+            $activeJadwal = $jadwals->first(function ($j) use ($key) {
+                return empty($j->start_date) || Carbon::parse($j->start_date)->format('Y-m-d') <= $key;
+            }) ?? $jadwals->first();
 
-                if ($rDayNum > 0 && $rDayNum === $dayNumIso) return true;
-                if ($calcDayNum > 0 && $calcDayNum === $dayNumIso) return true;
-                if ($rDayLower === $nama_hari_id || $rDayLower === $nama_hari_en) return true;
-                return false;
-            });
-
-            $jadwalMulai = $data_presensi?->t_jadwal_kerja_d_hari_n?->waktu_mulai ?? $jam_kerja_row?->waktu_mulai;
-
-            $telat = 0;
-            if ($data_presensi?->checkin_time && $jadwalMulai && $jadwalMulai !== '00:00:00' && $jadwalMulai !== '00:00') {
-            $diff = Carbon::parse($jadwalMulai)->diffInMinutes(Carbon::parse($data_presensi->checkin_time), false);
-            $telat = $diff > 0 ? $diff : 0;
+            $activeMasterId = $activeJadwal ? ($activeJadwal->t_jadwal_kerja_n_id ?? ($activeJadwal->jadwal_kerja_id ?? null)) : ($masterJadwalIds->first());
+            $jadwal_hari_collection = collect();
+            if ($activeMasterId) {
+                $jadwal_hari_collection = $jadwalHarisMap->get($activeMasterId) ?? collect();
+                if ($jadwal_hari_collection->isEmpty()) {
+                    $jadwal_hari_collection = $legacyHarisMap->get($activeMasterId) ?? collect();
+                }
             }
 
-            $status = $data_presensi?->status ?? 'NOT ATTEND';
-            if (isset($cutiDates[$key])) $status = $cutiDates[$key];
+            // Prioritas snapshot presensi, fallback ke jadwal aktif
+            $jam_kerja_row = $data_presensi?->t_jadwal_kerja_d_hari_n;
+            if (!$jam_kerja_row) {
+                $jam_kerja_row = $jadwal_hari_collection->first(function($row) use ($dayNumIso, $nama_hari_id, $nama_hari_en, $dayMap) {
+                    $rDayNum = !empty($row->day_num) ? (int)$row->day_num : 0;
+                    $rDayLower = strtolower(trim((string)($row->day ?? $row->hari ?? '')));
+                    $calcDayNum = $dayMap[$rDayLower] ?? 0;
+
+                    if ($rDayNum > 0 && $rDayNum === $dayNumIso) return true;
+                    if ($calcDayNum > 0 && $calcDayNum === $dayNumIso) return true;
+                    if ($rDayLower === $nama_hari_id || $rDayLower === $nama_hari_en) return true;
+                    return false;
+                });
+            }
+
+            $jadwalMulai = $data_presensi?->t_jadwal_kerja_d_hari_n?->waktu_mulai ?? ($jam_kerja_row?->waktu_mulai ?? ($data_presensi?->m_jam_kerja?->waktu_mulai ?? null));
 
             $tipe_hari = 'KERJA';
             if ($jam_kerja_row) {
@@ -254,23 +274,50 @@
                 }
             }
 
-            if (isset($liburDates[$key])) $tipe_hari = $liburDates[$key];
+            $isCuti = isset($cutiDates[$key]);
+            $isLiburNasional = isset($liburDates[$key]);
+            $isHariKerja = ($tipe_hari === 'KERJA') && !$isLiburNasional;
 
-            if (!$data_presensi && ($tipe_hari === 'LIBUR' || isset($liburDates[$key]))) {
+            if ($isLiburNasional) $tipe_hari = $liburDates[$key];
+
+            $status = $data_presensi?->status ?? 'NOT ATTEND';
+            if ($isCuti) $status = $cutiDates[$key];
+
+            if (!$data_presensi && ($tipe_hari === 'LIBUR' || $isLiburNasional)) {
                 $status = 'LIBUR';
             }
 
+            $telat = 0;
             $jamTelat = 0;
-            if($telat > 0) {
-            $jamTelat = floor($telat / 60) + 1;
+            if (
+                $isHariKerja
+                && !$isCuti
+                && $data_presensi?->checkin_time
+                && $jadwalMulai
+                && $jadwalMulai !== '00:00:00'
+                && $jadwalMulai !== '00:00'
+            ) {
+                $diff = Carbon::parse($key . ' ' . $jadwalMulai)->diffInMinutes(Carbon::parse($key . ' ' . $data_presensi->checkin_time), false);
+                $telat = $diff > 0 ? (int)$diff : 0;
+                if ($telat > 0) {
+                    $jamTelat = floor($telat / 60) + 1;
+                }
             }
+
+            $standart_gaji = $standartGajiList->first(function ($sg) use ($key) {
+                return empty($sg->start_date) || Carbon::parse($sg->start_date)->format('Y-m-d') <= $key;
+            }) ?? $standartGajiList->first();
+
+            $transport = $standart_gaji?->tunjangan_transport ?? 0;
+            $produktifitas = $standart_gaji?->tunjangan_produktifitas ?? 0;
+            $pokok = $standart_gaji?->gaji_pokok ?? 0;
 
             // Hitung Denda Telat
             $denda = (($transport + $produktifitas) / 173) * $jamTelat;
             $jumlah_denda_telat += $denda;
 
             // Hitung Denda Absen
-            $dendaAbsen = (($status === 'NOT ATTEND' || $status === 'WORKING') && $tipe_hari === 'KERJA') ? (($transport + $produktifitas + $pokok) / 173) * 7 : 0;
+            $dendaAbsen = (($status === 'NOT ATTEND' || $status === 'WORKING') && $isHariKerja && !$isCuti) ? (($transport + $produktifitas + $pokok) / 173) * 7 : 0;
             $jumlah_denda_absen += $dendaAbsen;
             }
           }
@@ -284,7 +331,7 @@
           <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; width: 3.5%">{{ $absensi['hari_kerja'] }}</td>
           <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; width: 3.5%;">{{ $absensi['jumlah_hadir'] }}</td>
           <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; width: 3.5%;">{{ $absensi['jumlah_cuti'] }}</td>
-          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; width: 3.5%;">{{ $absensi['hari_kerja'] - ($absensi['jumlah_hadir'] + $absensi['jumlah_cuti']) }}</td>
+          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; width: 3.5%;">{{ max(0, $absensi['hari_kerja'] - ($absensi['jumlah_hadir'] + $absensi['jumlah_cuti'])) }}</td>
 
           <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; font-weight: bold;">
             {{ "Rp " . number_format($jumlah_denda_telat, 0, ',', '.') }}

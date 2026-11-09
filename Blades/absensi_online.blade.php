@@ -142,12 +142,17 @@
     </div>
     <div class="mt-4 grid grid-cols-1 lg:grid-cols-4 gap-4">
       <div @click=(tampilkanModal(item)) class="border-2 p-4 space-y-3 rounded hover:bg-gray-200 delay-100 cursor-pointer hover:border-gray-400" v-for="(item, index) in listDetail" :key="index">
-        <span v-if="item.type?.toLowerCase() === 'hari kerja'" :class="item.status?.toLowerCase() === 'attend' ? 'bg-green-200 text-green-800' : (item.status?.toLowerCase() === 'working' ? 'bg-blue-200 text-blue-800' : 'bg-red-200 text-red-800')" class="font-semibold px-4 py-1 rounded">{{item.status?.toLowerCase() === 'attend' ? 'Hadir' : (item.status?.toLowerCase() === 'working' ? 'Belum Check Out' : 'Tidak Hadir')}}</span>
-        <span v-else class="font-semibold px-4 py-1 rounded bg-gray-200 text-gray-800">Hari Libur</span>
+        <span v-if="item.status?.toLowerCase() === 'attend'" class="font-semibold px-4 py-1 rounded bg-green-200 text-green-800">Hadir</span>
+        <span v-else-if="item.status?.toLowerCase() === 'working'" class="font-semibold px-4 py-1 rounded bg-blue-200 text-blue-800">Belum Check Out</span>
+        <span v-else-if="item.status?.toLowerCase() === 'cuti' || item.type?.toLowerCase() === 'cuti'" class="font-semibold px-4 py-1 rounded bg-amber-200 text-amber-800">Cuti</span>
+        <span v-else-if="item.type?.toLowerCase() === 'libur nasional'" class="font-semibold px-4 py-1 rounded bg-red-200 text-red-800">Libur Nasional</span>
+        <span v-else-if="item.type?.toLowerCase() !== 'hari kerja'" class="font-semibold px-4 py-1 rounded bg-gray-200 text-gray-800">Hari Libur</span>
+        <span v-else class="font-semibold px-4 py-1 rounded bg-red-200 text-red-800">Tidak Hadir</span>
         <h1>{{item.day_name_idn}}, {{removeStrip(item.date_to_idn)}}</h1>
+        <div v-if="item.shift" class="text-xs text-gray-500">Shift: {{item.shift}}</div>
         <div class="flex space-x-4">
           <span>In : {{item.checkin_time ? item.checkin_time : '-'}}</span>
-          <span>Out : {{item.checkout_time ? item.checkout_time : '-'}}</span>
+          <span>Out : {{item.checkout_time ? (item.checkout_date && item.checkout_date !== item.all_days_of_month ? `${item.checkout_time} (${item.checkout_date})` : item.checkout_time) : '-'}}</span>
         </div>
       </div>
     </div>
@@ -221,14 +226,14 @@
               <td class="align-top h-fit pb-2">{{dataDetail.checkout_address ? dataDetail.checkout_address : '-'}}</td>
             </tr>
             <tr>
-              <td class="align-top h-fit font-semibold">Jam Checkin</td>
+              <td class="align-top h-fit font-semibold">Jam Checkout</td>
               <td class="align-top px-2 h-fit w-[10%] font-semibold">:</td>
-              <td class="align-top h-fit pb-2">{{dataDetail.checkout_time ? dataDetail.checkout_time : '-'}}</td>
+              <td class="align-top h-fit pb-2">{{dataDetail.checkout_time ? (dataDetail.checkout_date && dataDetail.checkout_date !== dataDetail.all_days_of_month ? `${dataDetail.checkout_time} (${dataDetail.checkout_date})` : dataDetail.checkout_time) : '-'}}</td>
             </tr>
             <tr>
               <td class="align-top h-fit font-semibold">Office</td>
               <td class="align-top px-2 h-fit w-[10%] font-semibold">:</td>
-              <td :class="dataDetail.checkout?.toLowerCase() === 'in scope' ? 'text-green-600' : 'text-red-600' " class="align-top h-fit pb-2">{{dataDetail.checkout_region ? dataDetail.checkout_region : '-'}}</td>
+              <td :class="dataDetail.checkout_region?.toLowerCase() === 'in scope' ? 'text-green-600' : (dataDetail.checkout_region?.toLowerCase() === 'out scope' ? 'text-red-600' : 'text-black')" class="align-top h-fit pb-2">{{dataDetail.checkout_region ? dataDetail.checkout_region : '-'}}</td>
             </tr>
           </table>
           <table class="w-full block lg:hidden table-auto">
@@ -242,7 +247,7 @@
               <td class="align-top h-fit font-semibold">Jam Checkout :</td>
             </tr>
             <tr>
-              <td class="align-top h-fit pb-2">{{dataDetail.checkout_time ? dataDetail.checkout_time : '-'}}</td>
+              <td class="align-top h-fit pb-2">{{dataDetail.checkout_time ? (dataDetail.checkout_date && dataDetail.checkout_date !== dataDetail.all_days_of_month ? `${dataDetail.checkout_time} (${dataDetail.checkout_date})` : dataDetail.checkout_time) : '-'}}</td>
             </tr>
             <tr>
               <td class="align-top h-fit font-semibold">Office :</td>

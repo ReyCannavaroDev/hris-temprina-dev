@@ -518,12 +518,15 @@ function onSave() {
           body: JSON.stringify(values)
         })
         if (!res.ok) {
+          const responseJson = await res.json().catch(() => ({}))
           if ([400, 422].includes(res.status)) {
-            const responseJson = await res.json()
             formErrors.value = responseJson.errors || {}
-            throw new Error(responseJson.message || "Failed when trying to post data")
+            const errList = Array.isArray(responseJson.errors)
+              ? responseJson.errors
+              : Object.values(responseJson.errors || {}).flat()
+            throw new Error(errList[0] || responseJson.message || "Failed when trying to post data")
           } else {
-            throw new Error("Failed when trying to post data")
+            throw new Error(responseJson.message || "Failed when trying to post data")
           }
         }
         onBack()
@@ -531,7 +534,7 @@ function onSave() {
         isBadForm.value = true
         swal.fire({
           icon: 'error',
-          text: err
+          text: err?.message || err
         })
       }
       isRequesting.value = false

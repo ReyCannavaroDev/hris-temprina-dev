@@ -157,6 +157,11 @@
         @input="v=>values.tanggal=v" :hints="formErrors.tanggal" :check="false" />
     </div>
     <div>
+      <FieldX :bind="{ readonly: !actionText }" type="date" class="w-full mt-3" :value="values.tanggal_selesai"
+        label="Tanggal Selesai" placeholder="Pilih Tanggal Selesai" :errorText="formErrors.tanggal_selesai?'failed':''"
+        @input="v=>values.tanggal_selesai=v" :hints="formErrors.tanggal_selesai" :check="false" />
+    </div>
+    <div>
       <FieldX placeholdedr="Masukan Jam Mulai" label="Jam Mulai" :bind="{ readonly: !actionText   }" class="w-full mt-3"
         type="time" fa-icon="clock" :value="values.jam_mulai" :errorText="formErrors.jam_mulai ? 'failed' : ''"
         @input="v => values.jam_mulai =v" :hints="formErrors.jam_mulai" :check="false" />

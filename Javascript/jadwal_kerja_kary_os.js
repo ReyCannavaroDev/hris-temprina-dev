@@ -166,6 +166,16 @@ onBeforeMount(async () => {
       }
     }
 
+    if (values.m_kary_id?.length && karyOptions.value.length === 0) {
+      try {
+        const resKary = await fetch(`${store.server.url_backend}/operation/m_kary?where=this.id IN (${values.m_kary_id.join(',')})&transform=true&join=true`, {
+          headers: { 'Content-Type': 'application/json', Authorization: `${store.user.token_type} ${store.user.token}` }
+        });
+        const dataKary = await resKary.json();
+        karyOptions.value = Array.isArray(dataKary.data) ? dataKary.data : [];
+      } catch (e) {}
+    }
+
     if (initialValues && initialValues.t_jadwal_kerja_n_id) {
       const jadwalUrl = `${store.server.url_backend}/operation/t_jadwal_kerja_n/${initialValues.t_jadwal_kerja_n_id}`;
       const jadwalRes = await fetch(`${jadwalUrl}`, {
@@ -237,23 +247,34 @@ async function onSave() {
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
     const dataURL = `${store.server.url_backend}/operation/${endpointApi}${isCreating ? '' : '/' + route.params.id}`
 
-    values.t_jadwal_kerja_d_hari_n = detailArr.value
-    values.t_jadwal_kerja_det_hari = detailArr.value
+    const basePayload = { ...values }
+    delete basePayload.t_jadwal_kerja_d_hari_n
+    delete basePayload.t_jadwal_kerja_det_hari
 
-    const payloads = Array.isArray(values.m_kary_id)
-      ? (values.m_kary_id || []).map(id => ({
-        ...values,
-        m_kary_id: id,
-        t_jadwal_kerja_d_hari_n: detailArr.value,
-        t_jadwal_kerja_det_hari: detailArr.value
+    let payloads = []
+    if (isCreating) {
+      const karyIds = Array.isArray(values.m_kary_id)
+        ? values.m_kary_id.filter(Boolean)
+        : (values.m_kary_id ? [values.m_kary_id] : [])
+      if (karyIds.length === 0) {
+        throw 'Karyawan wajib dipilih terlebih dahulu.'
+      }
+      payloads = karyIds.map(id => ({
+        ...basePayload,
+        m_kary_id: id
       }))
-      : [{
-        ...values,
-        m_kary_id: values.m_kary_id,
-        t_jadwal_kerja_d_hari_n: detailArr.value,
-        t_jadwal_kerja_det_hari: detailArr.value
+    } else {
+      const scalarKaryId = Array.isArray(values.m_kary_id)
+        ? (values.m_kary_id[0] ?? null)
+        : values.m_kary_id
+      if (!scalarKaryId) {
+        throw 'Karyawan wajib dipilih terlebih dahulu.'
+      }
+      payloads = [{
+        ...basePayload,
+        m_kary_id: scalarKaryId
       }]
-
+    }
 
     for (const payload of payloads) {
       const res = await fetch(dataURL, {
@@ -269,7 +290,10 @@ async function onSave() {
 
       if (!res.ok) {
         formErrors.value = responseJson.errors || {}
-        const errorMessage = responseJson.message || Object.values(formErrors.value)[0] || 'Oops, terjadi kesalahan.'
+        const errList = Array.isArray(formErrors.value)
+          ? formErrors.value
+          : Object.values(formErrors.value || {}).flat()
+        const errorMessage = errList[0] || responseJson.message || 'Oops, terjadi kesalahan.'
         throw errorMessage
       }
     }
@@ -279,7 +303,7 @@ async function onSave() {
     isBadForm.value = true
     swal.fire({
       icon: 'warning',
-      text: err
+      text: err?.message || err
     })
   } finally {
     isRequesting.value = false

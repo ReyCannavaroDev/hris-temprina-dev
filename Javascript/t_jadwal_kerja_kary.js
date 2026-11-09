@@ -239,20 +239,34 @@ async function onSave() {
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
     const dataURL = `${store.server.url_backend}/operation/${endpointApi}${isCreating ? '' : '/' + route.params.id}`
 
-    const payloads = Array.isArray(values.m_kary_id)
-      ? (values.m_kary_id || []).map(id => ({
-        ...values,
-        m_kary_id: id,
-        t_jadwal_kerja_d_hari_n: detailArr.value,
-        t_jadwal_kerja_det_hari: detailArr.value
-      }))
-      : [{
-        ...values,
-        m_kary_id: values.m_kary_id,
-        t_jadwal_kerja_d_hari_n: detailArr.value,
-        t_jadwal_kerja_det_hari: detailArr.value
-      }]
+    const basePayload = { ...values }
+    delete basePayload.t_jadwal_kerja_d_hari_n
+    delete basePayload.t_jadwal_kerja_det_hari
 
+    let payloads = []
+    if (isCreating) {
+      const karyIds = Array.isArray(values.m_kary_id)
+        ? values.m_kary_id.filter(Boolean)
+        : (values.m_kary_id ? [values.m_kary_id] : [])
+      if (karyIds.length === 0) {
+        throw 'Karyawan wajib dipilih terlebih dahulu.'
+      }
+      payloads = karyIds.map(id => ({
+        ...basePayload,
+        m_kary_id: id
+      }))
+    } else {
+      const scalarKaryId = Array.isArray(values.m_kary_id)
+        ? (values.m_kary_id[0] ?? null)
+        : values.m_kary_id
+      if (!scalarKaryId) {
+        throw 'Karyawan wajib dipilih terlebih dahulu.'
+      }
+      payloads = [{
+        ...basePayload,
+        m_kary_id: scalarKaryId
+      }]
+    }
 
     for (const payload of payloads) {
       const res = await fetch(dataURL, {
@@ -268,7 +282,10 @@ async function onSave() {
 
       if (!res.ok) {
         formErrors.value = responseJson.errors || {}
-        const errorMessage = responseJson.message || Object.values(formErrors.value)[0] || 'Oops, terjadi kesalahan.'
+        const errList = Array.isArray(formErrors.value)
+          ? formErrors.value
+          : Object.values(formErrors.value || {}).flat()
+        const errorMessage = errList[0] || responseJson.message || 'Oops, terjadi kesalahan.'
         throw errorMessage
       }
     }
@@ -278,7 +295,7 @@ async function onSave() {
     isBadForm.value = true
     swal.fire({
       icon: 'warning',
-      text: err
+      text: err?.message || err
     })
   } finally {
     isRequesting.value = false

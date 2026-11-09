@@ -101,12 +101,14 @@
         </td>
         <td class="text-left border-1 border-gray-500 px-3 cursor-pointer"@click="openDateDetail(true,item.absensi,'checkout',item)">
           <div class="flex items-center">
-            <icon v-show="item.absensi?.checkout_time" class="mx-1" :class="item.absensi?.checkout_on_scope?'text-green-600':'text-red-600'" fa="map-marker-alt"/>{{item.absensi?.checkout_time}}
+            <icon v-show="item.absensi?.checkout_time" class="mx-1" :class="item.absensi?.checkout_on_scope?'text-green-600':'text-red-600'" fa="map-marker-alt"/>
+            <span>{{item.absensi?.checkout_time}}</span>
+            <span v-if="item.absensi?.checkout_date && item.absensi?.checkout_date !== (item.absensi?.tanggal || openDateSelected)" class="ml-1 text-xs text-gray-600">({{item.absensi.checkout_date}})</span>
           </div>
           </td>
         <td class="text-center border-1 border-gray-500 px-3">
           <template v-if = "data.can_update">
-          <RouterLink v-if="item.absensi?.status.toLowerCase() === 'not attend'" :to="$route.path+'/create?ts='+openDateSelected+`&user_id=${item.default_user_id}`" class="text-gray-600">
+          <RouterLink v-if="item.absensi?.status?.toLowerCase() === 'not attend'" :to="$route.path+'/create?ts='+openDateSelected+`&user_id=${item.default_user_id}`" class="text-gray-600">
             <icon fa="plus" />
           </RouterLink>
           <RouterLink v-else :to="$route.path+`/${item?.presensi_absensi_id}?action=Edit&ts=`+item.absensi?.tanggal" class="text-gray-600">
@@ -197,7 +199,7 @@
             <tr>
               <td class="w-[30%] py-1 px-2">Waktu {{isCheckin ? 'Checkin' : 'Checkout'}}</td>
               <td class="align-top py-1 px-1">:</td>
-              <td class=" py-1 px-1">{{isCheckin ? dataDetail.checkin_time :dataDetail.checkout_time}}</td>
+              <td class=" py-1 px-1">{{isCheckin ? dataDetail.checkin_time : dataDetail.checkout_time}}<span v-if="!isCheckin && dataDetail.checkout_time && dataDetail.checkout_date && dataDetail.checkout_date !== (dataDetail.tanggal || openDateSelected)" class="ml-1 text-xs text-gray-500">({{dataDetail.checkout_date}})</span></td>
             </tr>
             <tr>
               <td class="w-[30%] py-1 px-2">Kantor {{isCheckin ? 'Checkin' : 'Checkout'}}</td>
@@ -441,6 +443,14 @@
 
         <div class="mt-2 sm:mt-6">
           <p class="font-bold text-[18px]">Check Out</p>
+        </div>
+
+        <div class="">
+          <label class="font-semibold">Tanggal Check Out<span class="text-red-500 space-x-0 pl-0"></span></label>
+          <FieldX :bind="{ readonly: !actionText }" type="date" label="" class="w-full py-2 !mt-0"
+            :value="values.checkout_date" :errorText="formErrors.checkout_date ? 'failed' : ''"
+            @input="v=>values.checkout_date=v" :hints="formErrors.checkout_date" :check="false"
+            placeholder="Tanggal Check Out" />
         </div>
 
         <div class="">

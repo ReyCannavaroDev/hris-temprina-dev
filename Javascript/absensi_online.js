@@ -112,8 +112,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(()=>{
-  const stream = videoElement.value.srcObject
-  stream.getTracks()?.forEach((track)=>{
+  const stream = videoElement.value?.srcObject
+  stream?.getTracks()?.forEach((track)=>{
       track.stop()
     })
   
@@ -211,7 +211,7 @@ async function capture() {
       canvas.toBlob(resolve, 'image/jpeg')
     )
 
-    formData.append('foto', capturedImageBlob, 'captured_image.jpg')
+    formData.set('foto', capturedImageBlob, 'captured_image.jpg')
 
     stream.getTracks()?.forEach(track => {
       track.stop()
@@ -280,7 +280,7 @@ function showError(error) {
 
 function removeStrip(data){
   const tempTest = data?.split('-')
-  const monthName = ["Januari", "Februari", "Maret", "April","Mei", "Juni", "Juli", "Agustus","September", "Oktober", "November", "Desemeber"][tempTest[1]-1]
+  const monthName = ["Januari", "Februari", "Maret", "April","Mei", "Juni", "Juli", "Agustus","September", "Oktober", "November", "Desember"][tempTest[1]-1]
   return `${tempTest[0]} ${monthName} ${tempTest[2]}`
   // console.log(data)
   // return data?.replace(/-/g,' ')
@@ -445,9 +445,9 @@ async function postAttend() {
     }
 
     // Persiapkan data untuk dikirim
-    formData.append('lat', coordsLocation.value.latitude);
-    formData.append('long', coordsLocation.value.longitude);
-    formData.append('address', form.address);
+    formData.set('lat', coordsLocation.value.latitude);
+    formData.set('long', coordsLocation.value.longitude);
+    formData.set('address', form.address);
 
     let postData = {
       foto: capturedImage.value,

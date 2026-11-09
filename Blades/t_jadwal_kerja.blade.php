@@ -250,10 +250,9 @@
                 </td>
               </tr>
               <tr v-else class="text-center">
-                <td colspan="7" class="py-[20px]">
+                <td colspan="8" class="py-[20px]">
                   No data to show
                 </td>
-              </tr>
               </tr>
             </tbody>
           </table>
