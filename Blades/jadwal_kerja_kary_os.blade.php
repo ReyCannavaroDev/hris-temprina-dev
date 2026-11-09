@@ -136,16 +136,7 @@
       <label class="col-span-12">JADWAL KERJA</label>
       <FieldPopup :bind="{ readonly: !actionText }" :value="values.t_jadwal_kerja_n_id"
         @input="(v)=>values.t_jadwal_kerja_n_id=v" :errorText="formErrors.t_jadwal_kerja_n_id?'failed':''"
-        :hints="formErrors.t_jadwal_kerja_n_id" valueField="id" displayField="keterangan" @update:valueFull="response =>  {
-          $log(response)
-           $log('test',response?.t_jadwal_kerja_det_hari);
-          values.m_group_barang = response?.tipe;
-        
-          detailArr = (response?.t_jadwal_kerja_det_hari || []).map((dt)=>({
-            ...dt, 
-          }))
-          //values.divisi = response['divisi_id']
-        }" :api="{
+        :hints="formErrors.t_jadwal_kerja_n_id" valueField="id" displayField="keterangan" @update:valueFull="(response) => onJadwalSelected(response)" :api="{
           url: `${store.server.url_backend}/operation/t_jadwal_kerja_n`,
           headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
           params: {
@@ -288,19 +279,26 @@
               {{item.day}}
             </td>
             <td>
-              <FieldSelect :bind="{ disabled: true, clearable: false }" :value="item.tipe_hari"
-                @input="v => item.tipe_hari = v" :errorText="formErrors.tipe_hari ? 'failed' : ''"
+              <FieldSelect :bind="{ disabled: !actionText, clearable: false }" :value="item.tipe_hari"
+                @input="v => {
+                  item.tipe_hari = v;
+                  if (v === 'LIBUR') {
+                    item.m_jam_kerja_id = null;
+                    item.waktu_mulai = '00:00';
+                    item.waktu_akhir = '00:00';
+                  }
+                }" :errorText="formErrors.tipe_hari ? 'failed' : ''"
                 :hints="formErrors.tipe_hari" valueField="name" displayField="name"
-                :options="[ { id: true, name: 'KERJA' }, { id: false, name: 'LIBUR' } ]" placeholder="" label=""
+                :options="[ { id: 'KERJA', name: 'KERJA' }, { id: 'LIBUR', name: 'LIBUR' } ]" placeholder="" label=""
                 :check="false" />
             </td>
 
             <td class="text-[12px] text-left border border-[#CACACA]">
-              <FieldSelect :bind="{ disabled: true, clearable:false }" :value="item.m_jam_kerja_id"
+              <FieldSelect :bind="{ disabled: !actionText || item.tipe_hari === 'LIBUR', clearable: false }" :value="item.m_jam_kerja_id"
                 @input="v=>item.m_jam_kerja_id=v" :errorText="formErrors.m_jam_kerja_id?'failed':''"
                 :hints="formErrors.m_jam_kerja_id" valueField="id" displayField="desc" @update:valueFull="(response) => {
-                    item.waktu_mulai = response.waktu_mulai
-                    item.waktu_akhir = response.waktu_akhir
+                    item.waktu_mulai = response?.waktu_mulai
+                    item.waktu_akhir = response?.waktu_akhir
                     $log(response);
                     }" :api="{
                         url: `${store.server.url_backend}/operation/m_jam_kerja`,
@@ -314,12 +312,12 @@
             </td>
 
             <td>
-              <FieldX type="time" :bind="{ readonly: true }" :value="item.waktu_mulai"
+              <FieldX type="time" :bind="{ readonly: !actionText || item.tipe_hari === 'LIBUR' }" :value="item.waktu_mulai"
                 :errorText="formErrors.waktu_mulai?'failed':''" @input="v=>item.waktu_mulai=v"
                 :hints="formErrors.waktu_mulai" placeholder="" label="" fa-icon="" :check="false" />
             </td>
             <td>
-              <FieldX type="time" :bind="{ readonly: true }" :value="item.waktu_akhir"
+              <FieldX type="time" :bind="{ readonly: !actionText || item.tipe_hari === 'LIBUR' }" :value="item.waktu_akhir"
                 :errorText="formErrors.waktu_akhir?'failed':''" @input="v=>item.waktu_akhir=v"
                 :hints="formErrors.waktu_akhir" placeholder="" label="" fa-icon="" :check="false" />
             </td>
@@ -328,7 +326,6 @@
             <td colspan="7" class="py-[20px]">
               No data to show
             </td>
-          </tr>
           </tr>
         </tbody>
       </table>

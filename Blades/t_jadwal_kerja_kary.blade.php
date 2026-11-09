@@ -70,18 +70,7 @@
       <FieldPopup :bind="{ readonly: !actionText }" :value="values.t_jadwal_kerja_n_id"
         @input="(v)=>values.t_jadwal_kerja_n_id=v" :errorText="formErrors.t_jadwal_kerja_n_id?'failed':''"
         :hints="formErrors.t_jadwal_kerja_n_id" valueField="id" displayField="keterangan"
-        @update:valueFull="(response) =>  {
-          $log(response);
-          values.m_group_barang = response?.tipe;
-
-          if (!response?.t_jadwal_kerja_det_hari || response.t_jadwal_kerja_det_hari.length === 0) {
-              alert('DEBUG: Data detail hari (t_jadwal_kerja_det_hari) KOSONG atau UNDEFINED! Ini berarti file Custom.php untuk t_jadwal_kerja_n di generator belum di-update (atau jadwal ini memang tidak punya detail).');
-          }
-
-          detailArr = (response?.t_jadwal_kerja_det_hari || []).map((dt)=>({
-            ...dt, 
-          }));
-        }" :api="{
+        @update:valueFull="(response) => onJadwalSelected(response)" :api="{
           url: `${store.server.url_backend}/operation/t_jadwal_kerja_n`,
           headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
           params: {
@@ -175,7 +164,11 @@
         url: `${store.server.url_backend}/operation/m_kary`,
         headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
         params: {
-          transform:true,
+          transform: true,
+          scopes: 'respo,nonos',
+          m_subcomp_id: values.m_subcomp_id,
+          m_branch_id: values.m_branch_id,
+          where: `this.is_active='true'`,
         }
         }" placeholder="" label="" fa-icon="" :check="false" />
     </div>
@@ -208,15 +201,22 @@
             <td class="text-[12px] text-center border border-[#CACACA]">{{ i + 1 }}.</td>
             <td class="text-[12px] text-center border border-[#CACACA]">{{item.day}}</td>
             <td>
-              <FieldSelect :bind="{ disabled: true, clearable: false }" :value="item.tipe_hari"
-                @input="v => item.tipe_hari = v" valueField="name" displayField="name"
-                :options="[ { id: true, name: 'KERJA' }, { id: false, name: 'LIBUR' } ]" placeholder="" label="" :check="false" />
+              <FieldSelect :bind="{ disabled: !actionText, clearable: false }" :value="item.tipe_hari"
+                @input="v => {
+                  item.tipe_hari = v;
+                  if (v === 'LIBUR') {
+                    item.m_jam_kerja_id = null;
+                    item.waktu_mulai = '00:00';
+                    item.waktu_akhir = '00:00';
+                  }
+                }" valueField="name" displayField="name"
+                :options="[ { id: 'KERJA', name: 'KERJA' }, { id: 'LIBUR', name: 'LIBUR' } ]" placeholder="" label="" :check="false" />
             </td>
             <td class="text-[12px] text-left border border-[#CACACA]">
-              <FieldSelect :bind="{ disabled: true, clearable:false }" :value="item.m_jam_kerja_id"
-                @input="v=>item.m_jam_kerja_id=v" valueField="id" displayField="desc" @update:valueFull="(response) => {
-                    item.waktu_mulai = response.waktu_mulai
-                    item.waktu_akhir = response.waktu_akhir
+              <FieldSelect :bind="{ disabled: !actionText || item.tipe_hari === 'LIBUR', clearable: false }" :value="item.m_jam_kerja_id"
+                @input="v => item.m_jam_kerja_id = v" valueField="id" displayField="desc" @update:valueFull="(response) => {
+                    item.waktu_mulai = response?.waktu_mulai
+                    item.waktu_akhir = response?.waktu_akhir
                     }" :api="{
                         url: `${store.server.url_backend}/operation/m_jam_kerja`,
                         headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
@@ -224,12 +224,12 @@
                     }" placeholder="" label="" fa-icon="" :check="false" />
             </td>
             <td>
-              <FieldX type="time" :bind="{ readonly: true }" :value="item.waktu_mulai"
-                @input="v=>item.waktu_mulai=v" placeholder="" label="" fa-icon="" :check="false" />
+              <FieldX type="time" :bind="{ readonly: !actionText || item.tipe_hari === 'LIBUR' }" :value="item.waktu_mulai"
+                @input="v => item.waktu_mulai = v" placeholder="" label="" fa-icon="" :check="false" />
             </td>
             <td>
-              <FieldX type="time" :bind="{ readonly: true }" :value="item.waktu_akhir"
-                @input="v=>item.waktu_akhir=v" placeholder="" label="" fa-icon="" :check="false" />
+              <FieldX type="time" :bind="{ readonly: !actionText || item.tipe_hari === 'LIBUR' }" :value="item.waktu_akhir"
+                @input="v => item.waktu_akhir = v" placeholder="" label="" fa-icon="" :check="false" />
             </td>
           </tr>
           <tr v-else class="text-center">

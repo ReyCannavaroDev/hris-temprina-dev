@@ -225,14 +225,21 @@ async function onSave() {
   if (!result.isConfirmed) return;
 
   if (detailArr.value) {
-    const invalid = detailArr.value.some(item => !item.m_jam_kerja_id);
+    const invalid = detailArr.value.some(item => (item.tipe_hari !== 'LIBUR') && !item.m_jam_kerja_id);
     if (invalid) {
       await swal.fire({
         icon: 'error',
-        text: 'Jam kerja perlu diisi',
+        text: 'Jam kerja untuk hari kerja perlu diisi',
       });
       return;
     }
+    detailArr.value.forEach(item => {
+      if (item.tipe_hari === 'LIBUR') {
+        item.m_jam_kerja_id = null;
+        item.waktu_mulai = item.waktu_mulai && item.waktu_mulai !== '--:--' ? item.waktu_mulai : '00:00';
+        item.waktu_akhir = item.waktu_akhir && item.waktu_akhir !== '--:--' ? item.waktu_akhir : '00:00';
+      }
+    });
     values.t_jadwal_kerja_det_hari = detailArr.value;
   }
 

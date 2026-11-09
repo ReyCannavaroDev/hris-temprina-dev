@@ -191,18 +191,27 @@
                 </td>
                 <td>
                   <FieldSelect :bind="{ disabled: !actionText, clearable: false }" :value="item.tipe_hari"
-                    @input="v => item.tipe_hari = v" :errorText="formErrors.tipe_hari ? 'failed' : ''"
+                    @input="v => {
+                      item.tipe_hari = v;
+                      if (v === 'LIBUR') {
+                        item.m_jam_kerja_id = null;
+                        item.waktu_mulai = '00:00';
+                        item.waktu_akhir = '00:00';
+                      }
+                    }" :errorText="formErrors.tipe_hari ? 'failed' : ''"
                     :hints="formErrors.tipe_hari" valueField="name" displayField="name"
                     :options="[ { id: true, name: 'KERJA' }, { id: false, name: 'LIBUR' } ]" placeholder="" label=""
                     :check="false" />
                 </td>
 
                 <td class="text-[12px] text-left border border-[#CACACA]">
-                  <FieldSelect :bind="{ disabled: !actionText, clearable:false }" :value="item.m_jam_kerja_id"
+                  <FieldSelect :bind="{ disabled: !actionText || item.tipe_hari === 'LIBUR', clearable: true }" :value="item.m_jam_kerja_id"
                     @input="v=>item.m_jam_kerja_id=v" :errorText="formErrors.m_jam_kerja_id?'failed':''"
                     :hints="formErrors.m_jam_kerja_id" valueField="id" displayField="desc" @update:valueFull="(response) => {
-                    item.waktu_mulai = response.waktu_mulai
-                    item.waktu_akhir = response.waktu_akhir
+                    if (response) {
+                      item.waktu_mulai = response.waktu_mulai;
+                      item.waktu_akhir = response.waktu_akhir;
+                    }
                     $log(response);
                     }" :api="{
                         url: `${store.server.url_backend}/operation/m_jam_kerja`,
@@ -216,12 +225,12 @@
                 </td>
 
                 <td>
-                  <FieldX type="time" :bind="{ readonly: !actionText }" :value="item.waktu_mulai"
+                  <FieldX type="time" :bind="{ readonly: !actionText || item.tipe_hari === 'LIBUR' }" :value="item.waktu_mulai"
                     :errorText="formErrors.waktu_mulai?'failed':''" @input="v=>item.waktu_mulai=v"
                     :hints="formErrors.waktu_mulai" placeholder="" label="" fa-icon="" :check="false" />
                 </td>
                 <td>
-                  <FieldX type="time" :bind="{ readonly: !actionText }" :value="item.waktu_akhir"
+                  <FieldX type="time" :bind="{ readonly: !actionText || item.tipe_hari === 'LIBUR' }" :value="item.waktu_akhir"
                     :errorText="formErrors.waktu_akhir?'failed':''" @input="v=>item.waktu_akhir=v"
                     :hints="formErrors.waktu_akhir" placeholder="" label="" fa-icon="" :check="false" />
                 </td>

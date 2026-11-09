@@ -96,9 +96,11 @@ onBeforeMount(async () => {
   if (localStorage.getItem('respo')) {
     const respoValues = await JSON.parse(localStorage.getItem('respo'))
     console.log('ini respo', respoValues)
+    let sub = respoValues.m_subcomp_id ?? null
+    let branch = respoValues.m_branch_id ?? null
+    values.m_subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
+    values.m_branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
     values.comp_id = respoValues.m_comp_id
-    values.m_subcomp_id = respoValues.m_subcomp_id
-    values.m_branch_id = respoValues.m_branch_id
   }
 
   if (values.m_kary_id.length) {
@@ -185,17 +187,38 @@ onBeforeMount(async () => {
         });
       }
 
-      detailArr.value = Array.isArray(jadwalJson.data?.t_jadwal_kerja_det_hari)
-        ? (jadwalJson.data.t_jadwal_kerja_det_hari || []).slice().reverse().map(item => ({ ...item }))
-        : [];
+      const rawList = jadwalJson.data?.t_jadwal_kerja_det_hari || jadwalJson.data?.t_jadwal_kerja_d_hari_n || [];
+      detailArr.value = rawList.slice().sort((a, b) => getDayNum(a) - getDayNum(b)).map(item => ({
+        ...item,
+        day_num: getDayNum(item)
+      }));
     }
   }
 });
 
-
-
 // Table Detail
 const detailArr = ref([])
+
+const dayMap = {
+  'senin': 1, 'selasa': 2, 'rabu': 3, 'kamis': 4, 'jumat': 5, 'sabtu': 6, 'minggu': 7,
+  'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 7
+};
+
+function getDayNum(item) {
+  if (item && item.day_num && Number(item.day_num) > 0) return Number(item.day_num);
+  const name = String(item?.day || item?.hari || '').trim().toLowerCase();
+  return dayMap[name] || 99;
+}
+
+function onJadwalSelected(response) {
+  if (!response) return;
+  values.m_group_barang = response?.tipe;
+  const rawDetails = response?.t_jadwal_kerja_det_hari || response?.t_jadwal_kerja_d_hari_n || [];
+  detailArr.value = rawDetails.slice().sort((a, b) => getDayNum(a) - getDayNum(b)).map(dt => ({
+    ...dt,
+    day_num: getDayNum(dt)
+  }));
+}
 
 function onBack() {
   if (route.query.view_gaji) {
@@ -219,11 +242,15 @@ async function onSave() {
     const payloads = Array.isArray(values.m_kary_id)
       ? (values.m_kary_id || []).map(id => ({
         ...values,
-        m_kary_id: id
+        m_kary_id: id,
+        t_jadwal_kerja_d_hari_n: detailArr.value,
+        t_jadwal_kerja_det_hari: detailArr.value
       }))
       : [{
         ...values,
-        m_kary_id: values.m_kary_id
+        m_kary_id: values.m_kary_id,
+        t_jadwal_kerja_d_hari_n: detailArr.value,
+        t_jadwal_kerja_det_hari: detailArr.value
       }]
 
 
@@ -452,6 +479,9 @@ const landing = reactive({
     params: computed(() => {
       const params = {
         kary_id: store.user.data.m_kary_id ?? 0,
+        m_subcomp_id: data.subcomp_id || null,
+        m_branch_id: data.branch_id || null,
+        scopes: 'respo',
         join: true,
         transform: true,
         with: 'm_kary,m_kary.m_posisi,m_branch,t_jadwal_kerja_n',
@@ -466,9 +496,6 @@ const landing = reactive({
       } else if (activeBtn.value === 2) {
         where.push(`this.status='NON AKTIF'`)
       }
-
-      // If needed, filtering can be done here, but currently detail tables might have empty subcomp columns
-      // so we let it fetch all for now.
 
       if (where.length) {
         params.where = where.join(' AND ')

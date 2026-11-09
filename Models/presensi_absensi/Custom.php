@@ -1737,7 +1737,7 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
     {
         $jadwalKerja = t_jadwal_kerja::with([
             't_jadwal_kerja_det_hari' => function ($q) use ($matched_id, $date) {
-                $q->where('m_jam_kerja_id', $matched_id->id)->where('day_num', \Carbon::parse($date)->dayOfWeek + 1)
+                $q->where('m_jam_kerja_id', $matched_id->id)->where('day_num', \Carbon::parse($date)->dayOfWeekIso)
                     ->with([
                         't_jadwal_kerja_det' => function ($q2) {
                             // $q2->where('m_kary_id', $karyId);

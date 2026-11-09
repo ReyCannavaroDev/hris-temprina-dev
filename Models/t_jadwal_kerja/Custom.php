@@ -24,12 +24,13 @@ class t_jadwal_kerja extends \App\Models\BasicModels\t_jadwal_kerja
         if(strtolower($tipe_jam_kerja) == 'shift'){
             foreach(@app()->request->t_jadwal_kerja_det_hari ?? [] as $idx => $d){
                 $no = $idx+1;
-                if(!@$d['waktu_mulai']){
+                $isLibur = ($d['tipe_hari'] ?? '') === 'LIBUR';
+                if(!$isLibur && !@$d['waktu_mulai']){
                     return [
                         "errors" => ["Detail baris $no, waktu mulai wajib di isi"]
                     ];
                 }
-                if(!@$d['waktu_akhir']){
+                if(!$isLibur && !@$d['waktu_akhir']){
                     return [
                         "errors" => ["Detail baris $no, waktu akhir wajib di isi"]
                     ];
@@ -58,19 +59,22 @@ class t_jadwal_kerja extends \App\Models\BasicModels\t_jadwal_kerja
         if(strtolower($tipe_jam_kerja) == 'shift' && app()->request->from != 'setting_jadwal'){
             foreach(@app()->request->t_jadwal_kerja_det_hari ?? [] as $idx => $d){
                 $no = $idx+1;
-                if(!@$d['waktu_mulai']){
+                $isLibur = ($d['tipe_hari'] ?? '') === 'LIBUR';
+                if(!$isLibur && !@$d['waktu_mulai']){
                     return [
                         "errors" => ["Detail baris $no, waktu mulai wajib di isi"]
                     ];
                 }
-                if(!@$d['waktu_akhir']){
+                if(!$isLibur && !@$d['waktu_akhir']){
                     return [
                         "errors" => ["Detail baris $no, waktu akhir wajib di isi"]
                     ];
                 }
-                $check = t_jadwal_kerja_det_hari::join('t_jadwal_kerja as t','t.id','t_jadwal_kerja_det_hari.t_jadwal_kerja_id')
-                    ->whereRaw("((waktu_mulai <= ? and waktu_akhir >= ?) or (waktu_mulai <= ? and waktu_akhir >= ?)) and t.status = 'POSTED'", [$d['waktu_mulai'],$d['waktu_mulai'], $d['waktu_akhir'],$d['waktu_akhir']])   
-                    ->exists();
+                if (!$isLibur && !empty($d['waktu_mulai']) && !empty($d['waktu_akhir'])) {
+                    $check = t_jadwal_kerja_det_hari::join('t_jadwal_kerja as t','t.id','t_jadwal_kerja_det_hari.t_jadwal_kerja_id')
+                        ->whereRaw("((waktu_mulai <= ? and waktu_akhir >= ?) or (waktu_mulai <= ? and waktu_akhir >= ?)) and t.status = 'POSTED'", [$d['waktu_mulai'],$d['waktu_mulai'], $d['waktu_akhir'],$d['waktu_akhir']])   
+                        ->exists();
+                }
             }
         }
 
@@ -150,12 +154,25 @@ class t_jadwal_kerja extends \App\Models\BasicModels\t_jadwal_kerja
         
         $inserts = [];
         foreach ($details as $idx => $d) {
+            $tipeHari = $d['tipe_hari'] ?? 'KERJA';
+            $isLibur = ($tipeHari === 'LIBUR');
+            $wMulai = $d['waktu_mulai'] ?? $d['start'] ?? null;
+            $wAkhir = $d['waktu_akhir'] ?? $d['end'] ?? null;
+            if ($isLibur || empty($wMulai) || $wMulai === '--:--') {
+                $wMulai = '00:00:00';
+            }
+            if ($isLibur || empty($wAkhir) || $wAkhir === '--:--') {
+                $wAkhir = '00:00:00';
+            }
+
             $inserts[] = [
                 't_jadwal_kerja_id' => $id,
-                'm_jam_kerja_id' => $d['m_jam_kerja_id'] ?? null,
-                'day' => $d['hari'] ?? $d['day'] ?? null,
-                'waktu_mulai' => $d['waktu_mulai'] ?? $d['start'] ?? '--:--',
-                'waktu_akhir' => $d['waktu_akhir'] ?? $d['end'] ?? '--:--',
+                'm_jam_kerja_id'    => $isLibur ? null : ($d['m_jam_kerja_id'] ?? null),
+                'day'               => $d['hari'] ?? $d['day'] ?? null,
+                'day_num'           => $d['day_num'] ?? ($idx + 1),
+                'tipe_hari'         => $tipeHari,
+                'waktu_mulai'       => $wMulai,
+                'waktu_akhir'       => $wAkhir,
             ];
         }
         \DB::table('t_jadwal_kerja_det_hari')->insert($inserts);

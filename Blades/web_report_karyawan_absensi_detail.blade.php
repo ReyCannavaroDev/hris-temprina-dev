@@ -20,11 +20,11 @@ $end   = Carbon::parse($req->periode_akhir);
 $period = CarbonPeriod::create($start, $end);
 
 // Query Filter Karyawan
-$kary_ids = (array) ($req->kary_id ?? []);
-$m_comp_ids = (array) ($req->m_comp_id ?? []);
-$m_subcomp_ids = (array) ($req->m_subcomp_id ?? []);
-$m_divisi_ids = (array) ($req->m_divisi_id ?? []);
-$m_branch_ids = (array) ($req->m_branch_id ?? []);
+$kary_ids = array_filter((array) ($req->kary_id ?? []));
+$m_comp_ids = array_filter((array) ($req->m_comp_id ?? []));
+$m_subcomp_ids = array_filter((array) ($req->m_subcomp_id ?? []));
+$m_divisi_ids = array_filter((array) ($req->m_divisi_id ?? []));
+$m_branch_ids = array_filter((array) ($req->m_branch_id ?? []));
 
 $query = m_kary::query();
 $query->where('is_active', true);
@@ -77,29 +77,94 @@ $liburDates = $liburNasional->pluck('keterangan', 'tanggal')->mapWithKeys(
         }
     }
 
+    // 1. Ambil jadwal karyawan dari t_jadwal_kerja_d_n
+    $jadwal = t_jadwal_kerja_d_n::where(function($q) use ($m_kary) {
+            $q->where('m_kary_id', $m_kary->id)
+              ->orWhere('m_kary_id', (string)$m_kary->id)
+              ->orWhere('m_kary_id', 'like', '%"' . $m_kary->id . '"%')
+              ->orWhere('m_kary_id', 'like', '%[' . $m_kary->id . ']%');
+        })
+        ->where(function($q) use ($end) {
+            $q->whereNull('start_date')
+              ->orWhereDate('start_date', '<=', $end);
+        })
+        ->orderByDesc('start_date')
+        ->orderByDesc('id')
+        ->first();
+
+    if (!$jadwal) {
+        $jadwal = t_jadwal_kerja_d_n::where(function($q) use ($m_kary) {
+                $q->where('m_kary_id', $m_kary->id)
+                  ->orWhere('m_kary_id', (string)$m_kary->id)
+                  ->orWhere('m_kary_id', 'like', '%"' . $m_kary->id . '"%');
+            })
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    $masterJadwalId = $jadwal?->t_jadwal_kerja_n_id ?? $jadwal?->jadwal_kerja_id ?? null;
+    if (!$masterJadwalId) {
+        $legacyDet = \DB::table('t_jadwal_kerja_det')
+            ->where('m_kary_id', $m_kary->id)
+            ->orderByDesc('id')
+            ->first();
+        if ($legacyDet) {
+            $masterJadwalId = $legacyDet->t_jadwal_kerja_id ?? null;
+        }
+    }
+
+    // 2. Ambil list hari detail (cek t_jadwal_kerja_d_hari_n, fallback ke t_jadwal_kerja_det_hari)
+    $jadwalHariCollection = collect();
+    if ($masterJadwalId) {
+        $jadwalHariCollection = \DB::table('t_jadwal_kerja_d_hari_n')
+            ->where('t_jadwal_kerja_n_id', $masterJadwalId)
+            ->get();
+
+        if ($jadwalHariCollection->isEmpty()) {
+            $jadwalHariCollection = \DB::table('t_jadwal_kerja_det_hari')
+                ->where(function($q) use ($masterJadwalId) {
+                    $q->where('t_jadwal_kerja_id', $masterJadwalId)
+                      ->orWhere('t_jadwal_kerja_n_id', $masterJadwalId);
+                })
+                ->get();
+        }
+    }
+
+    $dayMap = [
+        'senin' => 1, 'monday' => 1,
+        'selasa' => 2, 'tuesday' => 2,
+        'rabu' => 3, 'wednesday' => 3,
+        'kamis' => 4, 'thursday' => 4,
+        'jumat' => 5, 'jum\'at' => 5, 'friday' => 5,
+        'sabtu' => 6, 'saturday' => 6,
+        'minggu' => 7, 'ahad' => 7, 'sunday' => 7,
+    ];
+
     foreach ($period as $tanggal) {
         $key = $tanggal->format('Y-m-d');
         $data = $presensi[$key] ?? null;
 
-        // Jadwal Shift
-        $jadwal = t_jadwal_kerja_d_n::where('m_kary_id', $m_kary->id)
-            ->whereDate('start_date', '<=', $key)
-            ->orderByDesc('start_date')
-            ->first();
+        $dayNumIso = (int)$tanggal->dayOfWeekIso; // 1 = Senin ... 7 = Minggu
+        $namaHariId = strtolower(trim($tanggal->translatedFormat('l')));
+        $namaHariEn = strtolower(trim($tanggal->format('l')));
 
-        $jam_kerja_row = null;
-        if($jadwal) {
-            $jam_kerja_row = t_jadwal_kerja_d_hari_n::where('t_jadwal_kerja_n_id', $jadwal->t_jadwal_kerja_n_id)
-                ->where('day', $tanggal->translatedFormat('l'))
-                ->first();
-        }
+        $jam_kerja_row = $jadwalHariCollection->first(function($row) use ($dayNumIso, $namaHariId, $namaHariEn, $dayMap) {
+            $rDayNum = !empty($row->day_num) ? (int)$row->day_num : 0;
+            $rDayLower = strtolower(trim((string)($row->day ?? $row->hari ?? '')));
+            $calcDayNum = $dayMap[$rDayLower] ?? 0;
+
+            if ($rDayNum > 0 && $rDayNum === $dayNumIso) return true;
+            if ($calcDayNum > 0 && $calcDayNum === $dayNumIso) return true;
+            if ($rDayLower === $namaHariId || $rDayLower === $namaHariEn) return true;
+            return false;
+        });
 
         $jadwalMulai = $data?->t_jadwal_kerja_d_hari_n?->waktu_mulai ?? $jam_kerja_row?->waktu_mulai;
         $jadwalAkhir = $data?->t_jadwal_kerja_d_hari_n?->waktu_akhir ?? $jam_kerja_row?->waktu_akhir;
 
         // Hitung Telat
         $telat = 0;
-        if ($data?->checkin_time && $jadwalMulai) {
+        if ($data?->checkin_time && $jadwalMulai && $jadwalMulai !== '00:00:00' && $jadwalMulai !== '00:00') {
             $diff = Carbon::parse($jadwalMulai)->diffInMinutes(Carbon::parse($data->checkin_time), false);
             $telat = $diff > 0 ? $diff : 0;
         }
@@ -107,7 +172,7 @@ $liburDates = $liburNasional->pluck('keterangan', 'tanggal')->mapWithKeys(
 
         // Hitung Lembur
         $lembur = 0;
-        if ($data?->checkout_time && $jadwalAkhir) {
+        if ($data?->checkout_time && $jadwalAkhir && $jadwalAkhir !== '00:00:00' && $jadwalAkhir !== '00:00') {
             if(Carbon::parse($data->checkout_time)->greaterThan(Carbon::parse($jadwalAkhir))){
                 $t_lembur = t_lembur::where('m_kary_id', $kary_id)->where('tanggal', $key)->where("status", "APPROVED")->first();
                 if($t_lembur) $lembur = Carbon::parse($t_lembur->jam_selesai)->diffInMinutes($t_lembur->jam_mulai);
@@ -118,8 +183,24 @@ $liburDates = $liburNasional->pluck('keterangan', 'tanggal')->mapWithKeys(
         $status = $data?->status ?? 'NOT ATTEND';
         if (isset($cutiDates[$key])) $status = $cutiDates[$key];
 
-        $tipe_hari = $jam_kerja_row?->tipe_hari ?? 'LIBUR';
+        // Tipe Hari
+        $tipe_hari = 'KERJA';
+        if ($jam_kerja_row) {
+            $tipe_hari = strtoupper(trim((string)($jam_kerja_row->tipe_hari ?? 'KERJA')));
+            if (empty($tipe_hari)) $tipe_hari = 'KERJA';
+        } else {
+            if ($jadwalHariCollection->isNotEmpty()) {
+                $tipe_hari = 'LIBUR';
+            } else {
+                $tipe_hari = ($dayNumIso === 7) ? 'LIBUR' : 'KERJA';
+            }
+        }
+
         if (isset($liburDates[$key])) $tipe_hari = $liburDates[$key];
+
+        if (!$data && ($tipe_hari === 'LIBUR' || isset($liburDates[$key]))) {
+            $status = 'LIBUR';
+        }
 
         $jamTelat = 0;
         if($telat > $data?->checkout_time){
