@@ -1,1 +1,19 @@
-// Error fetching: Failed to fetch
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class generateapprovallog extends Migration
+{
+    protected $tableName = "generate_approval_log";
+    
+    public function up()
+    {
+        Schema::table($this->tableName, function (Blueprint $table) {
+            //$table->string('_existColumnName_')->change();
+            //$table->string('_columnName_');
+            //$table->dropColumn([ ]);
+            $table->bigInteger('approver_id')->comment('{"src":"default_users.id"}')->nullable();
+        });
+    }
+}

@@ -1,1 +1,18 @@
-// Error fetching: Failed to fetch
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class mkarydlokasi extends Migration
+{
+    protected $tableName = "m_kary_d_lokasi";
+    
+    public function up()
+    {
+        Schema::table($this->tableName, function (Blueprint $table) {
+            //$table->string('_existColumnName_')->change();
+            //$table->string('_columnName_');
+            //$table->dropColumn([ ]);
+        });
+    }
+}

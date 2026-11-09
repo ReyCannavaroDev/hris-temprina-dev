@@ -217,6 +217,94 @@
     </div>
   </div>
 
+  <!-- STRUKTUR ORGANISASI PER CABANG -->
+  <div class="hd-section">Struktur organisasi</div>
+  <div class="hd-card">
+    <div class="sg-head">
+      <div class="sg-title">{{ sNamaCabang }} <span>{{ angka(struktur.kary.length) }} karyawan aktif</span></div>
+      <div class="sg-tools">
+        <select v-if="struktur.cabang.length > 1" :value="struktur.m_branch_id" @change="muatStruktur($event.target.value)">
+          <option v-for="c in struktur.cabang" :key="c.id" :value="c.id">{{ c.name }} ({{ c.n }})</option>
+        </select>
+        <div class="sg-seg">
+          <button :class="{ on: struktur.mode === 'bagan' }" @click="struktur.mode = 'bagan'">Bagan</button>
+          <button :class="{ on: struktur.mode === 'level' }" @click="struktur.mode = 'level'">Per level</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="struktur.error" class="sg-empty">{{ struktur.error }}</div>
+    <div v-else-if="struktur.loading && !struktur.kary.length" class="sg-empty">Memuat struktur...</div>
+    <div v-else-if="!struktur.kary.length" class="sg-empty">Belum ada karyawan aktif di cabang ini.</div>
+    <template v-else>
+      <div class="sg-stats" :style="{ opacity: struktur.loading ? .5 : 1 }">
+        <span class="sg-chip">{{ sInfo.divisi }} divisi</span>
+        <span class="sg-chip">{{ sInfo.pimpinan }} pimpinan</span>
+        <span class="sg-chip">{{ sInfo.kadivKaru }} Kadiv/Karu</span>
+        <span v-if="sInfo.tanpaJabatan" class="sg-chip warn">{{ sInfo.tanpaJabatan }} belum ada jabatan</span>
+        <span v-if="sInfo.tanpaLevel > 0" class="sg-chip warn">{{ sInfo.tanpaLevel }} jabatan belum ada level</span>
+        <span v-if="sInfo.tanpaDivisi" class="sg-chip warn">{{ sInfo.tanpaDivisi }} belum ada divisi</span>
+        <span class="sg-legend"><span v-for="g in legendLevel" :key="g.l"><i :style="{ background: g.warna }"></i>{{ g.nama }}</span></span>
+      </div>
+
+      <!-- Bagan: pimpinan di atas, lalu satu kolom per divisi -->
+      <div v-if="struktur.mode === 'bagan'" class="sg-chart" :style="{ opacity: struktur.loading ? .5 : 1 }">
+        <div v-for="row in sPimpinan" :key="row.lvl" class="sg-root">
+          <div v-for="(k, i) in row.orang" :key="i" class="sg-node" :style="{ '--c': warnaLevel(k.lvl) }">
+            <div class="lv">{{ namaLevel(k.lvl) }}</div>
+            <div class="j">{{ k.jabatan }}</div>
+            <div class="n">{{ namaRapi(k.nama) }}</div>
+          </div>
+        </div>
+        <div class="sg-lanes">
+          <div v-for="d in sDivisi" :key="d.nama" class="sg-lane" :class="{ lebar: d.lebar }">
+            <div class="sg-lane-h" :class="{ warn: d.kosong }">{{ d.nama }} <span>{{ d.jumlah }}</span></div>
+            <div class="sg-stack">
+              <!-- bagian: orang di divisi induk dulu, lalu tiap sub divisi dengan judul kecil -->
+              <div v-for="(bg, bi) in d.bagian" :key="bg.key" :class="bg.sub ? 'sg-sub' : 'sg-stack'" :style="bg.sub ? { '--s': warnaSub(bi) } : null">
+              <div v-if="bg.sub" class="sg-sub-h">{{ bg.nama }} <span>{{ bg.jumlah }}</span></div>
+              <!-- tiap baris: 1 kolom biasa, atau 2 kolom (kiri jabatan utama, kanan wakil) -->
+              <div v-for="b in bg.baris" :key="b.key" class="sg-baris" :class="{ dua: b.dua }">
+                <div v-for="(sisi, si) in (b.dua ? [b.kiri, b.kanan] : [b.kiri])" :key="si" class="sg-kol">
+                  <template v-for="g in sisi" :key="g.key">
+                    <div v-if="g.tunggal" class="sg-node" :style="{ '--c': warnaLevel(g.lvl) }">
+                      <div class="lv">{{ namaLevel(g.lvl) }}</div>
+                      <div class="j">{{ g.jabatan }}</div>
+                      <div class="n">{{ namaRapi(g.orang[0].nama) }}</div>
+                    </div>
+                    <div v-else class="sg-node sg-grp" :style="{ '--c': warnaLevel(g.lvl) }" @click="toggleGrup(bg.key + g.key)">
+                      <span class="cnt">{{ g.orang.length }} org</span>
+                      <div class="lv">{{ namaLevel(g.lvl) }}</div>
+                      <div class="j">{{ g.jabatan }}</div>
+                      <div v-if="struktur.buka[bg.key + g.key]" class="names">
+                        <div v-for="(o, i) in g.orang" :key="i">{{ namaRapi(o.nama) }}</div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Per level -->
+      <div v-else :style="{ opacity: struktur.loading ? .5 : 1 }">
+        <div v-for="row in sLevel" :key="row.lvl" class="sg-lv-row" :style="{ '--c': warnaLevel(row.lvl) }">
+          <div class="sg-lv-name">{{ namaLevel(row.lvl) }}<span>{{ row.jumlah }} orang</span></div>
+          <div class="sg-lv-items">
+            <span v-for="g in row.grup" :key="g.key" class="sg-pill">
+              <b>{{ g.jabatan }}</b>
+              <small v-if="g.tunggal">{{ namaRapi(g.orang[0].nama) }}{{ g.orang[0].divisi ? ' · ' + g.orang[0].divisi : '' }}</small>
+              <small v-else>{{ g.orang.length }} orang</small>
+            </span>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
   <!-- PER CABANG (respo tanpa cabang, mis. HOLDING) -->
   <template v-if="dash.lingkup.semua && dash.per_cabang.length">
     <div class="hd-section">Per cabang</div>
