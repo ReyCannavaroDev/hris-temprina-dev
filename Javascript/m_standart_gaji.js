@@ -756,7 +756,7 @@ const landing = reactive({
     params: computed(() => {
       const params = {
         page: page.value,
-        paginate: 40,
+        paginate: 25,
         kary_id: store.user.data.m_kary_id ?? 0,
         join: true,
         transform: true,

@@ -1918,8 +1918,12 @@ const landing = reactive({
     },
     params: computed(() => ({
       page: page.value,
+      // 25 baris, sama dengan menu Master lain. Halaman pertama harus lebih tinggi dari area tabel; kalau muat semua, scrollbar tidak muncul dan data berikutnya tidak dimuat
       paginate: 25,
-      scopes: 'nonos',
+      // respo: filter sesuai cabang/SUB respo aktif (respo tanpa cabang, mis. HOLDING, tetap tampil semua)
+      scopes: 'nonos,respo',
+      m_subcomp_id: data.subcomp_id ?? null,
+      m_branch_id: data.branch_id ?? null,
       kary_id: store.user.data.m_kary_id ?? 0,
       ...(statusFilter.value ? { where: statusFilter.value } : {}),
       join: true,

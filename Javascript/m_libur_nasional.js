@@ -315,6 +315,7 @@ const landing = computed(()=>{
       authorization: `${store.user.token_type} ${store.user.token}`
     },
     params: {
+      paginate: 25,
       simplest: true,
       searchfield:'this.id, this.kode, this.desc, this.tanggal',
     },

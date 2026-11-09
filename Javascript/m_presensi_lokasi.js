@@ -303,6 +303,7 @@ const landing = computed(() => {
         authorization: `${store.user.token_type} ${store.user.token}`
       },
       params: {
+        paginate: 25,
         simplest: true,
         searchfield: 'this.nama, branch.name, this.lat, this.long',
       },

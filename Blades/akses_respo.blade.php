@@ -1,32 +1,41 @@
-
 @verbatim
-<div class="flex flex-col border rounded-md shadow-md md:w-full w-full p-0 bg-white border-none">
+<div class="flex flex-col rounded-md shadow-md w-full p-0 bg-white">
   <div class="bg-gray-500 text-white rounded-t-md py-2 px-4">
     <div class="flex items-center">
-      <Icon fa="arrow-left" class="cursor-pointer mr-2 font-bold hover:text-yellow-500" title="Kembali" @click="onBack"/>
-      <div>
-        <h1 class="text-20px font-bold">Akses Responsibility</h1>
-        <p class="text-gray-100">Pilih salah satu Responsibility untuk mengakses fitur tertentu</p>
+      <Icon fa="arrow-left" class="cursor-pointer mr-3 font-bold hover:text-yellow-500" title="Kembali" @click="onBack"/>
+      <div class="min-w-0">
+        <h1 class="text-20px font-bold leading-tight">Akses Responsibility</h1>
+        <p class="text-gray-100 text-sm">Pilih salah satu Responsibility untuk mengakses fitur tertentu</p>
       </div>
     </div>
   </div>
-  <div class="m-4 p-2 rounded-lg">
-    <div class="grid grid-cols-4 gap-4">
-      <div v-for="(item, i) in dataRespo" :key="i">
-      
-        <div @click="clickItem(item.id)" :class="item.id == values.id_active ? 'font-semibold bg-green-300 text-white hover:!bg-green-500' : ''" href="#" class="block max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-green-800 dark:border-green-700 dark:hover:bg-green-700 duration-200 h-50 poin cursor-pointer">
-          <h5 class="mb-2 text-xl font-bold tracking-tight text-gray-900 dark:text-white">{{item.name}}</h5>
-          <p class="mb-0.5 font-normal text-[14px] text-gray-700 dark:text-gray-400">ROLE : {{item['roles']}}</p>
-          <p class="mb-0.5 font-normal text-[14px] text-gray-700 dark:text-gray-400">SBU : {{item['m_comp.name']}}</p>
-          <p class="mb-0.5 font-normal text-[14px] text-gray-700 dark:text-gray-400">SUB : {{item['m_subcomp.name']}}</p>
-          <p class="mb-0.5 font-normal text-[14px] text-gray-700 dark:text-gray-400">BRANCH :{{item['m_branch.name']}}</p>
+
+  <div class="p-3 md:p-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+      <div
+        v-for="(item, i) in dataRespo" :key="i"
+        @click="clickItem(item.id)"
+        :class="item.id == values.id_active
+          ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
+          : 'border-gray-200 bg-white hover:border-blue-400 hover:shadow-md'"
+        class="relative rounded-xl border p-4 cursor-pointer transition duration-200"
+      >
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <h5 class="text-lg font-bold text-gray-900 truncate">{{ item.name }}</h5>
+          <span v-if="item.id == values.id_active" class="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-500 text-white">Aktif</span>
         </div>
-<!-- 
-        <h1 class="text-white text-xl font-semibold">{{item.name}}</h1>
-        <h1>{{item['m_comp.name']}}</h1>
-        <h1>{{item['m_subcomp.name']}}</h1>
-        <h1>{{item['m_branch.name']}}</h1> -->
+        <div class="grid grid-cols-[72px_1fr] gap-x-2 gap-y-1 text-[13px]">
+          <span class="text-gray-500">Role</span>
+          <span class="text-gray-800 font-medium break-words">{{ item['roles'] || '-' }}</span>
+          <span class="text-gray-500">SBU</span>
+          <span class="text-gray-800 font-medium break-words">{{ item['m_comp.name'] || '-' }}</span>
+          <span class="text-gray-500">SUB</span>
+          <span class="text-gray-800 font-medium break-words">{{ item['m_subcomp.name'] || '-' }}</span>
+          <span class="text-gray-500">Branch</span>
+          <span class="text-gray-800 font-medium break-words">{{ item['m_branch.name'] || '-' }}</span>
+        </div>
       </div>
     </div>
+  </div>
 </div>
 @endverbatim

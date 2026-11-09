@@ -282,6 +282,7 @@ const landing = reactive({
     },
     params: computed(() => {
       const params = {
+        paginate: 25,
         join: true,
         transform: true,
         searchfield: 'this.nama, kategori.value, this.url, this.desc'

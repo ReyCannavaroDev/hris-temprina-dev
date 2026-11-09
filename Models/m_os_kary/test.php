@@ -1,1 +1,1 @@
-// Error: HTTP 500 
+// Error fetching: Failed to fetch

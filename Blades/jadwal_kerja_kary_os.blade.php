@@ -284,6 +284,8 @@
                   item.tipe_hari = v;
                   if (v === 'LIBUR') {
                     item.m_jam_kerja_id = null;
+                    item.waktu_mulai = '00:00:00';
+                    item.waktu_akhir = '00:00:00';
                     item.waktu_mulai = '00:00';
                     item.waktu_akhir = '00:00';
                   }

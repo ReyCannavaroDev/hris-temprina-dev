@@ -401,7 +401,7 @@ const landing = computed(() => {
         scopes: 'NotIncludeByGroup',
         simplest: true,
         searchfield: 'this.id, this.group, this.key, this.code, this.value',
-        paginate: 250
+        paginate: 25
       },
 
       onsuccess(response) {

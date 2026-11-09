@@ -68,6 +68,16 @@ function apply() {
   if (el.textContent !== text) el.textContent = text
 }
 
+// CSS global untuk shell. Di HP, top bar (sticky, z-50) menutupi bagian atas sidebar (fixed, z-40)
+// sehingga judul aplikasi tidak terlihat. Sidebar HP dinaikkan ke atas top bar; ia punya tombol tutup sendiri.
+const STYLE_ID = 'hris-layout-style'
+if (!document.getElementById(STYLE_ID)) {
+  const style = document.createElement('style')
+  style.id = STYLE_ID
+  style.textContent = '@media (max-width: 767px) { #scroll-nav-bar { z-index: 60 !important; } }'
+  document.head.appendChild(style)
+}
+
 onMounted(async () => {
   const dataLogin = readJson('user')
   if (!(dataLogin?.data?.name || dataLogin?.username)) return

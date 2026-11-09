@@ -30,6 +30,7 @@ class Respo
             [
                 "modul" => "Dashboard",
                 "text" => "Dashboard",
+                // /dashboard = dashboard baru; dashboard lama disimpan di /dashboard_lama
                 "path" => "/dashboard",
                 "truncatable" => true,
                 "icon" => "dashboard",
@@ -530,7 +531,7 @@ class Respo
         $respo_active = $user_respo->where('default_users_id', $user_id)->where('is_primary', true)->first();
         // dd($respo_active, $modul);  
 
-        if (strtolower(@$user->user_type) == 'admin' || in_array($modul, ['dashboard', 'notification', 'akses_respo', 'account'])) {
+        if (strtolower(@$user->user_type) == 'admin' || in_array($modul, ['dashboard', 'dashboard_lama', 'notification', 'akses_respo', 'account'])) {
             return [
                 'can_read'   => true,
                 // 'can_show'   => true,

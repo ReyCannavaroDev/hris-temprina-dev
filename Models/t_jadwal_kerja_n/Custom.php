@@ -96,7 +96,6 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
         });
 
         $result['t_jadwal_kerja_det_hari'] = $formattedDetails;
-        $result['t_jadwal_kerja_d_hari_n'] = $formattedDetails;
         
         return $result;
     }
@@ -175,13 +174,10 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
 
             if (is_array($result)) {
                 $result['t_jadwal_kerja_det_hari'] = $formattedDetails;
-                $result['t_jadwal_kerja_d_hari_n'] = $formattedDetails;
             } elseif (is_object($result)) {
                 $result->t_jadwal_kerja_det_hari = $formattedDetails;
-                $result->t_jadwal_kerja_d_hari_n = $formattedDetails;
                 if (method_exists($result, 'setAttribute')) {
                     $result->setAttribute('t_jadwal_kerja_det_hari', $formattedDetails);
-                    $result->setAttribute('t_jadwal_kerja_d_hari_n', $formattedDetails);
                 }
             }
         }
@@ -228,8 +224,9 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
         $payload = app('request')->input('t_jadwal_kerja_det_hari') ?? app('request')->input('t_jadwal_kerja_d_hari_n');
         $details = $arrayData['t_jadwal_kerja_det_hari'] ?? $arrayData['t_jadwal_kerja_d_hari_n'] ?? $payload ?? [];
 
-        if (empty($details) || !is_array($details)) return;
-
+        \DB::table('t_jadwal_kerja_det_hari')->where('t_jadwal_kerja_id', $id)->delete();
+        \DB::table('t_jadwal_kerja_d_hari_n')->where('t_jadwal_kerja_n_id', $id)->delete();
+        
         $dayMap = [
             'senin' => 1, 'monday' => 1,
             'selasa' => 2, 'tuesday' => 2,
@@ -250,24 +247,9 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
             7 => 'Minggu',
         ];
 
-        try {
-            $existingNew = \DB::table('t_jadwal_kerja_d_hari_n')
-                ->where('t_jadwal_kerja_n_id', $id)
-                ->get();
-        } catch (\Throwable $e) {
-            $existingNew = collect();
-        }
-
-        try {
-            $existingLegacy = \DB::table('t_jadwal_kerja_det_hari')
-                ->where('t_jadwal_kerja_id', $id)
-                ->get();
-        } catch (\Throwable $e) {
-            $existingLegacy = collect();
-        }
-
+        $insertsLegacy = [];
+        $insertsNew = [];
         foreach ($details as $idx => $d) {
-            $d = (array) $d;
             $dayName = $d['hari'] ?? $d['day'] ?? null;
             $dayNameLower = strtolower(trim((string)$dayName));
             $dayNum = !empty($d['day_num']) ? (int)$d['day_num'] : ($dayMap[$dayNameLower] ?? ($idx + 1));
@@ -276,91 +258,48 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
                 $dayName = $nameMap[$dayNum];
             }
 
-            $tipeHari = strtoupper(trim((string)($d['tipe_hari'] ?? 'KERJA')));
+            $tipeHari = $d['tipe_hari'] ?? 'KERJA';
             $isLibur = ($tipeHari === 'LIBUR');
             $waktuMulai = $d['waktu_mulai'] ?? $d['start'] ?? null;
             $waktuAkhir = $d['waktu_akhir'] ?? $d['end'] ?? null;
-            if ($isLibur || empty($waktuMulai) || $waktuMulai === '--:--' || $waktuMulai === '00:00') {
+            if ($isLibur || empty($waktuMulai) || $waktuMulai === '--:--') {
                 $waktuMulai = '00:00:00';
             }
-            if ($isLibur || empty($waktuAkhir) || $waktuAkhir === '--:--' || $waktuAkhir === '00:00') {
+            if ($isLibur || empty($waktuAkhir) || $waktuAkhir === '--:--') {
                 $waktuAkhir = '00:00:00';
             }
             $jamKerjaId = $isLibur ? null : ($d['m_jam_kerja_id'] ?? null);
 
-            // Update atau insert ke t_jadwal_kerja_d_hari_n (in-place update)
-            try {
-                $matchedNew = $existingNew->first(function($row) use ($dayNum, $dayName, $d) {
-                    if (!empty($d['id']) && $row->id == $d['id']) return true;
-                    if (!empty($row->day_num) && $row->day_num == $dayNum) return true;
-                    return strtolower(trim((string)$row->day)) === strtolower(trim((string)$dayName));
-                });
+            $insertsLegacy[] = [
+                't_jadwal_kerja_id' => $id,
+                'm_jam_kerja_id'    => $jamKerjaId,
+                'day'               => $dayName,
+                'day_num'           => $dayNum,
+                'tipe_hari'         => $tipeHari,
+                'waktu_mulai'       => $waktuMulai,
+                'waktu_akhir'       => $waktuAkhir,
+                'created_at'        => \Carbon\Carbon::now(),
+                'updated_at'        => \Carbon\Carbon::now(),
+            ];
 
-                if ($matchedNew) {
-                    \DB::table('t_jadwal_kerja_d_hari_n')
-                        ->where('id', $matchedNew->id)
-                        ->update([
-                            'm_jam_kerja_id' => $jamKerjaId,
-                            'day'            => $dayName,
-                            'day_num'        => $dayNum,
-                            'tipe_hari'      => $tipeHari,
-                            'waktu_mulai'    => $waktuMulai,
-                            'waktu_akhir'    => $waktuAkhir,
-                            'updated_at'     => \Carbon\Carbon::now(),
-                        ]);
-                } else {
-                    \DB::table('t_jadwal_kerja_d_hari_n')->insert([
-                        't_jadwal_kerja_n_id' => $id,
-                        'm_jam_kerja_id'      => $jamKerjaId,
-                        'day'                 => $dayName,
-                        'day_num'             => $dayNum,
-                        'tipe_hari'           => $tipeHari,
-                        'waktu_mulai'         => $waktuMulai,
-                        'waktu_akhir'         => $waktuAkhir,
-                        'created_at'          => \Carbon\Carbon::now(),
-                        'updated_at'          => \Carbon\Carbon::now(),
-                    ]);
-                }
-            } catch (\Throwable $e) {
-                \Log::error('Error saving t_jadwal_kerja_d_hari_n in master: ' . $e->getMessage());
-            }
+            $insertsNew[] = [
+                't_jadwal_kerja_n_id' => $id,
+                'm_jam_kerja_id'      => $jamKerjaId,
+                'day'                 => $dayName,
+                'day_num'             => $dayNum,
+                'tipe_hari'           => $tipeHari,
+                'waktu_mulai'         => $waktuMulai,
+                'waktu_akhir'         => $waktuAkhir,
+                'created_at'          => \Carbon\Carbon::now(),
+                'updated_at'          => \Carbon\Carbon::now(),
+            ];
+        }
 
-            // Update atau insert ke t_jadwal_kerja_det_hari (in-place update)
-            try {
-                $matchedLeg = $existingLegacy->first(function($row) use ($dayNum, $dayName, $d) {
-                    if (!empty($d['id']) && $row->id == $d['id']) return true;
-                    if (!empty($row->day_num) && $row->day_num == $dayNum) return true;
-                    return strtolower(trim((string)$row->day)) === strtolower(trim((string)$dayName));
-                });
-
-                if ($matchedLeg) {
-                    \DB::table('t_jadwal_kerja_det_hari')
-                        ->where('id', $matchedLeg->id)
-                        ->update([
-                            'm_jam_kerja_id' => $jamKerjaId,
-                            'day'            => $dayName,
-                            'day_num'        => $dayNum,
-                            'tipe_hari'      => $tipeHari,
-                            'waktu_mulai'    => $waktuMulai,
-                            'waktu_akhir'    => $waktuAkhir,
-                            'updated_at'     => \Carbon\Carbon::now(),
-                        ]);
-                } else {
-                    \DB::table('t_jadwal_kerja_det_hari')->insert([
-                        't_jadwal_kerja_id' => $id,
-                        'm_jam_kerja_id'    => $jamKerjaId,
-                        'day'               => $dayName,
-                        'day_num'           => $dayNum,
-                        'tipe_hari'         => $tipeHari,
-                        'waktu_mulai'       => $waktuMulai,
-                        'waktu_akhir'       => $waktuAkhir,
-                        'created_at'        => \Carbon\Carbon::now(),
-                        'updated_at'        => \Carbon\Carbon::now(),
-                    ]);
-                }
-            } catch (\Throwable $e) {
-                \Log::error('Error saving t_jadwal_kerja_det_hari in master: ' . $e->getMessage());
-            }
+        if (!empty($insertsLegacy)) {
+            \DB::table('t_jadwal_kerja_det_hari')->insert($insertsLegacy);
+        }
+        if (!empty($insertsNew)) {
+            \DB::table('t_jadwal_kerja_d_hari_n')->insert($insertsNew);
         }
     }
 

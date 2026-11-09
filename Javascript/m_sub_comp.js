@@ -374,6 +374,7 @@ const landing = reactive({
       authorization: `${store.user.token_type} ${store.user.token}`
     },
     params: {
+      paginate: 25,
       simplest: true,
       searchfield: 'this.id, this.code, this.name, m_comp.name, this.address, this.phone1, this.email, this.is_active'
     },
