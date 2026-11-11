@@ -20,9 +20,11 @@
     params: {
       m_subcomp_id : `${data.subcomp_id}`,
       m_branch_id : `${data.branch_id}`,
+      m_divisi_id : !isUserHC ? `${data.divisi_id || 0}` : null,
+      where: !isUserHC && data.divisi_id ? `this.is_active='true' AND this.m_divisi_id = ${data.divisi_id}` : `this.is_active='true'`,
       simplest: true,
-      join: store.user.data.is_hc ? false : true,
-      scopes: store.user.data.is_hc ? 'landing,nonos' : 'nonos,respo',
+      join: isUserHC ? false : true,
+      scopes: isUserHC ? 'landing,nonos' : 'nonos,respo',
       searchfield: 'this.nama_lengkap,m_posisi.name,m_branch.name'
     }
   }" :bind="{ readonly: false, searchable: true }" valueField="id" placeholder="SO" :check="true" @add="multiCreate" :columns="[
@@ -129,37 +131,49 @@
 
     <div>
       <label class="col-span-12">Branch</label>
-      <FieldSelect :bind="{ disabled: !actionText, clearable:false }" :value="values.m_branch_id"
-        @input="v=>values.m_branch_id=v" :errorText="formErrors.m_branch_id?'failed':''" :hints="formErrors.m_branch_id"
+      <FieldSelect :bind="{ disabled: !actionText || !isUserHC, clearable: false }" :value="values.m_branch_id"
+        @input="v => {
+          values.m_branch_id = v;
+          if (isUserHC) {
+            values.m_divisi_id = null;
+            values.m_kary_id = [];
+          }
+        }" :errorText="formErrors.m_branch_id ? 'failed' : ''" :hints="formErrors.m_branch_id"
         valueField="id" displayField="name" :api="{
                   url: `${store.server.url_backend}/operation/m_branch`,
                   headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                   params: {
-                    simplest:true,
-                    transform:false,
-                    join:false
+                    simplest: true,
+                    transform: false,
+                    join: false,
+                    where: `this.is_active='true'`
                   }
-              }" placeholder="" label="" fa-icon="" :check="false" />
+              }" placeholder="Pilih Cabang" label="" fa-icon="" :check="false" />
     </div>
 
     <div>
       <label class="col-span-12">Divisi</label>
-      <FieldSelect :bind="{ disabled: !actionText, clearable:false }" :value="values.m_divisi_id"
-        @input="v=>values.m_divisi_id=v" :errorText="formErrors.m_divisi_id?'failed':''" :hints="formErrors.m_divisi_id"
-        valueField="id" displayField="name" :api="{
+      <FieldSelect :key="values.m_branch_id" :bind="{ disabled: !actionText || (!isUserHC && values.m_divisi_id), clearable: false }" :value="values.m_divisi_id"
+        @input="v => {
+          values.m_divisi_id = v;
+          values.m_kary_id = [];
+        }" :errorText="formErrors.m_divisi_id ? 'failed' : ''" :hints="formErrors.m_divisi_id"
+        valueField="id" displayField="name.value" :api="{
                 url: `${store.server.url_backend}/operation/m_divisi`,
                 headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
                 params: {
-                  transform:true,
-                  join:false
+                  scopes: 'Name',
+                  transform: true,
+                  join: false,
+                  where: values.m_branch_id ? `this.is_active='true' AND this.m_branch_id = ${values.m_branch_id}` : `this.is_active='true'`
                 }
-              }" placeholder="" label="" fa-icon="" :check="false" />
+              }" placeholder="Pilih Divisi" label="" fa-icon="" :check="false" />
     </div>
 
     <div>
       <label class="col-span-12">Karyawan</label>
-      <FieldSelect :bind="{ disabled: !actionText, clearable:false,multiple:true }" :value="values.m_kary_id"
-        @input="v=>values.m_kary_id=v" :errorText="formErrors.m_kary_id?'failed':''" :hints="formErrors.m_kary_id"
+      <FieldSelect :key="values.m_branch_id + '_' + values.m_divisi_id" :bind="{ disabled: !actionText, clearable: false, multiple: true }" :value="values.m_kary_id"
+        @input="v => values.m_kary_id = v" :errorText="formErrors.m_kary_id ? 'failed' : ''" :hints="formErrors.m_kary_id"
         valueField="id" displayField="nama_lengkap" :api="{
         url: `${store.server.url_backend}/operation/m_kary`,
         headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
@@ -168,9 +182,10 @@
           scopes: 'respo,nonos',
           m_subcomp_id: values.m_subcomp_id,
           m_branch_id: values.m_branch_id,
-          where: `this.is_active='true'`,
+          m_divisi_id: values.m_divisi_id,
+          where: values.m_divisi_id ? `this.is_active='true' AND this.m_divisi_id = ${values.m_divisi_id}` : `this.is_active='true'`,
         }
-        }" placeholder="" label="" fa-icon="" :check="false" />
+        }" placeholder="Pilih Karyawan" label="" fa-icon="" :check="false" />
     </div>
 
     <div>

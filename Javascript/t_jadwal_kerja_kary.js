@@ -29,6 +29,79 @@ onBeforeMount(() => {
   document.title = 'Transaksi Jadwal Kerja Karyawan'
 })
 
+let data = reactive({})
+const user = JSON.parse(localStorage.getItem('user'))
+const userLocal = JSON.parse(localStorage.getItem('user') || '{}')
+const loggedInKaryData = ref(null)
+
+const isUserHC = computed(() => {
+  const u = store.user?.data || userLocal?.data || userLocal || user || {}
+  const respoStored = JSON.parse(localStorage.getItem('respo') || '{}')
+  const respoName = (respoStored?.name || '').toLowerCase()
+  const isHcRole = respoName.includes('hc') || respoName.includes('hrd') || respoName.includes('admin') || respoName.includes('super') || respoName.includes('personalia')
+  return u?.is_hc === true || u?.is_hc === 1 || u?.is_hc === '1' || (u?.user_type || '').toLowerCase() === 'admin' || (u?.user_type || '').toLowerCase() === 'superadmin' || isHcRole
+})
+
+const reloadRespo = () => {
+  try {
+    const stored = localStorage.getItem('respo')
+    if (stored) {
+      const respoValues = JSON.parse(stored)
+      let sub = respoValues.m_subcomp_id ?? respoValues.subcomp_id ?? null
+      let branch = respoValues.m_branch_id ?? respoValues.branch_id ?? null
+      const respoSub = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
+      const respoBranch = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
+
+      data.subcomp_id = respoSub
+      data.branch_id = respoBranch
+      data.respo_id = respoValues.id ?? respoValues.m_respo_id ?? null
+
+      if (typeof values !== 'undefined') {
+        if (isUserHC.value || !values.m_branch_id) {
+          values.m_subcomp_id = respoSub
+          values.m_branch_id = respoBranch
+          values.comp_id = respoValues.m_comp_id
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error reloading respo:', e)
+  }
+}
+
+const loadLoggedInKaryawan = async () => {
+  const karyId = store.user?.data?.m_kary_id || userLocal?.data?.m_kary_id || userLocal?.m_kary_id || user?.m_kary_id
+  if (!karyId) return
+  try {
+    const res = await fetch(`${store.server.url_backend}/operation/m_kary/${karyId}?join=true&transform=false`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    })
+    if (res.ok) {
+      const json = await res.json()
+      loggedInKaryData.value = json.data ?? json
+      if (!isUserHC.value && loggedInKaryData.value) {
+        data.divisi_id = loggedInKaryData.value.m_divisi_id
+        if (loggedInKaryData.value.m_branch_id) {
+          data.branch_id = loggedInKaryData.value.m_branch_id
+        }
+        if (loggedInKaryData.value.m_subcomp_id) {
+          data.subcomp_id = loggedInKaryData.value.m_subcomp_id
+        }
+        if (typeof values !== 'undefined' && !isRead) {
+          values.m_branch_id = loggedInKaryData.value.m_branch_id
+          values.m_subcomp_id = loggedInKaryData.value.m_subcomp_id
+          values.m_divisi_id = loggedInKaryData.value.m_divisi_id
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error fetching logged in kary data:', e)
+  }
+}
+
 //  @if( $id )------------------- JS CONTENT ! PENTING JANGAN DIHAPUS
 
 // HOT KEY
@@ -51,8 +124,6 @@ const handleKeyDown = (event) => {
 
 let initialValues = {}
 const changedValues = []
-
-const user = JSON.parse(localStorage.getItem('user'))
 
 const values = reactive({
   status: 'AKTIF',
@@ -93,15 +164,8 @@ const onReset = async (alert = false) => {
 const karyOptions = ref([])
 
 onBeforeMount(async () => {
-  if (localStorage.getItem('respo')) {
-    const respoValues = await JSON.parse(localStorage.getItem('respo'))
-    console.log('ini respo', respoValues)
-    let sub = respoValues.m_subcomp_id ?? null
-    let branch = respoValues.m_branch_id ?? null
-    values.m_subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
-    values.m_branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
-    values.comp_id = respoValues.m_comp_id
-  }
+  await loadLoggedInKaryawan()
+  reloadRespo()
 
   if (values.m_kary_id.length) {
     const res = await fetch(`${store.server.url_backend}/operation/m_kary?where=this.id IN (${values.m_kary_id.join(',')})&transform=true&join=true`, {
@@ -306,17 +370,10 @@ async function onSave() {
 //  @else----------------------- LANDING
 const activeBtn = ref()
 const infoOutstanding = ref(null)
-let data = reactive({})
 
 onBeforeMount(async () => {
-  if (localStorage.getItem('respo')) {
-    const respoValues = await JSON.parse(localStorage.getItem('respo'))
-    let sub = respoValues.m_subcomp_id ?? null
-    let branch = respoValues.m_branch_id ?? null
-    data.subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
-    data.branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
-    data.respo_id = respoValues.id
-  }
+  await loadLoggedInKaryawan()
+  reloadRespo()
   console.log('jarwok', data.subcomp_id)
 })
 
@@ -498,15 +555,20 @@ const landing = reactive({
         kary_id: store.user.data.m_kary_id ?? 0,
         m_subcomp_id: data.subcomp_id || null,
         m_branch_id: data.branch_id || null,
+        m_divisi_id: !isUserHC.value ? (data.divisi_id || null) : null,
         scopes: 'respo',
         join: true,
         transform: true,
-        with: 'm_kary,m_kary.m_posisi,m_branch,t_jadwal_kerja_n',
+        with: 'm_kary,m_kary.m_posisi,m_branch,m_divisi,t_jadwal_kerja_n',
         searchfield: 'start_date,status',
         order_by: 'id'
       }
 
       const where = []
+
+      if (!isUserHC.value && data.divisi_id) {
+        where.push(`this.m_divisi_id='${data.divisi_id}'`)
+      }
 
       if (activeBtn.value === 1) {
         where.push(`this.status='AKTIF'`)
@@ -647,12 +709,30 @@ const landing = reactive({
   ]
 })
 
+let respoInterval = null
+onMounted(() => {
+  let lastRespo = localStorage.getItem('respo')
+  respoInterval = setInterval(() => {
+    const currentRespo = localStorage.getItem('respo')
+    if (currentRespo !== lastRespo) {
+      lastRespo = currentRespo
+      reloadRespo()
+      apiTable.value?.reload()
+    }
+  }, 1000)
+})
+
+onBeforeUnmount(() => {
+  if (respoInterval) {
+    clearInterval(respoInterval)
+  }
+})
+
 onActivated(() => {
+  reloadRespo()
   //  reload table api landing
   if (apiTable.value) {
-    if (route.query.reload) {
-      apiTable.value.reload()
-    }
+    apiTable.value.reload()
   }
 })
 
