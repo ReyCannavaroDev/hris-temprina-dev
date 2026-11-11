@@ -17,10 +17,10 @@ class m_kary_det_jabatan extends Model
     "created_at"=> "datetime:d\/m\/Y H:i",
     "updated_at"=> "datetime:d\/m\/Y H:i"
 	];
-    protected $fillable = ["m_kary_id","m_comp_id","m_subcomp_id","m_branch_id","m_posisi_id","start_time","end_time","desc","is_primary","is_active","creator_id","last_editor_id","m_divisi_id","m_karyawan_id","m_company_id"];
+    protected $fillable = ["m_kary_id","m_comp_id","m_subcomp_id","m_branch_id","m_posisi_id","start_time","end_time","desc","is_primary","is_active","creator_id","last_editor_id","m_divisi_id","m_karyawan_id","m_company_id","level_name","sequence","posisi_name"];
 
-    public $columns     = ["id","m_kary_id","m_comp_id","m_subcomp_id","m_branch_id","m_posisi_id","start_time","end_time","desc","is_primary","is_active","creator_id","last_editor_id","created_at","updated_at","m_divisi_id","m_karyawan_id","m_company_id"];
-    public $columnsFull = ["id:bigint","m_kary_id:bigint","m_comp_id:bigint","m_subcomp_id:bigint","m_branch_id:bigint","m_posisi_id:bigint","start_time:date","end_time:date","desc:text","is_primary:boolean","is_active:boolean","creator_id:integer","last_editor_id:integer","created_at:datetime","updated_at:datetime","m_divisi_id:bigint","m_karyawan_id:bigint","m_company_id:integer"];
+    public $columns     = ["id","m_kary_id","m_comp_id","m_subcomp_id","m_branch_id","m_posisi_id","start_time","end_time","desc","is_primary","is_active","creator_id","last_editor_id","created_at","updated_at","m_divisi_id","m_karyawan_id","m_company_id","level_name","sequence","posisi_name"];
+    public $columnsFull = ["id:bigint","m_kary_id:bigint","m_comp_id:bigint","m_subcomp_id:bigint","m_branch_id:bigint","m_posisi_id:bigint","start_time:date","end_time:date","desc:text","is_primary:boolean","is_active:boolean","creator_id:integer","last_editor_id:integer","created_at:datetime","updated_at:datetime","m_divisi_id:bigint","m_karyawan_id:bigint","m_company_id:integer","level_name:string:255","sequence:integer","posisi_name:string:255"];
     public $rules       = [];
     public $joins       = ["m_kary.id=m_kary_det_jabatan.m_kary_id","m_comp.id=m_kary_det_jabatan.m_comp_id","m_subcomp.id=m_kary_det_jabatan.m_subcomp_id","m_branch.id=m_kary_det_jabatan.m_branch_id","m_posisi.id=m_kary_det_jabatan.m_posisi_id","m_divisi.id=m_kary_det_jabatan.m_divisi_id"];
     public $details     = [];
@@ -29,9 +29,9 @@ class m_kary_det_jabatan extends Model
     public $detailsHeirs= [];
     public $unique      = [];
     public $required    = ["is_active"];
-    public $createable  = ["m_kary_id","m_comp_id","m_subcomp_id","m_branch_id","m_posisi_id","start_time","end_time","desc","is_primary","is_active","creator_id","last_editor_id","m_divisi_id","m_karyawan_id","m_company_id"];
-    public $updateable  = ["m_kary_id","m_comp_id","m_subcomp_id","m_branch_id","m_posisi_id","start_time","end_time","desc","is_primary","is_active","creator_id","last_editor_id","m_divisi_id","m_karyawan_id","m_company_id"];
-    public $searchable  = ["id","m_kary_id","m_comp_id","m_subcomp_id","m_branch_id","m_posisi_id","start_time","end_time","desc","is_primary","is_active","creator_id","last_editor_id","created_at","updated_at","m_divisi_id","m_karyawan_id","m_company_id"];
+    public $createable  = ["m_kary_id","m_comp_id","m_subcomp_id","m_branch_id","m_posisi_id","start_time","end_time","desc","is_primary","is_active","creator_id","last_editor_id","m_divisi_id","m_karyawan_id","m_company_id","level_name","sequence","posisi_name"];
+    public $updateable  = ["m_kary_id","m_comp_id","m_subcomp_id","m_branch_id","m_posisi_id","start_time","end_time","desc","is_primary","is_active","creator_id","last_editor_id","m_divisi_id","m_karyawan_id","m_company_id","level_name","sequence","posisi_name"];
+    public $searchable  = ["id","m_kary_id","m_comp_id","m_subcomp_id","m_branch_id","m_posisi_id","start_time","end_time","desc","is_primary","is_active","creator_id","last_editor_id","created_at","updated_at","m_divisi_id","m_karyawan_id","m_company_id","level_name","sequence","posisi_name"];
     public $deleteable  = true;
     public $cascade     = true;
     public $deleteOnUse = false;

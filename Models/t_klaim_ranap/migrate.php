@@ -1,15 +1,21 @@
-    <?php
+<?php
 
-    use Illuminate\Database\Migrations\Migration;
-    use Illuminate\Database\Schema\Blueprint;
-    use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-    class tklaimranap extends Migration
+class tklaimranap extends Migration
+{
+    protected $tableName = "t_klaim_ranap";
+
+    public function up()
     {
-        protected $tableName = "t_klaim_ranap";
+        $tableExists = !empty(\DB::select(
+            "SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE c.relname = ? AND n.nspname = ANY(current_schemas(false)) LIMIT 1",
+            [$this->tableName]
+        ));
 
-        public function up()
-        {
+        if (!$tableExists) {
             Schema::create($this->tableName, function (Blueprint $table) {
                 $table->id()->from(1);
 
@@ -27,23 +33,27 @@
                 $table->integer('last_editor_id')->nullable();
                 $table->timestamps();
             });
+        } else {
+            \DB::statement('ALTER TABLE "t_klaim_ranap" ADD COLUMN IF NOT EXISTS "is_active" boolean NOT NULL DEFAULT true');
+        }
 
-            table_config($this->tableName, [
-                "guarded"       => ["id"],
-                "required"      => [],
-                "!createable"   => ["id","created_at","updated_at"],
-                "!updateable"   => ["id","created_at","updated_at"],
-                "searchable"    => "all",
-                "deleteable"    => "true",
-                "deleteOnUse"   => "false",
-                "extendable"    => "false",
-                "casts"     => [
-                    'created_at' => 'datetime:d/m/Y H:i',
-                    'updated_at' => 'datetime:d/m/Y H:i'
-                ]
-            ]);
+        table_config($this->tableName, [
+            "guarded"       => ["id"],
+            "required"      => [],
+            "!createable"   => ["id","created_at","updated_at"],
+            "!updateable"   => ["id","created_at","updated_at"],
+            "searchable"    => "all",
+            "deleteable"    => "true",
+            "deleteOnUse"   => "false",
+            "extendable"    => "false",
+            "casts"     => [
+                'created_at' => 'datetime:d/m/Y H:i',
+                'updated_at' => 'datetime:d/m/Y H:i'
+            ]
+        ]);
 
-            \DB::table('m_menu')->insertOrIgnore([
+        if (Schema::hasTable('m_menu') && !\DB::table('m_menu')->where('path', '/t_klaim_ranap')->exists()) {
+            \DB::table('m_menu')->insert([
                 'm_comp_id' => null,
                 'm_dir_id' => null,
                 'modul' => 'Transaksi',
@@ -55,15 +65,19 @@
                 'sequence' => 12,
                 'description' => 'Klaim Rawat Inap',
                 'note' => null,
-                'truncatable' => 0,
-                'is_active' => 1,
+                'truncatable' => false,
+                'is_active' => true,
                 'created_at' => \Carbon\Carbon::now(),
                 'updated_at' => \Carbon\Carbon::now(),
             ]);
         }
-        public function down()
-        {
-            \DB::table('m_menu')->where('path', '/t_klaim_ranap')->delete();
-            Schema::dropIfExists($this->tableName);
-        }
     }
+
+    public function down()
+    {
+        if (Schema::hasTable('m_menu')) {
+            \DB::table('m_menu')->where('path', '/t_klaim_ranap')->delete();
+        }
+        Schema::dropIfExists($this->tableName);
+    }
+}

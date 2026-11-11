@@ -50,7 +50,8 @@ class tLemburTest extends TestCase
 		    "created_at" => "datetime:optional:autocreate",
 		    "updated_at" => "datetime:optional:autocreate",
 		    "interval_min" => "integer:optional",
-		    "pic_id" => "bigint:optional"
+		    "pic_id" => "bigint:optional",
+		    "tanggal_selesai" => "date:optional"
 		];
 
         $this->call('POST', '/operation/t_lembur', $payload);

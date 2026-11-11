@@ -336,7 +336,10 @@ class mKaryTest extends TestCase
 		            "updated_at" => "datetime:optional:autocreate",
 		            "m_divisi_id" => "bigint:optional",
 		            "m_karyawan_id" => "bigint:optional",
-		            "m_company_id" => "integer:optional"
+		            "m_company_id" => "integer:optional",
+		            "level_name" => "string:255:optional",
+		            "sequence" => "integer:optional",
+		            "posisi_name" => "string:255:optional"
 		        ]
 		    ]
 		];

@@ -1,10 +1,210 @@
 import { useRouter, useRoute, RouterLink } from 'vue-router'
-import { ref, readonly, reactive, inject, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, onActivated } from 'vue'
+import { ref, readonly, reactive, inject, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, onActivated, computed, watch } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
 const store = inject('store')
 const swal = inject('swal')
+
+// ------------------------------ PERSIAPAN
+const userLocal = JSON.parse(localStorage.getItem('user') || '{}')
+const loggedInUser = computed(() => store.user?.data || userLocal?.data || {})
+const isUserOS = computed(() => !!loggedInUser.value?.m_os_id)
+const userOsId = computed(() => loggedInUser.value?.m_os_id || null)
+
+// Cache PT Outsource map for landing column without join
+const osMap = reactive({})
+const fetchCompanyOs = async () => {
+  try {
+    const res = await fetch(`${store.server.url_backend}/operation/m_company_outsourcing?simplest=true&paginate=100`, {
+      headers: {
+        'Content-Type': 'Application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    })
+    if (res.ok) {
+      const json = await res.json()
+      const list = json.data || []
+      list.forEach(item => {
+        osMap[item.id] = item.name
+      })
+    }
+  } catch (e) {}
+}
+
+// Active respo tracking (SBU / Comp, SUB / Subcomp, Cabang / Branch)
+const activeRespoData = reactive({
+  comp_id: null,
+  subcomp_id: null,
+  branch_id: null,
+  id: null
+})
+
+const reloadActiveRespo = async () => {
+  try {
+    let stored = localStorage.getItem('respo')
+    let r = stored ? JSON.parse(stored) : null
+    if (!r || !r.id) {
+      const res = await fetch(`${store.server.url_backend}/operation/m_respo/main_respo`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `${store.user.token_type} ${store.user.token}`
+        }
+      })
+      if (res.ok) {
+        const json = await res.json()
+        r = json.data || json
+        if (r && r.name) {
+          localStorage.setItem('respo', JSON.stringify(r))
+        }
+      }
+    }
+    if (r) {
+      let comp = r.m_comp_id ?? r.comp_id ?? null
+      let sub = r.m_subcomp_id ?? r.subcomp_id ?? null
+      let branch = r.m_branch_id ?? r.branch_id ?? null
+
+      activeRespoData.comp_id = Array.isArray(comp) ? comp[0] : (typeof comp === 'string' && comp.startsWith('[') ? JSON.parse(comp)[0] : comp)
+      activeRespoData.subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
+      activeRespoData.branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
+      activeRespoData.id = r.id ?? r.m_respo_id ?? null
+    }
+  } catch (e) {
+    console.error('Error reading respo from localStorage:', e)
+  }
+}
+
+// Table Detail
+const detailArr = ref([])
+
+// Selected Karyawan tracking for SBU, SUB, Cabang
+const selectedKaryData = reactive({
+  m_comp_id: null,
+  m_subcomp_id: null,
+  m_branch_id: null
+})
+
+const onKarySelect = (kary) => {
+  if (kary) {
+    selectedKaryData.m_comp_id = kary.m_comp_id ?? null
+    selectedKaryData.m_subcomp_id = kary.m_subcomp_id ?? null
+    selectedKaryData.m_branch_id = kary.m_branch_id ?? null
+    if (kary.nama_lengkap) {
+      values.name = kary.nama_lengkap
+    }
+    // Mengikuti karyawan yang dipilih: jika OS diisi ID OS, jika internal/kosong direset ke null
+    values.m_os_id = kary.m_company_outsourcing_id ?? null
+  } else {
+    selectedKaryData.m_comp_id = null
+    selectedKaryData.m_subcomp_id = null
+    selectedKaryData.m_branch_id = null
+    values.m_os_id = null
+  }
+}
+
+// Popup Karyawan: Mengikuti respo yang aktif (SBU, SUB, Cabang)
+const apiKaryPopup = computed(() => {
+  const params = {
+    simplest: true,
+    transform: false,
+    join: false,
+    scopes: 'respo',
+    searchfield: 'this.kode,this.nama_lengkap'
+  }
+
+  const conds = ['this.is_active=true']
+  if (activeRespoData.comp_id) {
+    conds.push(`this.m_comp_id=${activeRespoData.comp_id}`)
+  }
+
+  if (activeRespoData.subcomp_id) {
+    params.m_subcomp_id = activeRespoData.subcomp_id
+  }
+  if (activeRespoData.branch_id) {
+    params.m_branch_id = activeRespoData.branch_id
+  }
+
+  params.where = conds.join(' and ')
+
+  return {
+    url: `${store.server.url_backend}/operation/m_kary`,
+    headers: {
+      'Content-Type': 'Application/json',
+      Authorization: `${store.user.token_type} ${store.user.token}`
+    },
+    params,
+    onsuccess(response) {
+      response.page = response.current_page
+      response.hasNext = response.has_next
+      return response
+    }
+  }
+})
+
+const effectiveCompId = computed(() => {
+  return selectedKaryData.m_comp_id || (detailArr.value[0]?.m_comp_id) || activeRespoData.comp_id || null
+})
+
+const effectiveSubcompId = computed(() => {
+  return selectedKaryData.m_subcomp_id || (detailArr.value[0]?.m_subcomp_id) || activeRespoData.subcomp_id || null
+})
+
+const effectiveBranchId = computed(() => {
+  return selectedKaryData.m_branch_id || (detailArr.value[0]?.m_branch_id) || activeRespoData.branch_id || null
+})
+
+const apiRespoMultiSelect = computed(() => {
+  const conds = ['this.is_active=true']
+
+  const branchId = effectiveBranchId.value
+  const subcompId = effectiveSubcompId.value
+  const compId = effectiveCompId.value
+
+  if (compId) {
+    conds.push(`this.m_comp_id=${compId}`)
+  }
+  if (subcompId) {
+    conds.push(`(this.m_subcomp_id=${subcompId} or this.m_subcomp_id is null)`)
+  }
+  if (branchId) {
+    conds.push(`(this.m_branch_id=${branchId} or this.m_branch_id is null)`)
+  }
+
+  const whereClause = conds.join(' and ')
+
+  const notinClause = detailArr.value.length > 0
+    ? `m_respo.id:${detailArr.value.map(dt => dt.m_respo_id).filter(Boolean).join(',')}`
+    : null
+
+  return {
+    url: `${store.server.url_backend}/operation/m_respo`,
+    headers: {
+      'Content-Type': 'Application/json',
+      Authorization: `${store.user.token_type} ${store.user.token}`
+    },
+    params: {
+      simplest: false,
+      transform: false,
+      join: true,
+      override: true,
+      where: whereClause,
+      notin: notinClause
+    },
+    onsuccess: (response) => {
+      response.data = [...(response.data || [])].map((dt) => {
+        Object.keys(dt).forEach(k => dt['m_respo.' + k] = dt[k])
+        dt['m_respo_id'] = dt.id
+        dt['m_comp_id'] = dt['m_comp_id']
+        dt['m_subcomp_id'] = dt['m_subcomp_id']
+        dt['m_branch_id'] = dt['m_branch_id']
+        return dt
+      })
+      response.page = response.current_page
+      response.hasNext = response.has_next
+      return response
+    }
+  }
+})
 
 const isRead = route.params.id && route.params.id !== 'create'
 const actionText = ref(route.params.id === 'create' ? 'Tambah' : route.query.action)
@@ -16,10 +216,11 @@ const apiTable = ref(null)
 const formErrors = ref({})
 const tsId = `ts=` + (Date.parse(new Date()))
 
-// ------------------------------ PERSIAPAN
 const endpointApi = '/default_users'
 onBeforeMount(() => {
   document.title = 'Master Pengguna'
+  reloadActiveRespo()
+  fetchCompanyOs()
 })
 
 //  @if( $id )------------------- JS CONTENT ! PENTING JANGAN DIHAPUS
@@ -55,7 +256,12 @@ let values = reactive({
 
 // DEFAULT VALUE BEFORE MOUNT --UBAH DISINI
 const defaultValues = () => {
-
+  values.is_active = true
+  values.is_hc = false
+  values.m_os_id = null
+  selectedKaryData.m_comp_id = null
+  selectedKaryData.m_subcomp_id = null
+  selectedKaryData.m_branch_id = null
 }
 
 const isValidEmail = ref(true)
@@ -99,7 +305,6 @@ const onReset = async (alert = false) => {
 }
 
 // Table Detail
-const detailArr = ref([])
 const addDetail = () => {
   const tempItem = {
 
@@ -125,6 +330,38 @@ const removeDetail = (index) => {
 }
 // End Table Detail
 
+watch(() => values.m_kary_id, async (newVal) => {
+  if (newVal) {
+    try {
+      const res = await fetch(`${store.server.url_backend}/operation/m_kary/${newVal}?simplest=true`, {
+        headers: {
+          'Content-Type': 'Application/json',
+          Authorization: `${store.user.token_type} ${store.user.token}`
+        }
+      })
+      if (res.ok) {
+        const json = await res.json()
+        const k = json.data
+        if (k) {
+          selectedKaryData.m_comp_id = k.m_comp_id ?? null
+          selectedKaryData.m_subcomp_id = k.m_subcomp_id ?? null
+          selectedKaryData.m_branch_id = k.m_branch_id ?? null
+          if (!values.name && k.nama_lengkap) {
+            values.name = k.nama_lengkap
+          }
+          // Mengikuti karyawan yang dipilih: jika OS diisi ID OS, jika internal/kosong direset ke null
+          values.m_os_id = k.m_company_outsourcing_id ?? null
+        }
+      }
+    } catch (e) {}
+  } else {
+    selectedKaryData.m_comp_id = null
+    selectedKaryData.m_subcomp_id = null
+    selectedKaryData.m_branch_id = null
+    values.m_os_id = null
+  }
+})
+
 onBeforeMount(async () => {
   onReset(); // Reset form ke kondisi awal
 
@@ -147,6 +384,12 @@ onBeforeMount(async () => {
       if (!res.ok) throw new Error("Failed when trying to read data");
       const resultJson = await res.json();
       initialValues = resultJson.data;
+
+      // Restriksi OS: tidak boleh buka user dari PT OS lain
+      if (isUserOS.value && initialValues.m_os_id && initialValues.m_os_id != userOsId.value) {
+        throw new Error("Anda tidak memiliki akses ke user ini");
+      }
+
       initialValues.m_os_id = initialValues.m_os_id
       // values.m_kary_id = initialValues.m_kary_id
       console.log('',initialValues)
@@ -304,6 +547,7 @@ async function onSave() {
       },
       body: JSON.stringify({
         ...values,
+        m_os_id: values.m_os_id ? values.m_os_id : null,
         default_users_respo: details,
         is_active: values.is_active ? 1 : 0,
         is_hc: values.is_hc ? true : false
@@ -336,6 +580,19 @@ async function onSave() {
 //  @else----------------------- LANDING
 const activeBtn = ref()
 
+const getWhereFilter = (noBtn) => {
+  const conds = []
+  if (userOsId.value) {
+    conds.push(`this.m_os_id=${userOsId.value}`)
+  }
+  if (noBtn === 1) {
+    conds.push(`this.is_active=true`)
+  } else if (noBtn === 2) {
+    conds.push(`this.is_active=false`)
+  }
+  return conds.length > 0 ? conds.join(' and ') : null
+}
+
 function filterShowData(params, noBtn) {
   if (activeBtn.value === noBtn) {
     activeBtn.value = null
@@ -343,15 +600,7 @@ function filterShowData(params, noBtn) {
     activeBtn.value = noBtn
   }
   
-  if (activeBtn.value == null) {
-    // clear params filter
-    landing.api.params.where = null
-  } else if (params) {
-    landing.api.params.where = `this.is_active=true`
-  } else {
-    landing.api.params.where = `this.is_active=false`
-  }
-
+  landing.api.params.where = getWhereFilter(activeBtn.value)
   apiTable.value.reload()
 }
 
@@ -487,7 +736,8 @@ const landing = reactive({
     params: {
       paginate: 25,
       simplest: true,
-      searchfield: 'this.id, this.name, this.username, this.user_type, this.is_active'
+      searchfield: 'this.id, this.name, this.username, this.user_type, this.is_active',
+      where: userOsId.value ? `this.m_os_id=${userOsId.value}` : null
     },
     onsuccess(response) {
       response.page = response.current_page
@@ -513,7 +763,24 @@ const landing = reactive({
     filter: 'ColFilter',
     resizable: true,
     wrapText: true,
-    cellClass: ['border-r', '!border-gray-200', 'justify-start']
+    cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+    valueGetter: (params) => params.data?.m_kary?.nama_lengkap || params.data?.name || '-'
+  },
+  {
+    headerName: 'PT Outsource',
+    field: 'm_os_id',
+    filter: true,
+    sortable: true,
+    flex: 1,
+    filter: 'ColFilter',
+    resizable: true,
+    wrapText: true,
+    cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+    valueGetter: (params) => {
+      const osId = params.data?.m_os_id
+      if (!osId) return '-'
+      return osMap[osId] || '-'
+    }
   },
   {
     headerName: 'User Login',
@@ -553,8 +820,11 @@ const landing = reactive({
 })
 
 onActivated(() => {
+  reloadActiveRespo()
+  fetchCompanyOs()
   //  reload table api landing
   if (apiTable.value) {
+    landing.api.params.where = getWhereFilter(activeBtn.value)
     if (route.query.reload) {
       apiTable.value.reload()
     }

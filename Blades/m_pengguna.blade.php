@@ -16,6 +16,7 @@
         Create New
       </RouterLink>
       <button
+        v-if="!isUserOS"
         @click="syncData"
         class="border border-blue-600 text-blue-600 bg-white hover:bg-blue-600 hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md mx-2 py-1 px-2"
       >
@@ -48,19 +49,8 @@
     <!-- START COLUMN -->
     <div>
       <FieldPopup class="w-full !mt-3" :bind="{ readonly: !actionText }" :value="values.m_kary_id"
-        @input="(v)=>values.m_kary_id=v" :errorText="formErrors.m_kary_id?'failed':''" :hints="formErrors.m_kary_id"
-        valueField="id" displayField="nama_lengkap" :api="{
-            url: `${store.server.url_backend}/operation/m_kary`,
-        headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-        params: {
-          simplest:true,
-          searchfield: 'this.kode,this.nama_lengkap'
-        },onsuccess(response) {
-        response.page = response.current_page;
-        response.hasNext = response.has_next;
-        return response;
-      }
-      }" placeholder="Pilih Nama Karyawan" :check="true" :columns="[
+        @input="(v)=>values.m_kary_id=v" @update:valueFull="onKarySelect" :errorText="formErrors.m_kary_id?'failed':''" :hints="formErrors.m_kary_id"
+        valueField="id" displayField="nama_lengkap" :api="apiKaryPopup" placeholder="Pilih Nama Karyawan" :check="true" :columns="[
     {
       headerName: 'No',
       valueGetter: (p) => p.node.rowIndex + 1,
@@ -99,7 +89,7 @@
     </div>
 
     <div>
-      <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText, clearable:true }" :value="values.m_os_id"
+      <FieldSelect class="w-full !mt-3" :bind="{ disabled: !actionText, clearable: true }" :value="values.m_os_id"
         @input="v=>values.m_os_id=v" :errorText="formErrors.m_os_id?'failed':''" :hints="formErrors.m_os_id"
         valueField="id" displayField="name" :api="{
             url: `${store.server.url_backend}/operation/m_company_outsourcing`,
@@ -107,9 +97,10 @@
             params: {
               simplest:true,
               transform:false,
-              join:false
+              join:false,
+              where: 'this.is_active=true'
             }
-        }" placeholder="Nama OS" label="Nama OS" fa-icon="" :check="false" />
+        }" placeholder="Nama OS (Kosongkan jika Pegawai Internal)" label="Nama OS" fa-icon="" :check="false" />
 
     </div>
     <!-- <div>
@@ -233,33 +224,7 @@
           <icon fa="plus" />
           Add to List
         </button> -->
-      <ButtonMultiSelect title="Add To List" @add="onDetailAdd" :api="{
-            url: `${store.server.url_backend}/operation/m_respo`,
-            headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-            params: { simplest:false,
-                transform:false,
-                join:true,
-                override:true,
-                where:`this.is_active=true`,
-                notin:detailArr.length>0?`m_respo.id:${detailArr.map(dt=>dt.m_respo_id).join(',')}`:null
-                //searchfield:'this.id, this.name, m_subcomp.name as unit_bisnis',
-                //selectfield: 'this.id,this.name, m_subcomp.name as unit_bisnis'  
-             },
-            onsuccess:(response)=>{
-              response.data = [...response.data].map((dt)=>{
-                Object.keys(dt).forEach(k=>dt['m_respo.'+k] = dt[k])
-                dt['m_respo_id'] = dt.id
-                dt['m_comp_id']= dt['m_comp_id']
-                dt['m_subcomp_id']=dt['m_subcomp_id']
-                dt['m_branch_id']=dt['m_branch_id']
-
-                return dt
-              })
-              response.page = response.current_page
-              response.hasNext = response.has_next
-              return response
-            }
-          }" :columns="[{
+      <ButtonMultiSelect title="Add To List" @add="onDetailAdd" :api="apiRespoMultiSelect" :columns="[{
             checkboxSelection: true,
             headerCheckboxSelection: true,
             headerName: 'No',

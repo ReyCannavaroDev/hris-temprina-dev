@@ -80,6 +80,16 @@ class default_users extends \App\Models\BasicModels\default_users
             return ["errors" => ["Konfirmasi password salah"]];
         }
 
+        if (!empty($arrayData['m_os_id'])) {
+            if (!empty($arrayData['m_kary_id'])) {
+                $kary = m_kary::find($arrayData['m_kary_id']);
+                if ($kary && $kary->m_company_outsourcing_id && $kary->m_company_outsourcing_id != $arrayData['m_os_id']) {
+                    return ["errors" => ["Karyawan yang dipilih bukan dari PT Outsource yang ditentukan."]];
+                }
+            }
+        } else {
+            $arrayData['m_os_id'] = null;
+        }
 
         $hasher = app()->make("hash");
         return [
@@ -87,6 +97,14 @@ class default_users extends \App\Models\BasicModels\default_users
             "data" => array_merge($arrayData, [
                 "password" => $hasher->make(req("password")),
             ]),
+        ];
+    }
+
+    public function deleteBefore($model, $arrayData, $metaData, $id = null)
+    {
+        return [
+            "model" => $model,
+            "data" => $arrayData
         ];
     }
 
@@ -238,49 +256,43 @@ class default_users extends \App\Models\BasicModels\default_users
         if ($validator->fails())
             return $this->helper->responseValidate($validator);
 
+        $targetUser = $this->where('id', $id)->first();
+        if (!$targetUser)
+            return $this->helper->customResponse('User tidak ditemukan', 404);
+
         try {
             \DB::beginTransaction();
-            if ($req->password) {
-                $data = [
-                    'name' => $req->name,
-                    'username' => $req->username,
-                    'email' => $req->email,
-                    'm_kary_id' => $req->m_kary_id,
-                    // 'm_company_id' => $req->m_company_id,
-                    'user_type' => $req->user_type,
-                    'note' => $req->note,
-                    'is_active' => $req->is_active,
-                    'is_hc' => $req->is_hc,
-                    'password' => $hasher->make($req->password),
-                    'm_os_id' => $req->m_os_id,
-                ];
-            } else {
-                $data = [
-                    'name' => $req->name,
-                    'username' => $req->username,
-                    'email' => $req->email,
-                    'm_kary_id' => $req->m_kary_id,
-                    // 'm_company_id' => $req->m_company_id,
-                    'user_type' => $req->user_type,
-                    'note' => $req->note,
-                    'is_active' => $req->is_active,
-                    'is_hc' => $req->is_hc,
-                    'm_os_id' => $req->m_os_id,
+            $data = [
+                'name' => $req->name,
+                'username' => $req->username,
+                'email' => $req->email,
+                'm_kary_id' => $req->m_kary_id,
+                // 'm_company_id' => $req->m_company_id,
+                'user_type' => $req->user_type,
+                'note' => $req->note,
+                'is_active' => $req->is_active,
+                'is_hc' => !empty($req->is_hc),
+                'm_os_id' => $req->m_os_id ?: null,
+            ];
 
-                ];
+            if ($req->password) {
+                $data['password'] = $hasher->make($req->password);
             }
+
             $this->where('id', $id)->update($data);
 
             default_users_respo::where('default_users_id', $id)->delete();
 
-            foreach ($req->default_users_respo as $d) {
-                default_users_respo::where('default_users_id', $id)->create([
-                    'default_users_id' => $id,
-                    'seq' => $d['seq'],
-                    'm_respo_id' => $d['m_respo_id'],
-                    'is_primary' => $d['is_primary'],
-                    'is_active' => $d['is_active']
-                ]);
+            if (!empty($req->default_users_respo) && is_array($req->default_users_respo)) {
+                foreach ($req->default_users_respo as $d) {
+                    default_users_respo::create([
+                        'default_users_id' => $id,
+                        'seq' => $d['seq'],
+                        'm_respo_id' => $d['m_respo_id'],
+                        'is_primary' => $d['is_primary'],
+                        'is_active' => $d['is_active']
+                    ]);
+                }
             }
             \DB::commit();
             return $this->helper->customResponse('Update berhasil');
@@ -288,6 +300,20 @@ class default_users extends \App\Models\BasicModels\default_users
             \DB::rollback();
             return $this->helper->responseCatch($e);
         }
+    }
+
+    public function scoperespo($model)
+    {
+        $authUser = auth()->user();
+        if ($authUser && !empty($authUser->m_os_id)) {
+            $model->where('default_users.m_os_id', $authUser->m_os_id);
+        }
+        return $model;
+    }
+
+    public function scopebyUserRespo($model)
+    {
+        return $this->scoperespo($model);
     }
 
     public function custom_generate_user()

@@ -17,10 +17,10 @@ class t_lembur extends Model
     "created_at"=> "datetime:d\/m\/Y H:i",
     "updated_at"=> "datetime:d\/m\/Y H:i"
 	];
-    protected $fillable = ["nomor","m_comp_id","m_dir_id","m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id","no_doc","doc","keterangan","status","creator_id","last_editor_id","interval_min","pic_id"];
+    protected $fillable = ["nomor","m_comp_id","m_dir_id","m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id","no_doc","doc","keterangan","status","creator_id","last_editor_id","interval_min","pic_id","tanggal_selesai"];
 
-    public $columns     = ["id","nomor","m_comp_id","m_dir_id","m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id","no_doc","doc","keterangan","status","creator_id","last_editor_id","created_at","updated_at","interval_min","pic_id"];
-    public $columnsFull = ["id:bigint","nomor:string:50","m_comp_id:bigint","m_dir_id:bigint","m_kary_id:bigint","tanggal:date","jam_mulai:time","jam_selesai:time","tipe_lembur_id:bigint","alasan_id:bigint","no_doc:string:191","doc:string:191","keterangan:text","status:string:50","creator_id:bigint","last_editor_id:bigint","created_at:datetime","updated_at:datetime","interval_min:integer","pic_id:bigint"];
+    public $columns     = ["id","nomor","m_comp_id","m_dir_id","m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id","no_doc","doc","keterangan","status","creator_id","last_editor_id","created_at","updated_at","interval_min","pic_id","tanggal_selesai"];
+    public $columnsFull = ["id:bigint","nomor:string:50","m_comp_id:bigint","m_dir_id:bigint","m_kary_id:bigint","tanggal:date","jam_mulai:time","jam_selesai:time","tipe_lembur_id:bigint","alasan_id:bigint","no_doc:string:191","doc:string:191","keterangan:text","status:string:50","creator_id:bigint","last_editor_id:bigint","created_at:datetime","updated_at:datetime","interval_min:integer","pic_id:bigint","tanggal_selesai:date"];
     public $rules       = [];
     public $joins       = ["m_comp.id=t_lembur.m_comp_id","m_dir.id=t_lembur.m_dir_id","m_kary.id=t_lembur.m_kary_id","m_general.id=t_lembur.tipe_lembur_id","m_general.id=t_lembur.alasan_id","default_users.id=t_lembur.creator_id","default_users.id=t_lembur.last_editor_id","default_users.id=t_lembur.pic_id"];
     public $details     = [];
@@ -29,9 +29,9 @@ class t_lembur extends Model
     public $detailsHeirs= [];
     public $unique      = [];
     public $required    = ["m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id"];
-    public $createable  = ["nomor","m_comp_id","m_dir_id","m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id","no_doc","doc","keterangan","status","creator_id","last_editor_id","interval_min","pic_id"];
-    public $updateable  = ["nomor","m_comp_id","m_dir_id","m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id","no_doc","doc","keterangan","status","creator_id","last_editor_id","interval_min","pic_id"];
-    public $searchable  = ["id","nomor","m_comp_id","m_dir_id","m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id","no_doc","doc","keterangan","status","creator_id","last_editor_id","created_at","updated_at","interval_min","pic_id"];
+    public $createable  = ["nomor","m_comp_id","m_dir_id","m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id","no_doc","doc","keterangan","status","creator_id","last_editor_id","interval_min","pic_id","tanggal_selesai"];
+    public $updateable  = ["nomor","m_comp_id","m_dir_id","m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id","no_doc","doc","keterangan","status","creator_id","last_editor_id","interval_min","pic_id","tanggal_selesai"];
+    public $searchable  = ["id","nomor","m_comp_id","m_dir_id","m_kary_id","tanggal","jam_mulai","jam_selesai","tipe_lembur_id","alasan_id","no_doc","doc","keterangan","status","creator_id","last_editor_id","created_at","updated_at","interval_min","pic_id","tanggal_selesai"];
     public $deleteable  = true;
     public $cascade     = true;
     public $deleteOnUse = false;

@@ -65,7 +65,8 @@ class presensiAbsensiTest extends TestCase
 		    "t_jadwal_kerja_n_id" => "bigint:optional",
 		    "t_jadwal_kerja_d_n_id" => "bigint:optional",
 		    "t_jadwal_kerja_d_hari_n_id" => "bigint:optional",
-		    "jam_kerja_diakui" => "bigint:optional"
+		    "jam_kerja_diakui" => "bigint:optional",
+		    "checkout_date" => "date:optional"
 		];
 
         $this->call('POST', '/operation/presensi_absensi', $payload);
