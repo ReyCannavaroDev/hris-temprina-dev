@@ -3853,6 +3853,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
             // --- ambil detail hari & tipe hari ---
             $hariRow = $data?->t_jadwal_kerja_d_hari_n;
+            $hasJadwal = false;
             if (!$hariRow) {
                 $activeJadwal = $jadwals->first(function ($j) use ($key) {
                     return empty($j->start_date) || Carbon::parse($j->start_date)->format("Y-m-d") <= $key;
@@ -3860,20 +3861,35 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 if ($activeJadwal) {
                     $rows = $jadwalHarisMap->get($activeJadwal->t_jadwal_kerja_n_id);
                     if ($rows && $rows->isNotEmpty()) {
+                        $hasJadwal = true;
                         $hariRow = $this->matchDayRowRekap($rows, $tanggal);
                     } else {
                         $legRows = $legacyHarisMap->get($activeJadwal->t_jadwal_kerja_n_id);
                         if ($legRows && $legRows->isNotEmpty()) {
+                            $hasJadwal = true;
                             $hariRow = $this->matchDayRowRekap($legRows, $tanggal);
                         }
                     }
                 } elseif ($legacyFallbackRows->isNotEmpty()) {
+                    $hasJadwal = true;
                     $hariRow = $this->matchDayRowRekap($legacyFallbackRows, $tanggal);
                 }
+            } else {
+                $hasJadwal = true;
             }
 
-            $tipe = strtoupper(trim((string)($hariRow?->tipe_hari ?? "KERJA")));
-            if (empty($tipe)) $tipe = "KERJA";
+            $dayNumIso = (int)$tanggal->dayOfWeekIso;
+            if ($hariRow) {
+                $tipe = strtoupper(trim((string)($hariRow->tipe_hari ?? "KERJA")));
+                if (empty($tipe)) $tipe = "KERJA";
+            } else {
+                // Jika karyawan memiliki jadwal kerja tetapi hari tsb tidak terdaftar (misal Minggu dihapus), maka LIBUR
+                if ($hasJadwal) {
+                    $tipe = "LIBUR";
+                } else {
+                    $tipe = ($dayNumIso === 7) ? "LIBUR" : "KERJA";
+                }
+            }
 
             if (isset($liburDates[$key])) {
                 $status = $liburDates[$key];

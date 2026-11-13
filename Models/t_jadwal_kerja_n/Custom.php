@@ -400,6 +400,8 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
             ->get();
 
         $now = \Carbon\Carbon::now();
+        $keptNewIds = [];
+        $keptLegacyIds = [];
 
         foreach ($details as $idx => $d) {
             $d = (array)$d;
@@ -452,8 +454,9 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
                         'waktu_akhir'    => $waktuAkhir,
                         'updated_at'     => $now,
                     ]);
+                $keptNewIds[] = $matchedNew->id;
             } else {
-                \DB::table('t_jadwal_kerja_d_hari_n')->insert([
+                $insertedNewId = \DB::table('t_jadwal_kerja_d_hari_n')->insertGetId([
                     't_jadwal_kerja_n_id' => $id,
                     'm_jam_kerja_id'      => $jamKerjaId,
                     'day'                 => $dayName,
@@ -464,6 +467,7 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
                     'created_at'          => $now,
                     'updated_at'          => $now,
                 ]);
+                $keptNewIds[] = $insertedNewId;
             }
 
             $matchedLeg = $existingLegacy->first(function($row) use ($dayNum, $dayName, $d) {
@@ -484,8 +488,9 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
                         'waktu_akhir'    => $waktuAkhir,
                         'updated_at'     => $now,
                     ]);
+                $keptLegacyIds[] = $matchedLeg->id;
             } else {
-                \DB::table('t_jadwal_kerja_det_hari')->insert([
+                $insertedLegId = \DB::table('t_jadwal_kerja_det_hari')->insertGetId([
                     't_jadwal_kerja_id' => $id,
                     'm_jam_kerja_id'    => $jamKerjaId,
                     'day'               => $dayName,
@@ -496,7 +501,22 @@ class t_jadwal_kerja_n extends \App\Models\BasicModels\t_jadwal_kerja_n
                     'created_at'        => $now,
                     'updated_at'        => $now,
                 ]);
+                $keptLegacyIds[] = $insertedLegId;
             }
+        }
+
+        // Hapus hari-hari yang dibuang / tidak ada di form (mis. hari Minggu dihapus)
+        if (!empty($keptNewIds)) {
+            \DB::table('t_jadwal_kerja_d_hari_n')
+                ->where('t_jadwal_kerja_n_id', $id)
+                ->whereNotIn('id', $keptNewIds)
+                ->delete();
+        }
+        if (!empty($keptLegacyIds)) {
+            \DB::table('t_jadwal_kerja_det_hari')
+                ->where('t_jadwal_kerja_id', $id)
+                ->whereNotIn('id', $keptLegacyIds)
+                ->delete();
         }
     }
 
