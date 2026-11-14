@@ -13,13 +13,10 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
     {
         parent::__construct();
 
-        $this->joins = array_values(array_unique(array_merge($this->joins ?? [], [
+        // Default joins: hanya join m_kary agar tidak ada INNER JOIN ke m_divisi/m_posisi yang NULL pada OS
+        $this->joins = [
             "m_kary.id=t_jadwal_kerja_d_n.m_kary_id",
-            "m_branch.id=m_kary.m_branch_id",
-            "m_divisi.id=m_kary.m_divisi_id",
-            "m_posisi.id=m_kary.m_posisi_id",
-            "t_jadwal_kerja_n.id=t_jadwal_kerja_d_n.t_jadwal_kerja_n_id",
-        ])));
+        ];
     }
 
     public function createBefore($model, $arrayData, $metaData, $id=null)
@@ -72,6 +69,20 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
                     \DB::table($table)->insert($insertData);
                 }
             }
+        } else if (!empty($arrayData['m_kary_id']) && is_numeric($arrayData['m_kary_id'])) {
+            $kProfile = \DB::table('m_kary')->where('id', $arrayData['m_kary_id'])->first();
+            if ($kProfile) {
+                if (empty($arrayData['m_divisi_id'])) $arrayData['m_divisi_id'] = $kProfile->m_divisi_id ?? null;
+                if (empty($arrayData['m_branch_id'])) $arrayData['m_branch_id'] = $kProfile->m_branch_id ?? null;
+                if (empty($arrayData['m_subcomp_id'])) $arrayData['m_subcomp_id'] = $kProfile->m_subcomp_id ?? null;
+            }
+        }
+
+        if (is_array($arrayData['m_subcomp_id'] ?? null)) {
+            $arrayData['m_subcomp_id'] = $arrayData['m_subcomp_id'][0] ?? null;
+        }
+        if (is_array($arrayData['m_branch_id'] ?? null)) {
+            $arrayData['m_branch_id'] = $arrayData['m_branch_id'][0] ?? null;
         }
 
         // Hapus payload detail read-only agar tidak memodifikasi master jadwal kerja bersama
@@ -256,11 +267,46 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
         return $this->belongsTo(\App\Models\CustomModels\m_divisi::class, 'm_divisi_id', 'id');
     }
 
+    public function scopeos($model)
+    {
+        // Pastikan joins model di-strip dari m_divisi/m_posisi/m_branch jika terpanggil di scope
+        $model->getModel()->joins = ["m_kary.id=t_jadwal_kerja_d_n.m_kary_id"];
+
+        $m_os_id = request("m_os_id");
+
+        $status_os = \DB::table('m_general')->where(function ($q) {
+            $q->where("group", "STATUS KARYAWAN OUTSOURCE")
+              ->orWhereRaw("upper(value) like '%HARIAN%'")
+              ->orWhereRaw("upper(code) like '%HARIAN%'")
+              ->orWhereRaw("upper(value) like '%OUTSOURCE%'")
+              ->orWhereRaw("upper(code) like '%OUTSOURCE%'");
+        })->pluck("id")->toArray();
+
+        return $model->where(function ($q) use ($status_os) {
+            if (!empty($status_os)) {
+                $q->whereIn("m_kary.status_kary_id", $status_os)
+                  ->orWhereNotNull("m_kary.m_company_outsourcing_id");
+            } else {
+                $q->whereNotNull("m_kary.m_company_outsourcing_id");
+            }
+        })
+        ->when(!empty($m_os_id) && is_numeric($m_os_id) && (int)$m_os_id > 0, function ($q) use ($m_os_id) {
+            $q->where("m_kary.m_company_outsourcing_id", $m_os_id);
+        })
+        ->orderBy('t_jadwal_kerja_d_n.id', 'desc');
+    }
+
+    public function scopekary_os($model)
+    {
+        return $this->scopeos($model);
+    }
+
     public function scoperespo($model)
     {
         $m_subcomp_id = request("m_subcomp_id");
         $m_branch_id = request("m_branch_id");
         $m_divisi_id = request("m_divisi_id");
+        $m_os_id = request("m_os_id");
 
         if (empty($m_subcomp_id) || $m_subcomp_id === "null" || $m_subcomp_id === "undefined" || $m_subcomp_id === "[object Object]") {
             $m_subcomp_id = null;
@@ -270,6 +316,9 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
         }
         if (empty($m_divisi_id) || $m_divisi_id === "null" || $m_divisi_id === "undefined" || $m_divisi_id === "[object Object]") {
             $m_divisi_id = null;
+        }
+        if (empty($m_os_id) || $m_os_id === "null" || $m_os_id === "undefined") {
+            $m_os_id = null;
         }
 
         // Decode JSON array strings if sent as "[1]" or "[1,2]"
@@ -282,6 +331,9 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
         if (is_string($m_divisi_id) && str_starts_with(trim($m_divisi_id), '[')) {
             $m_divisi_id = json_decode($m_divisi_id, true);
         }
+
+        $scopes = request("scopes") ?? "";
+        $isOsScope = str_contains($scopes, "os");
 
         $authUser = auth()->user();
         $isHc = false;
@@ -302,7 +354,7 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
                             ->pluck('m_role.name');
                         foreach ($roles as $rName) {
                             $rLower = strtolower($rName);
-                            if (str_contains($rLower, 'admin') || str_contains($rLower, 'hc') || str_contains($rLower, 'hrd') || str_contains($rLower, 'super') || str_contains($rLower, 'personalia')) {
+                            if (str_contains($rLower, 'admin') || str_contains($rLower, 'hc') || str_contains($rLower, 'hrd') || str_contains($rLower, 'super') || str_contains($rLower, 'personalia') || str_contains($rLower, 'manager')) {
                                 $isHc = true;
                                 break;
                             }
@@ -311,8 +363,8 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
                 } catch (\Throwable $e) {}
             }
 
-            // Jika bukan HC (Kadiv / Karu): kunci ketat ke divisi dan cabangnya
-            if (!$isHc && !empty($authUser->m_kary_id)) {
+            // Jika bukan HC (Kadiv / Karu): kunci ketat ke divisi dan cabangnya HANYA jika bukan scope OS
+            if (!$isHc && !$isOsScope && !empty($authUser->m_kary_id)) {
                 $userKary = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->first();
                 if ($userKary && !empty($userKary->m_divisi_id)) {
                     $m_divisi_id = $userKary->m_divisi_id;
@@ -325,25 +377,36 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
 
         return $model
             ->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
-                if (is_numeric($m_subcomp_id)) {
-                    $q->where("m_kary.m_subcomp_id", $m_subcomp_id);
-                } else if (is_array($m_subcomp_id)) {
-                    $q->whereIn("m_kary.m_subcomp_id", $m_subcomp_id);
-                }
+                $q->where(function ($subQ) use ($m_subcomp_id) {
+                    if (is_numeric($m_subcomp_id)) {
+                        $subQ->where("m_kary.m_subcomp_id", $m_subcomp_id)
+                             ->orWhere("t_jadwal_kerja_d_n.m_subcomp_id", $m_subcomp_id);
+                    } else if (is_array($m_subcomp_id)) {
+                        $subQ->whereIn("m_kary.m_subcomp_id", $m_subcomp_id)
+                             ->orWhereIn("t_jadwal_kerja_d_n.m_subcomp_id", $m_subcomp_id);
+                    }
+                });
             })
             ->when($m_branch_id, function ($q) use ($m_branch_id) {
-                if (is_numeric($m_branch_id)) {
-                    $q->where("m_kary.m_branch_id", $m_branch_id);
-                } else if (is_array($m_branch_id)) {
-                    $q->whereIn("m_kary.m_branch_id", $m_branch_id);
-                }
+                $q->where(function ($subQ) use ($m_branch_id) {
+                    if (is_numeric($m_branch_id)) {
+                        $subQ->where("m_kary.m_branch_id", $m_branch_id)
+                             ->orWhere("t_jadwal_kerja_d_n.m_branch_id", $m_branch_id);
+                    } else if (is_array($m_branch_id)) {
+                        $subQ->whereIn("m_kary.m_branch_id", $m_branch_id)
+                             ->orWhereIn("t_jadwal_kerja_d_n.m_branch_id", $m_branch_id);
+                    }
+                });
             })
-            ->when($m_divisi_id, function ($q) use ($m_divisi_id) {
+            ->when(!$isOsScope && $m_divisi_id, function ($q) use ($m_divisi_id) {
                 if (is_numeric($m_divisi_id)) {
                     $q->where("m_kary.m_divisi_id", $m_divisi_id);
                 } else if (is_array($m_divisi_id)) {
                     $q->whereIn("m_kary.m_divisi_id", $m_divisi_id);
                 }
+            })
+            ->when(!empty($m_os_id) && is_numeric($m_os_id) && (int)$m_os_id > 0, function ($q) use ($m_os_id) {
+                $q->where("m_kary.m_company_outsourcing_id", $m_os_id);
             });
     }
 }

@@ -94,11 +94,12 @@ const karyOptions = ref([])
 
 onBeforeMount(async () => {
   if (localStorage.getItem('respo')) {
-    const respoValues = await JSON.parse(localStorage.getItem('respo'))
-    console.log('ini respo', respoValues)
+    const respoValues = JSON.parse(localStorage.getItem('respo') || '{}')
+    let sub = respoValues.m_subcomp_id ?? null
+    let branch = respoValues.m_branch_id ?? null
     values.comp_id = respoValues.m_comp_id
-    values.m_subcomp_id = respoValues.m_subcomp_id
-    values.m_branch_id = respoValues.m_branch_id
+    values.m_subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
+    values.m_branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
   }
 
   if (values.m_kary_id.length) {
@@ -314,17 +315,31 @@ async function onSave() {
 //  @else----------------------- LANDING
 const activeBtn = ref()
 const infoOutstanding = ref(null)
-let data = reactive({})
+let data = reactive({
+  subcomp_id: null,
+  branch_id: null,
+  respo_id: null
+})
+
+function reloadRespo() {
+  if (localStorage.getItem('respo')) {
+    try {
+      const respoValues = JSON.parse(localStorage.getItem('respo'))
+      let sub = respoValues.m_subcomp_id ?? null
+      let branch = respoValues.m_branch_id ?? null
+      data.subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
+      data.branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
+      data.respo_id = respoValues.id
+    } catch (e) {
+      console.error('Error parsing respo:', e)
+    }
+  }
+}
+
+reloadRespo()
 
 onBeforeMount(async () => {
-  if (localStorage.getItem('respo')) {
-    const respoValues = await JSON.parse(localStorage.getItem('respo'))
-    let sub = respoValues.m_subcomp_id ?? null
-    let branch = respoValues.m_branch_id ?? null
-    data.subcomp_id = Array.isArray(sub) ? sub[0] : (typeof sub === 'string' && sub.startsWith('[') ? JSON.parse(sub)[0] : sub)
-    data.branch_id = Array.isArray(branch) ? branch[0] : (typeof branch === 'string' && branch.startsWith('[') ? JSON.parse(branch)[0] : branch)
-    data.respo_id = respoValues.id
-  }
+  reloadRespo()
   console.log('jarwok', data.subcomp_id)
 })
 
@@ -347,17 +362,8 @@ function filterShowData(params, noBtn) {
   } else {
     activeBtn.value = noBtn
   }
-  
-  if (activeBtn.value == null) {
-    // clear params filter
-    landing.api.params.where = null
-  } else if (params) {
-    landing.api.params.where = `this.status='DRAFT'`
-  } else {
-    landing.api.params.where = `this.status='POSTED'`
-  }
 
-  apiTable.value.reload()
+  apiTable.value?.reload()
 }
 
 const landing = reactive({
@@ -495,16 +501,24 @@ const landing = reactive({
     params: computed(() => {
       const params = {
         kary_id: store.user.data.m_kary_id ?? 0,
+        scopes: 'kary_os,respo',
         join: true,
         transform: true,
-        searchfield: 'start_date,status',
-        order_by: 'id'
+        searchfield: 'start_date,status'
+      }
+
+      if (data.branch_id && data.branch_id !== 'undefined' && data.branch_id !== 'null') {
+        params.m_branch_id = data.branch_id
+      } else if (data.subcomp_id && data.subcomp_id !== 'undefined' && data.subcomp_id !== 'null') {
+        params.m_subcomp_id = data.subcomp_id
       }
 
       const where = []
-
-      // If needed, filtering can be done here, but currently detail tables might have empty subcomp columns
-      // so we let it fetch all for now.
+      if (activeBtn.value === 1) {
+        where.push(`this.status = 'AKTIF'`)
+      } else if (activeBtn.value === 2) {
+        where.push(`this.status = 'NON AKTIF'`)
+      }
 
       if (where.length) {
         params.where = where.join(' AND ')
@@ -613,11 +627,10 @@ const landing = reactive({
 })
 
 onActivated(() => {
+  reloadRespo()
   //  reload table api landing
   if (apiTable.value) {
-    if (route.query.reload) {
-      apiTable.value.reload()
-    }
+    apiTable.value.reload()
   }
 })
 

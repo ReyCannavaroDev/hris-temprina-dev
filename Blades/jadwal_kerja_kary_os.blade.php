@@ -18,11 +18,10 @@
       Authorization: `${store.user.token_type} ${store.user.token}`
     },
     params: {
-      //kary_id : `${store.user.data.m_kary_id ?? 0}`,
-      //respo_id : `${data.respo_id}`,
-      m_subcomp_id : `${data.subcomp_id}`,
-      m_branch_id : `${data.branch_id}`,
-      scopes : 'os',
+      m_subcomp_id : data.subcomp_id || null,
+      m_branch_id : data.branch_id || null,
+      scopes : 'os,respo',
+      where: `this.is_active='true'`,
       searchfield: 'this.kode,this.nama_lengkap,atasan.nama_lengkap,m_posisi.name'
     }
   }" :bind="{ readonly: false }" valueField="id" placeholder="SO" :check="true" @add="multiCreate" :columns="[
@@ -298,7 +297,7 @@
                         params: {
                           transform:false,
                           join:false,
-                          selectfield:'id,waktu_akhir,waktu_mulai,desc',
+                          selectfield:'id,waktu_akhir,waktu_mulai,this.desc',
                         }
                     }" placeholder="" label="" fa-icon="" :check="false" />
             </td>
