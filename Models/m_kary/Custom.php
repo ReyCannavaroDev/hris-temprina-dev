@@ -110,8 +110,26 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
                 // 1. Cek Divisi
                 $atasan = $findAtasan('m_divisi_id', $divisiId);
-                // 2. Jika di divisi tidak ada, cek Cabang
-                if (!$atasan) $atasan = $findAtasan('m_branch_id', $branchId);
+                // 2. Jika di divisi tidak ada, cek Cabang (prioritas 1 divisi atau Pimpinan Cabang/OM)
+                if (!$atasan && $branchId) {
+                    $atasan = \DB::table('m_kary')
+                        ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'm_kary.m_posisi_id')
+                        ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                        ->join('m_posisi as p', 'p.id', '=', 'm_kary.m_posisi_id')
+                        ->where('m_kary.m_branch_id', $branchId)
+                        ->where('m_kary.is_active', true)
+                        ->where('l.sequence', '>', $mySeq)
+                        ->when($karyId, function ($q) use ($karyId) {
+                            $q->where('m_kary.id', '!=', $karyId);
+                        })
+                        ->where(function($q) use ($divisiId) {
+                            if ($divisiId) $q->where('m_kary.m_divisi_id', $divisiId);
+                            $q->orWhereRaw("LOWER(p.name) ~* 'operational manager|\\bom\\b|kepala cabang'");
+                        })
+                        ->orderBy('l.sequence', 'asc')
+                        ->select('m_kary.id')
+                        ->first();
+                }
                 // 3. Jika di cabang tidak ada, cek SUB
                 if (!$atasan) $atasan = $findAtasan('m_subcomp_id', $subcompId);
                 // 4. Jika di SUB tidak ada, cek SBU
@@ -227,8 +245,26 @@ class m_kary extends \App\Models\BasicModels\m_kary
 
                 // 1. Cek Divisi
                 $atasan = $findAtasan('m_divisi_id', $divisiId);
-                // 2. Jika di divisi tidak ada, cek Cabang
-                if (!$atasan) $atasan = $findAtasan('m_branch_id', $branchId);
+                // 2. Jika di divisi tidak ada, cek Cabang (prioritas 1 divisi atau Pimpinan Cabang/OM)
+                if (!$atasan && $branchId) {
+                    $atasan = \DB::table('m_kary')
+                        ->join('m_level_posisi_d as ld', 'ld.m_posisi_id', '=', 'm_kary.m_posisi_id')
+                        ->join('m_level_posisi as l', 'l.id', '=', 'ld.m_level_posisi_id')
+                        ->join('m_posisi as p', 'p.id', '=', 'm_kary.m_posisi_id')
+                        ->where('m_kary.m_branch_id', $branchId)
+                        ->where('m_kary.is_active', true)
+                        ->where('l.sequence', '>', $mySeq)
+                        ->when($karyId, function ($q) use ($karyId) {
+                            $q->where('m_kary.id', '!=', $karyId);
+                        })
+                        ->where(function($q) use ($divisiId) {
+                            if ($divisiId) $q->where('m_kary.m_divisi_id', $divisiId);
+                            $q->orWhereRaw("LOWER(p.name) ~* 'operational manager|\\bom\\b|kepala cabang'");
+                        })
+                        ->orderBy('l.sequence', 'asc')
+                        ->select('m_kary.id')
+                        ->first();
+                }
                 // 3. Jika di cabang tidak ada, cek SUB
                 if (!$atasan) $atasan = $findAtasan('m_subcomp_id', $subcompId);
                 // 4. Jika di SUB tidak ada, cek SBU
