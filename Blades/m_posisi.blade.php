@@ -162,21 +162,10 @@
             values.tempNomor=v}" :hints="formErrors.nomor" :check="true" label="Nomor" placeholder="Masukan Nomor" />
     </div> -->
 
-    <div class="relative">
+    <div>
       <FieldX :bind="{ readonly: !actionText }" class="w-full !mt-3" :value="values.name"
-        :errorText="formErrors.name ? 'failed' : ''" @input="handleInput" @focus="openDropdown" ref="inputField"
-        label="Nama Jabatan" placeholder="Tuliskan Jabatan" />
-
-
-      <div v-if="isDropdownOpen && filteredOptions.length" ref="dropdownMenu"
-        class="absolute mt-1 w-full bg-white border border-gray-300 rounded-md shadow-md max-h-40 overflow-auto z-10">
-        <ul>
-          <li v-for="(nama, index) in filteredOptions" :key="index" @mousedown.prevent="selectName(nama)"
-            class="px-3 py-2 cursor-pointer hover:bg-gray-100">
-            {{ nama }}
-          </li>
-        </ul>
-      </div>
+        @input="v => values.name = v" :errorText="formErrors.name ? 'failed' : ''" :hints="formErrors.name"
+        label="Nama Jabatan" placeholder="Tuliskan Jabatan" :check="true" />
     </div>
 
 
