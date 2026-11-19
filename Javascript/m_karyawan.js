@@ -309,11 +309,12 @@ onBeforeMount(async () => {
           }
         }
         initialValues = { ...initialValues, ...initialValues.info_cuti }
+        for (const key in initialValues) values[key] = initialValues[key]
 
         if (initialValues.atasan_id) {
           values.atasan_id = initialValues.atasan_id
         }
-        if (initialValues.m_divisi_id) {
+        if (initialValues.m_divisi_id || initialValues.m_posisi_id || initialValues.m_branch_id) {
           fetchAtasanByDivisi(initialValues.m_divisi_id, initialValues.id, initialValues.m_posisi_id)
         }
 
@@ -374,7 +375,9 @@ onBeforeMount(async () => {
             })
           }
 
-          if (initialValues.m_divisi_id) {
+          for (const key in initialValues) values[key] = initialValues[key]
+
+          if (initialValues.m_divisi_id || initialValues.m_posisi_id || initialValues.m_branch_id) {
             fetchAtasanByDivisi(initialValues.m_divisi_id, null, initialValues.m_posisi_id)
           }
 
@@ -961,8 +964,9 @@ watchEffect(() => {
   }
 });
 
-// Auto-detect Atasan berdasarkan Divisi & Posisi Hierarki
+// Auto-detect Atasan & Bawahan berdasarkan Divisi & Posisi Hierarki
 const listAtasan = ref([]);
+const allHierarchyPeople = ref([]);
 const hierarchicalAtasan = ref([]);
 const loadingAtasan = ref(false);
 
@@ -980,7 +984,7 @@ const getLevelLabel = (rank) => {
 
 const currentEmployeeLevel = computed(() => {
   const primaryJabatan = inDetailArr.value?.find(i => i.is_primary) || inDetailArr.value?.[0];
-  const targetPosId = values.m_posisi_id || primaryJabatan?.m_posisi_id;
+  const targetPosId = values.m_posisi_id || initialValues?.m_posisi_id || primaryJabatan?.m_posisi_id;
   if (!targetPosId && !primaryJabatan) return null;
 
   const posisiName = primaryJabatan?.posisi_name ?? primaryJabatan?.['m_posisi.name'] ?? primaryJabatan?.name ?? (targetPosId ? posisiNameMap.value[targetPosId] : '') ?? '';
@@ -993,19 +997,44 @@ const currentEmployeeLevel = computed(() => {
   };
 });
 
+const hierarchicalLevels = computed(() => {
+  if (!currentEmployeeLevel.value) return [];
+  const myR = currentEmployeeLevel.value.rank;
+  const ranks = [6, 5, 4, 3, 2, 1];
+
+  return ranks.map(rank => {
+    const isCurrent = (rank === myR);
+    const isSuperior = (rank > myR);
+    const isSubordinate = (rank < myR);
+    const label = getLevelLabel(rank);
+
+    const people = allHierarchyPeople.value.filter(p => p.rank === rank);
+
+    return {
+      rank,
+      level_name: label,
+      isCurrent,
+      isSuperior,
+      isSubordinate,
+      posisi_name: isCurrent ? currentEmployeeLevel.value.posisi_name : null,
+      pejabat: people.map(p => `[${p.scope}] ${p.nama_lengkap} (${p.posisi_name || '-'})`)
+    };
+  });
+});
+
 const fetchAtasanByDivisi = async (divisiId = null, currentKaryId = null, currentPosisiId = null) => {
   try {
     loadingAtasan.value = true;
     const currentId = currentKaryId ?? route.params.id;
     const primaryJabatan = inDetailArr.value?.find(i => i.is_primary) || inDetailArr.value?.[0];
 
-    const companyId = values.m_company_id ?? primaryJabatan?.m_company_id ?? primaryJabatan?.['m_company.id'];
-    const sbuId = values.m_comp_id ?? primaryJabatan?.m_comp_id ?? primaryJabatan?.['m_comp.id'];
-    const subId = values.m_subcomp_id ?? primaryJabatan?.m_subcomp_id ?? primaryJabatan?.['m_subcomp.id'];
-    const branchId = values.m_branch_id ?? primaryJabatan?.m_branch_id ?? primaryJabatan?.['m_branch.id'];
-    const divId = divisiId ?? values.m_divisi_id ?? primaryJabatan?.m_divisi_id;
+    const companyId = values.m_company_id ?? initialValues?.m_company_id ?? primaryJabatan?.m_company_id ?? primaryJabatan?.['m_company.id'];
+    const sbuId = values.m_comp_id ?? initialValues?.m_comp_id ?? primaryJabatan?.m_comp_id ?? primaryJabatan?.['m_comp.id'];
+    const subId = values.m_subcomp_id ?? initialValues?.m_subcomp_id ?? primaryJabatan?.m_subcomp_id ?? primaryJabatan?.['m_subcomp.id'];
+    const branchId = values.m_branch_id ?? initialValues?.m_branch_id ?? primaryJabatan?.m_branch_id ?? primaryJabatan?.['m_branch.id'];
+    const divId = divisiId ?? values.m_divisi_id ?? initialValues?.m_divisi_id ?? primaryJabatan?.m_divisi_id;
 
-    const targetPosId = currentPosisiId ?? values.m_posisi_id ?? primaryJabatan?.m_posisi_id;
+    const targetPosId = currentPosisiId ?? values.m_posisi_id ?? initialValues?.m_posisi_id ?? primaryJabatan?.m_posisi_id;
     const targetPosName = primaryJabatan?.posisi_name ?? primaryJabatan?.['m_posisi.name'] ?? primaryJabatan?.name ?? (targetPosId ? posisiNameMap.value[targetPosId] : '') ?? '';
 
     // Pastikan daftar level posisi sudah dimuat
@@ -1020,8 +1049,16 @@ const fetchAtasanByDivisi = async (divisiId = null, currentKaryId = null, curren
       Authorization: `${store.user.token_type} ${store.user.token}`
     };
 
-    // Ambil kandidat atasan dari lingkup organisasi
     let candidateList = [];
+
+    const addCandidates = (items) => {
+      if (!Array.isArray(items)) return;
+      items.forEach(k => {
+        if (k && k.id && !candidateList.some(d => String(d.id) === String(k.id))) {
+          candidateList.push(k);
+        }
+      });
+    };
 
     // 1. Ambil karyawan dalam Cabang yang sama (jika ada branchId)
     if (branchId) {
@@ -1030,72 +1067,43 @@ const fetchAtasanByDivisi = async (divisiId = null, currentKaryId = null, curren
           where: `this.is_active = 'true' AND this.m_branch_id = '${branchId}'`,
           join: true,
           transform: false,
-          paginate: 300
+          paginate: 500
         });
         const resBranch = await fetch(`${store.server.url_backend}/operation/m_kary?${paramsBranch}`, { headers });
         if (resBranch.ok) {
           const jsonBranch = await resBranch.json();
-          candidateList = jsonBranch.data ?? [];
+          addCandidates(jsonBranch.data ?? []);
         }
       } catch (e) {
         console.error('Error fetching Branch candidates:', e);
       }
     }
 
-    // 2. Ambil karyawan dalam SBU yang sama (atau seluruh unit aktif jika SBU belum ditentukan)
-    const sbuWhere = sbuId ? `this.is_active = 'true' AND this.m_comp_id = '${sbuId}'` : `this.is_active = 'true'`;
-    const paramsSbu = new URLSearchParams({
-      where: sbuWhere,
-      join: true,
-      transform: false,
-      paginate: 300
-    });
-    try {
-      const resSbu = await fetch(`${store.server.url_backend}/operation/m_kary?${paramsSbu}`, { headers });
-      if (resSbu.ok) {
-        const jsonSbu = await resSbu.json();
-        (jsonSbu.data ?? []).forEach(k => {
-          if (!candidateList.some(d => String(d.id) === String(k.id))) {
-            candidateList.push(k);
-          }
-        });
-      }
-    } catch (e) {
-      console.error('Error fetching SBU candidates:', e);
-    }
-
-    // 3. Pastikan pejabat fungsional di Divisi yang sama ikut termuat (terutama jika Kadiv/Manager ada di Holding)
-    if (divId) {
+    // 2. Ambil karyawan dalam SBU yang sama
+    if (sbuId) {
       try {
-        const paramsDiv = new URLSearchParams({
-          where: `this.is_active = 'true' AND this.m_divisi_id = '${divId}'`,
+        const paramsSbu = new URLSearchParams({
+          where: `this.is_active = 'true' AND this.m_comp_id = '${sbuId}'`,
           join: true,
           transform: false,
-          paginate: 100
+          paginate: 500
         });
-        const resDiv = await fetch(`${store.server.url_backend}/operation/m_kary?${paramsDiv}`, { headers });
-        if (resDiv.ok) {
-          const jsonDiv = await resDiv.json();
-          (jsonDiv.data ?? []).forEach(k => {
-            if (!candidateList.some(d => String(d.id) === String(k.id))) {
-              candidateList.push(k);
-            }
-          });
+        const resSbu = await fetch(`${store.server.url_backend}/operation/m_kary?${paramsSbu}`, { headers });
+        if (resSbu.ok) {
+          const jsonSbu = await resSbu.json();
+          addCandidates(jsonSbu.data ?? []);
         }
       } catch (e) {
-        console.error('Error fetching Divisi candidates:', e);
+        console.error('Error fetching SBU candidates:', e);
       }
     }
 
-    // 4. Pastikan juga pejabat level Holding (Level 5 GM & Level 6 Direktur) ikut dimuat
-    const holdingPosisiIds = Object.keys(posisiSequenceMap.value).filter(posId => {
-      return Number(posisiSequenceMap.value[posId]) >= 5;
-    });
-
-    if (holdingPosisiIds.length > 0) {
+    // 3. Selalu ambil seluruh pejabat di Cabang HOLDING (m_branch_id = 15)
+    // Di cabang Holding terdapat Direktur, GM, dan pimpinan divisi fungsional pusat
+    if (String(branchId) !== '15') {
       try {
         const paramsHolding = new URLSearchParams({
-          where: `this.is_active = 'true' AND this.m_posisi_id IN (${holdingPosisiIds.join(',')})`,
+          where: `this.is_active = 'true' AND this.m_branch_id = '15'`,
           join: true,
           transform: false,
           paginate: 100
@@ -1103,81 +1111,123 @@ const fetchAtasanByDivisi = async (divisiId = null, currentKaryId = null, curren
         const resHolding = await fetch(`${store.server.url_backend}/operation/m_kary?${paramsHolding}`, { headers });
         if (resHolding.ok) {
           const jsonHolding = await resHolding.json();
-          (jsonHolding.data ?? []).forEach(h => {
-            if (!candidateList.some(d => String(d.id) === String(h.id))) {
-              candidateList.push(h);
-            }
-          });
+          addCandidates(jsonHolding.data ?? []);
         }
       } catch (errHolding) {
-        console.error('Error fetching holding atasan:', errHolding);
+        console.error('Error fetching holding candidates:', errHolding);
       }
     }
 
-    // 5. Jika karyawan sudah memiliki atasan_id yang tersimpan, pastikan atasan tersebut ikut dimuat
-    if (values.atasan_id && !candidateList.some(d => String(d.id) === String(values.atasan_id))) {
+    // 4. Pastikan juga jika ada divId, ambil karyawan di divisi tersebut
+    if (divId) {
       try {
-        const resSaved = await fetch(`${store.server.url_backend}/operation/m_kary/${values.atasan_id}?join=true&transform=false`, { headers });
+        const paramsDiv = new URLSearchParams({
+          where: `this.is_active = 'true' AND this.m_divisi_id = '${divId}'`,
+          join: true,
+          transform: false,
+          paginate: 200
+        });
+        const resDiv = await fetch(`${store.server.url_backend}/operation/m_kary?${paramsDiv}`, { headers });
+        if (resDiv.ok) {
+          const jsonDiv = await resDiv.json();
+          addCandidates(jsonDiv.data ?? []);
+        }
+      } catch (e) {
+        console.error('Error fetching Divisi candidates:', e);
+      }
+    }
+
+    // 5. Pastikan atasan_id tersimpan ikut termuat
+    const currentSavedAtasanId = values.atasan_id || initialValues?.atasan_id;
+    if (currentSavedAtasanId && !candidateList.some(d => String(d.id) === String(currentSavedAtasanId))) {
+      try {
+        const resSaved = await fetch(`${store.server.url_backend}/operation/m_kary/${currentSavedAtasanId}?join=true&transform=false`, { headers });
         if (resSaved.ok) {
           const jsonSaved = await resSaved.json();
           const savedKary = jsonSaved.data ?? jsonSaved;
           if (savedKary && savedKary.id) {
-            candidateList.push(savedKary);
+            addCandidates([savedKary]);
           }
         }
       } catch (errSaved) { }
     }
 
-    // Exclude diri sendiri dari calon atasan
+    // Exclude diri sendiri dari calon atasan / bawahan
     if (currentId && currentId !== 'create') {
       candidateList = candidateList.filter(k => String(k.id) !== String(currentId));
     }
 
-    // Context organisasi karyawan
     const currentCompId = companyId ? String(companyId) : null;
     const currentSbuId = sbuId ? String(sbuId) : null;
     const currentSubId = subId ? String(subId) : null;
     const currentBranchId = branchId ? String(branchId) : null;
     const currentDivId = divId ? String(divId) : null;
+    const isEmployeeInHolding = Boolean(currentBranchId === '15');
 
-    const myDivName = (
+    const rawDivName = (
       primaryJabatan?.['m_divisi.name'] ??
       primaryJabatan?.divisi_name ??
       values['m_divisi.name'] ??
       values.divisi_name ??
+      initialValues?.['m_divisi.name'] ??
+      initialValues?.divisi_name ??
       ''
-    ).toLowerCase().trim();
+    ).toString().toLowerCase().trim();
 
-    const isItDivisi = /information technology|\bit\b/i.test(myDivName) || /\bit\b/i.test(targetPosName);
-    const isHcDivisi = /human capital|\bhc\b|hrd/i.test(myDivName) || /\bhc\b|\bhrd\b/i.test(targetPosName);
+    // Deteksi kata kunci departemen / divisi secara fleksibel
+    const checkDivisionMatch = (candPosisiName = '', candDivName = '', candDivId = null) => {
+      if (currentDivId && candDivId && String(currentDivId) === String(candDivId)) return true;
 
-    // Filter Atasan yang Valid sesuai Hierarki, Divisi, dan Cabang
-    const eligibleSuperiors = candidateList.filter(item => {
-      // Jika merupakan atasan yang saat ini sudah tersimpan, selalu loloskan
-      if (values.atasan_id && String(item.id) === String(values.atasan_id)) return true;
+      const myText = `${targetPosName} ${rawDivName}`.toLowerCase();
+      const candText = `${candPosisiName} ${candDivName}`.toLowerCase();
 
+      const divKeywords = [
+        { regex: /\b(it|information technology|programmer|developer|edp|hardware|software)\b/i },
+        { regex: /\b(hc|hrd|human capital|personalia|sdm)\b/i },
+        { regex: /\b(ppic|inventory control|planning)\b/i },
+        { regex: /\b(finance|accounting|keuangan|akuntansi|kasir|pajak|tax)\b/i },
+        { regex: /\b(procurement|purchasing|pembelian)\b/i },
+        { regex: /\b(gudang|warehouse|logistik|logistic)\b/i },
+        { regex: /\b(marketing|sales|penjualan|pemasaran)\b/i },
+        { regex: /\b(produksi|production|cetak|pracetak|finishing|jilid|potong|operator)\b/i },
+        { regex: /\b(teknik|maintenance|mekanik|listrik|elektrik)\b/i },
+        { regex: /\b(qa|qc|quality control|quality assurance)\b/i },
+        { regex: /\b(umum|general affair|\bga\b|keamanan|satpam|security|driver|supir|kebersihan|ob)\b/i }
+      ];
+
+      for (const item of divKeywords) {
+        if (item.regex.test(myText) && item.regex.test(candText)) {
+          return true;
+        }
+      }
+
+      const cleanTokens = myText
+        .replace(/kadiv|wakadiv|manager|manajer|asmen|karu|wakaru|staff|staf|operator|kepala|divisi|bagian|holding|cabang|unit/gi, ' ')
+        .split(/[^a-zA-Z0-9]+/)
+        .map(t => t.trim().toLowerCase())
+        .filter(t => t.length >= 4);
+
+      for (const token of cleanTokens) {
+        if (candText.includes(token)) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    const processedPeople = [];
+
+    candidateList.forEach(item => {
       const kPosisiId = item.m_posisi_id;
       const kPosisiName = (item['m_posisi.name'] ?? item.posisi_name ?? (kPosisiId ? posisiNameMap.value[kPosisiId] : '') ?? '').trim();
       const kRank = getPosisiRank(kPosisiId, kPosisiName);
-
-      // Syarat 1: Level jabatan atasan harus lebih tinggi
-      if (kRank <= myRank) return false;
-
-      const kDivId = item.m_divisi_id ? String(item.m_divisi_id) : null;
-      const kDivName = (item['m_divisi.name'] ?? item.nama_divisi ?? '').toLowerCase().trim();
-      const isSameDivId = Boolean(currentDivId && kDivId && currentDivId === kDivId);
-      const isSameDivName = Boolean(myDivName && kDivName && (myDivName === kDivName || kDivName.includes(myDivName) || myDivName.includes(kDivName)));
-      
-      let matchesPosisiDivisi = false;
-      if (isItDivisi && /\bit\b|information technology/i.test(kPosisiName)) matchesPosisiDivisi = true;
-      if (isHcDivisi && /\bhc\b|hrd|human capital/i.test(kPosisiName)) matchesPosisiDivisi = true;
-
-      const matchesDivisi = isSameDivId || isSameDivName || matchesPosisiDivisi;
+      const nama = item.nama_lengkap ?? `${item.nama_depan ?? ''} ${item.nama_belakang ?? ''}`.trim();
+      const levelLabel = getLevelLabel(kRank);
 
       const kBranchId = item.m_branch_id ? String(item.m_branch_id) : null;
       const isSameBranch = Boolean(currentBranchId && kBranchId && currentBranchId === kBranchId);
-      const isHoldingBranch = Boolean(kBranchId === '15'); // 15 = Cabang HOLDING
-      const isEmployeeInHolding = Boolean(currentBranchId === '15');
+      const isHoldingBranch = Boolean(kBranchId === '15');
 
       const kSbuId = item.m_comp_id ? String(item.m_comp_id) : null;
       const isSameSbu = Boolean(currentSbuId && kSbuId && currentSbuId === kSbuId);
@@ -1188,133 +1238,134 @@ const fetchAtasanByDivisi = async (divisiId = null, currentKaryId = null, curren
       const kCompId = item.m_company_id ? String(item.m_company_id) : null;
       const isSameCompany = Boolean(currentCompId && kCompId && currentCompId === kCompId);
 
-      const isBranchLeader = /operational manager|\bom\b|kepala cabang|pimpinan cabang/i.test(kPosisiName);
-
-      // --- LEVEL 2: Karu / Wakaru / Spv ---
-      if (kRank === 2) {
-        // Wajib 1 divisi yang sama
-        if (!matchesDivisi) return false;
-        // Wajib 1 cabang yang sama
-        if (!isSameBranch) return false;
-        return true;
-      }
-
-      // --- LEVEL 3: Kadiv / Wakadiv ---
-      if (kRank === 3) {
-        // Wajib 1 divisi yang sama
-        if (!matchesDivisi) return false;
-        // Jika karyawan di holding -> harus Kadiv di holding
-        if (isEmployeeInHolding) {
-          return isSameBranch || isHoldingBranch;
-        }
-        // Jika karyawan di cabang -> boleh Kadiv di cabang itu ATAU Kadiv fungsional di Holding
-        return isSameBranch || isHoldingBranch;
-      }
-
-      // --- LEVEL 4: Asmen / Manager / OM ---
-      if (kRank === 4) {
-        // Opsi 1: Manager Divisi (wajib 1 divisi)
-        if (matchesDivisi) {
-          if (isEmployeeInHolding) {
-            return isSameBranch || isHoldingBranch;
-          }
-          return isSameBranch || isHoldingBranch;
-        }
-        // Opsi 2: Operational Manager (OM) / Kepala Cabang di cabang yang sama
-        if (isBranchLeader && isSameBranch) {
-          return true;
-        }
-        // Beda divisi dan bukan OM di cabang yang sama -> REJECT
-        return false;
-      }
-
-      // --- LEVEL 5: GM / Wadir ---
-      if (kRank === 5) {
-        // Wajib dalam lingkup SBU / SUB / Company yang sama (atau Holding)
-        const inScope = isSameSbu || isSameSub || isSameCompany || isHoldingBranch;
-        if (!inScope) return false;
-
-        // Jangan izinkan GM divisi lain (misal "Vice GM Business Services") jika tidak cocok divisinya
-        const isCrossDivisionalGM = /business services|keuangan|marketing|sdm|hc|finance/i.test(kPosisiName);
-        if (isCrossDivisionalGM && !matchesDivisi) {
-          return false;
-        }
-        return true;
-      }
-
-      // --- LEVEL 6: Direktur ---
-      if (kRank === 6) {
-        // Wajib dalam Company atau SBU yang sama (atau Direktur Holding)
-        return isSameCompany || isSameSbu || isHoldingBranch;
-      }
-
-      return false;
-    });
-
-    // Tag Scope Organisasi untuk setiap atasan
-    const tagged = eligibleSuperiors.map(item => {
-      const kPosisiId = item.m_posisi_id;
-      const kPosisiName = (item['m_posisi.name'] ?? item.posisi_name ?? (kPosisiId ? posisiNameMap.value[kPosisiId] : '') ?? '').trim();
-      const kRank = getPosisiRank(kPosisiId, kPosisiName);
-      const nama = item.nama_lengkap ?? `${item.nama_depan ?? ''} ${item.nama_belakang ?? ''}`.trim();
-      const levelLabel = getLevelLabel(kRank);
-
       const kDivId = item.m_divisi_id ? String(item.m_divisi_id) : null;
-      const kDivName = (item['m_divisi.name'] ?? item.nama_divisi ?? '').toLowerCase().trim();
-      const isSameDivId = Boolean(currentDivId && kDivId && currentDivId === kDivId);
-      const isSameDivName = Boolean(myDivName && kDivName && (myDivName === kDivName || kDivName.includes(myDivName) || myDivName.includes(kDivName)));
-      let matchesPosisiDivisi = false;
-      if (isItDivisi && /\bit\b|information technology/i.test(kPosisiName)) matchesPosisiDivisi = true;
-      if (isHcDivisi && /\bhc\b|hrd|human capital/i.test(kPosisiName)) matchesPosisiDivisi = true;
-      const matchesDivisi = isSameDivId || isSameDivName || matchesPosisiDivisi;
+      const kDivName = (item['m_divisi.name'] ?? item.nama_divisi ?? '').toString().toLowerCase().trim();
+      const matchesDiv = checkDivisionMatch(kPosisiName, kDivName, kDivId);
 
-      const kBranchId = item.m_branch_id ? String(item.m_branch_id) : null;
-      const isSameBranch = Boolean(currentBranchId && kBranchId && currentBranchId === kBranchId);
-      const isBranchLeader = /operational manager|\bom\b|kepala cabang|pimpinan cabang/i.test(kPosisiName);
+      const isBranchLeader = /operational manager|\bom\b|kepala cabang|pimpinan cabang|manager cabang|manajer cabang|kepala pabrik|manager pabrik/i.test(kPosisiName);
 
-      let scope = 'SBU Holding';
-      let scopePriority = 4; // 1 = Divisi, 2 = Cabang, 3 = SUB, 4 = SBU
-
-      if (matchesDivisi) {
-        scope = 'Divisi';
+      let scope = 'Holding';
+      let scopePriority = 4;
+      if (matchesDiv) {
+        scope = isSameBranch ? 'Divisi' : (isHoldingBranch ? 'Holding Divisi' : 'Divisi SBU');
         scopePriority = 1;
       } else if (isBranchLeader && isSameBranch) {
         scope = 'Cabang';
         scopePriority = 2;
-      } else if (subId && String(item.m_subcomp_id) === String(subId)) {
+      } else if (isSameBranch) {
+        scope = 'Cabang';
+        scopePriority = 2;
+      } else if (isSameSub) {
         scope = 'SUB';
         scopePriority = 3;
-      } else if (sbuId && String(item.m_comp_id) === String(sbuId)) {
+      } else if (isSameSbu) {
         scope = 'SBU';
         scopePriority = 4;
       }
 
-      return {
-        ...item,
-        nama_lengkap: nama,
-        posisi_name: kPosisiName,
-        rank: kRank,
-        scope: scope,
-        scope_priority: scopePriority,
-        level_label: levelLabel,
-        display_text: `[${scope}] ${nama} (${kPosisiName || '-'}) - ${levelLabel}`
-      };
+      // 1. EVALUASI ATASAN (kRank > myRank)
+      if (kRank > myRank || (currentSavedAtasanId && String(item.id) === String(currentSavedAtasanId))) {
+        let isEligibleAtasan = false;
+
+        if (kRank === 6) {
+          isEligibleAtasan = isSameCompany || isSameSbu || isHoldingBranch;
+        } else if (kRank === 5) {
+          const inScope = isSameSbu || isSameSub || isSameCompany || isHoldingBranch;
+          const isCrossDivisionalGM = /business services|keuangan|marketing|sdm|hc|finance/i.test(kPosisiName);
+          if (inScope && (!isCrossDivisionalGM || matchesDiv)) {
+            isEligibleAtasan = true;
+          }
+        } else if (kRank === 4) {
+          if (matchesDiv) {
+            isEligibleAtasan = isSameBranch || isHoldingBranch;
+          } else if (isSameBranch) {
+            isEligibleAtasan = isBranchLeader || !isEmployeeInHolding;
+          }
+        } else if (kRank === 3) {
+          if (matchesDiv) {
+            isEligibleAtasan = isSameBranch || isHoldingBranch;
+          }
+        } else if (kRank === 2) {
+          if (matchesDiv && isSameBranch) {
+            isEligibleAtasan = true;
+          }
+        }
+
+        if (currentSavedAtasanId && String(item.id) === String(currentSavedAtasanId)) {
+          isEligibleAtasan = true;
+        }
+
+        if (isEligibleAtasan) {
+          processedPeople.push({
+            ...item,
+            nama_lengkap: nama,
+            posisi_name: kPosisiName,
+            rank: kRank,
+            scope: scope,
+            scope_priority: scopePriority,
+            level_label: levelLabel,
+            is_atasan: true,
+            is_bawahan: false,
+            display_text: `[${scope}] ${nama} (${kPosisiName || '-'}) - ${levelLabel}`
+          });
+        }
+      }
+
+      // 2. EVALUASI BAWAHAN (kRank < myRank)
+      else if (kRank < myRank) {
+        let isEligibleBawahan = false;
+
+        if (myRank >= 5) {
+          isEligibleBawahan = isSameSbu || isSameSub || isSameBranch || isHoldingBranch;
+        } else if (myRank === 4) {
+          if (isBranchLeader && isSameBranch) {
+            isEligibleBawahan = true;
+          } else if (matchesDiv) {
+            isEligibleBawahan = isSameBranch || (isEmployeeInHolding && isHoldingBranch);
+          }
+        } else if (myRank === 3) {
+          if (matchesDiv && (isSameBranch || (isEmployeeInHolding && isHoldingBranch))) {
+            isEligibleBawahan = true;
+          }
+        } else if (myRank === 2) {
+          if (matchesDiv && (isSameBranch || (isEmployeeInHolding && isHoldingBranch))) {
+            isEligibleBawahan = true;
+          }
+        }
+
+        if (isEligibleBawahan) {
+          processedPeople.push({
+            ...item,
+            nama_lengkap: nama,
+            posisi_name: kPosisiName,
+            rank: kRank,
+            scope: scope,
+            scope_priority: scopePriority,
+            level_label: levelLabel,
+            is_atasan: false,
+            is_bawahan: true,
+            display_text: `[${scope}] ${nama} (${kPosisiName || '-'}) - ${levelLabel}`
+          });
+        }
+      }
     });
 
-    // Urutkan list atasan untuk dropdown:
-    // Prioritas scope terdekat (Divisi -> Cabang -> SUB -> SBU), lalu rank terdekat
-    tagged.sort((a, b) => {
+    allHierarchyPeople.value = processedPeople;
+
+    // Filter khusus untuk list dropdown atasan langsung (hanya calon atasan)
+    const atasanList = processedPeople.filter(p => p.is_atasan);
+    atasanList.sort((a, b) => {
       if (a.scope_priority !== b.scope_priority) {
         return a.scope_priority - b.scope_priority;
       }
       return a.rank - b.rank;
     });
 
-    listAtasan.value = tagged;
+    listAtasan.value = atasanList;
 
-    // Grouping untuk hierarki visual box
+    // Untuk kompatibilitas backward
     const groups = {};
-    tagged.forEach(item => {
+    atasanList.forEach(item => {
       if (!groups[item.rank]) {
         groups[item.rank] = {
           rank: item.rank,
@@ -1325,30 +1376,24 @@ const fetchAtasanByDivisi = async (divisiId = null, currentKaryId = null, curren
       const displayPejabat = `[${item.scope}] ${item.nama_lengkap} (${item.posisi_name || '-'})`;
       groups[item.rank].pejabat.push(displayPejabat);
     });
-
     const sortedRanks = Object.keys(groups).map(Number).sort((a, b) => b - a);
     hierarchicalAtasan.value = sortedRanks.map(r => groups[r]);
 
-    // Auto-select atasan langsung sesuai aturan:
-    // Cek Divisi -> jika kosong cek Cabang -> jika kosong cek SUB -> jika kosong cek SBU
-    let bestCandidates = tagged.filter(c => c.scope === 'Divisi');
-    if (bestCandidates.length === 0) {
-      bestCandidates = tagged.filter(c => c.scope === 'Cabang');
-    }
-    if (bestCandidates.length === 0) {
-      bestCandidates = tagged.filter(c => c.scope === 'SUB');
-    }
-    if (bestCandidates.length === 0) {
-      bestCandidates = tagged.filter(c => c.scope === 'SBU' || c.scope === 'SBU Holding');
-    }
-
-    if (bestCandidates.length > 0) {
-      // Ambil level terendah dari scope tersebut (paling dekat di atas karyawan ini)
-      bestCandidates.sort((a, b) => a.rank - b.rank);
-      const chosen = bestCandidates[0];
-      const isAlreadyInList = tagged.some(k => String(k.id) === String(values.atasan_id));
-      if (!isAlreadyInList || !values.atasan_id) {
-        values.atasan_id = chosen.id;
+    // Auto-select atasan langsung jika belum ada atasan_id
+    if (!values.atasan_id && atasanList.length > 0) {
+      let bestCandidates = atasanList.filter(c => c.scope === 'Divisi' || c.scope === 'Holding Divisi');
+      if (bestCandidates.length === 0) {
+        bestCandidates = atasanList.filter(c => c.scope === 'Cabang');
+      }
+      if (bestCandidates.length === 0) {
+        bestCandidates = atasanList.filter(c => c.scope === 'SUB');
+      }
+      if (bestCandidates.length === 0) {
+        bestCandidates = atasanList.filter(c => c.scope === 'SBU' || c.scope === 'Holding');
+      }
+      if (bestCandidates.length > 0) {
+        bestCandidates.sort((a, b) => a.rank - b.rank);
+        values.atasan_id = bestCandidates[0].id;
       }
     }
   } catch (e) {
@@ -1365,9 +1410,10 @@ watch([
   () => values.m_divisi_id,
   () => values.m_posisi_id
 ], ([newCompId, newSubcompId, newBranchId, newDivisiId, newPosisiId]) => {
-  if (newDivisiId || newBranchId || newSubcompId || newCompId) {
+  if (newDivisiId || newBranchId || newSubcompId || newCompId || newPosisiId) {
     fetchAtasanByDivisi(newDivisiId, route.params.id, newPosisiId);
   } else {
+    allHierarchyPeople.value = [];
     listAtasan.value = [];
     hierarchicalAtasan.value = [];
     values.atasan_id = null;

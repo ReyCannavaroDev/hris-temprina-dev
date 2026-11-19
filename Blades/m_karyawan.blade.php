@@ -307,32 +307,38 @@
               <div class="col-span-full border border-gray-200 rounded-md p-3 bg-gray-50 mt-3" v-show="!isProfile">
                 <div class="flex items-center justify-between mb-2">
                   <label class="text-sm font-semibold text-gray-700">Struktur Hierarki & Urutan Atasan (Berdasarkan Divisi & Level Jabatan)</label>
-                  <span v-if="loadingAtasan" class="text-xs text-blue-600 italic">Memuat struktur atasan...</span>
+                  <span v-if="loadingAtasan" class="text-xs text-blue-600 italic">Memuat struktur organisasi...</span>
                 </div>
 
-                <!-- DAFTAR ATASAN (Urutan Naik) -->
-                <div v-if="hierarchicalAtasan.length > 0" class="space-y-1.5 mb-1.5">
+                <!-- DAFTAR HIERARKI LENGKAP (Level 6 s.d. Level 1: Atasan, Posisi Saat Ini, & Bawahan) -->
+                <div v-if="hierarchicalLevels.length > 0" class="space-y-1.5 mb-1.5">
                   <div 
-                    v-for="(lvl, idx) in hierarchicalAtasan" 
+                    v-for="lvl in hierarchicalLevels" 
                     :key="lvl.rank" 
-                    class="flex flex-col sm:flex-row sm:items-center justify-between p-2 bg-white border border-gray-200 rounded-md text-xs text-gray-700"
+                    class="flex flex-col sm:flex-row sm:items-center justify-between p-2 rounded-md text-xs transition-colors"
+                    :class="lvl.isCurrent ? 'bg-blue-50 border border-blue-300 text-blue-900 font-semibold shadow-xs' : 'bg-white border border-gray-200 text-gray-700'"
                   >
-                    <div class="font-semibold text-gray-800 w-full sm:w-1/3">
-                      {{ lvl.level_name }}
+                    <div class="font-semibold w-full sm:w-1/3 flex items-center gap-1.5">
+                      <span v-if="lvl.isCurrent" class="text-blue-600 font-bold">●</span>
+                      <span>{{ lvl.level_name }}</span>
+                      <span v-if="lvl.isCurrent" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-200 text-blue-800 font-bold ml-1">Posisi Saat Ini</span>
+                      <span v-else-if="lvl.isSuperior" class="text-[10px] text-gray-400 font-normal">(Atasan)</span>
+                      <span v-else-if="lvl.isSubordinate" class="text-[10px] text-gray-400 font-normal">(Bawahan)</span>
                     </div>
-                    <div class="text-gray-600 w-full sm:w-2/3 mt-1 sm:mt-0">
-                      {{ lvl.pejabat.join('; ') }}
+                    <div class="w-full sm:w-2/3 mt-1 sm:mt-0" :class="lvl.isCurrent ? 'text-blue-950 font-medium' : 'text-gray-600'">
+                      <template v-if="lvl.isCurrent">
+                        Posisi Karyawan Ini {{ lvl.posisi_name ? `(${lvl.posisi_name})` : '' }}
+                        <span v-if="lvl.pejabat.length > 0" class="text-[11px] font-normal text-blue-700 block mt-0.5">
+                          Rekan sejajar: {{ lvl.pejabat.join('; ') }}
+                        </span>
+                      </template>
+                      <template v-else-if="lvl.pejabat.length > 0">
+                        {{ lvl.pejabat.join('; ') }}
+                      </template>
+                      <template v-else>
+                        <span class="italic text-gray-400">(Belum ada pejabat terdata)</span>
+                      </template>
                     </div>
-                  </div>
-                </div>
-
-                <!-- POSISI KARYAWAN SAAT INI (Di-highlight) -->
-                <div v-if="currentEmployeeLevel" class="flex flex-col sm:flex-row sm:items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-md text-xs text-blue-900 font-medium">
-                  <div class="font-bold w-full sm:w-1/3">
-                    {{ currentEmployeeLevel.level_name }}
-                  </div>
-                  <div class="w-full sm:w-2/3 mt-1 sm:mt-0">
-                    Posisi Karyawan Ini {{ currentEmployeeLevel.posisi_name ? `(${currentEmployeeLevel.posisi_name})` : '' }}
                   </div>
                 </div>
 
@@ -341,7 +347,7 @@
                 </div>
 
                 <!-- PILIH ATASAN LANGSUNG -->
-                <div class="mt-3 pt-3 border-t border-gray-200" v-if="listAtasan.length > 0 || values.atasan_id">
+                <div class="mt-3 pt-3 border-t border-gray-200">
                   <div class="flex items-center justify-between mb-1">
                     <label class="text-xs font-bold text-gray-700">Atasan Langsung (Penetapan Hierarki Pegawai)</label>
                     <span class="text-[11px] text-gray-500">Pilih atasan langsung sesuai struktur organisasi</span>
