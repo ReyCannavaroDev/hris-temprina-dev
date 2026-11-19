@@ -99,17 +99,27 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
         return $model
             ->leftJoin("m_divisi as d", "d.id", "=", "m_posisi.m_divisi_id")
             ->leftJoin("m_general as m_gen", function ($join) {
-                $join->on(\DB::raw('CAST(d.name AS text)'), '=', \DB::raw('CAST(m_gen.id AS text)'));
+                $join->on(\DB::raw('CAST(d.name AS text)'), '=', \DB::raw('CAST(m_gen.id AS text)'))
+                     ->where(function($w) {
+                         $w->where('m_gen.group', 'MASTER_DIVISI')
+                           ->orWhere('m_gen.group', 'DIVISI');
+                     });
             })
-            ->leftJoin("m_general as gen_direct", "gen_direct.id", "=", "m_posisi.m_divisi_id")
+            ->leftJoin("m_general as gen_direct", function ($join) {
+                $join->on("gen_direct.id", "=", "m_posisi.m_divisi_id")
+                     ->where(function($w) {
+                         $w->where('gen_direct.group', 'MASTER_DIVISI')
+                           ->orWhere('gen_direct.group', 'DIVISI');
+                     });
+            })
             ->leftJoin("m_level_posisi_d as lpd", "lpd.m_posisi_id", "=", "m_posisi.id")
             ->leftJoin("m_level_posisi as lp", "lpd.m_level_posisi_id", "=", "lp.id")
             ->select(
                 "m_posisi.*",
                 "lp.level_name",
                 "lp.sequence",
-                \DB::raw("COALESCE(m_gen.value, CAST(d.name AS text), d.name_old, gen_direct.value, '') as value"),
-                \DB::raw("COALESCE(m_gen.value, CAST(d.name AS text), d.name_old, gen_direct.value, '') as divisi_name")
+                \DB::raw("COALESCE(m_gen.value, d.name_old, gen_direct.value, CAST(d.name AS text), '') as value"),
+                \DB::raw("COALESCE(m_gen.value, d.name_old, gen_direct.value, CAST(d.name AS text), '') as divisi_name")
             );
     }
 
@@ -118,12 +128,20 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
         if (!empty($row['m_divisi_id'])) {
             $div = \DB::table('m_divisi')->where('id', $row['m_divisi_id'])->first();
             if ($div) {
-                $divName = $div->name;
-                $gen = \DB::table('m_general')->whereRaw('CAST(id AS text) = ?', [strval($div->name)])->first();
+                $divName = null;
+                $gen = \DB::table('m_general')
+                    ->whereRaw('CAST(id AS text) = ?', [strval($div->name)])
+                    ->where(function($w) {
+                        $w->where('group', 'MASTER_DIVISI')
+                          ->orWhere('group', 'DIVISI');
+                    })
+                    ->first();
                 if ($gen && !empty($gen->value)) {
                     $divName = $gen->value;
                 } elseif (!empty($div->name_old)) {
                     $divName = $div->name_old;
+                } else {
+                    $divName = $div->name;
                 }
                 $row['divisi_name'] = $divName;
                 $row['m_divisi.name'] = $divName;

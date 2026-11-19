@@ -64,6 +64,10 @@
               headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
               params: {
                 scopes: 'Name',
+                order_by: 'name.value',
+                order_type: 'ASC',
+                where: `this.is_active = true`,
+                paginate: 200
               }
           }" placeholder="Pilih Divisi" label="Divisi" :check="false" />
     </div>
