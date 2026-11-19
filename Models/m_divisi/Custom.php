@@ -39,8 +39,8 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
         }
         $displayWithBranch = (!empty($branchName) && !empty($divisiVal)) ? ($divisiVal . ' - ' . $branchName) : $divisiVal;
 
-        $data['name.value'] = $displayWithBranch;
-        $data['value'] = $displayWithBranch;
+        $data['name.value'] = $divisiVal;
+        $data['value'] = $divisiVal;
         $data['name'] = $divisiVal;
         $data['nama'] = $divisiVal;
         $data['name_old'] = $divisiVal;
@@ -105,32 +105,51 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
                                ->orWhere('name.group', 'DIVISI');
                          });
                 })
-                ->leftjoin('m_branch as b', 'b.id', '=', 'm_divisi.m_branch_id')
-                ->select(
-                    'm_divisi.id',
-                    'm_divisi.m_branch_id',
-                    \DB::raw("CASE 
-                        WHEN b.name IS NOT NULL AND b.name != '' 
-                        THEN CONCAT(COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), ''), ' - ', b.name)
-                        ELSE COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '')
-                    END as \"name.value\""),
-                    \DB::raw("CASE 
-                        WHEN b.name IS NOT NULL AND b.name != '' 
-                        THEN CONCAT(COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), ''), ' - ', b.name)
-                        ELSE COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '')
-                    END as value"),
-                    \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as name"),
-                    \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as nama"),
-                    \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as name_old"),
-                    'm_divisi.nomor',
-                    'b.name as branch_name'
-                );
+                ->whereRaw("TRIM(COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '')) != ''");
+
+        if (request('distinct') || request('unique') || request('is_distinct')) {
+            $query->select(
+                \DB::raw("COALESCE(MIN(CASE WHEN m_divisi.m_branch_id = 15 THEN m_divisi.id END), MIN(m_divisi.id)) as id"),
+                \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as \"name.value\""),
+                \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as value"),
+                \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as name"),
+                \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as nama"),
+                \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as name_old"),
+                \DB::raw("MIN(m_divisi.nomor) as nomor")
+            )
+            ->groupBy(\DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '')"));
+        } else {
+            $query->leftjoin('m_branch as b', 'b.id', '=', 'm_divisi.m_branch_id')
+                  ->select(
+                      'm_divisi.id',
+                      'm_divisi.m_branch_id',
+                      \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as \"name.value\""),
+                      \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as value"),
+                      \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as name"),
+                      \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as nama"),
+                      \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as name_old"),
+                      'm_divisi.nomor',
+                      'b.name as branch_name'
+                  );
+        }
 
         $orderType = strtoupper(request('order_type', 'ASC')) === 'DESC' ? 'DESC' : 'ASC';
         $query->getQuery()->orders = null;
-        $query->orderByRaw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') " . $orderType . ", b.name ASC");
+        $query->orderByRaw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') " . $orderType);
 
         return $query;
+    }
+
+    public function scopeDistinctName($model)
+    {
+        request()->merge(['distinct' => true]);
+        return $this->scopeName($model);
+    }
+
+    public function scopeUniqueDivisi($model)
+    {
+        request()->merge(['distinct' => true]);
+        return $this->scopeName($model);
     }
 
     public function scopeNames($model){
@@ -141,14 +160,9 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
                                ->orWhere('name.group', 'DIVISI');
                          });
                 })
-                ->leftjoin('m_branch as b', 'b.id', '=', 'm_divisi.m_branch_id')
                 ->select(
                     'm_divisi.id',
-                    \DB::raw("CASE 
-                        WHEN b.name IS NOT NULL AND b.name != '' 
-                        THEN CONCAT(COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), ''), ' - ', b.name)
-                        ELSE COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '')
-                    END as value"),
+                    \DB::raw("COALESCE(name.value, m_divisi.name_old, CAST(m_divisi.name AS text), '') as value"),
                     'm_divisi.nomor'
                 );
     }

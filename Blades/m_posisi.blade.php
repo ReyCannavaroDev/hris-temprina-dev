@@ -64,6 +64,7 @@
               headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
               params: {
                 scopes: 'Name',
+                distinct: true,
                 order_by: 'name.value',
                 order_type: 'ASC',
                 where: `this.is_active = true`,
