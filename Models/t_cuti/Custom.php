@@ -120,6 +120,8 @@ class t_cuti extends \App\Models\BasicModels\t_cuti
             ]);
         }
 
+        unset($newArrayData['sisa_cuti']);
+
         return [
             "model" => $model,
             "data" => $newArrayData,
@@ -153,6 +155,7 @@ class t_cuti extends \App\Models\BasicModels\t_cuti
             "interval_min" => $interval_min ?? $data['interval_min'] 
         ]);
 
+        unset($newArrayData['sisa_cuti']);
 
         return [
             "model"  => $model,

@@ -1,5 +1,5 @@
 import { useRouter, useRoute, RouterLink } from 'vue-router'
-import { ref, readonly, reactive, inject, onMounted, computed, onBeforeMount, watchEffect, onActivated, } from 'vue'
+import { ref, readonly, reactive, inject, onMounted, computed, onBeforeMount, watchEffect, watch, onActivated, } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -45,6 +45,7 @@ let initialValues = {}
 const changedValues = []
 
 const values = reactive({
+  sisa_cuti: null,
 })
 const totalDays = ref();
 
@@ -55,15 +56,96 @@ watchEffect(() => {
 
     if (!isNaN(dateFrom.getTime()) && !isNaN(dateTo.getTime())) {
       const timeDifference = dateTo.getTime() - dateFrom.getTime();
-      const daysDifference = Math.floor(timeDifference / (1000 * 3600 * 24));
+      const daysDifference = Math.floor(timeDifference / (1000 * 3600 * 24)) + 1;
 
-      totalDays.value = daysDifference;
+      const calculated = daysDifference > 0 ? daysDifference : 0;
+      totalDays.value = calculated;
+      if (!isRead || actionText.value) {
+        values.interval = calculated;
+      }
     } else {
       totalDays.value = 'error';
     }
   } else {
     totalDays.value = 0;
   }
+});
+
+const fetchSisaCuti = async (karyId) => {
+  if (!karyId) {
+    values.sisa_cuti = null;
+    return;
+  }
+  try {
+    const res = await fetch(`${store.server.url_backend}/operation/m_kary/infoCuti?m_kary_id=${karyId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const data = json.data ?? json;
+      if (data && (data.sisa_cuti_reguler !== undefined || data.cuti_sisa_reguler !== undefined)) {
+        values.sisa_cuti = Number(data.sisa_cuti_reguler ?? data.cuti_sisa_reguler ?? 0);
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('Error fetching infoCuti:', e);
+  }
+
+  try {
+    const resKary = await fetch(`${store.server.url_backend}/operation/m_kary/${karyId}?transform=false&join=false`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    });
+    if (resKary.ok) {
+      const jsonKary = await resKary.json();
+      const kData = jsonKary.data ?? jsonKary;
+      if (kData) {
+        values.sisa_cuti = Number(kData.cuti_sisa_reguler ?? kData.sisa_cuti_reguler ?? 0);
+      }
+    }
+  } catch (e) {
+    console.error('Fallback fetch m_kary failed:', e);
+  }
+};
+
+watch(() => values.m_kary_id, (newVal) => {
+  if (newVal) {
+    fetchSisaCuti(newVal);
+  } else {
+    values.sisa_cuti = null;
+  }
+}, { immediate: true });
+
+function onKaryawanSelected(res) {
+  if (!res) return;
+  if (res.cuti_sisa_reguler !== undefined) {
+    values.sisa_cuti = Number(res.cuti_sisa_reguler);
+  } else if (res.id) {
+    fetchSisaCuti(res.id);
+  }
+}
+
+const displaySisaCuti = computed(() => {
+  if (values.sisa_cuti === null || values.sisa_cuti === undefined || values.sisa_cuti === '') {
+    return '-';
+  }
+  const sisa = Number(values.sisa_cuti);
+  const diambil = Number(values.interval || totalDays.value || 0);
+
+  const tipeStr = String(values.tipe_string || '').toUpperCase();
+  const isTahunan = tipeStr.includes('TAHUNAN') || (!values.tipe_cuti_id && !values.tipe_string) || tipeStr === '';
+
+  if (isTahunan && diambil > 0) {
+    const estimasiSisa = sisa - diambil;
+    return `${sisa} Hari (Estimasi sisa: ${estimasiSisa} Hari)`;
+  }
+  return `${sisa} Hari`;
 });
 
 console.log(actionText.value)
@@ -348,13 +430,16 @@ function onSave() {
 
     isRequesting.value = true;
 
+    const payload = { ...values };
+    delete payload.sisa_cuti;
+
     fetch(dataURL, {
       method: isCreating ? 'POST' : 'PUT',
       headers: {
         'Content-Type': 'Application/json',
         Authorization: `${store.user.token_type} ${store.user.token}`,
       },
-      body: JSON.stringify(values),
+      body: JSON.stringify(payload),
     })
       .then(async (res) => {
         if (!res.ok) {

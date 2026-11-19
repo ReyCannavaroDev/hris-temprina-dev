@@ -132,6 +132,7 @@
          <FieldPopup :bind="{ readonly: true, disabled: true }" class="w-full !mt-3" :value="values.m_kary_id"
           @input="(v)=>values.m_kary_id=v" :errorText="formErrors.m_kary_id?'failed':''" :hints="formErrors.m_kary_id"
           valueField="id" displayField="nama_lengkap" :api="apiKary" placeholder="Pilih Karyawan" label="Karyawan"
+          @update:valueFull="onKaryawanSelected"
           :check="false" :columns="[
               {
                 headerName: 'No',
@@ -162,6 +163,10 @@
               },    
             ]" 
           />
+      </div>
+      <div>
+        <FieldX :bind="{ readonly: true, disabled: true }" class="w-full !mt-3" :value="displaySisaCuti"
+          :check="false" label="Sisa Cuti Tahunan" placeholder="Sisa Cuti Tahunan" />
       </div>
      <div>
       <FieldSelect :bind="{ disabled: !actionText, clearable:false }" class="w-full !mt-3" :value="values.tipe_cuti_id"
