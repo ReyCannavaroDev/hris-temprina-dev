@@ -33,20 +33,18 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
             $divisiVal = $row['name'];
         }
 
-        $data['name.value'] = $divisiVal;
-        $data['value'] = $divisiVal;
+        $branchName = $row['branch_name'] ?? null;
+        if (empty($branchName) && !empty($row['m_branch_id'])) {
+            $branchName = \DB::table('m_branch')->where('id', $row['m_branch_id'])->value('name');
+        }
+        $displayWithBranch = (!empty($branchName) && !empty($divisiVal)) ? ($divisiVal . ' - ' . $branchName) : $divisiVal;
+
+        $data['name.value'] = $displayWithBranch;
+        $data['value'] = $displayWithBranch;
         $data['name'] = $divisiVal;
         $data['nama'] = $divisiVal;
         $data['name_old'] = $divisiVal;
-
-        if(app()->request->concat_branch){
-            $getData = $this->where('m_divisi.id',$row['id'])
-            ->leftjoin('m_branch','m_branch.id','m_divisi.m_branch_id')
-            ->select('m_branch.name as branch_name','m_divisi.name as divisi_name')
-            ->first();
-            $concat = ($getData['divisi_name'] ?? '') . (($getData['branch_name'] ?? false) ? ' - ' : '') . ($getData['branch_name'] ?? '');
-            $data['concat_divisi_branch'] = $concat;
-        }
+        $data['concat_divisi_branch'] = $displayWithBranch;
         // Keamanan: Batasi kolom default_users (creator & last_editor) hanya ke id dan name saja
         foreach ($row as $key => $val) {
             if (strpos($key, 'creator.') === 0 && !in_array($key, ['creator.id', 'creator.name'])) {
