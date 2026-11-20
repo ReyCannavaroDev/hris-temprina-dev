@@ -3999,18 +3999,15 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 fn($item) => Carbon::parse($item->tanggal)->format("Y-m-d")
             );
 
-        $liburNasional = m_libur_nasional::whereBetween("tanggal", [
+        $liburNasional = m_libur_nasional::where("is_active", true)->whereBetween("tanggal", [
             $start->format("Y-m-d"),
             $end->format("Y-m-d"),
         ])->get();
-        $liburDates = $liburNasional
-            ->pluck("keterangan", "tanggal")
-            ->mapWithKeys(
-                fn($keterangan, $tgl) => [
-                    Carbon::parse($tgl)->format("Y-m-d") =>
-                        $keterangan ?? "LIBUR NASIONAL",
-                ]
-            );
+        $liburDates = [];
+        foreach ($liburNasional as $ln) {
+            $tglStr = Carbon::parse($ln->tanggal)->format("Y-m-d");
+            $liburDates[$tglStr] = trim((string)($ln->desc ?? $ln->keterangan ?? "LIBUR NASIONAL"));
+        }
 
         foreach ($period as $tanggal) {
             $key = $tanggal->format("Y-m-d");
@@ -4061,13 +4058,18 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 }
             }
 
-            if (isset($liburDates[$key])) {
-                $status = $liburDates[$key];
+            $isLiburNasional = isset($liburDates[$key]);
+            if ($isLiburNasional) {
+                if ($data && in_array($data->status, ["ATTEND", "WORKING"])) {
+                    $status = $data->status . " (LIBUR NASIONAL)";
+                } else {
+                    $status = $liburDates[$key];
+                }
                 $tipe = $liburDates[$key];
             }
 
             // --- hitung hadir ---
-            if ($status === "ATTEND" && $tipe === "KERJA") {
+            if (in_array($status, ["ATTEND", "WORKING"]) || str_contains((string)$status, "ATTEND")) {
                 $jumlah_hadir++;
             }
 
@@ -4142,6 +4144,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 "tanggal" => $key,
                 "tipe" => $tipe,
                 "status" => $status,
+                "is_libur_nasional" => $isLiburNasional,
             ];
         }
 
@@ -4152,6 +4155,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             "jumlah_hadir" => $jumlah_hadir,
             "total_jam_tidak_hadir" => $total_jam_tidak_hadir,
             "jumlah_cuti" => count($cutiDates),
+            "jumlah_libur_nasional" => collect($hasil)->where("is_libur_nasional", true)->count(),
             "total_menit_lembur_kerja" => $total_menit_lembur_kerja,
             "total_menit_lembur_libur" => $total_menit_lembur_libur,
             "total_menit_terlambat" => $total_menit_terlambat,

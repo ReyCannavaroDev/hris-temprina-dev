@@ -24,11 +24,13 @@
   $startStr = $start->format('Y-m-d');
   $endStr   = $end->format('Y-m-d');
 
-  // 🟢 BARIS BARU: Ambil list hari libur nasional (ditaruh di sini agar query-nya cepat)
-  $liburNasional = m_libur_nasional::whereBetween('tanggal', [$startStr, $endStr])->get();
-  $liburDates = $liburNasional->pluck('keterangan', 'tanggal')->mapWithKeys(
-  fn($keterangan, $tgl) => [Carbon::parse($tgl)->format('Y-m-d') => $keterangan ?? 'LIBUR']
-  );
+  // 🟢 BARIS BARU: Ambil list hari libur nasional (dengan kolom desc)
+  $liburNasional = m_libur_nasional::where('is_active', true)->whereBetween('tanggal', [$startStr, $endStr])->get();
+  $liburDates = [];
+  foreach ($liburNasional as $ln) {
+      $tglStr = Carbon::parse($ln->tanggal)->format('Y-m-d');
+      $liburDates[$tglStr] = trim((string)($ln->desc ?? $ln->keterangan ?? 'LIBUR NASIONAL'));
+  }
 
   // Cache nama divisi dari m_general / name_old agar query cepat dan relasi aman
   $allDivisi = \DB::table('m_divisi')->get();
@@ -82,8 +84,9 @@
 <span style="font-weight:bold; font-size: 9pt"> Periode  {{$req->periode}}</span><br/></br>
 <span style="font-weight:bold; font-style: italic; font-size: 8pt"> HK : Hari Kerja</span><br/>
 <span style="font-weight:bold; font-style: italic; font-size: 8pt"> H : Masuk Kerja</span><br/>
-<span style="font-weight:bold; font-style: italic; font-size: 8pt"> I : Ijin</span><br/>
+<span style="font-weight:bold; font-style: italic; font-size: 8pt"> I : Ijin / Cuti</span><br/>
 <span style="font-weight:bold; font-style: italic; font-size: 8pt"> A : Tidak Masuk Kerja / Tanpa Keterangan</span><br/>
+<span style="font-weight:bold; font-style: italic; font-size: 8pt"> LN : Hari Libur Nasional</span><br/>
 <!-- <span style="font-weight:bold; font-style: italic; font-size: 8pt"> CI AVG : Rata-rata Jam Checkin</span><br/>
 <span style="font-weight:bold; font-style: italic; font-size: 8pt"> CO AVG : Rata-rata Jam Checkout</span><br/> -->
 <br/>
@@ -91,15 +94,16 @@
   <thead class="bg-[#c6c6c6]">
     <tr>
       <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6;">NIK</th>
-      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 25%;">Karyawan</th>
-      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 20%;">Cabang</th>
-      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 20%;">Divisi</th>
+      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 22%;">Karyawan</th>
+      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 18%;">Cabang</th>
+      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 18%;">Divisi</th>
       <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 3.5%;">HK</th>
       <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 3.5%;">H</th>
       <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 3.5%;">I</th>
       <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 3.5%;">A</th>
-      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 3.5%;">Denda Telat</th>
-      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 3.5%;">Denda Absen</th>
+      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 3.5%;">LN</th>
+      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 4%;">Denda Telat</th>
+      <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6; width: 4%;">Denda Absen</th>
       <!-- <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6;">CI AVG</th>
       <th style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; background-color: #c6c6c6;">CO AVG</th> -->
     </tr>
@@ -278,12 +282,18 @@
             $isLiburNasional = isset($liburDates[$key]);
             $isHariKerja = ($tipe_hari === 'KERJA') && !$isLiburNasional;
 
-            if ($isLiburNasional) $tipe_hari = $liburDates[$key];
+            if ($isLiburNasional) $tipe_hari = 'LIBUR NASIONAL';
 
             $status = $data_presensi?->status ?? 'NOT ATTEND';
             if ($isCuti) $status = $cutiDates[$key];
 
-            if (!$data_presensi && ($tipe_hari === 'LIBUR' || $isLiburNasional)) {
+            if ($isLiburNasional) {
+                if ($data_presensi && in_array($data_presensi->status, ['ATTEND', 'WORKING'])) {
+                    $status = 'ATTEND (LIBUR NASIONAL)';
+                } else {
+                    $status = 'LIBUR NASIONAL';
+                }
+            } elseif (!$data_presensi && $tipe_hari === 'LIBUR') {
                 $status = 'LIBUR';
             }
 
@@ -325,18 +335,19 @@
         @endphp
         <tr>
           <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse;">{{ $dt->kode }}</td>
-          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; width: 25%;">{{ $dt->nama_lengkap }}</td>
-          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; width: 20%;">{{ $dt->m_branch?->name ?? '-' }}</td>
-          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; width: 20%;">{{ $divisiNameMap[$dt->m_divisi_id] ?? ($dt->m_divisi?->name_old ?? '-') }}</td>
+          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; width: 22%;">{{ $dt->nama_lengkap }}</td>
+          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; width: 18%;">{{ $dt->m_branch?->name ?? '-' }}</td>
+          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; width: 18%;">{{ $divisiNameMap[$dt->m_divisi_id] ?? ($dt->m_divisi?->name_old ?? '-') }}</td>
           <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; width: 3.5%">{{ $absensi['hari_kerja'] }}</td>
           <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; width: 3.5%;">{{ $absensi['jumlah_hadir'] }}</td>
           <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; width: 3.5%;">{{ $absensi['jumlah_cuti'] }}</td>
           <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; width: 3.5%;">{{ max(0, $absensi['hari_kerja'] - ($absensi['jumlah_hadir'] + $absensi['jumlah_cuti'])) }}</td>
+          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; width: 3.5%;">{{ $absensi['jumlah_libur_nasional'] ?? count($liburDates) }}</td>
 
-          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; font-weight: bold;">
+          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; font-weight: bold; width: 4%;">
             {{ "Rp " . number_format($jumlah_denda_telat, 0, ',', '.') }}
           </td>
-          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; font-weight: bold;">
+          <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right; font-weight: bold; width: 4%;">
             {{ "Rp " . number_format($jumlah_denda_absen, 0, ',', '.') }}
           </td>
           <!-- <td style="border:0.5px solid black; padding: 2px; font-size: 9pt; border-collapse: collapse; text-align: right;">{{ $dt->checkin_avg }}</td>

@@ -38,10 +38,20 @@ $query->when(!empty($m_divisi_ids), fn($q) => $q->whereIn('m_divisi_id', $m_divi
 
 $listKaryawan = $query->pluck('id');
 
-$liburNasional = m_libur_nasional::whereBetween('tanggal', [$startStr, $endStr])->get();
-$liburDates = $liburNasional->pluck('keterangan', 'tanggal')->mapWithKeys(
-    fn($keterangan, $tgl) => [Carbon::parse($tgl)->format('Y-m-d') => $keterangan ?? 'LIBUR']
-);
+$liburNasional = m_libur_nasional::where('is_active', true)->whereBetween('tanggal', [$startStr, $endStr])->get();
+$liburDates = [];
+foreach ($liburNasional as $ln) {
+    $tglStr = Carbon::parse($ln->tanggal)->format('Y-m-d');
+    $keteranganLibur = trim((string)($ln->desc ?? $ln->keterangan ?? 'Libur Nasional'));
+    if (empty($keteranganLibur)) {
+        $keteranganLibur = 'Libur Nasional';
+    }
+    $liburDates[$tglStr] = [
+        'nama' => $keteranganLibur,
+        'is_cuti_bersama' => (bool)$ln->is_cuti_bersama,
+        'is_potong_cuti' => (bool)$ln->is_potong_cuti,
+    ];
+}
 
 $dayMap = [
     'senin' => 1, 'monday' => 1,
@@ -226,14 +236,24 @@ $dayMap = [
 
         $isCuti = isset($cutiDates[$key]);
         $isLiburNasional = isset($liburDates[$key]);
+        $liburInfo = $liburDates[$key] ?? null;
         $isHariKerja = ($tipe_hari === 'KERJA') && !$isLiburNasional;
 
-        if ($isLiburNasional) $tipe_hari = $liburDates[$key];
+        if ($isLiburNasional) {
+            $prefix = ($liburInfo && $liburInfo['is_cuti_bersama']) ? 'CUTI BERSAMA' : 'LIBUR NASIONAL';
+            $tipe_hari = $prefix . ' - ' . ($liburInfo['nama'] ?? 'Libur Nasional');
+        }
 
         $status = $data?->status ?? 'NOT ATTEND';
         if ($isCuti) $status = $cutiDates[$key];
 
-        if (!$data && ($tipe_hari === 'LIBUR' || $isLiburNasional)) {
+        if ($isLiburNasional) {
+            if ($data && in_array($data->status, ['ATTEND', 'WORKING'])) {
+                $status = $data->status . ' (LIBUR NASIONAL)';
+            } else {
+                $status = ($liburInfo && $liburInfo['is_cuti_bersama']) ? 'CUTI BERSAMA' : 'LIBUR NASIONAL';
+            }
+        } elseif (!$data && $tipe_hari === 'LIBUR') {
             $status = 'LIBUR';
         }
 
@@ -335,18 +355,20 @@ $dayMap = [
         }
 
         $hasil[] = [
-            'tanggal'  => $key,
-            'hari'     => strtoupper($tanggal->translatedFormat('l')),
-            'tipe'     => $tipe_hari,
-            'status'   => $status,
-            'checkin'  => $data?->checkin_time ?? '-',
-            'checkout' => $checkoutDisplay,
-            'jam_kerja'=> $jamKerjaDisplay,
-            'telat'    => $telat,
-            'lembur'   => $lembur,
-            'jamTelat' => $jamTelat,
-            'denda'    => $denda_format,
-            'denda_absen' => $dendaAbsen_format,
+            'tanggal'           => $key,
+            'hari'              => strtoupper($tanggal->translatedFormat('l')),
+            'tipe'              => $tipe_hari,
+            'status'            => $status,
+            'checkin'           => $data?->checkin_time ?? '-',
+            'checkout'          => $checkoutDisplay,
+            'jam_kerja'         => $jamKerjaDisplay,
+            'telat'             => $telat,
+            'lembur'            => $lembur,
+            'jamTelat'          => $jamTelat,
+            'denda'             => $denda_format,
+            'denda_absen'       => $dendaAbsen_format,
+            'is_libur_nasional' => $isLiburNasional,
+            'is_cuti'           => $isCuti,
         ];
     }
 @endphp
@@ -376,15 +398,21 @@ $dayMap = [
         <tbody>
             @foreach($hasil as $dt)
                 @php
-                    if(in_array($dt['status'], ['ATTEND', 'WORKING'])) $jumlah_hadir++;
+                    if(in_array($dt['status'], ['ATTEND', 'WORKING']) || str_contains((string)$dt['status'], 'ATTEND')) $jumlah_hadir++;
                     
                     $rowStyle = "";
-                    if ($dt['status'] === 'NOT ATTEND' && $dt['tipe'] === 'KERJA') {
+                    if (!empty($dt['is_libur_nasional'])) {
+                        // Biru Muda untuk Hari Libur Nasional / Cuti Bersama
+                        $rowStyle = "background-color: #cce5ff; color: #004085;";
+                    } elseif ($dt['status'] === 'NOT ATTEND' && $dt['tipe'] === 'KERJA') {
+                        // Merah untuk Alpa / Tidak Masuk Kerja
                         $rowStyle = "background-color: #f8d7da; color: #721c24;";
-                    } elseif ($dt['tipe'] !== 'KERJA' || isset($cutiDates[$dt['tanggal']])) {
+                    } elseif ($dt['telat'] > 0) {
+                        // Merah untuk Terlambat
+                        $rowStyle = "background-color: #f8d7da; color: #721c24;";
+                    } elseif ($dt['tipe'] !== 'KERJA' || !empty($dt['is_cuti'])) {
+                        // Hijau untuk Libur Jadwal Rutin / Cuti
                         $rowStyle = "background-color: #d4edda; color: #155724;";
-                    }elseif($dt['telat'] > 0){
-                        $rowStyle = "background-color: #f8d7da; color: #721c24;";
                     }
                 @endphp
                 <tr style="{{ $rowStyle }}">
@@ -405,12 +433,21 @@ $dayMap = [
     </table>
 
     <br>
-    <table style="width: 30%; font-size: 7pt;">
+    <div style="font-size: 7pt; margin-bottom: 6px;">
+        <span style="font-weight: bold;">Keterangan Indikator Warna:</span><br/>
+        <span style="display:inline-block; width:10px; height:10px; background-color:#d4edda; border:0.5px solid #155724; vertical-align:middle; margin-right:3px;"></span> Libur Sesuai Jadwal Rutin / Cuti
+        <span style="display:inline-block; width:10px; height:10px; background-color:#cce5ff; border:0.5px solid #004085; vertical-align:middle; margin-left:10px; margin-right:3px;"></span> Hari Libur Nasional / Cuti Bersama
+        <span style="display:inline-block; width:10px; height:10px; background-color:#f8d7da; border:0.5px solid #721c24; vertical-align:middle; margin-left:10px; margin-right:3px;"></span> Tidak Masuk Kerja (Alpa) / Terlambat
+    </div>
+
+    <table style="width: 35%; font-size: 7pt;">
         <tr><td>Jumlah Hari Kerja</td><td>:</td><td>{{ collect($hasil)->where('tipe', 'KERJA')->count() }}</td></tr>
         <tr><td>Jumlah Hadir</td><td>:</td><td>{{ $jumlah_hadir }}</td></tr>
         <tr><td>Jumlah Telat</td><td>:</td><td>{{ $jumlah_telat }}</td></tr>
         <tr><td>Jumlah Lembur</td><td>:</td><td>{{ $jumlah_lembur }}</td></tr>
         <tr><td>Jumlah Cuti</td><td>:</td><td>{{ count($cutiDates) }}</td></tr>
+        <tr><td>Jumlah Libur Rutin</td><td>:</td><td>{{ collect($hasil)->where('tipe', 'LIBUR')->count() }}</td></tr>
+        <tr><td>Jumlah Libur Nasional</td><td>:</td><td>{{ collect($hasil)->where('is_libur_nasional', true)->count() }}</td></tr>
         <tr><td>Denda Terlambat</td><td>:</td><td>{{ "Rp " . number_format($jumlah_denda, 0, ',', '.') }}</td></tr>
         <tr><td>Denda Tidak Hadir</td><td>:</td><td>{{ "Rp " . number_format($jumlah_denda_absen, 0, ',', '.') }}</td></tr>
     </table>
