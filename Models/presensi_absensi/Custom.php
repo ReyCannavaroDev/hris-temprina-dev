@@ -30,6 +30,17 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         }
     }
 
+    public function transformRowData(array $row)
+    {
+        if (!empty($row['tanggal']) && empty($row['checkin_date'])) {
+            $row['checkin_date'] = $row['tanggal'];
+        }
+        if (!empty($row['checkout_time']) && empty($row['checkout_date'])) {
+            $row['checkout_date'] = $row['tanggal'] ?? null;
+        }
+        return $row;
+    }
+
     protected function hasCheckoutDateColumn(): bool
     {
         if (self::$hasCheckoutDateColumn === null) {
@@ -359,6 +370,26 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
             "default_user_id",
             "id"
         );
+    }
+
+    public function t_jadwal_kerja_d_hari_n(): \BelongsTo
+    {
+        return $this->belongsTo(\App\Models\CustomModels\t_jadwal_kerja_d_hari_n::class, 't_jadwal_kerja_d_hari_n_id', 'id');
+    }
+
+    public function m_jam_kerja(): \BelongsTo
+    {
+        return $this->belongsTo(\App\Models\CustomModels\m_jam_kerja::class, 'm_jam_kerja_id', 'id');
+    }
+
+    public function t_jadwal_kerja_n(): \BelongsTo
+    {
+        return $this->belongsTo(\App\Models\CustomModels\t_jadwal_kerja_n::class, 't_jadwal_kerja_n_id', 'id');
+    }
+
+    public function t_jadwal_kerja_d_n(): \BelongsTo
+    {
+        return $this->belongsTo(\App\Models\CustomModels\t_jadwal_kerja_d_n::class, 't_jadwal_kerja_d_n_id', 'id');
     }
 
     public function custom_get_by_daily($req)
@@ -802,12 +833,21 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         if ($tipeHari === 'LIBUR') {
             $jamKerjaText = 'LIBUR';
             $descText = 'LIBUR';
+            $jamKerjaMasuk = 'LIBUR';
+            $jamKerjaKeluar = 'LIBUR';
         } else {
             $wMulai = $jadwal->waktu_mulai ?? ($mJamKerja->waktu_mulai ?? null);
             $wAkhir = $jadwal->waktu_akhir ?? ($mJamKerja->waktu_akhir ?? null);
             $jamKerjaText = (!empty($wMulai) && !empty($wAkhir)) ? ($wMulai . ' - ' . $wAkhir) : '-';
             $descText = $mJamKerja?->desc ?? ($absensi?->shift ?? ($resolved['shift'] ?? '-'));
+            $jamKerjaMasuk = !empty($wMulai) ? substr((string)$wMulai, 0, 5) : '-';
+            $jamKerjaKeluar = !empty($wAkhir) ? substr((string)$wAkhir, 0, 5) : '-';
         }
+
+        $tanggalMasuk = $absensi?->tanggal ?: $dateStr;
+        $jamMasuk = $absensi?->checkin_time ? substr((string)$absensi->checkin_time, 0, 8) : '-';
+        $tanggalKeluar = $absensi?->checkout_date ?: ($absensi?->checkout_time ? $tanggalMasuk : '-');
+        $jamKeluar = $absensi?->checkout_time ? substr((string)$absensi->checkout_time, 0, 8) : '-';
 
         return [
             'm_kary_id'           => $user->m_kary_id,
@@ -818,6 +858,12 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
             'absensi'             => $absensiData,
             'status'              => $status,
             'jam_kerja'           => $jamKerjaText,
+            'jam_kerja_masuk'     => $jamKerjaMasuk,
+            'jam_kerja_keluar'    => $jamKerjaKeluar,
+            'tanggal_masuk'       => $tanggalMasuk,
+            'jam_masuk'           => $jamMasuk,
+            'tanggal_keluar'      => $tanggalKeluar,
+            'jam_keluar'          => $jamKeluar,
             'desc'                => $descText,
             'shift'               => $absensi?->shift ?? ($resolved['shift'] ?? $descText),
         ];

@@ -738,7 +738,7 @@ const landing = reactive({
     },
     params: {
       simplest: true,
-      searchfield: 'tanggal, creator.name, status, checkin_time, checkin_on_scope, checkout_time, checkout_on_scope',
+      searchfield: 'tanggal, checkout_date, creator.name, status, checkin_time, checkin_on_scope, checkout_time, checkout_on_scope',
     },
     onsuccess(response) {
       response.page = response.current_page
@@ -815,6 +815,16 @@ const landing = reactive({
   },
 
   // Checkout
+  {
+    field: 'checkout_date',
+    headerName: 'Tanggal Checkout',
+    filter: true,
+    sortable: true,
+    flex: 1,
+    filter: 'ColFilter',
+    resizable: true,
+    cellClass: ['border-r', '!border-gray-200', 'justify-left']
+  },
   {
     field: 'checkout_time',
     headerName: 'Waktu Checkout',

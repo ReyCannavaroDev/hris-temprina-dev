@@ -74,15 +74,16 @@
   <table class="table-auto w-full" v-if="openDateSelected && dataByDateDetail.length">
     <thead class="bg-blue-600 text-white ">
       <tr>
-        <th class="border-1 border-gray-500 px-3 py-2 w-[5%]">No</th>
-        <th class="border-1 border-gray-500 px-3 py-2 w-[10%]">NIK</th>
-        <th class="border-1 border-gray-500 px-3 py-2 w-[25%]">Nama</th>
-        <th class="border-1 border-gray-500 px-3 py-2 w-[27%]">Jam Kerja</th>
-        <th class="border-1 border-gray-500 px-3 py-2 w-[27%]">Jadwal</th>
-        <th class="border-1 border-gray-500 px-3 py-2 w-[10%]">Status</th>
-        <th class="border-1 border-gray-500 px-3 py-2 w-[12%]">Waktu Checkin</th>
-        <th class="border-1 border-gray-500 px-3 py-2 w-[12%]">Waktu Checkout</th>
-        <th class="border-1 border-gray-500 px-3 py-2 w-[12%]">Jam Kerja Diakui</th>
+        <th class="border-1 border-gray-500 px-3 py-2 w-[40px]">No</th>
+        <th class="border-1 border-gray-500 px-3 py-2 w-[90px]">NIK</th>
+        <th class="border-1 border-gray-500 px-3 py-2">Nama</th>
+        <th class="border-1 border-gray-500 px-3 py-2 w-[110px]">Jadwal / Shift</th>
+        <th class="border-1 border-gray-500 px-3 py-2 w-[90px]">Jam Masuk</th>
+        <th class="border-1 border-gray-500 px-3 py-2 w-[90px]">Jam Keluar</th>
+        <th class="border-1 border-gray-500 px-3 py-2 w-[90px]">Status</th>
+        <th class="border-1 border-gray-500 px-3 py-2 w-[140px]">Waktu Checkin</th>
+        <th class="border-1 border-gray-500 px-3 py-2 w-[140px]">Waktu Checkout</th>
+        <th class="border-1 border-gray-500 px-3 py-2 w-[110px]">Jam Kerja Diakui</th>
         <th class="border-1 border-gray-500 px-3 py-2 w-[50px]">Aksi</th>
       </tr>
     </thead>
@@ -92,19 +93,26 @@
         <td class="text-left border-1 border-gray-500 px-3">{{idx+1}}</td>
         <td class="text-left border-1 border-gray-500 px-3">{{item.kode}}</td>
         <td class="text-left border-1 border-gray-500 px-3">{{item.nama_lengkap}}</td>
-        <td class="text-left border-1 border-gray-500 px-3">{{item.jam_kerja}}</td>
-        <td class="text-left border-1 border-gray-500 px-3">{{item.desc}}</td>
-        <td class="text-left border-1 border-gray-500 px-3">{{item.absensi?.status}}</td>
+        <td class="text-left border-1 border-gray-500 px-3">{{item.desc || item.shift || '-'}}</td>
+        <td class="text-center border-1 border-gray-500 px-3">{{item.jam_kerja_masuk || '-'}}</td>
+        <td class="text-center border-1 border-gray-500 px-3">{{item.jam_kerja_keluar || '-'}}</td>
+        <td class="text-left border-1 border-gray-500 px-3">{{item.absensi?.status || item.status || '-'}}</td>
         <td class="text-left border-1 border-gray-500 px-3 cursor-pointer"@click="openDateDetail(true,item.absensi,'checkin',item)">
           <div class="flex items-center">
-            <icon v-show="item.absensi?.checkin_time" class="mx-1" :class="item.absensi?.checkin_on_scope?'text-green-600':'text-red-600'" fa="map-marker-alt"/>{{item.absensi?.checkin_time}}
+            <icon v-show="item.absensi?.checkin_time" class="mx-1" :class="item.absensi?.checkin_on_scope?'text-green-600':'text-red-600'" fa="map-marker-alt"/>
+            <div class="flex flex-col text-xs leading-tight">
+              <span v-if="item.tanggal_masuk || item.absensi?.tanggal" class="text-gray-500">{{item.tanggal_masuk || item.absensi?.tanggal}}</span>
+              <span class="font-medium">{{item.jam_masuk !== '-' ? item.jam_masuk : (item.absensi?.checkin_time || '-')}}</span>
+            </div>
           </div>
         </td>
         <td class="text-left border-1 border-gray-500 px-3 cursor-pointer"@click="openDateDetail(true,item.absensi,'checkout',item)">
           <div class="flex items-center">
             <icon v-show="item.absensi?.checkout_time" class="mx-1" :class="item.absensi?.checkout_on_scope?'text-green-600':'text-red-600'" fa="map-marker-alt"/>
-            <span>{{item.absensi?.checkout_time}}</span>
-            <span v-if="item.absensi?.checkout_date && item.absensi?.checkout_date !== (item.absensi?.tanggal || openDateSelected)" class="ml-1 text-xs text-gray-600">({{item.absensi.checkout_date}})</span>
+            <div class="flex flex-col text-xs leading-tight">
+              <span v-if="item.tanggal_keluar !== '-' || item.absensi?.checkout_date" class="text-gray-500">{{item.tanggal_keluar !== '-' ? item.tanggal_keluar : item.absensi?.checkout_date}}</span>
+              <span class="font-medium">{{item.jam_keluar !== '-' ? item.jam_keluar : (item.absensi?.checkout_time || '-')}}</span>
+            </div>
           </div>
         </td>
         <td class="text-center border-1 border-gray-500 px-3">{{item.absensi?.jam_kerja_diakui}}</td>
@@ -115,8 +123,6 @@
           <RouterLink v-else :to="$route.path+`/${item?.presensi_absensi_id}?action=Edit&ts=`+item.absensi?.tanggal" class="text-gray-600">
             <icon fa="edit" />
           </RouterLink>
-          <!-- <Icon fa="file" class="hover:text-yellow-500 cursor-pointer"/>
-          <Icon fa="file" class="hover:text-yellow-500 cursor-pointer"/> -->
         </td>
       </tr>
     </tbody>

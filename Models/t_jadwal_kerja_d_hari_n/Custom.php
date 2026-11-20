@@ -13,12 +13,12 @@ class t_jadwal_kerja_d_hari_n extends \App\Models\BasicModels\t_jadwal_kerja_d_h
         "id", "t_jadwal_kerja_n_id", "m_jam_kerja_id", "tipe_hari", "day", "day_num"
     ];
 
-    public function t_jadwal_kerja_n()
+    public function t_jadwal_kerja_n(): \BelongsTo
     {
         return $this->belongsTo(\App\Models\CustomModels\t_jadwal_kerja_n::class, 't_jadwal_kerja_n_id', 'id');
     }
 
-    public function m_jam_kerja()
+    public function m_jam_kerja(): \BelongsTo
     {
         return $this->belongsTo(\App\Models\CustomModels\m_jam_kerja::class, 'm_jam_kerja_id', 'id');
     }
