@@ -67,11 +67,6 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         }
     }
 
-    public function t_jadwal_kerja_d_hari_n()
-    {
-        return $this->belongsTo(\App\Models\CustomModels\t_jadwal_kerja_d_hari_n::class, 't_jadwal_kerja_d_hari_n_id', 'id');
-    }
-
     public function createBefore($model, $arrayData, $metaData, $id = null)
     {
         if (!empty($arrayData['tanggal'])) {
@@ -770,7 +765,10 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
     {
         $absensi = $user->presensi_absensi->first();
         $jadwal = $absensi && $absensi->t_jadwal_kerja_d_hari_n ? $absensi->t_jadwal_kerja_d_hari_n : null;
-        $mJamKerja = $absensi?->m_jam_kerja ?? ($jadwal?->m_jam_kerja ?? null);
+        $mJamKerja = $absensi?->m_jam_kerja ?? null;
+        if (!$mJamKerja && !empty($jadwal?->m_jam_kerja_id)) {
+            $mJamKerja = DB::table('m_jam_kerja')->where('id', $jadwal->m_jam_kerja_id)->first();
+        }
         $resolved = null;
 
         if (!$jadwal && !empty($user->m_kary_id)) {
