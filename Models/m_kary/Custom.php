@@ -153,6 +153,16 @@ class m_kary extends \App\Models\BasicModels\m_kary
             }
         }
 
+        if (isset($arrayData['sisa_cuti_reguler']) && !isset($arrayData['cuti_sisa_reguler'])) {
+            $arrayData['cuti_sisa_reguler'] = $arrayData['sisa_cuti_reguler'];
+        }
+        if (!isset($arrayData['cuti_sisa_reguler']) && isset($arrayData['cuti_jatah_reguler'])) {
+            $arrayData['cuti_sisa_reguler'] = $arrayData['cuti_jatah_reguler'];
+        }
+        if (empty($arrayData['exp_date_cuti'])) {
+            $arrayData['exp_date_cuti'] = Carbon::now()->endOfYear()->toDateString();
+        }
+
         $newArrayData = array_merge($arrayData, [
             "nip" => $arrayData["nip"] ?? '0' . $nip,
             "kode" => $kode,
@@ -191,6 +201,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 \DB::table('m_kary')->where('id', $karyId)->update(['is_sync' => false]);
                 \DB::table('default_users')->where('m_kary_id', $karyId)->update(['is_sync' => false]);
             } catch (\Throwable $e) {}
+            self::syncSisaCuti($karyId);
         }
 
         return [
@@ -202,6 +213,9 @@ class m_kary extends \App\Models\BasicModels\m_kary
     public function updateBefore($model, $arrayData, $metaData, $id = null)
     {
         $arrayData['is_sync'] = false;
+        if (isset($arrayData['sisa_cuti_reguler']) && !isset($arrayData['cuti_sisa_reguler'])) {
+            $arrayData['cuti_sisa_reguler'] = $arrayData['sisa_cuti_reguler'];
+        }
         $karyIdForFix = $id ?? $arrayData['id'] ?? null;
         if ($karyIdForFix) {
             try {
@@ -378,6 +392,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 \DB::table('m_kary')->where('id', $karyId)->update(['is_sync' => false]);
                 \DB::table('default_users')->where('m_kary_id', $karyId)->update(['is_sync' => false]);
             } catch (\Throwable $e) {}
+            self::syncSisaCuti($karyId);
         }
 
         if (@$arrayData["m_dir_id"]) {
@@ -575,6 +590,11 @@ class m_kary extends \App\Models\BasicModels\m_kary
             // $data = json_decode($data[0]->employee_attendance);
             $data = $this->infoCuti($row["id"]);
             $object["info_cuti"] = $data;
+            if (isset($data["sisa_cuti_reguler"])) {
+                $object["cuti_sisa_reguler"] = $data["sisa_cuti_reguler"];
+                $object["sisa_cuti_reguler"] = $data["sisa_cuti_reguler"];
+                $object["sisa_cuti_tahun_lalu"] = $data["sisa_cuti_tahun_lalu"];
+            }
 
             $jadwal_kerja = \DB::table("t_jadwal_kerja as t")
                 ->selectRaw("t.*")
@@ -583,6 +603,11 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 ->where("status", "POSTED")
                 ->first();
             $object["jadwal_kerja"] = $jadwal_kerja;
+        } else {
+            if (!isset($row['cuti_sisa_reguler']) || $row['cuti_sisa_reguler'] === null) {
+                $object['cuti_sisa_reguler'] = $row['cuti_jatah_reguler'] ?? 12;
+            }
+            $object['sisa_cuti_reguler'] = $object['cuti_sisa_reguler'] ?? ($row['cuti_sisa_reguler'] ?? 12);
         }
         $object["nomor_ktp"] =
             \DB::table("m_kary_det_kartu")
@@ -601,9 +626,11 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 404
             );
         }
-        $data = $this->infoCuti($kary_id);
-        return $this->helper->customResponse("OK", 200, $data);
-
+        $info = self::syncSisaCuti($kary_id);
+        if (!$info) {
+            $info = $this->infoCuti($kary_id);
+        }
+        return $this->helper->customResponse("OK", 200, $info);
     }
 
     // public function infoCuti($id)
@@ -645,53 +672,180 @@ class m_kary extends \App\Models\BasicModels\m_kary
     //         'sisa_cuti_reguler' => $sisa_cuti_reguler,
     //     ];
     // }
-    public function infoCuti($id)
+    public function infoCuti($id, $year = null)
     {
-        $m_kary = m_kary::findOrFail($id);
+        $m_kary = m_kary::find($id);
+        if (!$m_kary) {
+            return [
+                "cuti_reguler" => 0,
+                "sisa_cuti_reguler" => 0,
+                "cuti_sisa_reguler" => 0,
+                "cuti_tahun_lalu" => 0,
+                "sisa_cuti_tahun_lalu" => 0,
+                "cuti_terpakai" => 0,
+                "pakai_tahun_lalu" => 0,
+                "pakai_reguler" => 0,
+            ];
+        }
 
-        $cuti_reguler = $m_kary->cuti_jatah_reguler ?? 0;
-        $cuti_tahun_lalu = $m_kary->cuti_jatah_tahun_lalu ?? 0;
+        $calcYear = $year ?: Carbon::now()->year;
+
+        $cuti_reguler = (int)($m_kary->cuti_jatah_reguler ?? ($m_kary->cuti_sisa_reguler ?: 12));
+        $cuti_tahun_lalu = (int)($m_kary->cuti_jatah_tahun_lalu ?? 0);
 
         // $adj_cuti = t_cuti_adjustment::where('m_kary_id', $id)
         //     ->sum('value') ?? 0;
         $adj_cuti = 0;
-
         $cuti_reguler += $adj_cuti;
 
-        $cuti_terpakai =
+        $cuti_terpakai = (int)(
             t_cuti::where("m_kary_id", $id)
                 ->where("status", "APPROVED")
-                ->whereYear("date_from", Carbon::now()->year)
-                ->whereHas("tipe_cuti", fn($q) => $q->where("key", "02"))
-                ->whereHas("alasan", fn($q) => $q->where("value_2", "true"))
-                ->sum("interval") ?? 0;
+                ->whereYear("date_from", $calcYear)
+                ->where(function($q) {
+                    $q->whereHas("tipe_cuti", function($tc) {
+                        $tc->where("key", "02")
+                           ->orWhere("value", "ILIKE", "%TAHUNAN%");
+                    })
+                    ->orWhereNull("tipe_cuti_id");
+                })
+                ->where(function($q) {
+                    $q->whereHas("alasan", function($al) {
+                        $al->where("value_2", "true")
+                           ->orWhere("value_2", "1");
+                    })
+                    ->orWhereDoesntHave("alasan")
+                    ->orWhereNull("alasan_id");
+                })
+                ->selectRaw("COALESCE(SUM(COALESCE(interval, CASE WHEN date_to IS NOT NULL AND date_from IS NOT NULL THEN (date_to - date_from + 1) ELSE 0 END, 0)), 0) as total")
+                ->value("total") ?? 0
+        );
 
         $pakai_tahun_lalu = min($cuti_terpakai, $cuti_tahun_lalu);
-        $sisa_cuti_tahun_lalu = $cuti_tahun_lalu - $pakai_tahun_lalu;
+        $sisa_cuti_tahun_lalu = max($cuti_tahun_lalu - $pakai_tahun_lalu, 0);
 
         $pakai_reguler = $cuti_terpakai - $pakai_tahun_lalu;
-        $sisa_cuti_reguler = $cuti_reguler - $pakai_reguler;
-
-        $sisa_cuti_tahun_lalu = max($sisa_cuti_tahun_lalu, 0);
-        $sisa_cuti_reguler = max($sisa_cuti_reguler, 0);
+        $sisa_cuti_reguler = max($cuti_reguler - $pakai_reguler, 0);
 
         return [
             "cuti_reguler" => $cuti_reguler,
             "sisa_cuti_reguler" => $sisa_cuti_reguler,
+            "cuti_sisa_reguler" => $sisa_cuti_reguler,
             "cuti_tahun_lalu" => $cuti_tahun_lalu,
             "sisa_cuti_tahun_lalu" => $sisa_cuti_tahun_lalu,
+            "cuti_terpakai" => $cuti_terpakai,
+            "pakai_tahun_lalu" => $pakai_tahun_lalu,
+            "pakai_reguler" => $pakai_reguler,
         ];
+    }
+
+    public static function syncSisaCuti($m_kary_id)
+    {
+        if (!$m_kary_id) return null;
+        try {
+            self::checkAndRollOverCuti($m_kary_id);
+
+            $instance = new self();
+            $info = $instance->infoCuti($m_kary_id);
+            \DB::table('m_kary')->where('id', $m_kary_id)->update([
+                'cuti_sisa_reguler' => $info['sisa_cuti_reguler'],
+                'updated_at' => Carbon::now()
+            ]);
+            return $info;
+        } catch (\Throwable $e) {
+            \Log::error("Error syncSisaCuti for kary_id {$m_kary_id}: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public static function checkAndRollOverCuti($m_kary_id, $targetYear = null)
+    {
+        if (!$m_kary_id) return null;
+
+        try {
+            $kary = \DB::table('m_kary')->where('id', $m_kary_id)->first();
+            if (!$kary) return null;
+
+            $currentYear = (int)($targetYear ?: Carbon::now()->year);
+            $expYear = $kary->exp_date_cuti ? (int)(Carbon::parse($kary->exp_date_cuti)->year) : null;
+            $newExpDate = Carbon::create($currentYear, 12, 31)->toDateString();
+
+            // 1. Jika exp_date_cuti masih null: inisialisasi untuk tahun berjalan
+            if ($expYear === null) {
+                \DB::table('m_kary')->where('id', $m_kary_id)->update([
+                    'exp_date_cuti' => $newExpDate,
+                    'cuti_jatah_reguler' => $kary->cuti_jatah_reguler ?? 12,
+                    'updated_at' => Carbon::now()
+                ]);
+                return;
+            }
+
+            // 2. Jika tahun exp_date_cuti lebih kecil dari currentYear -> Pergantian Tahun (Roll-Over)!
+            if ($expYear < $currentYear) {
+                $sisaCarryOver = 0;
+                // Sesuai aturan Temprina: Hanya sisa tahun (N-1) yang berhak di-carry over ke tahun N
+                if ($expYear === ($currentYear - 1)) {
+                    $instance = new self();
+                    $prevInfo = $instance->infoCuti($m_kary_id, $expYear);
+                    $sisaCarryOver = max((int)($prevInfo['sisa_cuti_reguler'] ?? 0), 0);
+                }
+
+                // Update kuota tahun baru (12 hari baru + sisa tahun lalu):
+                \DB::table('m_kary')->where('id', $m_kary_id)->update([
+                    'cuti_jatah_tahun_lalu' => $sisaCarryOver,
+                    'cuti_jatah_reguler' => 12,
+                    'cuti_sisa_reguler' => 12,
+                    'exp_date_cuti' => $newExpDate,
+                    'updated_at' => Carbon::now()
+                ]);
+
+                \Log::info("Roll-over cuti tahunan berhasil untuk kary_id {$m_kary_id}: carry_over={$sisaCarryOver}, jatah_baru=12, tahun={$currentYear}");
+            }
+        } catch (\Throwable $e) {
+            \Log::error("Error checkAndRollOverCuti for kary_id {$m_kary_id}: " . $e->getMessage());
+        }
+    }
+
+    public function rollOverAllKaryawan($targetYear = null)
+    {
+        $currentYear = (int)($targetYear ?: Carbon::now()->year);
+        $employees = m_kary::where('is_active', true)->get();
+        $count = 0;
+        foreach ($employees as $emp) {
+            self::checkAndRollOverCuti($emp->id, $currentYear);
+            self::syncSisaCuti($emp->id);
+            $count++;
+        }
+        return $count;
+    }
+
+    public function custom_rollOverCuti()
+    {
+        $year = app()->request->year;
+        $count = $this->rollOverAllKaryawan($year);
+        return $this->helper->customResponse("Berhasil memperbarui roll-over kuota cuti tahunan {$count} karyawan", 200);
+    }
+
+    public function syncAllSisaCuti()
+    {
+        $all_kary = m_kary::where('is_active', true)->get();
+        $count = 0;
+        foreach ($all_kary as $kary) {
+            self::syncSisaCuti($kary->id);
+            $count++;
+        }
+        return $count;
+    }
+
+    public function custom_syncAllSisaCuti()
+    {
+        $count = $this->syncAllSisaCuti();
+        return $this->helper->customResponse("Berhasil memperbarui sisa cuti {$count} karyawan", 200);
     }
 
     public function resetCuti()
     {
-        $all_kary = m_kary::all();
-        foreach ($all_kary as $m_kary) {
-            $m_kary->cuti_jatah_tahun_lalu = $this->infoCuti($m_kary->id)[
-                "sisa_cuti_reguler"
-            ];
-            $m_kary->save();
-        }
+        return $this->rollOverAllKaryawan();
     }
 
     public function public_resetCuti()
@@ -725,41 +879,21 @@ class m_kary extends \App\Models\BasicModels\m_kary
         return $formattedNik;
     }
 
-    public function custom_resetCuti($request)
+    public function custom_resetCuti($request = null)
     {
         try {
-            \DB::beginTransaction();
-            $employees = m_kary::where("is_active", true)->get();
-
-            foreach ($employees as $employee) {
-                $employmentStartDate = Carbon::parse($employee->tgl_masuk);
-
-                $yearsOfWork = $employmentStartDate->diffInYears(Carbon::now());
-
-                $baseLeaveDays = 12;
-                $additionalLeaveDays = [3, 5, 0, 3, 0, 0, 3, 0, 5];
-
-                $employee->cuti_sisa_reguler =
-                    $yearsOfWork >= 1
-                    ? $baseLeaveDays +
-                    $additionalLeaveDays[
-                        ($yearsOfWork - 1) % count($additionalLeaveDays)
-                    ]
-                    : -4;
-
-                $employee->cuti_sisa_panjang = 16;
-                $employee->exp_date_cuti = Carbon::now()
-                    ->addYear()
-                    ->format("Y-m-d");
-
-                $employee->save();
-            }
-
-            \DB::commit();
-        } catch (\Exception $e) {
+            $year = is_object($request) ? ($request->year ?? null) : null;
+            $count = $this->rollOverAllKaryawan($year);
             return response()->json([
-                "errors" => $e->getMessage(),
+                "status" => true,
+                "message" => "Berhasil melakukan roll-over kuota cuti tahunan untuk {$count} karyawan",
+                "count" => $count,
             ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                "status" => false,
+                "errors" => $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -1442,7 +1576,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
                     "cuti_jatah_reguler" =>
                         $req->cuti_jatah_reguler ?? $kar->cuti_jatah_reguler,
                     "cuti_sisa_reguler" =>
-                        $req->cuti_sisa_reguler ?? $kar->cuti_sisa_reguler,
+                        $req->cuti_sisa_reguler ?? $req->sisa_cuti_reguler ?? $kar->cuti_sisa_reguler,
                     "cuti_panjang" => $req->cuti_panjang ?? $kar->cuti_panjang,
                     "cuti_sisa_panjang" =>
                         $req->cuti_sisa_panjang ?? $kar->cuti_sisa_panjang,

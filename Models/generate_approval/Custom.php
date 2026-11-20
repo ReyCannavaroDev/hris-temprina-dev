@@ -349,6 +349,18 @@ class generate_approval extends \App\Models\BasicModels\generate_approval
                         ]);
                     }
                 }
+
+                // Auto-sync pemotongan sisa cuti jika transaksi approval adalah cuti (t_cuti)
+                if ($datas['trx_table'] === 't_cuti') {
+                    try {
+                        $trxCuti = \DB::table('t_cuti')->where('id', $app->trx_id)->first();
+                        if ($trxCuti && !empty($trxCuti->m_kary_id)) {
+                            \App\Models\CustomModels\m_kary::syncSisaCuti($trxCuti->m_kary_id);
+                        }
+                    } catch (\Throwable $e) {
+                        \Log::error("Error sync sisa cuti in generate_approval: " . $e->getMessage());
+                    }
+                }
             }
 
             \DB::commit();

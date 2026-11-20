@@ -13,6 +13,31 @@ class t_cuti extends \App\Models\BasicModels\t_cuti
         $this->helper = getCore("Helper");
     }
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saved(function ($model) {
+            try {
+                if (!empty($model->m_kary_id)) {
+                    \App\Models\CustomModels\m_kary::syncSisaCuti($model->m_kary_id);
+                }
+            } catch (\Throwable $e) {
+                \Log::error("Error syncSisaCuti on t_cuti saved: " . $e->getMessage());
+            }
+        });
+
+        static::deleted(function ($model) {
+            try {
+                if (!empty($model->m_kary_id)) {
+                    \App\Models\CustomModels\m_kary::syncSisaCuti($model->m_kary_id);
+                }
+            } catch (\Throwable $e) {
+                \Log::error("Error syncSisaCuti on t_cuti deleted: " . $e->getMessage());
+            }
+        });
+    }
+
     public $fileColumns = [
         'attachment'
     ];
@@ -172,12 +197,34 @@ class t_cuti extends \App\Models\BasicModels\t_cuti
         if (app()->request->header("Source") == "mobile") {
             $app = $this->createAppTicket($model->id);
         }
+        $karyId = $model->m_kary_id ?? $arrayData['m_kary_id'] ?? null;
+        if ($karyId) {
+            \App\Models\CustomModels\m_kary::syncSisaCuti($karyId);
+        }
     }
 
-      public function updateAfterTransaction( $newdata, $olddata, $data, $meta )
+    public function updateAfterTransaction( $newdata, $olddata, $data, $meta )
     {
         if (app()->request->header("Source") == "mobile") {
             $app = $this->createAppTicket($newdata['id']);  
+        }
+
+        $karyId = $newdata['m_kary_id'] ?? $olddata['m_kary_id'] ?? null;
+        if ($karyId) {
+            \App\Models\CustomModels\m_kary::syncSisaCuti($karyId);
+        }
+        if (!empty($olddata['m_kary_id']) && $olddata['m_kary_id'] != $karyId) {
+            \App\Models\CustomModels\m_kary::syncSisaCuti($olddata['m_kary_id']);
+        }
+    }
+
+    public function deleteAfter($model, $arrayData, $metaData, $id = null)
+    {
+        $karyId = (is_object($model) ? ($model->m_kary_id ?? null) : null)
+            ?? $arrayData['m_kary_id']
+            ?? null;
+        if ($karyId) {
+            \App\Models\CustomModels\m_kary::syncSisaCuti($karyId);
         }
     }
 
@@ -242,13 +289,14 @@ class t_cuti extends \App\Models\BasicModels\t_cuti
     
 
 
-    // public function updateSisaCuti($data){
-    //     $m_kary = m_kary::find($data->m_kary_id);
-    //     if($data?->status?->value_2){
-    //         $m_kary->
-    //     }
-        
-    // }
+    public function updateSisaCuti($data)
+    {
+        $karyId = is_object($data) ? ($data->m_kary_id ?? null) : (is_array($data) ? ($data['m_kary_id'] ?? null) : $data);
+        if ($karyId) {
+            return \App\Models\CustomModels\m_kary::syncSisaCuti($karyId);
+        }
+        return null;
+    }
 
     public function custom_getKary($req)
     {
@@ -459,6 +507,10 @@ class t_cuti extends \App\Models\BasicModels\t_cuti
                         "status" => "IN APPROVAL",
                     ]);
                 }
+
+                if ($data && !empty($data->m_kary_id)) {
+                    \App\Models\CustomModels\m_kary::syncSisaCuti($data->m_kary_id);
+                }
             }
 
             \DB::commit();
@@ -522,6 +574,11 @@ class t_cuti extends \App\Models\BasicModels\t_cuti
             ]);
 
             $log = $this->logHc($data->id);
+
+            // Auto-calculate pemotongan sisa cuti karyawan
+            if (!empty($data->m_kary_id)) {
+                \App\Models\CustomModels\m_kary::syncSisaCuti($data->m_kary_id);
+            }
 
             \DB::commit();
             return $this->helper->customResponse("Approval berhasil", 200);
