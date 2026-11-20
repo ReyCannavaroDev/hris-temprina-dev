@@ -67,6 +67,11 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         }
     }
 
+    public function t_jadwal_kerja_d_hari_n()
+    {
+        return $this->belongsTo(\App\Models\CustomModels\t_jadwal_kerja_d_hari_n::class, 't_jadwal_kerja_d_hari_n_id', 'id');
+    }
+
     public function createBefore($model, $arrayData, $metaData, $id = null)
     {
         if (!empty($arrayData['tanggal'])) {
@@ -819,7 +824,7 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
             'm_kary',
             'presensi_absensi' => function ($q) use ($dateStr) {
                 $q->where('tanggal', $dateStr)
-                  ->with(['t_jadwal_kerja_d_hari_n.m_jam_kerja', 'm_jam_kerja']);
+                  ->with(['t_jadwal_kerja_d_hari_n', 'm_jam_kerja']);
             }
         ])
         ->whereHas('m_kary', function ($q) use ($req, $divisiId, $status_os) {
@@ -863,7 +868,7 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
             'm_kary',
             'presensi_absensi' => function ($q) use ($dateStr) {
                 $q->where('tanggal', $dateStr)
-                  ->with(['t_jadwal_kerja_d_hari_n.m_jam_kerja', 'm_jam_kerja']);
+                  ->with(['t_jadwal_kerja_d_hari_n', 'm_jam_kerja']);
             }
         ])
         ->whereHas('m_kary', function ($q) use ($req, $divisiId, $status_os) {
@@ -906,7 +911,7 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
             'm_kary',
             'presensi_absensi' => function ($q) use ($dateStr) {
                 $q->where('tanggal', $dateStr)
-                  ->with(['t_jadwal_kerja_d_hari_n.m_jam_kerja', 'm_jam_kerja']);
+                  ->with(['t_jadwal_kerja_d_hari_n', 'm_jam_kerja']);
             }
         ])
         ->whereHas('m_kary', function ($q) use ($req, $divisiId, $status_harian) {

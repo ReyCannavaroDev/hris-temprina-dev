@@ -119,7 +119,7 @@
 
           if($user) {
             // 1. Ambil Data Presensi & Cuti (Tetap di luar loop harian)
-            $presensi = presensi_absensi::with(['t_jadwal_kerja_d_hari_n.m_jam_kerja', 'm_jam_kerja'])
+            $presensi = presensi_absensi::with(['t_jadwal_kerja_d_hari_n', 'm_jam_kerja'])
             ->where('default_user_id', $user->id)
             ->whereBetween('tanggal', [$startStr, $endStr])
             ->get()

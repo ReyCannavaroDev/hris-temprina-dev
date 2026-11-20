@@ -3908,7 +3908,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ->pluck("id")
             ->first();
 
-        $presensi = presensi_absensi::with(["t_jadwal_kerja_d_hari_n.m_jam_kerja", "m_jam_kerja"])
+        $presensi = presensi_absensi::with(["t_jadwal_kerja_d_hari_n", "m_jam_kerja"])
             ->where("default_user_id", $userId)
             ->whereBetween("tanggal", [$start->format("Y-m-d"), $end->format("Y-m-d")])
             ->get()
