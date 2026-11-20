@@ -1398,7 +1398,7 @@ const landing = reactive({
         },
         params: computed(() => {
             const p = {
-                scopes: 'kary_os,respo',
+                scopes: 'kary_os,respo_os',
                 // 50 baris: halaman pertama harus lebih tinggi dari layar, kalau muat semua scrollbar tidak muncul dan data berikutnya tidak pernah dimuat
                 paginate: 50,
                 kary_id: store.user.data?.m_kary_id ?? 0,
