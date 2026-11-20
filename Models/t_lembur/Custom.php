@@ -570,8 +570,19 @@ class t_lembur extends \App\Models\BasicModels\t_lembur
     {
         $status_harian = m_general::where('group', "STATUS KARYAWAN OUTSOURCE")->pluck('id')->toArray();
 
-        return $model->whereIn('m_kary.status_kary_id', $status_harian);
+        $authUser = auth()->user();
+        $osId = request('m_os_id') ?: ($authUser->m_os_id ?? null);
+        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
+            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
 
+        return $model->whereIn('m_kary.status_kary_id', $status_harian)
+            ->when(!empty($osId), function ($q) use ($osId) {
+                $q->where(function ($sub) use ($osId) {
+                    $sub->where('m_kary.m_company_outsourcing_id', $osId)
+                        ->orWhereNull('m_kary.m_company_outsourcing_id');
+                });
+            });
     }
 
     public function scopegetharian($model)

@@ -79,6 +79,15 @@ class m_kary extends \App\Models\BasicModels\m_kary
         $nip = @$this->helper->generateNomor("KODE NIP KARYAWAN");
         @$arrayData['kode'] = null;
 
+        $authUser = auth()->user();
+        $userOsId = $authUser->m_os_id ?? null;
+        if (!$userOsId && $authUser && !empty($authUser->m_kary_id)) {
+            $userOsId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+        if (!empty($userOsId)) {
+            $arrayData['m_company_outsourcing_id'] = $userOsId;
+        }
+
         if (empty($arrayData['atasan_id'])) {
             try {
                 $divisiId = $arrayData['m_divisi_id'] ?? null;
@@ -222,6 +231,19 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 \DB::table('m_kary')->where('id', $karyIdForFix)->update(['is_sync' => false]);
                 \DB::table('default_users')->where('m_kary_id', $karyIdForFix)->update(['is_sync' => false]);
             } catch (\Throwable $e) {}
+        }
+
+        $authUser = auth()->user();
+        $userOsId = $authUser->m_os_id ?? null;
+        if (!$userOsId && $authUser && !empty($authUser->m_kary_id)) {
+            $userOsId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+        if (!empty($userOsId)) {
+            $currentKary = $karyIdForFix ? \DB::table('m_kary')->where('id', $karyIdForFix)->first() : null;
+            if ($currentKary && !empty($currentKary->m_company_outsourcing_id) && $currentKary->m_company_outsourcing_id != $userOsId) {
+                return ["errors" => ["Anda tidak memiliki izin mengubah data karyawan milik PT Outsource lain."]];
+            }
+            $arrayData['m_company_outsourcing_id'] = $userOsId;
         }
 
         if (empty($arrayData['atasan_id'])) {
@@ -3021,6 +3043,12 @@ class m_kary extends \App\Models\BasicModels\m_kary
               ->orWhereRaw("upper(code) like '%OUTSOURCE%'");
         })->pluck("id")->toArray();
 
+        $authUser = auth()->user();
+        $osId = request("m_os_id") ?: ($authUser->m_os_id ?? null);
+        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
+            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+
         return $model->where(function ($q) use ($status_os) {
             if (!empty($status_os)) {
                 $q->whereIn("m_kary.status_kary_id", $status_os)
@@ -3028,6 +3056,12 @@ class m_kary extends \App\Models\BasicModels\m_kary
             } else {
                 $q->whereNotNull("m_kary.m_company_outsourcing_id");
             }
+        })
+        ->when(!empty($osId), function ($q) use ($osId) {
+            $q->where(function ($sub) use ($osId) {
+                $sub->where("m_kary.m_company_outsourcing_id", $osId)
+                    ->orWhereNull("m_kary.m_company_outsourcing_id");
+            });
         });
     }
 
@@ -3075,6 +3109,12 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $m_branch_id = null;
         }
 
+        $authUser = auth()->user();
+        $osId = request("m_os_id") ?: ($authUser->m_os_id ?? null);
+        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
+            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+
         return $model
             ->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
                 if (is_numeric($m_subcomp_id)) {
@@ -3089,7 +3129,19 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 } else if (is_array($m_branch_id)) {
                     $q->whereIn("m_kary.m_branch_id", $m_branch_id);
                 }
+            })
+            ->when(!empty($osId), function ($q) use ($osId) {
+                $q->where(function ($sub) use ($osId) {
+                    $sub->where("m_kary.m_company_outsourcing_id", $osId)
+                        ->orWhereNull("m_kary.m_company_outsourcing_id");
+                });
             });
+    }
+
+    //filter karyawan OS by respo dan jangkauan PT OS (Multi-Tenant Admin OS)
+    public function scoperespo_os($model)
+    {
+        return $this->scoperespo($model);
     }
 
     public function scopejabatan($model)
@@ -3666,6 +3718,12 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ->pluck('id')
             ->toArray();
 
+        $authUser = auth()->user();
+        $osId = request("m_os_id") ?: ($authUser->m_os_id ?? null);
+        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
+            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+
         return $model->where(function ($q) use ($typeIds) {
             if (!empty($typeIds)) {
                 $q->whereIn('m_kary.status_kary_id', $typeIds)
@@ -3673,6 +3731,12 @@ class m_kary extends \App\Models\BasicModels\m_kary
             } else {
                 $q->whereNotNull('m_kary.m_company_outsourcing_id');
             }
+        })
+        ->when(!empty($osId), function ($q) use ($osId) {
+            $q->where(function ($sub) use ($osId) {
+                $sub->where("m_kary.m_company_outsourcing_id", $osId)
+                    ->orWhereNull("m_kary.m_company_outsourcing_id");
+            });
         });
     }
 

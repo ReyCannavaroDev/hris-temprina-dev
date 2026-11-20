@@ -398,6 +398,7 @@ const landing = reactive({
       simplest: true,
       scopes: "getos",
       searchfield: 'this.id, this.nomor, m_kary.nik, m_kary.nama_lengkap, m_kary_dir.name, m_kary_divisi.name, m_kary_dept.nama, this.periode, periode.value, this.netto',
+      ...(store.user.data?.m_os_id ? { m_os_id: store.user.data.m_os_id } : {})
     },
     onsuccess(response) {
       response.page = response.current_page

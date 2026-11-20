@@ -2377,10 +2377,22 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
     {
         $status_harian = m_general::where('group', "STATUS KARYAWAN OUTSOURCE")->pluck('id')->toArray();
 
+        $authUser = auth()->user();
+        $osId = request('m_os_id') ?: ($authUser->m_os_id ?? null);
+        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
+            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+
         return $model->whereIn('m_kary.status_kary_id', $status_harian)
                     ->where(function ($q) {
                         $q->where('deskripsi', '!=', 'BORONGAN')
                         ->orWhereNull('deskripsi');
+                    })
+                    ->when(!empty($osId), function ($q) use ($osId) {
+                        $q->where(function ($sub) use ($osId) {
+                            $sub->where('m_kary.m_company_outsourcing_id', $osId)
+                                ->orWhereNull('m_kary.m_company_outsourcing_id');
+                        });
                     })
                     ->leftJoin('m_divisi', 't_perhitungan_gaji.m_kary_divisi_id', 'm_divisi.id')
                     ->leftJoin('m_general', 'm_divisi.name', 'm_general.id')
@@ -2393,8 +2405,20 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
     {
         $status_os = m_general::where('group', "STATUS KARYAWAN OUTSOURCE")->pluck('id')->toArray();
 
+        $authUser = auth()->user();
+        $osId = request('m_os_id') ?: ($authUser->m_os_id ?? null);
+        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
+            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+
         return $model->whereIn('m_kary.status_kary_id', $status_os)
                     ->where('deskripsi', 'BORONGAN')
+                    ->when(!empty($osId), function ($q) use ($osId) {
+                        $q->where(function ($sub) use ($osId) {
+                            $sub->where('m_kary.m_company_outsourcing_id', $osId)
+                                ->orWhereNull('m_kary.m_company_outsourcing_id');
+                        });
+                    })
                     ->leftJoin('m_divisi', 't_perhitungan_gaji.m_kary_divisi_id', 'm_divisi.id')
                     ->leftJoin('m_general', 'm_divisi.name', 'm_general.id')
                     ->leftJoin('m_branch', 'm_branch.id', 'm_divisi.m_branch_id')

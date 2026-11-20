@@ -513,6 +513,10 @@ const landing = reactive({
         params.m_subcomp_id = data.subcomp_id
       }
 
+      if (store.user.data?.m_os_id) {
+        params.m_os_id = store.user.data.m_os_id
+      }
+
       const where = []
       if (activeBtn.value === 1) {
         where.push(`this.status = 'AKTIF'`)

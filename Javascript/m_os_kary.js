@@ -1416,6 +1416,9 @@ const landing = reactive({
             if (data.respo_id && data.respo_id !== 'undefined' && data.respo_id !== 'null') {
                 p.respo_id = data.respo_id;
             }
+            if (store.user.data?.m_os_id) {
+                p.m_os_id = store.user.data.m_os_id;
+            }
             return p;
         }),
         onsuccess(response) {

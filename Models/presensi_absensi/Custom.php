@@ -518,7 +518,11 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         }
 
         $divisiId = $req->divisi_id ?? $req->m_divisi_id;
-        $os_id = $req->m_os_id ?? null;
+        $authUser = auth()->user();
+        $os_id = $req->m_os_id ?? ($authUser->m_os_id ?? null);
+        if (!$os_id && $authUser && !empty($authUser->m_kary_id)) {
+            $os_id = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
 
         $dates = [];
         $current = Carbon::parse($startDate);
@@ -544,7 +548,10 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
             $q->where("is_active", true)
                 ->whereIn('status_kary_id', $status_os)
                 ->when($os_id, function ($q2) use ($os_id) {
-                    $q2->where('m_company_outsourcing_id', $os_id);
+                    $q2->where(function ($sub) use ($os_id) {
+                        $sub->where('m_company_outsourcing_id', $os_id)
+                            ->orWhereNull('m_company_outsourcing_id');
+                    });
                 });
 
             if (!empty($req->m_subcomp_id)) {
@@ -578,7 +585,10 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
                 $q1->where("is_active", true)
                     ->whereIn('status_kary_id', $status_os)
                     ->when($os_id, function ($q2) use ($os_id) {
-                        $q2->where('m_company_outsourcing_id', $os_id);
+                        $q2->where(function ($sub) use ($os_id) {
+                            $sub->where('m_company_outsourcing_id', $os_id)
+                                ->orWhereNull('m_company_outsourcing_id');
+                        });
                     });
 
                 if (!empty($req->m_subcomp_id)) {
@@ -600,7 +610,10 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
                     $q->where("is_active", true)
                         ->whereIn('status_kary_id', $status_os)
                         ->when($os_id, function ($q2) use ($os_id) {
-                            $q2->where('m_company_outsourcing_id', $os_id);
+                            $q2->where(function ($sub) use ($os_id) {
+                                $sub->where('m_company_outsourcing_id', $os_id)
+                                    ->orWhereNull('m_company_outsourcing_id');
+                            });
                         });
 
                     if (!empty($req->m_subcomp_id)) {
@@ -862,6 +875,12 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         $status_os = m_general::where('group', 'STATUS KARYAWAN OUTSOURCE')
             ->pluck('id');
 
+        $authUser = auth()->user();
+        $os_id = $req->m_os_id ?: ($authUser->m_os_id ?? null);
+        if (!$os_id && $authUser && !empty($authUser->m_kary_id)) {
+            $os_id = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+
         $kary = default_users::with([
             'm_kary',
             'presensi_absensi' => function ($q) use ($dateStr) {
@@ -869,11 +888,14 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
                   ->with(['t_jadwal_kerja_d_hari_n', 'm_jam_kerja']);
             }
         ])
-        ->whereHas('m_kary', function ($q) use ($req, $divisiId, $status_os) {
+        ->whereHas('m_kary', function ($q) use ($req, $divisiId, $status_os, $os_id) {
             $q->where('is_active', true)
               ->whereIn('status_kary_id', $status_os);
-            if (!empty($req->m_os_id)) {
-                $q->where('m_company_outsourcing_id', $req->m_os_id);
+            if (!empty($os_id)) {
+                $q->where(function ($sub) use ($os_id) {
+                    $sub->where('m_company_outsourcing_id', $os_id)
+                        ->orWhereNull('m_company_outsourcing_id');
+                });
             }
             if (!empty($req->m_subcomp_id)) {
                 $q->where('m_subcomp_id', $req->m_subcomp_id);

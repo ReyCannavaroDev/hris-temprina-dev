@@ -747,6 +747,7 @@ const landing = reactive({
         join: true,
         scopes: "getos",
         transform: true,
+        ...(store.user.data?.m_os_id ? { m_os_id: store.user.data.m_os_id } : {})
       }
 
       const where = []

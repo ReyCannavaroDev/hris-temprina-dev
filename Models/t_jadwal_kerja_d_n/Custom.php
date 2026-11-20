@@ -272,7 +272,11 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
         // Pastikan joins model di-strip dari m_divisi/m_posisi/m_branch jika terpanggil di scope
         $model->getModel()->joins = ["m_kary.id=t_jadwal_kerja_d_n.m_kary_id"];
 
-        $m_os_id = request("m_os_id");
+        $authUser = auth()->user();
+        $m_os_id = request("m_os_id") ?: ($authUser->m_os_id ?? null);
+        if (!$m_os_id && $authUser && !empty($authUser->m_kary_id)) {
+            $m_os_id = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
 
         $status_os = \DB::table('m_general')->where(function ($q) {
             $q->where("group", "STATUS KARYAWAN OUTSOURCE")
@@ -291,7 +295,10 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
             }
         })
         ->when(!empty($m_os_id) && is_numeric($m_os_id) && (int)$m_os_id > 0, function ($q) use ($m_os_id) {
-            $q->where("m_kary.m_company_outsourcing_id", $m_os_id);
+            $q->where(function ($sub) use ($m_os_id) {
+                $sub->where("m_kary.m_company_outsourcing_id", $m_os_id)
+                    ->orWhereNull("m_kary.m_company_outsourcing_id");
+            });
         })
         ->orderBy('t_jadwal_kerja_d_n.id', 'desc');
     }
@@ -301,12 +308,22 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
         return $this->scopeos($model);
     }
 
+    public function scoperespo_os($model)
+    {
+        return $this->scoperespo($model);
+    }
+
     public function scoperespo($model)
     {
         $m_subcomp_id = request("m_subcomp_id");
         $m_branch_id = request("m_branch_id");
         $m_divisi_id = request("m_divisi_id");
-        $m_os_id = request("m_os_id");
+        
+        $authUser = auth()->user();
+        $m_os_id = request("m_os_id") ?: ($authUser->m_os_id ?? null);
+        if (!$m_os_id && $authUser && !empty($authUser->m_kary_id)) {
+            $m_os_id = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
 
         if (empty($m_subcomp_id) || $m_subcomp_id === "null" || $m_subcomp_id === "undefined" || $m_subcomp_id === "[object Object]") {
             $m_subcomp_id = null;
@@ -406,7 +423,10 @@ class t_jadwal_kerja_d_n extends \App\Models\BasicModels\t_jadwal_kerja_d_n
                 }
             })
             ->when(!empty($m_os_id) && is_numeric($m_os_id) && (int)$m_os_id > 0, function ($q) use ($m_os_id) {
-                $q->where("m_kary.m_company_outsourcing_id", $m_os_id);
+                $q->where(function ($sub) use ($m_os_id) {
+                    $sub->where("m_kary.m_company_outsourcing_id", $m_os_id)
+                        ->orWhereNull("m_kary.m_company_outsourcing_id");
+                });
             });
     }
 }
