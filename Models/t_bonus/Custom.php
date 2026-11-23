@@ -245,6 +245,21 @@ class t_bonus extends \App\Models\BasicModels\t_bonus
         });
     }
 
+    public function custom_downloadTemplate($req)
+    {
+        $headers = ['NIK', 'NILAI', 'TANGGAL_AWAL', 'TANGGAL_AKHIR', 'KETERANGAN', 'NO_DOKUMEN'];
+        $sample = ['01234567', '1500000', date('Y-m-01'), date('Y-m-t'), 'Bonus Kinerja', 'SK-001/XI/2026'];
+
+        $csv = "\xEF\xBB\xBF" . implode(',', $headers) . "\r\n" . implode(',', array_map(function($v) {
+            return '"' . str_replace('"', '""', $v) . '"';
+        }, $sample)) . "\r\n";
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="template_import_bonus.csv"',
+        ]);
+    }
+
     public function custom_importBonus($req)
     {
         try {
@@ -262,14 +277,27 @@ class t_bonus extends \App\Models\BasicModels\t_bonus
             $data = [];
             if ($ext === 'csv') {
                 $path = $file->getRealPath();
-                $data = array_map('str_getcsv', file($path));
+                $rawLines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                if (empty($rawLines)) {
+                    return response()->json(['error' => 'File CSV kosong'], 422);
+                }
+                $firstLine = $rawLines[0];
+                $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+                $data = array_map(function($line) use ($delimiter) {
+                    return str_getcsv($line, $delimiter);
+                }, $rawLines);
             } else {
                 $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getRealPath());
                 $data = $spreadsheet->getActiveSheet()->toArray();
             }
-            //dd($data);
 
-            $header = array_map('trim', $data[0]);
+            if (empty($data) || empty($data[0])) {
+                return response()->json(['error' => 'Header file tidak ditemukan atau data kosong'], 422);
+            }
+
+            $header = array_map(function($h) {
+                return strtoupper(trim(preg_replace('/[\xEF\xBB\xBF]/', '', (string)$h)));
+            }, $data[0]);
             unset($data[0]);
 
 

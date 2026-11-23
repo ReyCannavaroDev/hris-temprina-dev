@@ -272,6 +272,35 @@ const testClick = () => {
   fileInput.value.click()
 }
 
+function downloadTemplate() {
+  const headers = ['NIK', 'NILAI', 'TANGGAL_AWAL', 'TANGGAL_AKHIR', 'KETERANGAN', 'NO_DOKUMEN']
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const lastDay = new Date(year, now.getMonth() + 1, 0).getDate()
+
+  const tglAwal = `${year}-${month}-01`
+  const tglAkhir = `${year}-${month}-${String(lastDay).padStart(2, '0')}`
+  const sample = ['01234567', '1500000', tglAwal, tglAkhir, 'Bonus Kinerja', 'SK-001/XI/2026']
+
+  const csvRows = [
+    headers.join(','),
+    sample.map(val => `"${val}"`).join(',')
+  ]
+
+  const csvContent = '\uFEFF' + csvRows.join('\r\n')
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.setAttribute('href', url)
+  link.setAttribute('download', 'template_import_bonus.csv')
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+window.downloadTemplate = downloadTemplate
+
 function uploadFile(file) {
   if (!file) return
 

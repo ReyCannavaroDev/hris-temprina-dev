@@ -10,25 +10,37 @@
       </div>
     </div>
     <div class="flex gap-2">
+      <!-- Tombol Download Format -->
+      <button
+        type="button"
+        v-if="data?.can_create"
+        @click="downloadTemplate"
+        class="border border-purple-600 text-purple-600 bg-white hover:bg-purple-600 hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2 cursor-pointer flex items-center gap-1"
+      >
+        <icon fa="download" /> Download Format
+      </button>
+
+      <!-- Tombol Upload File -->
+      <label
+        for="fileUpload"
+        v-if="data?.can_create"
+        class="cursor-pointer border border-green-600 text-green-600 bg-white hover:bg-green-600 hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2 flex items-center gap-1"
+      >
+        <icon fa="upload" /> Upload File
+      </label>
+      <input
+        id="fileUpload"
+        type="file"
+        class="sr-only"
+        accept=".csv, .xls, .xlsx"
+        @change="(e) => uploadFile(e.target.files[0])"
+      />
+
+      <!-- Tombol Create New -->
       <RouterLink v-if="data.can_create" :to="$route.path+'/create?'+(Date.parse(new Date()))"
         class="border border-blue-600 text-blue-600 bg-white hover:bg-blue-600 hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2">
         Create New
       </RouterLink>
-
-      <label
-      for="fileUpload"
-      v-if = "data?.can_create"
-      class="cursor-pointer border border-green-600 text-green-600 bg-white hover:bg-green-600 hover:text-white duration-300 transform hover:-translate-y-0.5 rounded-md py-1 px-2"
-      >
-      Upload File
-    </label>
-      <input
-      id="fileUpload"
-      type="file"
-      class="sr-only"
-      
-      @change="(e) => uploadFile(e.target.files[0])"
-    />
     </div>
 
   </div>
