@@ -57,7 +57,9 @@ watchEffect(() => {
       },
       params: {
         simplest: true,
-        searchfield: `this.id, this.nomor, m_kary.nama_depan, this.keterangan, this.nilai`,
+        join: true,
+        transform: true,
+        searchfield: `this.id, this.nomor, m_kary.nama_lengkap, m_kary.nama_depan, this.keterangan, this.nilai`,
       },
       onsuccess(response) {
         response.page = response.current_page
@@ -774,7 +776,7 @@ const landing = computed(() => {
 
       //   return params
       // }),
-      params: { simplest: true, join: true,transform: true, searchfield: 'this.nama, m_kary.nama_lengkap' },
+      params: { simplest: true, join: true, transform: true, searchfield: 'this.nomor, m_kary.nama_lengkap, m_kary.nama_depan, this.keterangan' },
       onsuccess(res) {
         res.page = res.current_page
         res.hasNext = res.has_next
@@ -801,14 +803,22 @@ const landing = computed(() => {
       cellClass: ['border-r', '!border-gray-200', 'justify-start']
     },
     {
-      field: 'm_kary.nama_depan',
+      field: 'm_kary.nama_lengkap',
       headerName: 'Karyawan',
       filter: true,
       sortable: true,
       flex: 1,
       filter: 'ColFilter',
       resizable: true,
-      cellClass: ['border-r', '!border-gray-200', 'justify-left']
+      cellClass: ['border-r', '!border-gray-200', 'justify-left'],
+      cellRenderer: (params) => {
+        return params.data?.['m_kary.nama_lengkap']
+          || params.data?.['m_kary.nama_depan']
+          || params.data?.m_kary?.nama_lengkap
+          || params.data?.m_kary?.nama_depan
+          || params.value
+          || '-'
+      }
     },
     {
       field: 'keterangan',

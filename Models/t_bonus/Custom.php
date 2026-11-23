@@ -18,14 +18,43 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 class t_bonus extends \App\Models\BasicModels\t_bonus
 {    
     private $helper;
+
+    public $joins = [
+        "m_kary.id=t_bonus.m_kary_id",
+        "m_general.id=t_bonus.jenis_bonus_id",
+        "m_comp.id=t_bonus.m_comp_id",
+        "m_subcomp.id=t_bonus.m_subcomp_id",
+        "m_branch.id=t_bonus.m_branch_id",
+        "default_users.id=t_bonus.creator_id",
+        "default_users.id=t_bonus.last_editor_id",
+    ];
+
     public function __construct()
     {
         parent::__construct();
         $this->helper = new Helper();
-
+        $this->joins = [
+            "m_kary.id=t_bonus.m_kary_id",
+            "m_general.id=t_bonus.jenis_bonus_id",
+            "m_comp.id=t_bonus.m_comp_id",
+            "m_subcomp.id=t_bonus.m_subcomp_id",
+            "m_branch.id=t_bonus.m_branch_id",
+            "default_users.id=t_bonus.creator_id",
+            "default_users.id=t_bonus.last_editor_id",
+        ];
     }
     
     public $fileColumns    = [ /*file_column*/ ];
+
+    public function m_kary() :\Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo('App\Models\BasicModels\m_kary', 'm_kary_id', 'id');
+    }
+
+    public function jenis_bonus() :\Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo('App\Models\BasicModels\m_general', 'jenis_bonus_id', 'id');
+    }
 
     //public $createAdditionalData = ["creator_id"=>"auth:id"];
     //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
@@ -239,9 +268,9 @@ class t_bonus extends \App\Models\BasicModels\t_bonus
         if ($m_branch_id === 'null')  $m_branch_id  = null;
 
         return $model->when($m_subcomp_id, function($q) use ($m_subcomp_id){
-            $q->where('t_request_pelatihan.m_subcomp_id', $m_subcomp_id);
+            $q->where('t_bonus.m_subcomp_id', $m_subcomp_id);
         })->when($m_branch_id, function($q) use ($m_branch_id){
-            $q->where('t_request_pelatihan.m_branch_id', $m_branch_id);
+            $q->where('t_bonus.m_branch_id', $m_branch_id);
         });
     }
 
