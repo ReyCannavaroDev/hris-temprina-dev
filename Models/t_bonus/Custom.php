@@ -330,7 +330,9 @@ class t_bonus extends \App\Models\BasicModels\t_bonus
                     ], 422);
                 }
 
-                $kary = m_kary::where('nik', $rowData['NIK'])->first();
+                $kary = m_kary::where('nik', $rowData['NIK'])
+                    ->orWhere('kode', $rowData['NIK'])
+                    ->first();
                 if (!$kary) {
                     DB::rollBack();
                     return response()->json(['error' => "NIK {$rowData['NIK']} tidak ditemukan"], 422);
