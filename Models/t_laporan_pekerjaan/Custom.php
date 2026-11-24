@@ -34,6 +34,55 @@ class t_laporan_pekerjaan extends \App\Models\BasicModels\t_laporan_pekerjaan
           // "errors" => ['error1']
       ];
     }
+
+    public function transformRowData(array $row)
+    {
+        $branchId = $row['m_branch_id'] ?? null;
+        $requestId = $row['request_id'] ?? null;
+        $picId = $row['pic_id'] ?? null;
+        $jenisId = $row['jenis_pekerjaan_id'] ?? null;
+
+        // Fallback ke t_pengajuan_pekerjaan jika id tertentu belum terisi
+        if ((empty($branchId) || empty($requestId) || empty($picId) || empty($jenisId)) && !empty($row['t_pengajuan_pekerjaan_id'])) {
+            $pengajuan = \DB::table('t_pengajuan_pekerjaan')->where('id', $row['t_pengajuan_pekerjaan_id'])->first();
+            if (empty($branchId)) $branchId = $pengajuan->m_branch_id ?? null;
+            if (empty($requestId)) $requestId = $pengajuan->request_id ?? null;
+            if (empty($picId)) $picId = $pengajuan->pic_id ?? null;
+            if (empty($jenisId)) $jenisId = $pengajuan->jenis_pekerjaan_id ?? null;
+        }
+
+        $branch = !empty($branchId) ? \DB::table('m_branch')->where('id', $branchId)->first() : null;
+        $requestUser = !empty($requestId) ? \DB::table('m_kary')->where('id', $requestId)->first() : null;
+        $picUser = !empty($picId) ? \DB::table('m_kary')->where('id', $picId)->first() : null;
+        $jenisPekerjaan = !empty($jenisId) ? \DB::table('m_general')->where('id', $jenisId)->first() : null;
+
+        $branchName = $branch->name ?? '-';
+        $requestNama = $requestUser->nama_lengkap ?? '-';
+        $picNama = $picUser->nama_lengkap ?? '-';
+        $jenisPekerjaanNama = $jenisPekerjaan->value ?? '-';
+
+        return array_merge($row, [
+            // Cabang
+            'm_branch' => $branch ? (array)$branch : null,
+            'm_branch.name' => $branchName,
+            'branch_name' => $branchName,
+
+            // User / Pemohon
+            'request' => $requestUser ? (array)$requestUser : null,
+            'request.nama_lengkap' => $requestNama,
+            'request_nama' => $requestNama,
+
+            // PIC
+            'pic' => $picUser ? (array)$picUser : null,
+            'pic.nama_lengkap' => $picNama,
+            'pic_nama' => $picNama,
+
+            // Jenis Pekerjaan
+            'jenis_pekerjaan' => $jenisPekerjaan ? (array)$jenisPekerjaan : null,
+            'jenis_pekerjaan.value' => $jenisPekerjaanNama,
+            'jenis_pekerjaan_nama' => $jenisPekerjaanNama,
+        ]);
+    }
     
 
     public function custom_send_approval()
