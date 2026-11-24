@@ -124,6 +124,8 @@ class t_laporan_pekerjaan extends \App\Models\BasicModels\t_laporan_pekerjaan
                 } else {
                     $data->update([
                         "status" => "IN APPROVAL",
+                        "score" => $req->score,
+                        "catatan_penilaian" => $req->note,
                     ]);
                 }
             }

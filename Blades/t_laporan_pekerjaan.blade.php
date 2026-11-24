@@ -521,24 +521,101 @@
             :hints="formErrors.keterangan" placeholder="Masukkan Catatan" label="" fa-icon="" :check="false" />
         </div>
 
-        <div v-show="route.query.is_approval">
-          <label >Catatan Approval<label class="text-red-500 space-x-0 pl-0">*</label></label>
-          <FieldX :bind="{ readonly: !actionText && !route.query.is_approval }" class="w-full py-2 !mt-0"
-            :value="values.catatan" :errorText="formErrors.catatan?'failed':''" @input="v=>values.catatan=v"
-            :hints="formErrors.catatan" :check="false" label="" placeholder="Tuliskan catatan" />
-        </div>
-        <div>
-          <label >Catatan Penilaian</label>
-          <FieldX :bind="{ readonly: true }" class="w-full py-2 !mt-0" :value="values.catatan_penilaian"
-            :errorText="formErrors.catatan_penilaian?'failed':''" @input="v=>values.catatan_penilaian=v"
-            :hints="formErrors.catatan_penilaian" :check="false" label="" placeholder="Tuliskan catatan" />
-        </div>
-        <div>
-          <label >Score</label>
-          <FieldX :bind="{ readonly: !route.query.is_approval }" class="w-full py-2 !mt-0" :value="values.score"
-            :errorText="formErrors.score?'failed':''" @input="v=>values.score=v" :hints="formErrors.score"
-            :check="false" label="" placeholder="Masukkan score" />
-        </div>
+        <!-- BLOK PENILAIAN & SCORE (Hanya tampil untuk User/Penilai/Admin dan disembunyikan dari PIC) -->
+        <template v-if="canViewPenilaian">
+          <div class="col-span-2 mt-4 pt-4 border-t border-gray-200">
+            <h3 class="font-bold text-gray-800 text-sm mb-1 flex items-center gap-1.5">
+              <span class="text-amber-500 text-base">★</span> Penilaian Kinerja Pekerjaan
+              <span v-if="route.query.is_approval" class="text-xs font-normal text-gray-500">(Diisi oleh User / Penilai saat Approval)</span>
+              <span v-else class="text-xs font-normal text-gray-500">(Confidential - Hanya untuk Penilai / Admin)</span>
+            </h3>
+          </div>
+
+          <!-- Komponen Score / Rating 1-5 Bintang -->
+          <div>
+            <label class="font-semibold block mb-1">
+              Rating Penilaian (Score)
+              <span v-if="route.query.is_approval" class="text-red-500">*</span>
+            </label>
+
+            <!-- Mode Approval: Interaktif Bintang bisa diklik (1 - 5) -->
+            <div v-if="route.query.is_approval" class="py-2">
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1 bg-gray-50 p-1.5 rounded-md border border-gray-200">
+                  <button
+                    v-for="star in [1, 2, 3, 4, 5]"
+                    :key="star"
+                    type="button"
+                    @click="values.score = String(star)"
+                    class="text-2xl transition-transform hover:scale-125 focus:outline-none cursor-pointer leading-none px-1"
+                    :class="parseInt(values.score || 0) >= star ? 'text-amber-400' : 'text-gray-300 hover:text-amber-200'"
+                    :title="ratingLabels[star]"
+                  >
+                    ★
+                  </button>
+                </div>
+                <span v-if="values.score" class="text-xs font-semibold px-2.5 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                  {{ ratingLabels[parseInt(values.score)] || (values.score + ' / 5') }}
+                </span>
+                <span v-else class="text-xs text-gray-400 italic">
+                  Klik bintang untuk memberi nilai (1 - 5)
+                </span>
+              </div>
+              <p v-if="formErrors.score" class="text-xs text-red-500 mt-1">Rating wajib dipilih</p>
+            </div>
+
+            <!-- Mode View / Readonly: Bintang Readonly -->
+            <div v-else class="py-2">
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-0.5 text-xl">
+                  <span
+                    v-for="star in [1, 2, 3, 4, 5]"
+                    :key="star"
+                    :class="parseInt(values.score || 0) >= star ? 'text-amber-400' : 'text-gray-300'"
+                  >
+                    ★
+                  </span>
+                </div>
+                <span class="text-xs font-semibold px-2.5 py-0.5 rounded bg-gray-100 text-gray-700">
+                  {{ ratingLabels[parseInt(values.score)] || (values.score ? values.score + ' / 5' : 'Belum Dinilai') }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Catatan Penilaian -->
+          <div>
+            <label class="font-semibold block mb-1">
+              Catatan Penilaian
+              <span v-if="route.query.is_approval" class="text-red-500">*</span>
+            </label>
+            <!-- Saat approval, bind ke values.catatan (yang dikirim ke backend sebagai catatan penilaian) -->
+            <FieldX
+              v-if="route.query.is_approval"
+              type="textarea"
+              class="w-full py-1 !mt-0"
+              :bind="{ readonly: false }"
+              :value="values.catatan"
+              :errorText="formErrors.catatan ? 'failed' : ''"
+              @input="v => { values.catatan = v; values.catatan_penilaian = v; }"
+              :hints="formErrors.catatan"
+              :check="false"
+              label=""
+              placeholder="Tuliskan catatan evaluasi penilaian pekerjaan..."
+            />
+            <!-- Saat view biasa, tampilkan values.catatan_penilaian readonly -->
+            <FieldX
+              v-else
+              type="textarea"
+              class="w-full py-1 !mt-0"
+              :bind="{ readonly: true }"
+              :value="values.catatan_penilaian || values.catatan"
+              :check="false"
+              label=""
+              placeholder="Tidak ada catatan penilaian"
+            />
+          </div>
+        </template>
 
       </div>
       <hr class="mt-10">

@@ -8,6 +8,7 @@ import {
   onBeforeMount,
   watchEffect,
   onActivated,
+  computed,
 } from "vue";
 
 const router = useRouter();
@@ -35,6 +36,35 @@ const is_approval = route.query.is_approval ? true : false
 const is_to_upload = route.query.is_to_upload ? true : false
 let isApproved = ref(false)
 let isFinish = ref(false)
+
+const ratingLabels = {
+  1: '1/5 - Sangat Kurang',
+  2: '2/5 - Kurang',
+  3: '3/5 - Cukup',
+  4: '4/5 - Baik',
+  5: '5/5 - Sangat Baik',
+};
+
+const canViewPenilaian = computed(() => {
+  // Selalu tampil saat mode approval
+  if (is_approval) return true;
+  // Sembunyikan saat create baru (agar PIC tidak bingung)
+  if (route.params.id === 'create') return false;
+  // Jika admin / superadmin, selalu bisa lihat
+  const userType = store.user.data?.user_type?.toLowerCase();
+  if (userType === 'admin') return true;
+  const currentKaryId = store.user.data?.m_kary_id;
+  // Jika user yang login adalah PIC dan BUKAN requester: SEMBUNYIKAN (confidential per instruksi Pak Iqbal)
+  if (currentKaryId && values.pic_id == currentKaryId && values.request_id != currentKaryId) {
+    return false;
+  }
+  // Jika requester / atasan penilai: tampilkan
+  if (currentKaryId && values.request_id == currentKaryId) {
+    return true;
+  }
+  // Default: tampilkan jika sudah ada penilaian
+  return Boolean(values.score || values.catatan_penilaian);
+});
 
 // ------------------------------ PERSIAPAN
 const endpointApi = "/t_laporan_pekerjaan";
@@ -169,11 +199,19 @@ function onBack() {
 }
 
 function onProcess(typePar) {
+  if (typePar?.toLowerCase() === 'approve' && !values.score) {
+    swal.fire({
+      icon: 'warning',
+      text: 'Silakan pilih rating penilaian (skala 1 - 5 bintang) terlebih dahulu sebelum melakukan approval.',
+    });
+    return;
+  }
+
   const payload = {
     id: route.params.id,
     type: typePar?.toLowerCase() === 'revise' ? 'REVISED' : (typePar?.toLowerCase() === 'reject' ? 'REJECTED' : (typePar?.toLowerCase() === 'posted' ? 'POSTED' : 'APPROVED')),
-    note: values.catatan,
-    score: values.score
+    note: values.catatan || values.catatan_penilaian || '',
+    score: values.score || ''
   };
   // if(!payload.note) {
   //   swal.fire({
@@ -650,7 +688,26 @@ const landing = reactive({
       flex: 1,
       filter: "ColFilter",
       resizable: true,
-      cellClass: ["border-r", "!border-gray-200", "justify-left"],
+      cellClass: ["border-r", "!border-gray-200", "justify-center"],
+      cellRenderer: (params) => {
+        const currentKaryId = store.user.data?.m_kary_id;
+        const userType = store.user.data?.user_type?.toLowerCase();
+        // Sembunyikan untuk PIC pelaksana per instruksi Pak Iqbal (confidential per transaksi)
+        if (userType !== 'admin' && currentKaryId && params.data?.pic_id == currentKaryId && params.data?.request_id != currentKaryId) {
+          return `<span class="text-gray-400 italic text-xs">Confidential</span>`;
+        }
+        const val = parseInt(params.value, 10);
+        if (!val || isNaN(val)) {
+          return params.value ? `<span class="font-medium">${params.value}</span>` : `<span class="text-gray-400">-</span>`;
+        }
+        let stars = '';
+        for (let i = 1; i <= 5; i++) {
+          stars += i <= val 
+            ? `<span style="color: #f59e0b; font-size: 14px;">★</span>` 
+            : `<span style="color: #d1d5db; font-size: 14px;">★</span>`;
+        }
+        return `<div class="flex items-center gap-1">${stars} <span class="text-xs font-semibold text-gray-600">(${val}/5)</span></div>`;
+      }
     },
     {
       headerName: 'Status',
