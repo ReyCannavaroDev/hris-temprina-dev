@@ -387,8 +387,7 @@ const landing = reactive({
     {
       icon: "trash",
       class: "bg-red-600 text-light-100",
-      show: () => data.can_delete,
-      // show: (row) =>row.status?.toUpperCase() === 'DRAFT',
+      show: (row) => row?.status?.toUpperCase() === 'DRAFT' && data.can_delete,
       title: "Hapus",
       // show: () => store.user.data.username==='developer',
       click(row) {
@@ -441,8 +440,7 @@ const landing = reactive({
       icon: "edit",
       title: "Edit",
       class: "bg-blue-600 text-light-100",
-      show: () => data.can_update,
-      // show: (row) => row.status?.toUpperCase() === 'DRAFT' || row.status?.toUpperCase() === 'REVISED',
+      show: (row) => ['DRAFT', 'REVISED'].includes(row?.status?.toUpperCase()) && data.can_update,
       click(row) {
         router.push(`${route.path}/${row.id}?action=Edit&` + tsId);
       },
@@ -450,7 +448,7 @@ const landing = reactive({
     {
       icon: "copy",
       title: "Copy",
-      // show: (row) => row.status?.toUpperCase() === "DRAFT" && data.can_create,
+      show: () => data.can_create,
       class: "bg-gray-600 text-light-100",
       click(row) {
         router.push(`${route.path}/${row.id}?action=Copy&` + tsId);

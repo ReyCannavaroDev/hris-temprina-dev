@@ -35,6 +35,40 @@ class t_laporan_pekerjaan extends \App\Models\BasicModels\t_laporan_pekerjaan
       ];
     }
 
+    public function updateBefore( $model, $arrayData, $metaData, $id=null )
+    {
+        $existing = $id ? $this->find($id) : null;
+        if ($existing && !in_array(strtoupper($existing->status), ['DRAFT', 'REVISED'])) {
+            return [
+                "model"  => $model,
+                "data"   => $arrayData,
+                "errors" => ["Data dengan status " . $existing->status . " tidak dapat diubah."]
+            ];
+        }
+
+        return [
+            "model"  => $model,
+            "data"   => $arrayData,
+        ];
+    }
+
+    public function deleteBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $existing = $id ? $this->find($id) : null;
+        if ($existing && strtoupper($existing->status) !== 'DRAFT') {
+            return [
+                "model"  => $model,
+                "data"   => $arrayData,
+                "errors" => ["Data dengan status " . $existing->status . " tidak dapat dihapus."]
+            ];
+        }
+
+        return [
+            "model"  => $model,
+            "data"   => $arrayData,
+        ];
+    }
+
     public function transformRowData(array $row)
     {
         $branchId = $row['m_branch_id'] ?? null;
