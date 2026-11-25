@@ -48,6 +48,8 @@
             :check="false" @input="(v)=>{
               //$log(v)
               values.sbu=v
+              values.m_branch_id=null
+              values.m_divisi_id=null
               values.m_dept_id=''
               detailArr = []
               //$log(values.divisi)
@@ -68,10 +70,11 @@
         </div>
         <div>
           <label class="font-semibold">Cabang<span class="text-red-500 space-x-0 pl-0"></span></label>
-          <FieldSelect class="w-full py-2 !mt-0" :bind="{ disabled: !actionText, clearable:true }"
+          <FieldSelect :key="values.sbu" class="w-full py-2 !mt-0" :bind="{ disabled: !actionText, clearable:true }"
             :value="values.m_branch_id" :check="false" @input="(v)=>{
               //$log(v)
               values.m_branch_id=v
+              values.m_divisi_id=null
               values.m_dept_id=''
               detailArr = []
               //$log(values.divisi)
@@ -85,7 +88,7 @@
                 params: {
                   simplest:true,
                   single:true,
-                  //where:`this.is_active='true' AND this.m_comp_id = '${values.sbu}'`,
+                  where: values.sbu ? `this.is_active='true' AND this.m_subcomp_id = '${values.sbu}'` : `this.is_active='true'`,
                   transform:false,
                 }
             }" fa-icon="search" :check="true" />
