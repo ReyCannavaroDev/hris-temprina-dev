@@ -25,6 +25,26 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
 
     public function createBefore($model, $arrayData, $metaData, $id = null)
     {
+        $name = trim($arrayData['name'] ?? '');
+        $divisiId = $arrayData['m_divisi_id'] ?? null;
+
+        if (!empty($name)) {
+            $exists = \DB::table('m_posisi')
+                ->whereRaw('LOWER(TRIM(name)) = ?', [strtolower($name)])
+                ->when($divisiId, function($q) use ($divisiId) {
+                    $q->where('m_divisi_id', $divisiId);
+                })
+                ->exists();
+
+            if ($exists) {
+                return [
+                    "model" => $model,
+                    "data" => $arrayData,
+                    "errors" => ["Nama Jabatan '{$name}' sudah terdaftar pada divisi ini!"]
+                ];
+            }
+        }
+
         $newArrayData = array_merge($arrayData, [
             "kode" => $this->helper->generateNomor("KODE POSISI"),
             "comp_id" => auth()->user()->comp_id ?? 0,
@@ -33,6 +53,35 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
             "model" => $model,
             "data" => $newArrayData,
             // "errors" => ['error1']
+        ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $name = trim($arrayData['name'] ?? '');
+        $divisiId = $arrayData['m_divisi_id'] ?? null;
+
+        if (!empty($name)) {
+            $exists = \DB::table('m_posisi')
+                ->where('id', '!=', $id)
+                ->whereRaw('LOWER(TRIM(name)) = ?', [strtolower($name)])
+                ->when($divisiId, function($q) use ($divisiId) {
+                    $q->where('m_divisi_id', $divisiId);
+                })
+                ->exists();
+
+            if ($exists) {
+                return [
+                    "model" => $model,
+                    "data" => $arrayData,
+                    "errors" => ["Nama Jabatan '{$name}' sudah terdaftar pada divisi ini!"]
+                ];
+            }
+        }
+
+        return [
+            "model" => $model,
+            "data" => $arrayData,
         ];
     }
 
@@ -96,7 +145,9 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
 
     public function scopeGetValueGen($model)
     {
-        return $model
+        $req = app()->request;
+
+        $query = $model
             ->leftJoin("m_divisi as d", "d.id", "=", "m_posisi.m_divisi_id")
             ->leftJoin("m_general as m_gen", function ($join) {
                 $join->on(\DB::raw('CAST(d.name AS text)'), '=', \DB::raw('CAST(m_gen.id AS text)'))
@@ -121,6 +172,42 @@ class m_posisi extends \App\Models\BasicModels\m_posisi
                 \DB::raw("COALESCE(m_gen.value, d.name_old, gen_direct.value, CAST(d.name AS text), '') as value"),
                 \DB::raw("COALESCE(m_gen.value, d.name_old, gen_direct.value, CAST(d.name AS text), '') as divisi_name")
             );
+
+        // Filter Kolom Nama Jabatan (mendukung filter_name, name, filter_nama, nama)
+        $filterName = $req->filter_name ?? $req->name ?? $req->filter_nama ?? $req->nama ?? null;
+        if (!empty($filterName)) {
+            $query->where("m_posisi.name", "ILIKE", "%" . trim($filterName) . "%");
+        }
+
+        // Filter Kolom Divisi
+        $filterDivisi = $req->filter_value ?? $req->filter_divisi ?? $req->divisi ?? null;
+        if (!empty($filterDivisi)) {
+            $keywordDiv = trim($filterDivisi);
+            $query->where(function($q) use ($keywordDiv) {
+                $q->where("m_gen.value", "ILIKE", "%{$keywordDiv}%")
+                  ->orWhere("d.name_old", "ILIKE", "%{$keywordDiv}%")
+                  ->orWhere("gen_direct.value", "ILIKE", "%{$keywordDiv}%");
+            });
+        }
+
+        // Filter Kolom Level Jabatan
+        $filterLevel = $req->filter_level_name ?? $req->level_name ?? null;
+        if (!empty($filterLevel)) {
+            $query->where("lp.level_name", "ILIKE", "%" . trim($filterLevel) . "%");
+        }
+
+        // Global Search (Ctrl+F)
+        if ($req->filled('search')) {
+            $keyword = trim($req->search);
+            $query->where(function ($q) use ($keyword) {
+                $q->where("m_posisi.name", "ILIKE", "%{$keyword}%")
+                  ->orWhere("m_gen.value", "ILIKE", "%{$keyword}%")
+                  ->orWhere("lp.level_name", "ILIKE", "%{$keyword}%")
+                  ->orWhere("d.name_old", "ILIKE", "%{$keyword}%");
+            });
+        }
+
+        return $query;
     }
 
     public function transformRowData(array $row)

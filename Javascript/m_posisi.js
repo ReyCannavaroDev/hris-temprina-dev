@@ -396,7 +396,8 @@ const landing = reactive({
     filter: 'ColFilter',
     resizable: true,
     wrapText:true,
-    cellClass: [ 'border-r', '!border-gray-200', 'justify-start']
+    cellClass: [ 'border-r', '!border-gray-200', 'justify-start'],
+    valueGetter: (p) => p.data?.name ?? '-'
   },
   {
     field: 'is_active',
