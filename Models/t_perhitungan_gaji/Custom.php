@@ -1769,7 +1769,19 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
 
         // dd($payload);
 
-        $response = Http::get(env("ERP_URL") . "/public/t_pres/hasilborongan", $payload);
+        try {
+            $response = Http::timeout(15)->get(env("ERP_URL") . "/public/t_pres/hasilborongan", $payload);
+        } catch (\Throwable $e) {
+            \Log::error("Koneksi ERP hasilborongan error: " . $e->getMessage());
+            return [
+                "m_kary_id"  => $id,
+                "total_gaji" => 0,
+                "total_tax"  => 0,
+                "netto"      => 0,
+                "detail"     => [],
+                "error"      => "Koneksi ke ERP gagal: " . $e->getMessage()
+            ];
+        }
 
         // dd($response);
 
@@ -2021,8 +2033,12 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
         $kary = $kary->get();
         // dd($kary);
 
-        $date_from = \DateTime::createFromFormat("d/m/Y", trim($req->periode_awal));
-        $date_to   = \DateTime::createFromFormat("d/m/Y", trim($req->periode_akhir));
+        $date_from = \DateTime::createFromFormat("d/m/Y", trim($req->periode_awal)) ?: \DateTime::createFromFormat("Y-m-d", trim($req->periode_awal));
+        $date_to   = \DateTime::createFromFormat("d/m/Y", trim($req->periode_akhir)) ?: \DateTime::createFromFormat("Y-m-d", trim($req->periode_akhir));
+
+        if (!$date_from || !$date_to) {
+            return $this->helper->customResponse("Periode awal dan periode akhir harus diisi dengan format tanggal yang valid", 422);
+        }
 
         $interval = $date_from->diff($date_to);
         $jumlah_bulan = 0;
@@ -2103,8 +2119,12 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
         $kary = $kary->get();
         // dd($kary);
 
-        $date_from = \DateTime::createFromFormat("d/m/Y", trim($req->periode_awal));
-        $date_to   = \DateTime::createFromFormat("d/m/Y", trim($req->periode_akhir));
+        $date_from = \DateTime::createFromFormat("d/m/Y", trim($req->periode_awal)) ?: \DateTime::createFromFormat("Y-m-d", trim($req->periode_awal));
+        $date_to   = \DateTime::createFromFormat("d/m/Y", trim($req->periode_akhir)) ?: \DateTime::createFromFormat("Y-m-d", trim($req->periode_akhir));
+
+        if (!$date_from || !$date_to) {
+            return $this->helper->customResponse("Periode awal dan periode akhir harus diisi dengan format tanggal yang valid", 422);
+        }
 
         $interval = $date_from->diff($date_to);
         $jumlah_bulan = 0;
@@ -2190,8 +2210,12 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
         $kary = $kary->get();
         // dd($kary);
 
-        $date_from = \DateTime::createFromFormat("d/m/Y", trim($req->periode_awal));
-        $date_to   = \DateTime::createFromFormat("d/m/Y", trim($req->periode_akhir));
+        $date_from = \DateTime::createFromFormat("d/m/Y", trim($req->periode_awal)) ?: \DateTime::createFromFormat("Y-m-d", trim($req->periode_awal));
+        $date_to   = \DateTime::createFromFormat("d/m/Y", trim($req->periode_akhir)) ?: \DateTime::createFromFormat("Y-m-d", trim($req->periode_akhir));
+
+        if (!$date_from || !$date_to) {
+            return $this->helper->customResponse("Periode awal dan periode akhir harus diisi dengan format tanggal yang valid", 422);
+        }
 
         $interval = $date_from->diff($date_to);
         $jumlah_bulan = 0;

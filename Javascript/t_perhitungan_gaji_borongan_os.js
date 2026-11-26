@@ -90,6 +90,14 @@ const values = reactive({
 })
 
 async function generatePerhitungan() {
+  if (!values.periode_awal || !values.periode_akhir) {
+    return swal.fire({
+      icon: "warning",
+      title: "Perhatian",
+      text: "Silahkan pilih Periode Awal dan Periode Akhir terlebih dahulu sebelum melakukan generate."
+    });
+  }
+
   detailArr.value = [];
 
   // Tampilkan SweetAlert loading sebelum fetch
@@ -138,8 +146,9 @@ async function generatePerhitungan() {
 
     if (!resultData?.length) {
       return swal.fire({
-        icon: "warning",
-        text: "Tidak ditemukan data Perhitungan Gaji, pastikan karyawan sudah memiliki standar gaji"
+        icon: "info",
+        title: "Informasi",
+        text: "Tidak ditemukan data hasil borongan dari ERP untuk periode ini."
       });
     }
 
@@ -157,7 +166,7 @@ async function generatePerhitungan() {
     swal.close();
     swal.fire({
       icon: "error",
-      text: "Sesuatu yang salah terjadi, silahkan coba kembali nanti atau hubungi administrator"
+      text: typeof err === "string" ? err : (err?.message || "Sesuatu yang salah terjadi, silahkan coba kembali nanti atau hubungi administrator")
     });
   }
 }
