@@ -1,5 +1,5 @@
 import { useRouter, useRoute, RouterLink } from 'vue-router'
-import { ref, readonly, reactive, inject, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, onActivated } from 'vue'
+import { ref, readonly, reactive, inject, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, onActivated, computed, watch } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -11,13 +11,19 @@ const actionText = ref(route.params.id === 'create' ? 'Tambah' : route.query.act
 const isBadForm = ref(false)
 const isRequesting = ref(false)
 const modulPath = route.params.modul
-const currentMenu = store.currentMenu
+const currentMenu = computed(() => store.currentMenu)
 const apiTable = ref(null)
 const formErrors = ref({})
 const tsId = `ts=` + (Date.parse(new Date()))
 
 // ------------------------------ PERSIAPAN
 const endpointApi = '/m_grade'
+
+watch(() => store.currentMenu, (val) => {
+  if (val?.can_read && apiTable.value) {
+    apiTable.value.reload()
+  }
+})
 onBeforeMount(() => {
   document.title = 'Master Grading'
 })
@@ -65,7 +71,7 @@ const values = reactive({
 
 onBeforeMount(async () => {
   values.direktorat = store.user.data?.direktorat
-  if (isRead && currentMenu?.can_read) {
+  if (isRead) {
     //  READ DATA
     try {
       const editedId = route.params.id
@@ -363,7 +369,7 @@ const landing = reactive({
       icon: 'trash',
       class: 'bg-red-600 text-light-100',
       title: "Hapus",
-      show: (row) => (currentMenu?.can_delete),
+      show: (row) => (store.currentMenu?.can_delete),
       // show: () => store.user.data.username==='developer',
       click(row) {
         swal.fire({
@@ -410,7 +416,7 @@ const landing = reactive({
       icon: 'eye',
       title: "Read",
       class: 'bg-green-600 text-light-100',
-      show: (row) => (currentMenu?.can_read),
+      show: (row) => (store.currentMenu?.can_read ?? true),
       // show: (row) => (currentMenu?.can_read)||store.user.data.username==='developer',
       click(row) {
         router.push(`${route.path}/${row.id}?` + tsId)
@@ -421,7 +427,7 @@ const landing = reactive({
       title: "Edit",
       class: 'bg-blue-600 text-light-100',
       show: (row) =>
-        currentMenu?.can_update === true ,
+        store.currentMenu?.can_update === true,
       // show: (row) =>
       //   currentMenu?.can_update === true &&
       //   (row.status?.toUpperCase() === 'DRAFT' ||
@@ -435,7 +441,7 @@ const landing = reactive({
       icon: 'copy',
       title: "Copy",
       class: 'bg-gray-600 text-light-100',
-      show: (row) => currentMenu?.can_create === true ,
+      show: (row) => store.currentMenu?.can_create === true,
       // show: (row) => currentMenu?.can_create === true && row.status?.toUpperCase() === 'DRAFT',
       click(row) {
         router.push(`${route.path}/${row.id}?action=Copy&` + tsId)
@@ -444,9 +450,7 @@ const landing = reactive({
   ],
   api: {
     // url: `${store.server.url_backend}/operation${endpointApi}`,
-    url: currentMenu?.can_read
-         ? `${store.server.url_backend}/operation${endpointApi}` 
-         : '',
+    url: `${store.server.url_backend}/operation${endpointApi}`,
     headers: {
       'Content-Type': 'Application/json',
       authorization: `${store.user.token_type} ${store.user.token}`
