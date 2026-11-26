@@ -92,6 +92,8 @@ async function loadTable() {
         counter++
       }
       
+      // Sinkronisasi badge counter unread di menu sidebar
+      window.dispatchEvent(new CustomEvent('hris-notif-update'))
     } catch (err) {
       isBadForm.value = true
       swal.fire({
