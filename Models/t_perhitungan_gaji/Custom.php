@@ -1714,18 +1714,22 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
         $checkExists = m_standart_gaji_harian::where(
             "m_kary_id",
             $kary["id"]
-        )->exists();
+        )->where('is_active', true)->exists();
         if ($checkExists) {
-            // $m_standart_gaji_harian = m_standart_gaji_harian::where(
-            //     "m_kary_id",
-            //     $kary["id"]
-            // )->first();
-
             //logic baru ambil by periode
-             $m_standart_gaji_harian = m_standart_gaji_harian::where("m_kary_id", $m_kary_id)
-            ->whereDate("start_date", "<=", $periode_awal)
-            ->orderByDesc("start_date")
-            ->first();
+            $m_standart_gaji_harian = m_standart_gaji_harian::where("m_kary_id", $m_kary_id)
+                ->where('is_active', true)
+                ->whereDate("start_date", "<=", $periode_awal)
+                ->orderByDesc("start_date")
+                ->first();
+
+            // Fallback: Jika tanggal start_date diinput setelah periode_awal, tetap ambil master gaji aktif terbaru
+            if (!$m_standart_gaji_harian) {
+                $m_standart_gaji_harian = m_standart_gaji_harian::where("m_kary_id", $m_kary_id)
+                    ->where('is_active', true)
+                    ->orderByDesc("start_date")
+                    ->first();
+            }
         } 
        
         $getBasicSalary = $this->factorSalaryHarian(
@@ -1975,7 +1979,7 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
                     "m_kary_dept_id" => $key->m_dept_id,
                     "m_kary_dept.nama" => $key->dept,
                     "m_kary_posisi_id" => $key->m_posisi_id,
-                    "m_kary_posisi.name" => $key?->m_posisi?->name ?? '',
+                    "m_kary_posisi.name" => $key->posisi_name ?? $key?->m_posisi?->name ?? '',
                     "nik" => $key->nik,
                     "nama_lengkap" => $key->nama_lengkap,
                     "periode" => $date_from->format("d-m-Y"),
@@ -2063,7 +2067,7 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
                     "m_kary_dept_id" => $key->m_dept_id,
                     "m_kary_dept.nama" => $key->dept,
                     "m_kary_posisi_id" => $key->m_posisi_id,
-                    "m_kary_posisi.name" => $key?->m_posisi?->name ?? '',
+                    "m_kary_posisi.name" => $key->posisi_name ?? $key?->m_posisi?->name ?? '',
                     "nik" => $key->nik,
                     "nama_lengkap" => $key->nama_lengkap,
                     "periode" => $date_from->format("d-m-Y"),
@@ -2155,7 +2159,7 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
                     "m_kary_dept_id" => $key->m_dept_id,
                     "m_kary_dept.nama" => $key->dept,
                     "m_kary_posisi_id" => $key->m_posisi_id,
-                    "m_kary_posisi.name" => $key?->m_posisi?->name ?? '',
+                    "m_kary_posisi.name" => $key->posisi_name ?? $key?->m_posisi?->name ?? '',
                     "nik" => $key->nik,
                     "nama_lengkap" => $key->nama_lengkap,
                     "periode" => $date_from->format("d-m-Y"),
@@ -2178,21 +2182,41 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
     public function generateSalaryHarianOS()
     {
         $req = app()->request;
-        $status_harian = m_general::where('group', "STATUS KARYAWAN OUTSOURCE")->pluck('id')->toArray();
+        $status_harian = \DB::table('m_general')
+            ->where(function ($q) {
+                $q->where('group', "STATUS KARYAWAN OUTSOURCE")
+                  ->orWhereRaw("UPPER(value) LIKE '%HARIAN%'")
+                  ->orWhereRaw("UPPER(value) LIKE '%OUTSOURCE%'");
+            })
+            ->pluck('id')
+            ->toArray();
+
+        $authUser = auth()->user();
+        $userOsId = $authUser->m_os_id ?? null;
+        if (!$userOsId && $authUser && !empty($authUser->m_kary_id)) {
+            $userOsId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
 
         $kary = m_kary::selectRaw(
-                "m_kary.*, m_general.value periode_text, m_divisi.name divisi, divisi_name.value as divisi_name"
+                "m_kary.*, coalesce(periode_gaji.value, 'HARIAN') as periode_text, m_divisi.name as divisi, divisi_name.value as divisi_name, m_posisi.name as posisi_name"
             )
             ->leftJoin("m_divisi", "m_divisi.id", "m_kary.m_divisi_id")
             ->leftJoin("m_general as divisi_name", "divisi_name.id", "m_divisi.name")
             ->leftJoin("m_posisi", "m_posisi.id", "m_kary.m_posisi_id")
-            ->join("m_general", "m_general.id", "m_kary.periode_gaji_id")
+            ->leftJoin("m_general as periode_gaji", "periode_gaji.id", "m_kary.periode_gaji_id")
             ->where("m_kary.is_active", true)
-            ->whereIn("m_kary.status_kary_id", $status_harian)
-            ->where(function($query) {
-                $query->WhereRaw("EXISTS (SELECT 1 FROM m_standart_gaji_harian sg WHERE sg.m_kary_id = m_kary.id AND sg.is_active = true)");
+            ->where(function ($q) use ($status_harian) {
+                $q->whereNotNull('m_kary.m_company_outsourcing_id');
+                if (!empty($status_harian)) {
+                    $q->orWhereIn('m_kary.status_kary_id', $status_harian);
+                }
             })
-            ;
+            ->where(function($query) {
+                $query->whereRaw("EXISTS (SELECT 1 FROM m_standart_gaji_harian sg WHERE sg.m_kary_id = m_kary.id AND sg.is_active = true)");
+            })
+            ->when(!empty($userOsId), function ($q) use ($userOsId) {
+                $q->where('m_kary.m_company_outsourcing_id', $userOsId);
+            });
 
         if ($req->sbu) {
             $kary->where("m_kary.m_subcomp_id", $req->sbu);
@@ -2205,6 +2229,9 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
         }
         if ($req->m_kary_id) {
             $kary->where("m_kary.id", $req->m_kary_id);
+        }
+        if ($req->m_company_outsourcing_id) {
+            $kary->where("m_kary.m_company_outsourcing_id", $req->m_company_outsourcing_id);
         }
 
         $kary = $kary->get();
@@ -2240,7 +2267,7 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
                     "m_kary_dept_id" => $key->m_dept_id,
                     "m_kary_dept.nama" => $key->dept,
                     "m_kary_posisi_id" => $key->m_posisi_id,
-                    "m_kary_posisi.name" => $key?->m_posisi?->name ?? '',
+                    "m_kary_posisi.name" => $key->posisi_name ?? $key?->m_posisi?->name ?? '',
                     "nik" => $key->nik,
                     "nama_lengkap" => $key->nama_lengkap,
                     "periode" => $date_from->format("d-m-Y"),
@@ -2399,7 +2426,14 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
 
     public function scopegetos($model)
     {
-        $status_harian = m_general::where('group', "STATUS KARYAWAN OUTSOURCE")->pluck('id')->toArray();
+        $status_harian = \DB::table('m_general')
+            ->where(function ($q) {
+                $q->where('group', "STATUS KARYAWAN OUTSOURCE")
+                  ->orWhereRaw("UPPER(value) LIKE '%HARIAN%'")
+                  ->orWhereRaw("UPPER(value) LIKE '%OUTSOURCE%'");
+            })
+            ->pluck('id')
+            ->toArray();
 
         $authUser = auth()->user();
         $osId = request('m_os_id') ?: ($authUser->m_os_id ?? null);
@@ -2407,7 +2441,12 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
             $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
         }
 
-        return $model->whereIn('m_kary.status_kary_id', $status_harian)
+        return $model->where(function ($q) use ($status_harian) {
+                        $q->whereNotNull('m_kary.m_company_outsourcing_id');
+                        if (!empty($status_harian)) {
+                            $q->orWhereIn('m_kary.status_kary_id', $status_harian);
+                        }
+                    })
                     ->where(function ($q) {
                         $q->where('deskripsi', '!=', 'BORONGAN')
                         ->orWhereNull('deskripsi');
