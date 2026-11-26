@@ -57,6 +57,13 @@ const onGenerate = async () => {
     })
     return
   }
+  if (!values.f_id || (Array.isArray(values.f_id) && values.f_id.length === 0)) {
+    swal.fire({
+      icon: 'warning',
+      text: 'Harap memilih minimal satu periode final gaji terlebih dahulu!',
+    })
+    return
+  }
   // if(!values.m_kary_id){
   //   swal.fire({
   //     icon: 'error',

@@ -123,7 +123,8 @@
                 },
                 params: {
                   simplest: true,
-                  //scopes: 'owndata',
+                  scopes: 'posted',
+                  where: `this.status = 'POSTED'`,
                   searchfield: 'this.desc, this.nomor, this.periode_awal, this.periode_akhir'
                 }
               }" 
@@ -166,6 +167,13 @@
                   field: 'periode_akhir', 
                   headerName: 'Akhir', 
                   cellClass: ['border-r', '!border-gray-200', 'justify-center'], 
+                  searchable: true 
+                },
+                { 
+                  width: 100, 
+                  field: 'status', 
+                  headerName: 'Status', 
+                  cellClass: ['border-r', '!border-gray-200', 'justify-center', 'font-semibold', 'text-green-600'], 
                   searchable: true 
                 }
               ]"

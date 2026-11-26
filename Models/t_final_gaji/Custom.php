@@ -686,6 +686,12 @@ class t_final_gaji extends \App\Models\BasicModels\t_final_gaji
 
             $ids = array_map('trim', array_filter((array) $ids));
 
+            // Pastikan hanya data berstatus POSTED yang diekspor (cegah data DRAFT)
+            $ids = t_final_gaji::whereIn('id', $ids)->where('status', 'POSTED')->pluck('id')->toArray();
+            if (empty($ids)) {
+                return response()->json(['error' => 'Data final gaji yang dipilih belum diposting (masih berstatus DRAFT) atau tidak ditemukan.'], 422);
+            }
+
             $details = t_final_gaji_det::with([
                 'm_kary.m_divisi',
                 'm_kary.status_kary',
@@ -1566,6 +1572,16 @@ class t_final_gaji extends \App\Models\BasicModels\t_final_gaji
         } catch (\Exception $e) {
             return response()->json(["error" => $e->getMessage() . " line " . $e->getLine()], 500);
         }
+    }
+
+    public function scopeposted($model)
+    {
+        return $model->where('t_final_gaji.status', 'POSTED');
+    }
+
+    public function scopenondraft($model)
+    {
+        return $model->where('t_final_gaji.status', '!=', 'DRAFT');
     }
 
     public function scopeowndata($model)
