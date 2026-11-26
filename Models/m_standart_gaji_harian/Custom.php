@@ -86,17 +86,56 @@ class m_standart_gaji_harian extends \App\Models\BasicModels\m_standart_gaji_har
 
     public function scopeharian($model)
     {
-        // Bypass filter agar data testing bisa tampil
-        // $id = m_general::where('group', 'STATUS KARYAWAN')->where('value', 'HARIAN')->pluck('id')->toArray();
-        // return $model->whereIn('m_kary.status_kary_id', $id);
-        return $model;
+        $statusHarian = \DB::table('m_general')
+            ->where('group', 'STATUS KARYAWAN')
+            ->where(function ($q) {
+                $q->where('value', 'HARIAN')
+                  ->orWhereRaw("UPPER(value) LIKE '%HARIAN%'");
+            })
+            ->pluck('id')
+            ->toArray();
+
+        $statusOs = \DB::table('m_general')
+            ->where('group', 'STATUS KARYAWAN OUTSOURCE')
+            ->orWhereRaw("UPPER(value) LIKE '%OUTSOURCE%'")
+            ->pluck('id')
+            ->toArray();
+
+        return $model
+            ->whereNull('m_kary.m_company_outsourcing_id')
+            ->when(!empty($statusOs), function ($q) use ($statusOs) {
+                $q->whereNotIn('m_kary.status_kary_id', $statusOs);
+            })
+            ->when(!empty($statusHarian), function ($q) use ($statusHarian) {
+                $q->whereIn('m_kary.status_kary_id', $statusHarian);
+            });
     }
 
     public function scopeos($model)
     {
-        // Bypass filter agar data testing bisa tampil
-        // $id = m_general::where('group', 'STATUS KARYAWAN OUTSOURCE')->pluck('id')->toArray();
-        // return $model->whereIn('m_kary.status_kary_id', $id);
-        return $model;
+        $statusOs = \DB::table('m_general')
+            ->where(function ($q) {
+                $q->where('group', 'STATUS KARYAWAN OUTSOURCE')
+                  ->orWhereRaw("UPPER(value) LIKE '%OUTSOURCE%'");
+            })
+            ->pluck('id')
+            ->toArray();
+
+        $authUser = auth()->user();
+        $osId = request('m_os_id') ?: ($authUser->m_os_id ?? null);
+        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
+            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+
+        return $model
+            ->where(function ($q) use ($statusOs) {
+                $q->whereNotNull('m_kary.m_company_outsourcing_id');
+                if (!empty($statusOs)) {
+                    $q->orWhereIn('m_kary.status_kary_id', $statusOs);
+                }
+            })
+            ->when(!empty($osId), function ($q) use ($osId) {
+                $q->where('m_kary.m_company_outsourcing_id', $osId);
+            });
     }
 }

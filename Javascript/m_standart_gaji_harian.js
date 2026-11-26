@@ -582,7 +582,6 @@ const landing = reactive({
         page: page.value,
         paginate: 25,
         scopes:'harian',
-        kary_id: store.user.data.m_kary_id ?? 0,
         join: true,
         transform: true,
       }
