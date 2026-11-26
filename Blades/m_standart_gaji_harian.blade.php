@@ -63,7 +63,7 @@
                   values.m_kary_id = null;
                 }
               }" :errorText="formErrors.m_kary_id?'failed':''" :hints="formErrors.m_kary_id" valueField="id"
-        displayField="nama_lengkap" :api="apiKary" placeholder="Pilih Karyawan" label="Karyawan" :check="false"
+        displayField="nama_lengkap" :api="apiKary" placeholder="Pilih Karyawan Harian" label="Karyawan" :check="false"
         :columns="[
             {
               headerName: 'No',
@@ -77,7 +77,7 @@
             {
               flex: 1,
               field: 'kode',
-              headerName: 'Kode',
+              headerName: 'NIK / Kode',
               sortable: false, 
               resizable: true, 
               filter: 'ColFilter',
@@ -86,7 +86,7 @@
             {
               flex: 1,
               field: 'nama_lengkap',
-              headerName: 'Nama',
+              headerName: 'Nama Karyawan',
               sortable: false, 
               resizable: true, 
               filter: 'ColFilter',

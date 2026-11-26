@@ -41,11 +41,37 @@ class m_standart_gaji_harian extends \App\Models\BasicModels\m_standart_gaji_har
     
     public function createBefore($model, $arrayData, $metaData, $id = null)
     {
+        $chosenKaryId = req('m_kary_id');
+        $rawInput = json_decode(app()->request->getContent(), true);
+        if (!empty($rawInput['m_kary_id'])) {
+            $chosenKaryId = $rawInput['m_kary_id'];
+        }
+        if (!empty($chosenKaryId)) {
+            $arrayData['m_kary_id'] = $chosenKaryId;
+        }
+
         return [
             "model" => $model,
             "data" => array_merge($arrayData, [
                 "kode" => app()->request->kode ?? $this->helper->generateNomor("KODE STANDART GAJI"),
             ]),
+        ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $chosenKaryId = req('m_kary_id');
+        $rawInput = json_decode(app()->request->getContent(), true);
+        if (!empty($rawInput['m_kary_id'])) {
+            $chosenKaryId = $rawInput['m_kary_id'];
+        }
+        if (!empty($chosenKaryId)) {
+            $arrayData['m_kary_id'] = $chosenKaryId;
+        }
+
+        return [
+            "model" => $model,
+            "data" => $arrayData,
         ];
     }
 

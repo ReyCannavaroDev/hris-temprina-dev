@@ -39,7 +39,7 @@ class Middleware
                     }
                 }
             });
-            if(in_array('m_kary_id', $modelInstance->columns)) {
+            if(in_array('m_kary_id', $modelInstance->columns) && !in_array(@$modelInstance->getTable(), ['m_standart_gaji_harian', 'm_standart_gaji_harian_os', 'm_standart_gaji', 'default_users', 'm_kary'])) {
                 $requestData['m_kary_id'] = @$user->m_kary_id;
             }
         }

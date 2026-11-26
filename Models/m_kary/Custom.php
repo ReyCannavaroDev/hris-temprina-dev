@@ -870,11 +870,6 @@ class m_kary extends \App\Models\BasicModels\m_kary
         return $this->rollOverAllKaryawan();
     }
 
-    public function public_resetCuti()
-    {
-        return $this->resetCuti();
-    }
-
     private function generateNik($compId, $dirId, $divisiId, $posisiId)
     {
         $currentDateTime = \Carbon\Carbon::now();
@@ -3065,7 +3060,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
         });
     }
 
-    //harian internal
+    //harian internal (hanya karyawan internal non-outsource)
     public function scopeharianinternal($model)
     {
         $status_os = m_general::where(
@@ -3075,7 +3070,8 @@ class m_kary extends \App\Models\BasicModels\m_kary
             ->where("value", "HARIAN")
             ->pluck("id");
 
-        return $model->whereIn("m_kary.status_kary_id", $status_os);
+        return $model->whereIn("m_kary.status_kary_id", $status_os)
+            ->whereNull("m_kary.m_company_outsourcing_id");
     }
 
     //filter karyawan reguler (bukan outsource dan bukan harian)
@@ -3109,11 +3105,7 @@ class m_kary extends \App\Models\BasicModels\m_kary
             $m_branch_id = null;
         }
 
-        $authUser = auth()->user();
-        $osId = request("m_os_id") ?: ($authUser->m_os_id ?? null);
-        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
-            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
-        }
+        $this->filterPtOs($model);
 
         return $model
             ->when($m_subcomp_id, function ($q) use ($m_subcomp_id) {
@@ -3129,19 +3121,70 @@ class m_kary extends \App\Models\BasicModels\m_kary
                 } else if (is_array($m_branch_id)) {
                     $q->whereIn("m_kary.m_branch_id", $m_branch_id);
                 }
-            })
-            ->when(!empty($osId), function ($q) use ($osId) {
-                $q->where(function ($sub) use ($osId) {
-                    $sub->where("m_kary.m_company_outsourcing_id", $osId)
-                        ->orWhereNull("m_kary.m_company_outsourcing_id");
-                });
             });
     }
 
-    //filter karyawan OS by respo dan jangkauan PT OS (Multi-Tenant Admin OS)
+    // Jangkauan PT OS (Multi-Tenant Admin OS): user dari PT outsource hanya melihat karyawan PT-nya
+    // sendiri, ditambah karyawan yang PT-nya belum diisi.
+    private function filterPtOs($model)
+    {
+        $authUser = auth()->user();
+        $osId = request("m_os_id") ?: ($authUser->m_os_id ?? null);
+        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
+            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+
+        return $model->when(!empty($osId), function ($q) use ($osId) {
+            $q->where(function ($sub) use ($osId) {
+                $sub->where("m_kary.m_company_outsourcing_id", $osId)
+                    ->orWhereNull("m_kary.m_company_outsourcing_id");
+            });
+        });
+    }
+
+    // Filter respo khusus menu Karyawan OS: sama seperti scoperespo (termasuk jangkauan PT OS), tetapi karyawan
+    // yang cabang/sub company-nya masih kosong ikut tampil, supaya bisa ditemukan dan dilengkapi.
+    // Setelah terisi, ikut filter respo biasa.
     public function scoperespo_os($model)
     {
-        return $this->scoperespo($model);
+        $this->filterPtOs($model);
+
+        $bersih = function ($v) {
+            return (empty($v) || in_array($v, ["null", "undefined", "[object Object]"], true)) ? null : $v;
+        };
+        $m_subcomp_id = $bersih(request("m_subcomp_id"));
+        $m_branch_id = $bersih(request("m_branch_id"));
+
+        if ($m_branch_id && is_numeric($m_branch_id)) {
+            $subcompCabang = \DB::table('m_branch')->where('id', $m_branch_id)->value('m_subcomp_id');
+            return $model->where(function ($q) use ($m_branch_id, $subcompCabang) {
+                $q->where('m_kary.m_branch_id', $m_branch_id)
+                  ->orWhere(function ($q2) use ($subcompCabang) {
+                      $q2->whereNull('m_kary.m_branch_id')
+                         ->where(function ($q3) use ($subcompCabang) {
+                             $q3->whereNull('m_kary.m_subcomp_id');
+                             if ($subcompCabang) {
+                                 $q3->orWhere('m_kary.m_subcomp_id', $subcompCabang);
+                             }
+                         });
+                  });
+            });
+        }
+
+        if ($m_subcomp_id && is_numeric($m_subcomp_id)) {
+            return $model->where(function ($q) use ($m_subcomp_id) {
+                $q->where('m_kary.m_subcomp_id', $m_subcomp_id)
+                  ->orWhere(function ($q2) use ($m_subcomp_id) {
+                      $q2->whereNull('m_kary.m_subcomp_id')
+                         ->where(function ($q3) use ($m_subcomp_id) {
+                             $q3->whereNull('m_kary.m_branch_id')
+                                ->orWhereIn('m_kary.m_branch_id', \DB::table('m_branch')->where('m_subcomp_id', $m_subcomp_id)->select('id'));
+                         });
+                  });
+            });
+        }
+
+        return $model;
     }
 
     public function scopejabatan($model)

@@ -112,20 +112,23 @@ let isDataFetched = false;
 
 const apiKary = computed(() => {
   const params = {
-    kary_id: store.user.data?.m_kary_id ?? 0,
-    scopes:"harianinternal",
+    scopes: "harianinternal",
     join: true,
     transform: true,
+    searchfield: 'this.kode, this.nama_lengkap, this.nik'
   }
 
-  const where = []
+  const where = ['this.is_active = true', 'this.m_company_outsourcing_id is null']
 
-  if (values.subcomp_id != null) {
-    where.push(`m_subcomp_id = ${values.subcomp_id}`)
+  const subcompId = values.m_subcomp_id || data.subcomp_id
+  const branchId = values.m_branch_id || data.branch_id
+
+  if (subcompId != null) {
+    where.push(`this.m_subcomp_id = ${subcompId}`)
   }
 
-  if (values.branch_id != null) {
-    where.push(`m_branch_id = ${values.branch_id}`)
+  if (branchId != null) {
+    where.push(`this.m_branch_id = ${branchId}`)
   }
 
   if (where.length) {
@@ -255,7 +258,7 @@ onBeforeMount(async () => {
       const dataURL = `${store.server.url_backend}/operation${endpointApi}/${editedId}`
       isRequesting.value = true
 
-      const params = { join: false, transform: false }
+      const params = { join: true, transform: false }
       const fixedParams = new URLSearchParams(params)
       const res = await fetch(dataURL + '?' + fixedParams, {
         headers: {
