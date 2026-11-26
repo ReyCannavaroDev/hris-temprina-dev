@@ -85,7 +85,7 @@
     <div>
       <FieldX :bind="{ readonly: !actionText }" class="w-full !mt-3" :value="values.name"
         :errorText="formErrors.name?'failed':''" @input="v=>values.name=v" :hints="formErrors.name" :check="true"
-        label="Nama" placeholder="Nama | Ex : Budiono" />
+        label="Nama Lengkap" placeholder="Nama Lengkap | Ex : Budiono Siregar" />
     </div>
 
     <div>

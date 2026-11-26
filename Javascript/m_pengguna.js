@@ -346,7 +346,7 @@ watch(() => values.m_kary_id, async (newVal) => {
           selectedKaryData.m_comp_id = k.m_comp_id ?? null
           selectedKaryData.m_subcomp_id = k.m_subcomp_id ?? null
           selectedKaryData.m_branch_id = k.m_branch_id ?? null
-          if (!values.name && k.nama_lengkap) {
+          if (k.nama_lengkap) {
             values.name = k.nama_lengkap
           }
           // Mengikuti karyawan yang dipilih: jika OS diisi ID OS, jika internal/kosong direset ke null
@@ -424,6 +424,9 @@ onBeforeMount(async () => {
   // Sinkronisasi nilai initialValues ke values
   for (const key in initialValues) {
     values[key] = initialValues[key];
+  }
+  if (initialValues['m_kary.nama_lengkap']) {
+    values.name = initialValues['m_kary.nama_lengkap'];
   }
 
   // Jika mode Edit, kosongkan password
@@ -736,7 +739,7 @@ const landing = reactive({
     params: {
       paginate: 25,
       simplest: true,
-      searchfield: 'this.id, this.name, this.username, this.user_type, this.is_active',
+      searchfield: 'this.id, this.name, m_kary.nama_lengkap, this.username, this.user_type, this.is_active',
       where: userOsId.value ? `this.m_os_id=${userOsId.value}` : null
     },
     onsuccess(response) {
@@ -764,7 +767,8 @@ const landing = reactive({
     resizable: true,
     wrapText: true,
     cellClass: ['border-r', '!border-gray-200', 'justify-start'],
-    valueGetter: (params) => params.data?.m_kary?.nama_lengkap || params.data?.name || '-'
+    valueGetter: (params) => params.data?.['m_kary.nama_lengkap'] || params.data?.nama_lengkap || params.data?.m_kary?.nama_lengkap || params.data?.name || '-',
+    filterValueGetter: (params) => params.data?.['m_kary.nama_lengkap'] || params.data?.nama_lengkap || params.data?.m_kary?.nama_lengkap || params.data?.name || ''
   },
   {
     headerName: 'PT Outsource',

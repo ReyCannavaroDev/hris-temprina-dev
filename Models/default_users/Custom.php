@@ -52,6 +52,9 @@ class default_users extends \App\Models\BasicModels\default_users
             $model->dept = @m_dept::find($kary->m_dept_id)->nama;
         }
         $model->atasan = m_kary::where('id', @$model['m_kary.atasan_id'] ?? 0)->pluck('nama_lengkap')->first();
+        if (empty($model->nama_lengkap)) {
+            $model->nama_lengkap = @$model['m_kary.nama_lengkap'] ?: @$model->name;
+        }
 
         if (app()->request->header('Source') === 'mobile') {
             $data = \DB::select("select public.employee_attendance(?,?)", [Date('Y-m-d'), $model['m_kary_id'] ?? 0]);
@@ -89,6 +92,13 @@ class default_users extends \App\Models\BasicModels\default_users
             }
         } else {
             $arrayData['m_os_id'] = null;
+        }
+
+        if (!empty($arrayData['m_kary_id'])) {
+            $kary = m_kary::find($arrayData['m_kary_id']);
+            if ($kary && !empty($kary->nama_lengkap)) {
+                $arrayData['name'] = $kary->nama_lengkap;
+            }
         }
 
         $hasher = app()->make("hash");
@@ -262,8 +272,16 @@ class default_users extends \App\Models\BasicModels\default_users
 
         try {
             \DB::beginTransaction();
+            $name = $req->name;
+            if (!empty($req->m_kary_id)) {
+                $kary = m_kary::find($req->m_kary_id);
+                if ($kary && !empty($kary->nama_lengkap)) {
+                    $name = $kary->nama_lengkap;
+                }
+            }
+
             $data = [
-                'name' => $req->name,
+                'name' => $name,
                 'username' => $req->username,
                 'email' => $req->email,
                 'm_kary_id' => $req->m_kary_id,
