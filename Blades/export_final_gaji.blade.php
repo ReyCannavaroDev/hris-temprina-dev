@@ -12,41 +12,39 @@
       <div class="grid <md:grid-cols-1 grid-cols-2 gap-x-[60px] gap-y-[12px] px-4">
         <!-- START COLUMN -->
           <div>
-            <label class="font-semibold">Tipe Export</label>
+            <label class="font-semibold text-sm">Format Output</label>
               <FieldSelect 
-                :bind="{ readonly: true }" 
+                :bind="{ readonly: false, clearable: false }" 
                 class="w-full py-2 !mt-0"
                 :value="values.tipe" 
                 :errorText="formErrors.tipe ? 'failed' : ''"
                 @input="v => values.tipe = v" 
                 :hints="formErrors.tipe" 
                 :check="false"
-                
                 label=""
-                :options="['excel']"
-                placeholder="Pilih Tipe Export"
+                :options="['Excel', 'HTML']"
+                placeholder="Pilih Format Output"
                 valueField="key" 
                 displayField="key"
             />
           </div>
-          <!-- <div>
-            <label class="font-semibold">Tipe Export</label>
+          <div>
+            <label class="font-semibold text-sm">Template Laporan</label>
               <FieldSelect 
-                :bind="{ readonly: !actionText }" 
+                :bind="{ readonly: false, clearable: false }" 
                 class="w-full py-2 !mt-0"
                 :value="values.tipe_template" 
                 :errorText="formErrors.tipe_template ? 'failed' : ''"
                 @input="v => values.tipe_template = v" 
                 :hints="formErrors.tipe_template" 
                 :check="false"
-                
                 label=""
-                :options="['Karyawan','Coscentre']"
-                placeholder="Pilih Tipe Export"
+                :options="['Cost Center', 'Detail Karyawan']"
+                placeholder="Pilih Template Laporan"
                 valueField="key" 
                 displayField="key"
             />
-          </div> -->
+          </div>
 
           <!-- <div >
             <label class="font-semibold">Pilih Final Gaji</label>
@@ -221,13 +219,29 @@
       </div>
         <!-- END COLUMN -->
         <div class="flex flex-row justify-end space-x-[20px] mt-[1em]">
-          <button @click="onGenerate" class="bg-green-600 hover:bg-green-800 duration-300 text-white px-[36.5px] py-[12px] rounded-[6px] ">
-            {{ values.tipe?.toLowerCase() === 'html' ? 'View' : 'Export' }}
+          <button @click="onGenerate" :class="values.tipe?.toLowerCase() === 'html' ? 'bg-blue-600 hover:bg-blue-800' : 'bg-green-600 hover:bg-green-800'" class="duration-300 text-white px-[36.5px] py-[12px] rounded-[6px] font-semibold flex items-center gap-2 shadow-sm transition-all">
+            <icon :fa="values.tipe?.toLowerCase() === 'html' ? 'eye' : 'file-excel'" />
+            <span>{{ values.tipe?.toLowerCase() === 'html' ? 'View Report' : 'Export Excel' }}</span>
           </button>
         </div>
         <!-- ACTION BUTTON START -->
-        <div class="overflow-x-auto mt-6 mb-4 px-4" v-show="exportHtml">
-          <hr>
+        <div class="overflow-x-auto mt-6 mb-4 px-4 border rounded-md p-4 bg-gray-50 shadow-inner" v-show="exportHtml">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-gray-700 text-sm flex items-center gap-2">
+              <icon fa="table" />
+              <span>Preview Laporan Final Gaji</span>
+            </h3>
+            <div class="flex items-center gap-2">
+              <button @click="onPrintReport" class="bg-indigo-600 hover:bg-indigo-800 text-white text-xs px-3 py-1.5 rounded flex items-center gap-1.5 shadow-sm transition-all font-medium">
+                <icon fa="print" size="xs" />
+                <span>Cetak / Print</span>
+              </button>
+              <button @click="exportHtml = false" class="bg-gray-500 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded shadow-sm transition-all font-medium">
+                Tutup Preview
+              </button>
+            </div>
+          </div>
+          <hr class="mb-4">
           <div id="exportTable">
           </div>
         </div>

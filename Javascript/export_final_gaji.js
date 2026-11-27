@@ -39,21 +39,21 @@ const checkedState = ref()
 //   }
 // })
 const values = reactive({
-  tipe: 'excel',
+  tipe: 'Excel',
+  tipe_template: 'Cost Center',
   f_id: null,
+  m_branch_id: null,
   m_kary_id: store.user?.data?.m_kary_id || null,
   m_kary: {
     nama_lengkap: store.user?.data?.name || ''
   }
 })
 
-// console.log(values)
-
 const onGenerate = async () => {
-  if (values.tipe === null) {
+  if (!values.tipe) {
     swal.fire({
       icon: 'error',
-      text: 'Harap Memilih Tipe Export Dahulu!',
+      text: 'Harap Memilih Format Output Dahulu!',
     })
     return
   }
@@ -64,50 +64,83 @@ const onGenerate = async () => {
     })
     return
   }
-  // if(!values.m_kary_id){
-  //   swal.fire({
-  //     icon: 'error',
-  //     text: 'Pilih NIK Terlebih Dahulu!',
-  //   })
-  //   return
-  // }
+
   const tempGet = []
   isRequesting.value = true
-  if (values.tipe) {
-    // if (values.tipe?.toLowerCase() === 'excel') {
-    //   tempGet.push(`export=xls`)
-    // } else
-    if (values.tipe?.toLowerCase() === 'pdf') {
-      tempGet.push()
-    }
-  }
-  if (values.periode_from) {
-    let tempYear = values.periode_from.split('/')[2]
-    let tempMonth = values.periode_from.split('/')[1]
-    let tempDay = values.periode_from.split('/')[0]
-    tempGet.push(`periode_from=${tempYear}-${tempMonth}-${tempDay}`)
-  }
-  if (values.periode_to) {
-    let tempYear2 = values.periode_to.split('/')[2]
-    let tempMonth2 = values.periode_to.split('/')[1]
-    let tempDay2 = values.periode_to.split('/')[0]
-    tempGet.push(`periode_to=${tempYear2}-${tempMonth2}-${tempDay2}`)
-  }
-  if (values.f_id) {
-    tempGet.push(`f_id=${values.f_id}`)
-  }
+
+  const finalIds = Array.isArray(values.f_id) ? values.f_id.join(',') : values.f_id
+  tempGet.push(`f_id=${finalIds}`)
+
   if (values.m_branch_id) {
     tempGet.push(`m_branch_id=${values.m_branch_id}`)
   }
-  if (values.m_kary_id) {
-    tempGet.push(`m_kary_id=${values.m_kary_id}`)
+  if (values.tipe_template) {
+    tempGet.push(`tipe_template=${encodeURIComponent(values.tipe_template)}`)
   }
+
   const paramsGet = tempGet.join("&")
-  exportHtml.value = false
-  window.open(
-    `${store.server.url_backend}/public/t_final_gaji/exportGajiCC?${paramsGet}`
-  )
-  isRequesting.value = false
+
+  if (values.tipe?.toLowerCase() === 'html') {
+    try {
+      const response = await fetch(`${store.server.url_backend}/public/t_final_gaji/exportGajiHtml?${paramsGet}`, {
+        headers: {
+          Authorization: `${store.user.token_type} ${store.user.token}`
+        }
+      })
+      if (!response.ok) throw new Error("Gagal mengambil tampilan laporan HTML")
+      const htmlText = await response.text()
+      exportHtml.value = true
+      const targetDiv = document.getElementById('exportTable')
+      if (targetDiv) {
+        targetDiv.innerHTML = htmlText
+      }
+    } catch (err) {
+      swal.fire({
+        icon: 'error',
+        text: err?.message || 'Terjadi kesalahan saat memuat laporan'
+      })
+    } finally {
+      isRequesting.value = false
+    }
+  } else {
+    // Excel export
+    exportHtml.value = false
+    const endpointMethod = values.tipe_template === 'Detail Karyawan' ? 'exportGaji' : 'exportGajiCC'
+    window.open(
+      `${store.server.url_backend}/public/t_final_gaji/${endpointMethod}?${paramsGet}`
+    )
+    isRequesting.value = false
+  }
+}
+
+const onPrintReport = () => {
+  const printContent = document.getElementById('exportTable')
+  if (!printContent) return
+  const win = window.open('', '_blank')
+  win.document.write(`
+    <html>
+      <head>
+        <title>Laporan Final Gaji</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          table { width: 100%; border-collapse: collapse; font-size: 10px; }
+          th, td { border: 1px solid #333; padding: 4px 6px; }
+          th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; }
+          @media print {
+            body { padding: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        ${printContent.innerHTML}
+      </body>
+    </html>
+  `)
+  win.document.close()
+  win.focus()
+  setTimeout(() => {
+    win.print()
+  }, 500)
 }
 
 //  @endif -------------------------------------------------END

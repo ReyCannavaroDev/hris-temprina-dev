@@ -671,6 +671,165 @@ class t_final_gaji extends \App\Models\BasicModels\t_final_gaji
     //     }
     // }
 
+    public function public_exportGaji($req)
+    {
+        try {
+            $f_id_raw = $req->f_id;
+            $m_branch_id = $req->m_branch_id;
+
+            if (is_string($f_id_raw)) {
+                $decoded = json_decode($f_id_raw, true);
+                $ids = is_array($decoded) ? $decoded : explode(',', $f_id_raw);
+            } else {
+                $ids = is_array($f_id_raw) ? $f_id_raw : [$f_id_raw];
+            }
+
+            $ids = array_map('trim', array_filter((array) $ids));
+
+            // Pastikan hanya data berstatus POSTED yang diekspor
+            $ids = t_final_gaji::whereIn('id', $ids)->where('status', 'POSTED')->pluck('id')->toArray();
+            if (empty($ids)) {
+                return response()->json(['error' => 'Data final gaji yang dipilih belum diposting (masih berstatus DRAFT) atau tidak ditemukan.'], 422);
+            }
+
+            $details = t_final_gaji_det::with([
+                'm_kary.m_divisi',
+                'm_kary.status_kary',
+                'm_kary.m_branch',
+                'm_kary.m_posisi',
+                't_final_gaji_det_rincian.t_potongan.jenis_potongan',
+                't_final_gaji'
+            ])
+            ->whereIn('t_final_gaji_id', $ids)
+            ->when($m_branch_id, function ($query) use ($m_branch_id) {
+                return $query->whereHas('m_kary', function ($q) use ($m_branch_id) {
+                    $q->where('m_branch_id', $m_branch_id);
+                });
+            })
+            ->get();
+
+            $groupedByBranch = $details->groupBy(function ($item) {
+                return $item->m_kary?->m_branch?->name ?? 'CABANG TIDAK TERDEFINISI';
+            });
+
+            $rows = [];
+
+            foreach ($groupedByBranch as $branchName => $itemsInBranch) {
+                $rows[] = [
+                    'BULAN' => '', 'NO' => '', 'NIK' => '', 'NAMA' => "CABANG: " . strtoupper($branchName),
+                    'STATUS' => '', 'DIVISI' => '', 'POSISI' => '',
+                    'THP' => '', 'LEMBUR' => '', 'KLAIM_ASKES' => '', 'JAMSOSTEK' => '', 
+                    'BPJS_KES' => '', 'BPJS_PENSIUN' => '', 'POT_TERLAMBAT' => '', 
+                    'POT_ABSEN' => '', 'POT_PROD' => '', 'SANKSI_KERJA' => '', 
+                    'PINJ_KOPERASI' => '', 'PINJ_KANTOR' => '', 'POT_LAINNYA' => '', 'NETTO' => '', 'ANGKA_CSV' => ''
+                ];
+
+                $bt = ['thp' => 0, 'lembur' => 0, 'askes' => 0, 'jamsostek' => 0, 'bpjs' => 0, 'jp' => 0, 'terlambat' => 0, 'absen' => 0, 'prod' => 0, 'sanksi' => 0, 'koperasi' => 0, 'kantor' => 0, 'lainnya' => 0, 'netto' => 0, 'csv' => 0];
+                $no = 1;
+
+                foreach ($itemsInBranch as $item) {
+                    $rincian = $item->t_final_gaji_det_rincian;
+                    
+                    $valAskes = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'askes'))->sum('value');
+                    $valThp = $rincian->filter(fn($i) => $i->factor === '+' && !str_contains(strtolower($i->name), 'lembur') && !str_contains(strtolower($i->name), 'askes'))->sum('value');
+                    $valLembur = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'lembur'))->sum('value');
+
+                    $valTerlambat = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'terlambat'))->sum('value');
+                    $valAbsen     = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'tidak masuk kerja'))->sum('value');
+                    $valProd      = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'produktifitas'))->sum('value');
+                    $valSanksi    = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'kesalahan kerja'))->sum('value');
+                    $valKoperasi  = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'pinjaman koperasi'))->sum('value');
+                    $valKantor    = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'pinjaman kantor'))->sum('value');
+                    $valJamsostek = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'jht') || str_contains(strtolower($i->name), 'bpjs ketenagakerjaan'))->sum('value');
+                    $valBpjsKes   = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'bpjs kesehatan'))->sum('value');
+                    $valBpjsPen   = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'bpjs pensiun'))->sum('value');
+
+                    $totalPotonganGaji = $rincian->where('factor', '-')->sum('value');
+                    $valPotLainnya = $totalPotonganGaji - ($valTerlambat + $valAbsen + $valProd + $valSanksi + $valKoperasi + $valKantor + $valJamsostek + $valBpjsKes + $valBpjsPen + $valAskes);
+
+                    $valNettoOriginal = ($valThp + $valLembur) - $totalPotonganGaji;
+                    $valAngkaCSV = $valNettoOriginal + $valKoperasi + $valKantor;
+
+                    $rows[] = [
+                        'BULAN'         => \Carbon\Carbon::parse($item->t_final_gaji?->periode_akhir)->format('Ym'),
+                        'NO'            => $no++,
+                        'NIK'           => $item->m_kary?->nip ?? '-',
+                        'NAMA'          => $item->m_kary?->nama_lengkap ?? '-',
+                        'STATUS'        => $item->m_kary?->status_kary?->value ?? $item->m_kary?->status_kary?->name ?? '-',
+                        'DIVISI'        => $item->m_kary?->m_divisi?->name ?? '-',
+                        'POSISI'        => $item->m_kary?->m_posisi?->name ?? '-',
+                        'THP'           => $valThp,
+                        'LEMBUR'        => $valLembur,
+                        'KLAIM_ASKES'   => $valAskes,
+                        'JAMSOSTEK'     => $valJamsostek,
+                        'BPJS_KES'      => $valBpjsKes,
+                        'BPJS_PENSIUN'  => $valBpjsPen,
+                        'POT_TERLAMBAT' => $valTerlambat,
+                        'POT_ABSEN'     => $valAbsen,
+                        'POT_PROD'      => $valProd,
+                        'SANKSI_KERJA'  => $valSanksi,
+                        'PINJ_KOPERASI' => $valKoperasi,
+                        'PINJ_KANTOR'   => $valKantor,
+                        'POT_LAINNYA'   => max(0, $valPotLainnya),
+                        'NETTO'         => $valNettoOriginal,
+                        'ANGKA_CSV'     => $valAngkaCSV,
+                    ];
+
+                    $bt['thp'] += $valThp; 
+                    $bt['lembur'] += $valLembur; 
+                    $bt['askes'] += $valAskes;
+                    $bt['jamsostek'] += $valJamsostek; 
+                    $bt['bpjs'] += $valBpjsKes; 
+                    $bt['jp'] += $valBpjsPen;
+                    $bt['terlambat'] += $valTerlambat; 
+                    $bt['absen'] += $valAbsen; 
+                    $bt['prod'] += $valProd; 
+                    $bt['sanksi'] += $valSanksi;
+                    $bt['koperasi'] += $valKoperasi; 
+                    $bt['kantor'] += $valKantor;
+                    $bt['lainnya'] += max(0, $valPotLainnya);
+                    $bt['netto'] += $valNettoOriginal;
+                    $bt['csv'] += $valAngkaCSV;
+                }
+
+                $rows[] = [
+                    'BULAN' => '', 'NO' => '', 'NIK' => '', 'NAMA' => "SUB-TOTAL CABANG " . strtoupper($branchName),
+                    'STATUS' => '', 'DIVISI' => '', 'POSISI' => count($itemsInBranch) . " Karyawan",
+                    'THP' => $bt['thp'], 'LEMBUR' => $bt['lembur'], 'KLAIM_ASKES' => $bt['askes'], 
+                    'JAMSOSTEK' => $bt['jamsostek'], 'BPJS_KES' => $bt['bpjs'], 'BPJS_PENSIUN' => $bt['jp'], 
+                    'POT_TERLAMBAT' => $bt['terlambat'], 'POT_ABSEN' => $bt['absen'], 
+                    'POT_PROD' => $bt['prod'], 'SANKSI_KERJA' => $bt['sanksi'],
+                    'PINJ_KOPERASI' => $bt['koperasi'], 'PINJ_KANTOR' => $bt['kantor'], 
+                    'POT_LAINNYA' => $bt['lainnya'], 'NETTO' => $bt['netto'], 'ANGKA_CSV' => $bt['csv']
+                ];
+                $rows[] = ['BULAN' => ''];
+            }
+
+            $firstId = reset($ids); 
+            $fileDesc = count($ids) > 1 ? "MULTIPLE" : ($this->find($firstId)->desc ?? "EXPORT");
+            $fileName = "export-gaji-karyawan-" . $fileDesc . '-' . \Carbon\Carbon::now()->format("YmdHis") . ".xlsx";
+
+            return Excel::download(new class(collect($rows)) implements FromCollection, WithHeadings, WithColumnFormatting {
+                protected $data;
+                public function __construct($data) { $this->data = $data; }
+                public function collection() { return $this->data; }
+                public function headings(): array {
+                    return ['Bulan', 'No', 'NIK', 'Nama Karyawan', 'Status', 'Divisi', 'Posisi', 'THP Final', 'Lembur', 'Pot. Askes', 'Jamsostek', 'BPJS Kesehatan', 'BPJS Pensiun', 'Pot. Terlambat', 'Pot. Absen', 'Pot. Produktifitas', 'Sanksi Kesalahan', 'Pinj. Koperasi', 'Pinj. Kantor', 'Pot. Lainnya', 'Netto', 'Angka CSV'];
+                }
+                public function columnFormats(): array {
+                    return [
+                        'H' => '#,##0', 'I' => '#,##0', 'J' => '#,##0', 'K' => '#,##0', 'L' => '#,##0', 
+                        'M' => '#,##0', 'N' => '#,##0', 'O' => '#,##0', 'P' => '#,##0', 'Q' => '#,##0', 
+                        'R' => '#,##0', 'S' => '#,##0', 'T' => '#,##0', 'U' => '#,##0', 'V' => '#,##0'
+                    ];
+                }
+            }, $fileName);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage() . " line " . $e->getLine()], 500);
+        }
+    }
+
     public function public_exportGajiCC($req)
     {
         try {
@@ -708,9 +867,8 @@ class t_final_gaji extends \App\Models\BasicModels\t_final_gaji
             })
             ->get();
 
-            $filteredDetails = $details->filter(function ($item) {
-                return $item->m_kary?->status_kary?->group === 'STATUS KARYAWAN';
-            });
+            // Semua detail karyawan dalam final gaji diikutsertakan
+            $filteredDetails = $details;
 
             $groupedByBranch = $filteredDetails->groupBy(function ($item) {
                 return $item->m_kary?->m_branch?->name ?? 'CABANG TIDAK TERDEFINISI';
@@ -730,7 +888,7 @@ class t_final_gaji extends \App\Models\BasicModels\t_final_gaji
                 ];
 
                 $groupedByStatus = $itemsInBranch->groupBy(function ($item) {
-                    return $item->m_kary?->status_kary?->value ?? 'TIDAK TERDEFINISI';
+                    return $item->m_kary?->status_kary?->value ?? $item->m_kary?->status_kary?->name ?? 'TETAP';
                 });
 
                 foreach ($groupedByStatus as $statusName => $itemsByStatus) {
@@ -746,8 +904,7 @@ class t_final_gaji extends \App\Models\BasicModels\t_final_gaji
 
                     $groupedByCC = $itemsByStatus->groupBy(function ($item) {
                         if (!$item->m_kary) return 'DATA TIDAK DITEMUKAN';
-                        // $divisiId = $item->m_kary->m_divisi_id ?? 0;
-                        $divisiId = $item->m_kary->m_divisi->name ?? 0;
+                        $divisiId = $item->m_kary->m_divisi_id ?? $item->m_kary_divisi_id ?? 0;
                         $posisiId = $item->m_kary->m_posisi_id ?? 0;
                         $level = m_level_posisi::whereHas('m_level_posisi_d', function($q) use ($posisiId){
                             $q->where('m_posisi_id', $posisiId);
@@ -880,6 +1037,395 @@ class t_final_gaji extends \App\Models\BasicModels\t_final_gaji
             return response()->json(['error' => $e->getMessage() . " line " . $e->getLine()], 500);
         }
     }
+    public function public_exportGajiHtml($req)
+    {
+        try {
+            $f_id_raw = $req->f_id;
+            $m_branch_id = $req->m_branch_id;
+            $tipe_template = $req->tipe_template ?? 'Cost Center';
+
+            if (is_string($f_id_raw)) {
+                $decoded = json_decode($f_id_raw, true);
+                $ids = is_array($decoded) ? $decoded : explode(',', $f_id_raw);
+            } else {
+                $ids = is_array($f_id_raw) ? $f_id_raw : [$f_id_raw];
+            }
+
+            $ids = array_map('trim', array_filter((array) $ids));
+
+            $finalGajis = t_final_gaji::whereIn('id', $ids)->where('status', 'POSTED')->get();
+            if ($finalGajis->isEmpty()) {
+                return response('<div style="padding:15px; background:#fee2e2; color:#b91c1c; border-radius:6px; font-weight:bold;">Data final gaji yang dipilih belum diposting (masih berstatus DRAFT) atau tidak ditemukan.</div>', 422)->header('Content-Type', 'text/html');
+            }
+            $postedIds = $finalGajis->pluck('id')->toArray();
+
+            $periodeDesc = $finalGajis->pluck('desc')->filter()->join(', ');
+            if (empty($periodeDesc)) {
+                $periodeDesc = $finalGajis->map(function($f) {
+                    return ($f->periode_awal ? date('d/m/Y', strtotime($f->periode_awal)) : '') . ' - ' . ($f->periode_akhir ? date('d/m/Y', strtotime($f->periode_akhir)) : '');
+                })->filter()->join(', ');
+            }
+
+            $branchNameSelected = 'Semua Cabang';
+            if ($m_branch_id) {
+                $branchObj = \DB::table('m_branch')->where('id', $m_branch_id)->first();
+                if ($branchObj) {
+                    $branchNameSelected = $branchObj->name;
+                }
+            }
+
+            $details = t_final_gaji_det::with([
+                'm_kary.m_divisi',
+                'm_kary.status_kary',
+                'm_kary.m_branch',
+                'm_kary.m_posisi',
+                't_final_gaji_det_rincian.t_potongan.jenis_potongan',
+                't_final_gaji'
+            ])
+            ->whereIn('t_final_gaji_id', $postedIds)
+            ->when($m_branch_id, function ($query) use ($m_branch_id) {
+                return $query->whereHas('m_kary', function ($q) use ($m_branch_id) {
+                    $q->where('m_branch_id', $m_branch_id);
+                });
+            })
+            ->get();
+
+            if ($details->isEmpty()) {
+                return response('<div style="padding:15px; background:#fef3c7; color:#92400e; border-radius:6px; font-weight:bold;">Tidak ada detail transaksi gaji yang ditemukan untuk periode dan cabang yang dipilih.</div>', 200)->header('Content-Type', 'text/html');
+            }
+
+            $fnNum = function($num) {
+                return $num ? number_format($num, 0, ',', '.') : '-';
+            };
+
+            $html = '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #333; margin: 10px 0;">';
+            $html .= '<div style="text-align: center; margin-bottom: 20px;">';
+            $html .= '<h2 style="margin: 0 0 5px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">PT TEMPRINA MEDIA GRAFIKA</h2>';
+            $html .= '<h3 style="margin: 0 0 5px 0; font-size: 14px; font-weight: bold; text-transform: uppercase;">LAPORAN FINAL GAJI (' . htmlspecialchars(strtoupper($tipe_template)) . ')</h3>';
+            $html .= '<p style="margin: 0; font-size: 12px; color: #555;">';
+            $html .= '<strong>Periode:</strong> ' . htmlspecialchars($periodeDesc) . ' &nbsp;|&nbsp; ';
+            $html .= '<strong>Cabang:</strong> ' . htmlspecialchars($branchNameSelected);
+            $html .= '</p></div>';
+
+            if ($tipe_template === 'Detail Karyawan') {
+                $groupedByBranch = $details->groupBy(function ($item) {
+                    return $item->m_kary?->m_branch?->name ?? 'CABANG TIDAK TERDEFINISI';
+                });
+                $grandTotal = ['thp' => 0, 'lembur' => 0, 'askes' => 0, 'jamsostek' => 0, 'bpjs' => 0, 'jp' => 0, 'terlambat' => 0, 'absen' => 0, 'prod' => 0, 'sanksi' => 0, 'koperasi' => 0, 'kantor' => 0, 'lainnya' => 0, 'netto' => 0, 'csv' => 0];
+
+                $html .= '<table style="width: 100%; border-collapse: collapse; font-size: 10px;">';
+                $html .= '<thead><tr style="background-color: #2b3a4a; color: #ffffff;">';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: center;">No</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: center;">NIK</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: left;">Nama Karyawan</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: center;">Status</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: left;">Divisi</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: left;">Posisi</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">THP Final</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Lembur</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pot. Askes</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Jamsostek</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">BPJS Kes</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">BPJS Pen</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pot. Tlbt</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pot. Absen</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pot. Prod</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Sanksi</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pinj. Kop</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pinj. Ktr</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pot. Lain</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right; background-color: #1e293b;">Netto</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right; background-color: #1e293b;">Angka CSV</th>';
+                $html .= '</tr></thead><tbody>';
+
+                foreach ($groupedByBranch as $branchName => $itemsInBranch) {
+                    $html .= '<tr style="background-color: #e2e8f0; font-weight: bold;">';
+                    $html .= '<td colspan="21" style="border: 1px solid #ccc; padding: 6px 8px; color: #1e293b;">CABANG: ' . htmlspecialchars(strtoupper($branchName)) . '</td>';
+                    $html .= '</tr>';
+
+                    $bt = ['thp' => 0, 'lembur' => 0, 'askes' => 0, 'jamsostek' => 0, 'bpjs' => 0, 'jp' => 0, 'terlambat' => 0, 'absen' => 0, 'prod' => 0, 'sanksi' => 0, 'koperasi' => 0, 'kantor' => 0, 'lainnya' => 0, 'netto' => 0, 'csv' => 0];
+                    $no = 1;
+
+                    foreach ($itemsInBranch as $item) {
+                        $rincian = $item->t_final_gaji_det_rincian;
+                        $valAskes = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'askes'))->sum('value');
+                        $valThp = $rincian->filter(fn($i) => $i->factor === '+' && !str_contains(strtolower($i->name), 'lembur') && !str_contains(strtolower($i->name), 'askes'))->sum('value');
+                        $valLembur = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'lembur'))->sum('value');
+                        $valTerlambat = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'terlambat'))->sum('value');
+                        $valAbsen = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'tidak masuk kerja'))->sum('value');
+                        $valProd = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'produktifitas'))->sum('value');
+                        $valSanksi = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'kesalahan kerja'))->sum('value');
+                        $valKoperasi = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'pinjaman koperasi'))->sum('value');
+                        $valKantor = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'pinjaman kantor'))->sum('value');
+                        $valJamsostek = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'jht') || str_contains(strtolower($i->name), 'bpjs ketenagakerjaan'))->sum('value');
+                        $valBpjsKes = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'bpjs kesehatan'))->sum('value');
+                        $valBpjsPen = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'bpjs pensiun'))->sum('value');
+                        $totalPotonganGaji = $rincian->where('factor', '-')->sum('value');
+                        $valPotLainnya = $totalPotonganGaji - ($valTerlambat + $valAbsen + $valProd + $valSanksi + $valKoperasi + $valKantor + $valJamsostek + $valBpjsKes + $valBpjsPen + $valAskes);
+                        $valNettoOriginal = ($valThp + $valLembur) - $totalPotonganGaji;
+                        $valAngkaCSV = $valNettoOriginal + $valKoperasi + $valKantor;
+
+                        $bt['thp'] += $valThp; $bt['lembur'] += $valLembur; $bt['askes'] += $valAskes;
+                        $bt['jamsostek'] += $valJamsostek; $bt['bpjs'] += $valBpjsKes; $bt['jp'] += $valBpjsPen;
+                        $bt['terlambat'] += $valTerlambat; $bt['absen'] += $valAbsen; $bt['prod'] += $valProd;
+                        $bt['sanksi'] += $valSanksi; $bt['koperasi'] += $valKoperasi; $bt['kantor'] += $valKantor;
+                        $bt['lainnya'] += max(0, $valPotLainnya); $bt['netto'] += $valNettoOriginal; $bt['csv'] += $valAngkaCSV;
+
+                        $bgRow = ($no % 2 === 0) ? '#f8fafc' : '#ffffff';
+                        $html .= '<tr style="background-color: ' . $bgRow . ';">';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: center;">' . ($no++) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: center;">' . htmlspecialchars($item->m_kary?->nip ?? '-') . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px;">' . htmlspecialchars($item->m_kary?->nama_lengkap ?? '-') . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: center;">' . htmlspecialchars($item->m_kary?->status_kary?->value ?? $item->m_kary?->status_kary?->name ?? '-') . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px;">' . htmlspecialchars($item->m_kary?->m_divisi?->name ?? '-') . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px;">' . htmlspecialchars($item->m_kary?->m_posisi?->name ?? '-') . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valThp) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valLembur) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valAskes) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valJamsostek) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valBpjsKes) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valBpjsPen) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valTerlambat) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valAbsen) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valProd) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valSanksi) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valKoperasi) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($valKantor) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum(max(0, $valPotLainnya)) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right; font-weight: bold; background-color: #f1f5f9;">' . $fnNum($valNettoOriginal) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right; font-weight: bold; background-color: #f1f5f9;">' . $fnNum($valAngkaCSV) . '</td>';
+                        $html .= '</tr>';
+                    }
+
+                    $html .= '<tr style="background-color: #fef08a; font-weight: bold;">';
+                    $html .= '<td colspan="6" style="border: 1px solid #ccc; padding: 6px 8px; text-align: right;">SUB-TOTAL CABANG ' . htmlspecialchars(strtoupper($branchName)) . ':</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['thp']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['lembur']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['askes']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['jamsostek']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['bpjs']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['jp']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['terlambat']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['absen']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['prod']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['sanksi']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['koperasi']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['kantor']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['lainnya']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['netto']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['csv']) . '</td>';
+                    $html .= '</tr>';
+
+                    foreach ($bt as $k => $v) { $grandTotal[$k] += $v; }
+                }
+
+                $html .= '</tbody><tfoot>';
+                $html .= '<tr style="background-color: #1e293b; color: #ffffff; font-weight: bold;">';
+                $html .= '<td colspan="6" style="border: 1px solid #1e293b; padding: 8px; text-align: right;">GRAND TOTAL:</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['thp']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['lembur']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['askes']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['jamsostek']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['bpjs']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['jp']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['terlambat']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['absen']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['prod']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['sanksi']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['koperasi']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['kantor']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['lainnya']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['netto']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['csv']) . '</td>';
+                $html .= '</tr></tfoot></table>';
+
+            } else {
+                $groupedByBranch = $details->groupBy(function ($item) {
+                    return $item->m_kary?->m_branch?->name ?? 'CABANG TIDAK TERDEFINISI';
+                });
+                $grandTotal = ['qty' => 0, 'thp' => 0, 'lembur' => 0, 'askes' => 0, 'jamsostek' => 0, 'bpjs' => 0, 'jp' => 0, 'terlambat' => 0, 'absen' => 0, 'prod' => 0, 'sanksi' => 0, 'koperasi' => 0, 'kantor' => 0, 'lainnya' => 0, 'netto' => 0, 'csv' => 0];
+
+                $html .= '<table style="width: 100%; border-collapse: collapse; font-size: 10px;">';
+                $html .= '<thead><tr style="background-color: #2b3a4a; color: #ffffff;">';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: center;">Bulan</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: left;">Cost Center</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: center;">Jml Karyawan</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">THP Final</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Lembur</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pot. Askes</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Jamsostek</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">BPJS Kes</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">BPJS Pen</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pot. Tlbt</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pot. Absen</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pot. Prod</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Sanksi</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pinj. Kop</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pinj. Ktr</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">Pot. Lain</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right; background-color: #1e293b;">Netto</th>';
+                $html .= '<th style="border: 1px solid #ccc; padding: 6px 4px; text-align: right; background-color: #1e293b;">Angka CSV</th>';
+                $html .= '</tr></thead><tbody>';
+
+                foreach ($groupedByBranch as $branchName => $itemsInBranch) {
+                    $html .= '<tr style="background-color: #e2e8f0; font-weight: bold;">';
+                    $html .= '<td colspan="18" style="border: 1px solid #ccc; padding: 6px 8px; color: #1e293b;">CABANG: ' . htmlspecialchars(strtoupper($branchName)) . '</td>';
+                    $html .= '</tr>';
+
+                    $bt = ['qty' => 0, 'thp' => 0, 'lembur' => 0, 'askes' => 0, 'jamsostek' => 0, 'bpjs' => 0, 'jp' => 0, 'terlambat' => 0, 'absen' => 0, 'prod' => 0, 'sanksi' => 0, 'koperasi' => 0, 'kantor' => 0, 'lainnya' => 0, 'netto' => 0, 'csv' => 0];
+                    $groupedByStatus = $itemsInBranch->groupBy(function ($item) {
+                        return $item->m_kary?->status_kary?->value ?? $item->m_kary?->status_kary?->name ?? 'TETAP';
+                    });
+
+                    foreach ($groupedByStatus as $statusName => $itemsByStatus) {
+                        $html .= '<tr style="background-color: #f1f5f9; font-weight: bold; font-style: italic;">';
+                        $html .= '<td colspan="18" style="border: 1px solid #ccc; padding: 5px 12px; color: #475569;">STATUS: ' . htmlspecialchars(strtoupper($statusName)) . '</td>';
+                        $html .= '</tr>';
+
+                        $st = ['qty' => 0, 'thp' => 0, 'lembur' => 0, 'askes' => 0, 'jamsostek' => 0, 'bpjs' => 0, 'jp' => 0, 'terlambat' => 0, 'absen' => 0, 'prod' => 0, 'sanksi' => 0, 'koperasi' => 0, 'kantor' => 0, 'lainnya' => 0, 'netto' => 0, 'csv' => 0];
+                        $groupedByCC = $itemsByStatus->groupBy(function ($item) {
+                            if (!$item->m_kary) return 'DATA TIDAK DITEMUKAN';
+                            $divisiId = $item->m_kary->m_divisi_id ?? $item->m_kary_divisi_id ?? 0;
+                            $posisiId = $item->m_kary->m_posisi_id ?? 0;
+                            $level = m_level_posisi::whereHas('m_level_posisi_d', function($q) use ($posisiId){
+                                $q->where('m_posisi_id', $posisiId);
+                            })->first();
+                            $cc = m_cost_center::whereHas('m_cost_center_d', function($q) use ($divisiId, $level){
+                                $q->where('m_divisi_id', $divisiId)->where('m_level_posisi_id', $level?->id ?? 0);
+                            })->first();
+                            return $cc ? $cc->cost_name : 'TANPA COST CENTER';
+                        });
+
+                        foreach ($groupedByCC as $ccName => $itemsInCC) {
+                            $ccAccum = ['thp' => 0, 'lembur' => 0, 'askes' => 0, 'jamsostek' => 0, 'bpjs' => 0, 'jp' => 0, 'terlambat' => 0, 'absen' => 0, 'prod' => 0, 'sanksi' => 0, 'koperasi' => 0, 'kantor' => 0, 'lainnya' => 0, 'netto' => 0, 'csv' => 0];
+                            foreach ($itemsInCC as $item) {
+                                $rincian = $item->t_final_gaji_det_rincian;
+                                $valAskes = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'askes'))->sum('value');
+                                $valThp = $rincian->filter(fn($i) => $i->factor === '+' && !str_contains(strtolower($i->name), 'lembur') && !str_contains(strtolower($i->name), 'askes'))->sum('value');
+                                $valLembur = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'lembur'))->sum('value');
+                                $valTerlambat = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'terlambat'))->sum('value');
+                                $valAbsen = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'tidak masuk kerja'))->sum('value');
+                                $valProd = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'produktifitas'))->sum('value');
+                                $valSanksi = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'kesalahan kerja'))->sum('value');
+                                $valKoperasi = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'pinjaman koperasi'))->sum('value');
+                                $valKantor = $rincian->filter(fn($i) => $i->t_potongan?->jenis_potongan && str_contains(strtolower($i->t_potongan->jenis_potongan->value), 'pinjaman kantor'))->sum('value');
+                                $valJamsostek = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'jht') || str_contains(strtolower($i->name), 'bpjs ketenagakerjaan'))->sum('value');
+                                $valBpjsKes = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'bpjs kesehatan'))->sum('value');
+                                $valBpjsPen = $rincian->filter(fn($i) => str_contains(strtolower($i->name), 'bpjs pensiun'))->sum('value');
+                                $totalPotonganGaji = $rincian->where('factor', '-')->sum('value');
+                                $valPotLainnya = $totalPotonganGaji - ($valTerlambat + $valAbsen + $valProd + $valSanksi + $valKoperasi + $valKantor + $valJamsostek + $valBpjsKes + $valBpjsPen + $valAskes);
+                                $valNettoOriginal = ($valThp + $valLembur) - $totalPotonganGaji;
+                                $valAngkaCSV = $valNettoOriginal + $valKoperasi + $valKantor;
+
+                                $ccAccum['thp'] += $valThp; $ccAccum['lembur'] += $valLembur; $ccAccum['askes'] += $valAskes;
+                                $ccAccum['jamsostek'] += $valJamsostek; $ccAccum['bpjs'] += $valBpjsKes; $ccAccum['jp'] += $valBpjsPen;
+                                $ccAccum['terlambat'] += $valTerlambat; $ccAccum['absen'] += $valAbsen; $ccAccum['prod'] += $valProd;
+                                $ccAccum['sanksi'] += $valSanksi; $ccAccum['koperasi'] += $valKoperasi; $ccAccum['kantor'] += $valKantor;
+                                $ccAccum['lainnya'] += max(0, $valPotLainnya); $ccAccum['netto'] += $valNettoOriginal; $ccAccum['csv'] += $valAngkaCSV;
+                            }
+
+                            $bulanStr = \Carbon\Carbon::parse($itemsInCC->first()->t_final_gaji->periode_akhir)->format('Ym');
+                            $html .= '<tr style="background-color: #ffffff;">';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: center;">' . $bulanStr . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px;">' . htmlspecialchars($ccName) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: center;">' . $itemsInCC->count() . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['thp']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['lembur']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['askes']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['jamsostek']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['bpjs']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['jp']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['terlambat']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['absen']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['prod']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['sanksi']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['koperasi']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['kantor']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right;">' . $fnNum($ccAccum['lainnya']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right; font-weight: bold; background-color: #f1f5f9;">' . $fnNum($ccAccum['netto']) . '</td>';
+                            $html .= '<td style="border: 1px solid #ccc; padding: 4px; text-align: right; font-weight: bold; background-color: #f1f5f9;">' . $fnNum($ccAccum['csv']) . '</td>';
+                            $html .= '</tr>';
+
+                            foreach($ccAccum as $key => $val) { $st[$key] += $val; }
+                            $st['qty'] += $itemsInCC->count();
+                        }
+
+                        $html .= '<tr style="background-color: #e0f2fe; font-weight: bold;">';
+                        $html .= '<td colspan="2" style="border: 1px solid #ccc; padding: 5px 8px; text-align: right;">SUB-TOTAL ' . htmlspecialchars(strtoupper($statusName)) . ':</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: center;">' . $st['qty'] . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['thp']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['lembur']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['askes']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['jamsostek']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['bpjs']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['jp']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['terlambat']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['absen']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['prod']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['sanksi']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['koperasi']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['kantor']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['lainnya']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['netto']) . '</td>';
+                        $html .= '<td style="border: 1px solid #ccc; padding: 5px 4px; text-align: right;">' . $fnNum($st['csv']) . '</td>';
+                        $html .= '</tr>';
+
+                        foreach($st as $key => $val) { $bt[$key] += $val; }
+                    }
+
+                    $html .= '<tr style="background-color: #fef08a; font-weight: bold;">';
+                    $html .= '<td colspan="2" style="border: 1px solid #ccc; padding: 6px 8px; text-align: right;">TOTAL CABANG ' . htmlspecialchars(strtoupper($branchName)) . ':</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: center;">' . $bt['qty'] . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['thp']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['lembur']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['askes']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['jamsostek']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['bpjs']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['jp']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['terlambat']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['absen']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['prod']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['sanksi']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['koperasi']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['kantor']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['lainnya']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['netto']) . '</td>';
+                    $html .= '<td style="border: 1px solid #ccc; padding: 6px 4px; text-align: right;">' . $fnNum($bt['csv']) . '</td>';
+                    $html .= '</tr>';
+
+                    foreach ($bt as $k => $v) { $grandTotal[$k] += $v; }
+                }
+
+                $html .= '</tbody><tfoot>';
+                $html .= '<tr style="background-color: #1e293b; color: #ffffff; font-weight: bold;">';
+                $html .= '<td colspan="2" style="border: 1px solid #1e293b; padding: 8px; text-align: right;">GRAND TOTAL:</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: center;">' . $grandTotal['qty'] . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['thp']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['lembur']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['askes']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['jamsostek']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['bpjs']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['jp']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['terlambat']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['absen']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['prod']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['sanksi']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['koperasi']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['kantor']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['lainnya']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['netto']) . '</td>';
+                $html .= '<td style="border: 1px solid #1e293b; padding: 8px 4px; text-align: right;">' . $fnNum($grandTotal['csv']) . '</td>';
+                $html .= '</tr></tfoot></table>';
+            }
+
+            $html .= '</div>';
+            return response($html, 200)->header('Content-Type', 'text/html');
+
+        } catch (\Exception $e) {
+            return response('<div style="padding:15px; background:#fee2e2; color:#b91c1c; border-radius:6px; font-weight:bold;">Error: ' . htmlspecialchars($e->getMessage()) . ' (Line: ' . $e->getLine() . ')</div>', 500)->header('Content-Type', 'text/html');
+        }
+    }
+
 
     public function public_exportBPJSKesCC($req)
     {
