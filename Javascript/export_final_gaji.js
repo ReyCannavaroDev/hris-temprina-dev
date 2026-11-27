@@ -39,8 +39,7 @@ const checkedState = ref()
 //   }
 // })
 const values = reactive({
-  tipe: 'Excel',
-  tipe_template: 'Cost Center',
+  tipe: 'excel',
   f_id: null,
   m_branch_id: null,
   m_kary_id: store.user?.data?.m_kary_id || null,
@@ -53,7 +52,7 @@ const onGenerate = async () => {
   if (!values.tipe) {
     swal.fire({
       icon: 'error',
-      text: 'Harap Memilih Format Output Dahulu!',
+      text: 'Harap Memilih Tipe Export Dahulu!',
     })
     return
   }
@@ -73,9 +72,6 @@ const onGenerate = async () => {
 
   if (values.m_branch_id) {
     tempGet.push(`m_branch_id=${values.m_branch_id}`)
-  }
-  if (values.tipe_template) {
-    tempGet.push(`tipe_template=${encodeURIComponent(values.tipe_template)}`)
   }
 
   const paramsGet = tempGet.join("&")
@@ -105,42 +101,11 @@ const onGenerate = async () => {
   } else {
     // Excel export
     exportHtml.value = false
-    const endpointMethod = values.tipe_template === 'Detail Karyawan' ? 'exportGaji' : 'exportGajiCC'
     window.open(
-      `${store.server.url_backend}/public/t_final_gaji/${endpointMethod}?${paramsGet}`
+      `${store.server.url_backend}/public/t_final_gaji/exportGajiCC?${paramsGet}`
     )
     isRequesting.value = false
   }
-}
-
-const onPrintReport = () => {
-  const printContent = document.getElementById('exportTable')
-  if (!printContent) return
-  const win = window.open('', '_blank')
-  win.document.write(`
-    <html>
-      <head>
-        <title>Laporan Final Gaji</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          table { width: 100%; border-collapse: collapse; font-size: 10px; }
-          th, td { border: 1px solid #333; padding: 4px 6px; }
-          th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; }
-          @media print {
-            body { padding: 0; }
-          }
-        </style>
-      </head>
-      <body>
-        ${printContent.innerHTML}
-      </body>
-    </html>
-  `)
-  win.document.close()
-  win.focus()
-  setTimeout(() => {
-    win.print()
-  }, 500)
 }
 
 //  @endif -------------------------------------------------END
