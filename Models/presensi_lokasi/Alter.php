@@ -2,6 +2,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 class presensilokasi extends Migration
 {
@@ -18,5 +19,11 @@ class presensilokasi extends Migration
                 $table->text('ip_address')->nullable();
             }
         });
+
+        // Sinkronisasi data existing jika comp_id berisi branch_id tapi branch_id masih NULL
+        if (Schema::hasColumn($this->tableName, 'branch_id') && Schema::hasColumn($this->tableName, 'comp_id')) {
+            DB::statement("UPDATE {$this->tableName} SET branch_id = comp_id WHERE branch_id IS NULL AND comp_id IS NOT NULL");
+            DB::statement("UPDATE {$this->tableName} SET comp_id = branch_id WHERE comp_id IS NULL AND branch_id IS NOT NULL");
+        }
     }
 }

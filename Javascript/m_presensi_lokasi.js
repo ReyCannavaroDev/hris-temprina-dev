@@ -112,6 +112,12 @@ onBeforeMount(async () => {
   for (const key in initialValues) {
     values[key] = initialValues[key]
   }
+  if (values.comp_id && !values.branch_id) {
+    values.branch_id = values.comp_id
+  }
+  if (values.branch_id && !values.comp_id) {
+    values.comp_id = values.branch_id
+  }
   if (values['m_dir.nama']) {
     values.direktorat = values['m_dir.nama']
   }
@@ -175,6 +181,13 @@ async function onSave() {
     }
 
     values.ip_address = validIps.join(', ')
+
+    if (values.comp_id && !values.branch_id) {
+      values.branch_id = values.comp_id
+    }
+    if (values.branch_id && !values.comp_id) {
+      values.comp_id = values.branch_id
+    }
 
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
     const dataURL = `${store.server.url_backend}/operation${endpointApi}${isCreating ? '' : ('/' + route.params.id)}`
@@ -358,7 +371,8 @@ const landing = computed(() => {
       params: {
         paginate: 25,
         simplest: true,
-        searchfield: 'this.nama, branch.name, this.lat, this.long, this.ip_address',
+        join: true,
+        searchfield: 'this.nama, m_branch.name, this.lat, this.long, this.ip_address',
       },
       onsuccess(response) {
         response.page = response.current_page
@@ -377,13 +391,14 @@ const landing = computed(() => {
     },
     {
       headerName: 'Cabang',
-      field: 'branch.name',
+      field: 'm_branch.name',
       filter: true,
       sortable: true,
       flex: 1,
       filter: 'ColFilter',
       resizable: true,
-      cellClass: ['border-r', '!border-gray-200']
+      cellClass: ['border-r', '!border-gray-200'],
+      valueGetter: (p) => p.data['m_branch.name'] || p.data['m_comp.name'] || p.data?.branch?.name || '-'
     },
     {
       headerName: 'Nama',
