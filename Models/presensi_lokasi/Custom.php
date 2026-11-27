@@ -7,12 +7,6 @@ class presensi_lokasi extends \App\Models\BasicModels\presensi_lokasi
     public function __construct()
     {
         parent::__construct();
-        // presensi_lokasi secara historis menyimpan ID branch di comp_id.
-        // Hapus join m_comp default dan arahkan relasi m_branch ke comp_id agar data lama maupun baru ter-join dengan benar.
-        $this->joins = array_values(array_filter($this->joins, function ($j) {
-            return $j !== "m_comp.id=presensi_lokasi.comp_id" && $j !== "m_branch.id=presensi_lokasi.branch_id";
-        }));
-        $this->joins[] = "m_branch.id=presensi_lokasi.comp_id";
     }
     
     public $fileColumns    = [ /*file_column*/ ];

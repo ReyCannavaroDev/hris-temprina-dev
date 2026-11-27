@@ -372,7 +372,7 @@ const landing = computed(() => {
         paginate: 25,
         simplest: true,
         join: true,
-        searchfield: 'this.nama, m_branch.name, this.lat, this.long, this.ip_address',
+        searchfield: 'this.nama, comp.name, branch.name, this.lat, this.long, this.ip_address',
       },
       onsuccess(response) {
         response.page = response.current_page
@@ -391,14 +391,14 @@ const landing = computed(() => {
     },
     {
       headerName: 'Cabang',
-      field: 'm_branch.name',
+      field: 'comp.name',
       filter: true,
       sortable: true,
       flex: 1,
       filter: 'ColFilter',
       resizable: true,
       cellClass: ['border-r', '!border-gray-200'],
-      valueGetter: (p) => p.data['m_branch.name'] || p.data['m_comp.name'] || p.data?.branch?.name || '-'
+      valueGetter: (p) => p.data?.['comp.name'] || p.data?.['branch.name'] || p.data?.['m_branch.name'] || p.data?.['m_comp.name'] || p.data?.comp?.name || p.data?.branch?.name || '-'
     },
     {
       headerName: 'Nama',
