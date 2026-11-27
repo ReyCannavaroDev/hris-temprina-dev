@@ -14,6 +14,9 @@ class mapproval extends Migration
             //$table->string('_columnName_');
             //$table->dropColumn([ ]);
             $table->bigInteger('m_comp_id')->comment('{"src":"m_comp.id"}')->nullable()->change();
+            if (!Schema::hasColumn($this->tableName, 'm_branch_id')) {
+                $table->bigInteger('m_branch_id')->comment('{"src":"m_branch.id"}')->nullable();
+            }
         });
     }
 }

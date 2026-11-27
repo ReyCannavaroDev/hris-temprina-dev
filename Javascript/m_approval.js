@@ -1,5 +1,5 @@
 import { useRouter, useRoute, RouterLink } from 'vue-router'
-import { ref, readonly, reactive, inject, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, onActivated } from 'vue'
+import { ref, readonly, reactive, inject, onMounted, onBeforeMount, onBeforeUnmount, watchEffect, onActivated, computed } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -73,6 +73,9 @@ const onReset = async (alert = false) => {
           }
         } else {
           detailArr.value = []
+          filterDetail.m_comp_id = null
+          filterDetail.m_subcomp_id = null
+          filterDetail.m_branch_id = null
           for (const key in values) {
             delete values[key]
           }
@@ -88,37 +91,61 @@ const onReset = async (alert = false) => {
 }
 
 
+// Filter Detail Approval (Ala ERP)
+const filterDetail = reactive({
+  m_comp_id: null,
+  m_subcomp_id: null,
+  m_branch_id: null
+})
+
+const onFilterCompChange = (v) => {
+  filterDetail.m_subcomp_id = null
+  filterDetail.m_branch_id = null
+}
+
+const onFilterSubcompChange = (v) => {
+  filterDetail.m_branch_id = null
+}
+
+const displayedDetails = computed(() => {
+  return detailArr.value.filter((item) => {
+    if (filterDetail.m_comp_id && item.m_comp_id && Number(item.m_comp_id) !== Number(filterDetail.m_comp_id)) return false
+    if (filterDetail.m_subcomp_id && item.m_subcomp_id && Number(item.m_subcomp_id) !== Number(filterDetail.m_subcomp_id)) return false
+    if (filterDetail.m_branch_id && item.m_branch_id && Number(item.m_branch_id) !== Number(filterDetail.m_branch_id)) return false
+    return true
+  })
+})
+
 // Table Detail
 let _id = 0
 let newLevel;
 
 const detailArr = ref([])
 const addDetail = () => {
-  if (_id === 0) {
-    newLevel = ++_id;
-  } else {
-    const lastItem = detailArr.value[detailArr.value.length - 1];
-    newLevel = lastItem ? lastItem.level + 1 : ++_id;
-  }
+  const currentFiltered = displayedDetails.value
+  const lastItem = currentFiltered[currentFiltered.length - 1]
+  const newLevel = lastItem ? lastItem.level + 1 : (currentFiltered.length === 0 ? 1 : currentFiltered.length + 1)
+
   const tempItem = {
     level: newLevel,
-    is_readonly: _id === 1 ? true : false,
-    type: newLevel === 1 ? 'MENGAJUKAN' : null,
+    is_readonly: false,
+    type: newLevel === 1 ? 'MENGAJUKAN' : 'MENYETUJUI',
+    m_comp_id: filterDetail.m_comp_id || values.m_comp_id || null,
+    m_subcomp_id: filterDetail.m_subcomp_id || null,
+    m_branch_id: filterDetail.m_branch_id || values.m_branch_id || null,
+    default_users_id: null,
     is_full: false,
     is_skip: false,
     is_active: 1
   }
   detailArr.value = [...detailArr.value, tempItem]
 }
-const removeDetail = (index) => {
-  detailArr.value.splice(index, 1)
-  detailArr.value.forEach((item, idx) => {
-    item.level = idx + 1
-  })
-  if (detailArr.value.length === 0) {
-    _id = 0;
+
+const removeDetail = (itemToRemove) => {
+  const index = detailArr.value.indexOf(itemToRemove)
+  if (index !== -1) {
+    detailArr.value.splice(index, 1)
   }
-  // detailArr.value = detailArr.value.filter((e) => e.__id != index.__id)
 }
 // End Table Detail
 
@@ -350,7 +377,8 @@ const landing = reactive({
     params: {
       paginate: 25,
       simplest: true,
-      searchfield: 'this.id, this.code, m_menu.menu, this.name, this.note, this.is_active'
+      join: true,
+      searchfield: 'this.id, this.code, m_menu.menu, this.name, m_branch.name, this.note, this.is_active'
     },
     onsuccess(response) {
       response.page = response.current_page
@@ -398,6 +426,18 @@ const landing = reactive({
     resizable: true,
     wrapText: true,
     cellClass: ['border-r', '!border-gray-200', 'justify-start']
+  },
+  {
+    field: 'm_branch.name',
+    headerName: 'Cabang',
+    filter: true,
+    sortable: true,
+    flex: 1,
+    filter: 'ColFilter',
+    resizable: true,
+    wrapText: true,
+    cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+    valueGetter: (p) => p.data['m_branch.name'] || 'Semua Cabang'
   },
   {
     field: 'note',

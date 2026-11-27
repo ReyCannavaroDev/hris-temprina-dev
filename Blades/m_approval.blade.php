@@ -130,10 +130,80 @@
         placeholder="Pilih Status" label="Status" :check="false" />
     </div>
 
+    <!-- CABANG (HEADER) -->
+    <div>
+      <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="w-full !mt-3" :value="values.m_branch_id"
+        @input="v=>values.m_branch_id=v" :errorText="formErrors.m_branch_id?'failed':''" :hints="formErrors.m_branch_id"
+        valueField="id" displayField="name" :api="{
+              url: `${store.server.url_backend}/operation/m_branch`,
+              headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+              params: {
+                simplest:true,
+                transform:false,
+                where: 'this.is_active=true',
+                paginate: 100,
+                order_by: 'name',
+                order_type: 'ASC'
+              }
+          }" placeholder="Semua Cabang (Opsional)" label="Cabang" :check="false" />
+    </div>
+
     <!-- START TABLE DETAIL -->
     <hr class="<md:col-span-1 col-span-3">
-    <div class="<md:col-span-1 col-span-3">
-      <button v-show="actionText" @click="addDetail" type="button" class="bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded p-1.5">
+
+    <!-- FILTER DETAIL APPROVAL (ALA ERP) -->
+    <div class="<md:col-span-1 col-span-3 bg-gray-50 p-3 rounded-md border border-gray-200 mt-2">
+      <div class="flex justify-between items-center mb-2">
+        <div>
+          <h2 class="text-sm font-semibold text-gray-700">Filter detail approval</h2>
+          <p class="text-xs text-gray-500">Pilih cabang untuk melihat dan mengubah approval cabang itu saja. Baris baru otomatis terisi sesuai filter.</p>
+        </div>
+        <div class="text-xs text-gray-600 font-medium">
+          Tampil {{ displayedDetails.length }} dari {{ detailArr.length }} baris
+        </div>
+      </div>
+      <div class="grid <md:grid-cols-1 grid-cols-3 gap-2">
+        <div>
+          <FieldSelect :bind="{ clearable: true }" class="w-full !mt-0"
+            :value="filterDetail.m_comp_id" @input="v => { filterDetail.m_comp_id = v; onFilterCompChange(v); }"
+            placeholder="Semua Bisnis Unit" label="" valueField="id" displayField="name"
+            :api="{
+              url: `${store.server.url_backend}/operation/m_comp`,
+              headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+              params: { simplest: true, transform: false, paginate: 100, order_by: 'name', order_type: 'ASC' }
+            }" :check="false" />
+        </div>
+        <div>
+          <FieldSelect :bind="{ clearable: true }" class="w-full !mt-0"
+            :value="filterDetail.m_subcomp_id" @input="v => { filterDetail.m_subcomp_id = v; onFilterSubcompChange(v); }"
+            placeholder="Semua SBU" label="" valueField="id" displayField="name"
+            :api="{
+              url: `${store.server.url_backend}/operation/m_subcomp`,
+              headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+              params: {
+                simplest: true, transform: false, paginate: 100, order_by: 'name', order_type: 'ASC',
+                where: filterDetail.m_comp_id ? `this.m_comp_id=${filterDetail.m_comp_id}` : undefined
+              }
+            }" :check="false" />
+        </div>
+        <div>
+          <FieldSelect :bind="{ clearable: true }" class="w-full !mt-0"
+            :value="filterDetail.m_branch_id" @input="v => filterDetail.m_branch_id = v"
+            placeholder="Semua Cabang" label="" valueField="id" displayField="name"
+            :api="{
+              url: `${store.server.url_backend}/operation/m_branch`,
+              headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+              params: {
+                simplest: true, transform: false, paginate: 100, order_by: 'name', order_type: 'ASC',
+                where: filterDetail.m_subcomp_id ? `this.m_subcomp_id=${filterDetail.m_subcomp_id}` : (filterDetail.m_comp_id ? `this.m_comp_id=${filterDetail.m_comp_id}` : undefined)
+              }
+            }" :check="false" />
+        </div>
+      </div>
+    </div>
+
+    <div class="<md:col-span-1 col-span-3 mt-3">
+      <button v-show="actionText" @click="addDetail" type="button" class="bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded p-1.5 flex items-center gap-1">
           <icon fa="plus" />
           Add to List
         </button>
@@ -144,25 +214,31 @@
           <thead>
             <tr class="border">
               <td
-                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize p-2 text-center w-[5%] border bg-[#f8f8f8] border-[#CACACA]">
+                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize p-2 text-center w-[4%] border bg-[#f8f8f8] border-[#CACACA]">
                 No.</td>
               <td
-                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[5%]">
+                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[6%]">
                 Level<label class="text-red-600">*</label></td>
               <td
                 class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[10%]">
                 Tipe<label class="text-red-600">*</label></td>
               <td
-                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[10%]">
-                User</td>
-              <!-- <td
-                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[10%]">
-                Level Jabatan</td> -->
+                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[12%]">
+                Bisnis Unit</td>
               <td
-                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[5%]">
+                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[12%]">
+                SBU</td>
+              <td
+                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[14%]">
+                Cabang</td>
+              <td
+                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[16%]">
+                User</td>
+              <td
+                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[8%]">
                 Full Approval</td>
               <td
-                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[10%] border bg-[#f8f8f8] border-[#CACACA]">
+                class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center w-[8%] border bg-[#f8f8f8] border-[#CACACA]">
                 Status</td>
               <td
                 class="text-[#8F8F8F] font-semibold text-[14px] text-capitalize px-2 text-center border bg-[#f8f8f8] border-[#CACACA] w-[5%]">
@@ -170,34 +246,55 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, i) in detailArr" :key="i" class="border-t" v-if="detailArr.length > 0">
+            <tr v-for="(item, i) in displayedDetails" :key="i" class="border-t" v-if="displayedDetails.length > 0">
               <td class="p-2 text-center border border-[#CACACA]">
                 {{ i + 1 }}.
               </td>
               <td class="p-2 border border-[#CACACA]">
-                <FieldNumber :bind="{ readonly: !actionText || i == 0 }" class="!mt-0" :value="item.level"
+                <FieldNumber :bind="{ readonly: !actionText }" class="!mt-0" :value="item.level"
                   @input="(v)=>item.level=v" placeholder="" :check="false" label="" />
               </td>
               <td class="p-2 border border-[#CACACA]">
-                <FieldSelect :bind="{ disabled: !actionText || i == 0, clearable:true }" class="!mt-0"
+                <FieldSelect :bind="{ disabled: !actionText, clearable:false }" class="!mt-0"
                   :value="item.type" @input="v=>item.type=v" :options="['MENGAJUKAN', 'MENYETUJUI']" placeholder=""
                   label="" :check="false" />
               </td>
-              <!-- <td class="p-2 border border-[#CACACA]">
+              <td class="p-2 border border-[#CACACA]">
                 <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="!mt-0"
-                  :value="item.m_level_posisi_id" @input="v=>item.m_level_posisi_id=v" valueField="id" displayField="level_name"
+                  :value="item.m_comp_id" @input="v=>{ item.m_comp_id=v; item.m_subcomp_id=null; item.m_branch_id=null; }"
+                  valueField="id" displayField="name"
                   :api="{
-                          url: `${store.server.url_backend}/operation/m_level_posisi`,
-                          headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
-                          params: {
-                      simplest:true,
-                      transform:false,
-                      join:false,
-                      selectfield:`level_name,id`,
-                      searchfield:'level_name'
-                          }
-                      }" placeholder="" label="" :check="false" />
-              </td> -->
+                    url: `${store.server.url_backend}/operation/m_comp`,
+                    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+                    params: { simplest:true, transform:false, paginate: 100, order_by: 'name', order_type: 'ASC' }
+                  }" placeholder="Bisnis Unit" label="" :check="false" />
+              </td>
+              <td class="p-2 border border-[#CACACA]">
+                <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="!mt-0"
+                  :value="item.m_subcomp_id" @input="v=>{ item.m_subcomp_id=v; item.m_branch_id=null; }"
+                  valueField="id" displayField="name"
+                  :api="{
+                    url: `${store.server.url_backend}/operation/m_subcomp`,
+                    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+                    params: {
+                      simplest:true, transform:false, paginate: 100, order_by: 'name', order_type: 'ASC',
+                      where: item.m_comp_id ? `this.m_comp_id=${item.m_comp_id}` : undefined
+                    }
+                  }" placeholder="SBU" label="" :check="false" />
+              </td>
+              <td class="p-2 border border-[#CACACA]">
+                <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="!mt-0"
+                  :value="item.m_branch_id" @input="v=>item.m_branch_id=v"
+                  valueField="id" displayField="name"
+                  :api="{
+                    url: `${store.server.url_backend}/operation/m_branch`,
+                    headers: { 'Content-Type': 'Application/json', Authorization: `${store.user.token_type} ${store.user.token}`},
+                    params: {
+                      simplest:true, transform:false, paginate: 100, order_by: 'name', order_type: 'ASC',
+                      where: item.m_subcomp_id ? `this.m_subcomp_id=${item.m_subcomp_id}` : (item.m_comp_id ? `this.m_comp_id=${item.m_comp_id}` : undefined)
+                    }
+                  }" placeholder="Cabang" label="" :check="false" />
+              </td>
               <td class="p-2 border border-[#CACACA]">
                 <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="!mt-0"
                   :value="item.default_users_id" @input="v=>item.default_users_id=v" valueField="id" displayField="username"
@@ -211,12 +308,12 @@
                       selectfield:`username,id,this.profil_image`,
                       searchfield:'username'
                           }
-                      }" placeholder="" label="" :check="false" />
+                      }" placeholder="Pilih User" label="" :check="false" />
               </td>
               <td class="p-2 border border-[#CACACA]">
-                <div class="flex justify-center">
-                  <input type="checkbox" v-model="item.is_full" :id="i" :disabled="!actionText">
-                  <label :for="i" class="ml-2"> Ya</label>
+                <div class="flex justify-center items-center">
+                  <input type="checkbox" v-model="item.is_full" :id="'full_' + i" :disabled="!actionText">
+                  <label :for="'full_' + i" class="ml-1 text-xs"> Ya</label>
                 </div>
               </td>
               <td class="p-2 border border-[#CACACA]">
@@ -227,18 +324,17 @@
               </td>
               <td class="p-2 border border-[#CACACA]">
                 <div class="flex justify-center">
-                  <button type="button" @click="removeDetail(i)" :disabled="!actionText || i == 0">
+                  <button type="button" @click="removeDetail(item)" :disabled="!actionText">
                       <svg width="14" height="14" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path id="Vector" d="M14 1H10.5L9.5 0H4.5L3.5 1H0V3H14M1 16C1 16.5304 1.21071 17.0391 1.58579 17.4142C1.96086 17.7893 2.46957 18 3 18H11C11.5304 18 12.0391 17.7893 12.4142 17.4142C12.7893 17.0391 13 16.5304 13 16V4H1V16Z" fill="#F24E1E"/>
                       </svg>
                     </button>
                 </div>
-
               </td>
             </tr>
             <tr v-else class="text-center">
-              <td colspan="12" class="py-[20px]">
-                No data to show
+              <td colspan="10" class="py-[20px] text-gray-500">
+                Tidak ada data approval untuk ditampilkan
               </td>
             </tr>
           </tbody>

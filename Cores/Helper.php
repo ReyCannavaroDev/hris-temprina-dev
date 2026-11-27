@@ -527,8 +527,43 @@ class Helper
         if (in_array('creator_id', $columns)) {
             $query->addSelect('creator_id');
         }
+        if (in_array('m_branch_id', $columns)) {
+            $query->addSelect('m_branch_id');
+        }
 
         $trx = $query->first();
+
+        // Branch-aware approver resolution
+        $trx_branch_id = @$config["m_branch_id"] 
+            ?? @$trx->m_branch_id 
+            ?? auth()->user()->m_branch_id 
+            ?? null;
+
+        if (!empty($trx_branch_id)) {
+            $branchDetails = DB::select(
+                "select d.* from m_approval_det d join m_approval a on a.id = d.m_approval_id where a.id = ? and d.m_branch_id = ? and type <> 'MENGAJUKAN' order by d.level asc",
+                [$m_approval->m_approval_id, $trx_branch_id]
+            );
+            if (!empty($branchDetails)) {
+                $details = $branchDetails;
+            } else {
+                $details = DB::select(
+                    "select d.* from m_approval_det d join m_approval a on a.id = d.m_approval_id where a.id = ? and d.m_branch_id is null and type <> 'MENGAJUKAN' order by d.level asc",
+                    [$m_approval->m_approval_id]
+                );
+            }
+        } else {
+            $details = DB::select(
+                "select d.* from m_approval_det d join m_approval a on a.id = d.m_approval_id where a.id = ? and d.m_branch_id is null and type <> 'MENGAJUKAN' order by d.level asc",
+                [$m_approval->m_approval_id]
+            );
+            if (empty($details)) {
+                $details = DB::select(
+                    "select d.* from m_approval_det d join m_approval a on a.id = d.m_approval_id where a.id = ? and type <> 'MENGAJUKAN' order by d.level asc",
+                    [$m_approval->m_approval_id]
+                );
+            }
+        }
 
         // dd($target_id);
         if (!$target_id) {
@@ -564,8 +599,7 @@ class Helper
         //     : null;
 
         $header = [
-            // "m_subcomp_id" => $m_subcomp_id,
-            // "m_branch_id" => $m_branch_id,
+            "m_branch_id" => $trx_branch_id,
             "nomor" => $this->generateNomor('KODE APPROVAL'),
             "m_approval_id" => $m_approval->m_approval_id,
             "trx_id" => $trx_id,
@@ -597,6 +631,9 @@ class Helper
                     "level" => $d->level,
                     "urutan_level" => $idx + 1,
                     "type" => $d->type,
+                    "m_comp_id" => $d->m_comp_id ?? null,
+                    "m_subcomp_id" => $d->m_subcomp_id ?? null,
+                    "m_branch_id" => $d->m_branch_id ?? $trx_branch_id,
                     "default_users_id" => $d->default_users_id ?? $user_atasan_id,
                     "is_full" => $d->is_full,
                     "is_skip" => $d->is_skip,
@@ -613,7 +650,7 @@ class Helper
             // insert log pengajuan
             $fixedConfigPengajuan = "select d.* from m_approval_det d 
                 join m_approval a on a.id = d.m_approval_id 
-                where a.id= ? AND type = 'MENGAJUKAN' ORDER BY d.level ASC";
+                where a.id= ? AND type = 'MENGAJUKAN' " . (!empty($trx_branch_id) ? "AND (d.m_branch_id = $trx_branch_id OR d.m_branch_id IS NULL) " : "") . "ORDER BY d.level ASC";
             $pengajuan = DB::select($fixedConfigPengajuan, [ $m_approval->m_approval_id ]);
             if(count($pengajuan)){
                 $log_insert = generate_approval_log::create([
