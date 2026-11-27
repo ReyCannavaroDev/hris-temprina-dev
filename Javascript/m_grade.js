@@ -65,7 +65,7 @@ const changedValues = []
 
 const values = reactive({
   is_active: true,
-
+  tahun: new Date().getFullYear(),
 })
 
 
@@ -121,6 +121,7 @@ function onReset() {
     if (res.isConfirmed) {
       const newValues = {
         code: '',
+        tahun: new Date().getFullYear(),
         value: '',
         desc: ''
       };
@@ -217,34 +218,39 @@ async function onSave() {
 
 window.downloadExcel = async function () {
   try {
-    const url = new URL(`${store.server.url_backend}/operation/m_general`);
-    url.searchParams.append("group", "BERKAS");
-    url.searchParams.append("key", "FORMAT_GRADING");
-    url.searchParams.append("is_active", true);
+    const backendUrl = `${store.server.url_backend}/public/m_grade/download_template`;
+    const checkRes = await fetch(backendUrl, { method: "HEAD" }).catch(() => null);
 
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Authorization: `${store.user.token_type} ${store.user.token}`,
-      },
-    });
-
-    const result = await response.json();
-
-    if (result?.data?.length) {
-      const target = result.data.find(item => item.group === "BERKAS" && item.key === "FORMAT_GRADING");
-
-      if (target?.value) {
-        window.open(target.value, "_blank");
-      } else {
-        alert("URL format grading tidak ditemukan.");
-      }
-    } else {
-      alert("Data tidak ditemukan.");
+    if (checkRes && checkRes.ok) {
+      window.open(backendUrl, "_blank");
+      return;
     }
+
+    // Fallback: generate file CSV format template langsung di client
+    const currentYear = new Date().getFullYear();
+    const headers = ["Zona ID", "Tahun", "Kode", "Keterangan", "Score", "Min", "Max"];
+    const rows = [
+      ["1", currentYear, "A", "Grade A", "90", "5000000", "7000000"],
+      ["1", currentYear, "B", "Grade B", "80", "4000000", "5000000"],
+      ["1", currentYear, "C", "Grade C", "70", "3000000", "4000000"],
+    ];
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", downloadUrl);
+    link.setAttribute("download", `Format_Import_Master_Grading_${currentYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(downloadUrl);
   } catch (error) {
     console.error("Error saat download format grading:", error);
-    alert("Terjadi kesalahan saat mengunduh file.");
+    swal.fire({
+      icon: "error",
+      text: "Terjadi kesalahan saat mengunduh file format.",
+    });
   }
 };
 
@@ -458,7 +464,7 @@ const landing = reactive({
     params: {
       paginate: 25,
       simplest: true,
-      searchfield: 'this.code, this.value , this.value_2 , this.value_3 , this.value_4',
+      searchfield: 'this.code, this.tahun, this.keterangan',
     },
     onsuccess(response) {
       response.page = response.current_page
@@ -483,6 +489,16 @@ const landing = reactive({
     resizable: true,
     flex: 1,
     cellClass: ['border-r', '!border-gray-200']
+  },
+  {
+    headerName: 'Tahun',
+    field: 'tahun',
+    filter: true,
+    sortable: true,
+    filter: 'ColFilter',
+    resizable: true,
+    width: 100,
+    cellClass: ['border-r', '!border-gray-200', 'justify-center']
   },
   {
     headerName: 'Keterangan',

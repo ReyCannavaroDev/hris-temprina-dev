@@ -63,6 +63,13 @@
         placeholder="Tuliskan Kode" :check="false" />
     </div>
 
+    <!-- TAHUN -->
+    <div>
+      <FieldNumber class="w-full !mt-3" :bind="{ readonly: !actionText }" :value="values.tahun"
+        :errorText="formErrors.tahun?'failed':''" @input="v=>values.tahun=v" 
+        :hints="formErrors.tahun" label="Tahun" placeholder="Contoh: 2026" :check="false" />
+    </div>
+
     <!-- ZONA -->
     <div>
       <FieldSelect :bind="{ disabled:!actionText}" class="w-full !mt-3" :value="values.m_zona_id" @input="v=>{

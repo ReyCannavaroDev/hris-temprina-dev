@@ -10,9 +10,18 @@ class mgrade extends Migration
     public function up()
     {
         Schema::table($this->tableName, function (Blueprint $table) {
-            //$table->string('_existColumnName_')->change();
-            //$table->string('_columnName_');
-            //$table->dropColumn([ ]);
+            if (!Schema::hasColumn($this->tableName, 'tahun')) {
+                $table->integer('tahun')->nullable()->after('m_zona_id');
+            }
+        });
+    }
+
+    public function down()
+    {
+        Schema::table($this->tableName, function (Blueprint $table) {
+            if (Schema::hasColumn($this->tableName, 'tahun')) {
+                $table->dropColumn('tahun');
+            }
         });
     }
 }
