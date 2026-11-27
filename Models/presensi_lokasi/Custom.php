@@ -11,8 +11,11 @@ class presensi_lokasi extends \App\Models\BasicModels\presensi_lokasi
     
     public $fileColumns    = [ /*file_column*/ ];
 
-    //public $createAdditionalData = ["creator_id"=>"auth:id"];
-    //public $updateAdditionalData = ["last_editor_id"=>"auth:id"];
-
+    public $fillable   = ["comp_id","default_user_id","nama","lat","long","is_active","creator_id","last_editor_id","branch_id","ip_address"];
+    public $columns    = ["id","comp_id","default_user_id","nama","lat","long","is_active","creator_id","last_editor_id","created_at","updated_at","branch_id","ip_address"];
+    public $columnsFull= ["id:bigint","comp_id:bigint","default_user_id:bigint","nama:string:191","lat:float","long:float","is_active:boolean","creator_id:bigint","last_editor_id:bigint","created_at:datetime","updated_at:datetime","branch_id:bigint","ip_address:text"];
+    public $createable = ["comp_id","default_user_id","nama","lat","long","is_active","creator_id","last_editor_id","branch_id","ip_address"];
+    public $updateable = ["comp_id","default_user_id","nama","lat","long","is_active","creator_id","last_editor_id","branch_id","ip_address"];
+    public $searchable = ["id","comp_id","default_user_id","nama","lat","long","is_active","creator_id","last_editor_id","created_at","updated_at","branch_id","ip_address"];
     
 }

@@ -44,8 +44,34 @@ let initialValues = {}
 const changedValues = []
 
 const values = reactive({
-  is_active: 1
+  is_active: 1,
+  ip_address: ''
 })
+
+// State detail input IP Kantor (Whitelisted Multi-IP)
+const ipList = ref([])
+
+const parseIpStringToList = (ipStr) => {
+  if (!ipStr) return []
+  return ipStr
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .map((ip) => ({ ip, note: '' }))
+}
+
+const addIp = () => {
+  ipList.value.push({ ip: '', note: '' })
+}
+
+const removeIp = (index) => {
+  ipList.value.splice(index, 1)
+}
+
+const onIpInput = (item, event) => {
+  const val = event.target.value
+  item.ip = val.replace(/[^0-9./]/g, '')
+}
 
 onBeforeMount(async () => {
   // tampilkan default direktorat dengan store user branch.name
@@ -89,6 +115,11 @@ onBeforeMount(async () => {
   if (values['m_dir.nama']) {
     values.direktorat = values['m_dir.nama']
   }
+  if (values.ip_address) {
+    ipList.value = parseIpStringToList(values.ip_address)
+  } else {
+    ipList.value = []
+  }
 })
 
 function onReset() {
@@ -99,12 +130,14 @@ function onReset() {
   }).then((res) => {
 
     if (res.isConfirmed) {
+      ipList.value = []
       const newValues = {
         default_user_id: '',
         nama: '',
         lat: '',
         long: '',
-        geo_checkin: ''
+        geo_checkin: '',
+        ip_address: ''
       };
 
       for (const key in newValues) {
@@ -123,6 +156,26 @@ function onBack() {
 async function onSave() {
   //values.tags = JSON.stringify(values.tags)
   try {
+    // Compile ipList to values.ip_address
+    const validIps = ipList.value
+      .map((item) => item.ip.trim())
+      .filter((ip) => ip.length > 0)
+
+    // Validasi format IPv4
+    for (const ip of validIps) {
+      const cleanIp = ip.split('/')[0]
+      const parts = cleanIp.split('.')
+      if (parts.length !== 4 || parts.some(p => isNaN(p) || p === '' || Number(p) < 0 || Number(p) > 255)) {
+        swal.fire({
+          icon: 'warning',
+          text: `Format IP tidak valid: "${ip}". Pastikan format IPv4 valid (contoh: 180.252.10.1).`
+        })
+        return
+      }
+    }
+
+    values.ip_address = validIps.join(', ')
+
     const isCreating = ['Create', 'Copy', 'Tambah'].includes(actionText.value)
     const dataURL = `${store.server.url_backend}/operation${endpointApi}${isCreating ? '' : ('/' + route.params.id)}`
     isRequesting.value = true
@@ -305,7 +358,7 @@ const landing = computed(() => {
       params: {
         paginate: 25,
         simplest: true,
-        searchfield: 'this.nama, branch.name, this.lat, this.long',
+        searchfield: 'this.nama, branch.name, this.lat, this.long, this.ip_address',
       },
       onsuccess(response) {
         response.page = response.current_page
@@ -341,6 +394,18 @@ const landing = computed(() => {
       filter: 'ColFilter',
       resizable: true,
       cellClass: ['border-r', '!border-gray-200']
+    },
+    {
+      headerName: 'IP Kantor',
+      field: 'ip_address',
+      filter: true,
+      sortable: true,
+      flex: 1.5,
+      filter: 'ColFilter',
+      resizable: true,
+      wrapText: true,
+      cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+      valueGetter: (p) => p.data.ip_address || '-'
     },
     {
       headerName: 'Latitude',

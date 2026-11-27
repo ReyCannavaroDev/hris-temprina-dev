@@ -1099,6 +1099,8 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         DB::beginTransaction();
         try {
             $distance = $kary_id ? $this->distance($req->lat, $req->long, $kary_id) : false;
+            $ipLokasi = (!$distance && $kary_id) ? $this->checkIpScope($kary_id) : false;
+
             $data = [];
             if ($distance) {
                 $data["on_scope"] = true;
@@ -1106,6 +1108,13 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
                 $data["checkin_lat"] = $req->lat;
                 $data["checkin_long"] = $req->long;
                 $data["checkin_address"] = $req->address;
+                $data["catatan_in"] = null;
+            } elseif ($ipLokasi) {
+                $data["on_scope"] = true;
+                $data["region"] = $ipLokasi->nama;
+                $data["checkin_lat"] = $req->lat ?: $ipLokasi->lat;
+                $data["checkin_long"] = $req->long ?: $ipLokasi->long;
+                $data["checkin_address"] = $req->address ?: "Kantor (Validasi IP)";
                 $data["catatan_in"] = null;
             } else {
                 $data["on_scope"] = false;
@@ -1265,11 +1274,13 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         // ====================================================================
         DB::beginTransaction();
         try {
-            // Jarak Scope
+            // Jarak Scope (GPS & IP Kantor)
             $distance = $kary_id ? $this->distance($req->lat, $req->long, $kary_id) : false;
-            $onScope = $distance ? true : false;
-            $regionName = $distance ? $distance->nama : "Out Scope";
-            $catatanOut = $distance ? null : ($req->catatan_out ?? null);
+            $ipLokasi = (!$distance && $kary_id) ? $this->checkIpScope($kary_id) : false;
+
+            $onScope = ($distance || $ipLokasi) ? true : false;
+            $regionName = $distance ? $distance->nama : ($ipLokasi ? $ipLokasi->nama : "Out Scope");
+            $catatanOut = ($distance || $ipLokasi) ? null : ($req->catatan_out ?? null);
 
             // Jam Kerja Diakui (Outsource) dengan full Datetime
             $jam_kerja_diakui = null;
@@ -1332,6 +1343,80 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
     }
 
 
+    private function ipInSubnet($ip, $range)
+    {
+        if (strpos($range, '/') === false) {
+            $range .= '/32';
+        }
+        list($subnet, $netmask) = explode('/', $range, 2);
+        $netmask = (int)$netmask;
+        $ip_decimal = ip2long($ip);
+        $subnet_decimal = ip2long($subnet);
+        if ($ip_decimal === false || $subnet_decimal === false) {
+            return false;
+        }
+        $wildcard_decimal = pow(2, (32 - $netmask)) - 1;
+        $netmask_decimal = ~$wildcard_decimal;
+        return (($ip_decimal & $netmask_decimal) === ($subnet_decimal & $netmask_decimal));
+    }
+
+    private function checkIpScope($kary_id, $clientIp = null)
+    {
+        if (!$clientIp) {
+            $clientIp = request()->header('X-Forwarded-For') 
+                ? trim(explode(',', request()->header('X-Forwarded-For'))[0])
+                : (request()->header('CF-Connecting-IP') ?: request()->ip());
+        }
+
+        if (empty($clientIp) || empty($kary_id)) {
+            return false;
+        }
+
+        $kary = \DB::table('m_kary')->where('id', $kary_id)->first();
+        if (!$kary) {
+            return false;
+        }
+
+        $lokasiIds = \DB::table('m_kary_d_lokasi')->where('m_kary_id', $kary_id)->pluck('presensi_lokasi_id')->toArray();
+        if (!empty($kary->presensi_lokasi_default_id)) {
+            $lokasiIds[] = $kary->presensi_lokasi_default_id;
+        }
+
+        $query = \DB::table('presensi_lokasi')
+            ->where('is_active', true)
+            ->whereNotNull('ip_address')
+            ->where('ip_address', '<>', '');
+
+        if (!empty($kary->m_branch_id)) {
+            $query->where(function ($q) use ($lokasiIds, $kary) {
+                if (!empty($lokasiIds)) {
+                    $q->whereIn('id', $lokasiIds)
+                      ->orWhere('branch_id', $kary->m_branch_id);
+                } else {
+                    $q->where('branch_id', $kary->m_branch_id);
+                }
+            });
+        } elseif (!empty($lokasiIds)) {
+            $query->whereIn('id', $lokasiIds);
+        }
+
+        $lokasis = $query->get();
+
+        foreach ($lokasis as $lok) {
+            $allowedIps = array_filter(array_map('trim', explode(',', $lok->ip_address)));
+            foreach ($allowedIps as $ip) {
+                if ($ip === $clientIp) {
+                    return $lok;
+                }
+                if (strpos($ip, '/') !== false && $this->ipInSubnet($clientIp, $ip)) {
+                    return $lok;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private function distance($lat, $long, $kary_id)
     {
         // dd($lat, $long, $kary_id);
@@ -1349,12 +1434,21 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         $kary_id = default_users::find(auth()->user()->id)?->m_kary_id ?? 0;
         //dd(default_users::find(auth()->user()->id), $kary_id);
         $distance = $this->distance($req->lat, $req->long, $kary_id);
+        $ipLokasi = (!$distance && $kary_id) ? $this->checkIpScope($kary_id) : false;
+
         if ($distance) {
             $data["on_scope"] = true;
             $data["region"] = $distance->nama;
             $data["checkout_lat"] = $distance->lat;
             $data["checkout_long"] = $distance->long;
             $data["checkout_address"] = $req->address;
+        } elseif ($ipLokasi) {
+            $data["on_scope"] = true;
+            $data["region"] = $ipLokasi->nama;
+            $data["checkout_lat"] = $ipLokasi->lat ?: $req->lat;
+            $data["checkout_long"] = $ipLokasi->long ?: $req->long;
+            $data["checkout_address"] = $req->address ?: "Kantor (Validasi IP)";
+            $data["is_ip_scope"] = true;
         } else {
             $data["on_scope"] = false;
             $data["region"] = "Out Scope";

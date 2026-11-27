@@ -14,7 +14,9 @@ class presensilokasi extends Migration
             //$table->string('_columnName_');
             //$table->dropColumn([ ]);
             $table->bigInteger('branch_id')->comment('{"src":"m_branch.id"}')->nullable()->change();
-
+            if (!Schema::hasColumn($this->tableName, 'ip_address')) {
+                $table->text('ip_address')->nullable();
+            }
         });
     }
 }

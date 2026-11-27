@@ -183,6 +183,86 @@
           placeholder="Pilih Status" label="Status" :check="false"
         />
       </div>
+
+      <!-- SECTION DAFTAR IP KANTOR (DETAIL INPUT) -->
+      <div class="<md:col-span-1 col-span-3 bg-gray-50 p-4 rounded-md border border-gray-200 mt-2">
+        <div class="flex justify-between items-center mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-gray-700 flex items-center gap-1.5">
+              <icon fa="network-wired" class="text-blue-600" />
+              Daftar IP Kantor (Whitelisted Multi-IP)
+            </h2>
+            <p class="text-xs text-gray-500 mt-0.5">
+              Karyawan yang terhubung ke IP kantor ini otomatis berstatus <b>ON SCOPE</b> tanpa tergantung fluktuasi sinyal GPS.
+            </p>
+          </div>
+          <button 
+            type="button" 
+            v-show="actionText" 
+            @click="addIp" 
+            class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1 shadow-sm transition-transform duration-200 transform hover:-translate-y-0.5"
+          >
+            <icon fa="plus" />
+            Tambah IP
+          </button>
+        </div>
+
+        <div style="-ms-overflow-style: none; scrollbar-width: thin;" class="overflow-x-auto">
+          <table class="table-auto border border-[#CACACA] w-full bg-white rounded">
+            <thead>
+              <tr class="bg-[#f8f8f8] border-b border-[#CACACA]">
+                <th class="p-2 text-center text-xs font-semibold text-gray-600 border-r border-[#CACACA] w-[60px]">No.</th>
+                <th class="p-2 text-left text-xs font-semibold text-gray-600 border-r border-[#CACACA] w-[50%]">Alamat IP Publik Kantor <span class="text-red-500">*</span></th>
+                <th class="p-2 text-left text-xs font-semibold text-gray-600 border-r border-[#CACACA]">Keterangan (Opsional)</th>
+                <th class="p-2 text-center text-xs font-semibold text-gray-600 w-[80px]" v-show="actionText">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, idx) in ipList" :key="idx" class="border-b border-[#CACACA] hover:bg-gray-50">
+                <td class="p-2 text-center text-xs text-gray-600 border-r border-[#CACACA]">
+                  {{ idx + 1 }}.
+                </td>
+                <td class="p-2 border-r border-[#CACACA]">
+                  <input 
+                    type="text" 
+                    v-model="item.ip" 
+                    :disabled="!actionText"
+                    @input="onIpInput(item, $event)"
+                    placeholder="Contoh: 180.252.10.1 atau 192.168.1.0/24"
+                    class="w-full text-xs p-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
+                  />
+                </td>
+                <td class="p-2 border-r border-[#CACACA]">
+                  <input 
+                    type="text" 
+                    v-model="item.note" 
+                    :disabled="!actionText"
+                    placeholder="Contoh: ISP Utama / Wi-Fi Kantor"
+                    class="w-full text-xs p-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  />
+                </td>
+                <td class="p-2 text-center" v-show="actionText">
+                  <button 
+                    type="button" 
+                    @click="removeIp(idx)" 
+                    title="Hapus IP"
+                    class="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14 1H10.5L9.5 0H4.5L3.5 1H0V3H14M1 16C1 16.5304 1.21071 17.0391 1.58579 17.4142C1.96086 17.7893 2.46957 18 3 18H11C11.5304 18 12.0391 17.7893 12.4142 17.4142C12.7893 17.0391 13 16.5304 13 16V4H1V16Z" fill="#F24E1E"/>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="ipList.length === 0">
+                <td colspan="4" class="p-4 text-center text-xs text-gray-400 italic">
+                  Belum ada IP kantor yang ditambahkan. Klik tombol <b>+ Tambah IP</b> di atas jika lokasi ini divalidasi via IP kantor.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
       <!-- END COLUMN -->
       <!-- ACTION BUTTON START -->
     </div>
