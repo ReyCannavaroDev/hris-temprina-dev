@@ -1083,6 +1083,9 @@ function onReset() {
             for (const key in initialValues) {
                 values[key] = initialValues[key]
             }
+            if (store.user.data?.m_os_id) {
+                values.m_company_outsourcing_id = store.user.data.m_os_id
+            }
         }
     })
 }
@@ -1091,7 +1094,12 @@ async function onSave() {
 
     const detail_filter = inDetailArr.value;
 
+    if (store.user.data?.m_os_id) {
+        values.m_company_outsourcing_id = store.user.data.m_os_id
+    }
+
     const requiredFields = [
+        { key: 'm_company_outsourcing_id', msg: 'PT. Outsourcing wajib dipilih' },
         { key: 'nama_depan', msg: 'Nama Depan wajib diisi' },
         { key: 'nik', msg: 'No. KTP wajib diisi' },
         { key: 'nama_belakang', msg: 'Nama Belakang wajib diisi' },

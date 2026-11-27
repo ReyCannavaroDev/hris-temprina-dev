@@ -322,7 +322,7 @@
 
           <div>
             <label >PT.Outsourcing<label class="text-red-500 space-x-0 pl-0"></label></label>
-            <FieldSelect :bind="{ disabled: !actionText, clearable:true }" class="w-full mt-3"
+            <FieldSelect :bind="{ disabled: !actionText || !!store.user.data?.m_os_id, clearable: !store.user.data?.m_os_id }" class="w-full mt-3"
               :errorText="formErrors.m_company_outsourcing_id?'failed':''"
               :hints="formErrors.m_company_outsourcing_id"
               :value="values.m_company_outsourcing_id" @input="v=>{
@@ -333,7 +333,7 @@
                   if (obj) {
                     values.m_company_outsourcing_id = obj.id; 
                   } else {
-                    values.m_company_outsourcing_id = null;
+                    values.m_company_outsourcing_id = store.user.data?.m_os_id ?? null;
                   }
                 }"
               label="" placeholder="PT.Outsourcing" valueField="id" displayField="name" :api="{
@@ -346,6 +346,8 @@
                       simplest: true,
                       transform: false,
                       join: true,
+                      scopes: 'respo',
+                      where: store.user.data?.m_os_id ? `this.id='${store.user.data.m_os_id}'` : undefined
                     }
                   }" :check="false" />
           </div>

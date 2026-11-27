@@ -13,8 +13,14 @@ class m_company_outsourcing extends \App\Models\BasicModels\m_company_outsourcin
     {
         static::addGlobalScope('os_tenant', function ($builder) {
             $authUser = auth()->user();
-            if ($authUser && !empty($authUser->m_os_id)) {
-                $builder->where('m_company_outsourcing.id', $authUser->m_os_id);
+            if ($authUser) {
+                $osId = request('m_os_id') ?: ($authUser->m_os_id ?? null);
+                if (!$osId && !empty($authUser->m_kary_id)) {
+                    $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+                }
+                if (!empty($osId)) {
+                    $builder->where('m_company_outsourcing.id', $osId);
+                }
             }
         });
     }
@@ -27,11 +33,15 @@ class m_company_outsourcing extends \App\Models\BasicModels\m_company_outsourcin
     public function scoperespo($model)
     {
         $authUser = auth()->user();
-        if ($authUser && !empty($authUser->m_os_id)) {
-            $model->where('m_company_outsourcing.id', $authUser->m_os_id);
+        if ($authUser) {
+            $osId = request('m_os_id') ?: ($authUser->m_os_id ?? null);
+            if (!$osId && !empty($authUser->m_kary_id)) {
+                $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+            }
+            if (!empty($osId)) {
+                $model->where('m_company_outsourcing.id', $osId);
+            }
         }
         return $model;
     }
-
-    
 }
