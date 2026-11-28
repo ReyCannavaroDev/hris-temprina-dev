@@ -2424,6 +2424,47 @@ class t_perhitungan_gaji extends \App\Models\BasicModels\t_perhitungan_gaji
         return $model;
     }
 
+    public function scopeGenerateForFinalOs($model)
+    {
+        $req = app()->request;
+        $date_from = \DateTime::createFromFormat("Y-m-d", $req->periode_awal) ?: null;
+        $date_to   = \DateTime::createFromFormat("Y-m-d", $req->periode_akhir) ?: null;
+
+        if ($date_from && $date_to) {
+            $model = $model->whereBetween("t_perhitungan_gaji.periode_in_date", [$date_from, $date_to]);
+        }
+
+        $status_os = \DB::table('m_general')
+            ->where(function ($q) {
+                $q->where('group', "STATUS KARYAWAN OUTSOURCE")
+                  ->orWhereRaw("UPPER(value) LIKE '%HARIAN%'")
+                  ->orWhereRaw("UPPER(value) LIKE '%OUTSOURCE%'");
+            })
+            ->pluck('id')
+            ->toArray();
+
+        $authUser = auth()->user();
+        $osId = $req->m_company_outsourcing_id ?: (request('m_os_id') ?: ($authUser->m_os_id ?? null));
+        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
+            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+
+        $branchId = $req->m_branch_id ?: ($authUser->m_branch_id ?? null);
+
+        return $model->where(function ($q) use ($status_os) {
+                $q->whereNotNull('m_kary.m_company_outsourcing_id');
+                if (!empty($status_os)) {
+                    $q->orWhereIn('m_kary.status_kary_id', $status_os);
+                }
+            })
+            ->when(!empty($osId), function ($q) use ($osId) {
+                $q->where('m_kary.m_company_outsourcing_id', $osId);
+            })
+            ->when(!empty($branchId), function ($q) use ($branchId) {
+                $q->where('m_kary.m_branch_id', $branchId);
+            });
+    }
+
     public function scopegetos($model)
     {
         $status_harian = \DB::table('m_general')

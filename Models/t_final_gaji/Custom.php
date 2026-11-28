@@ -21,6 +21,31 @@ class t_final_gaji extends \App\Models\BasicModels\t_final_gaji
         $this->helper = getCore("Helper");
     }
 
+    public $fillable = [
+        "nomor", "m_comp_id", "periode_awal", "periode_akhir", "total_pengeluaran_gaji", 
+        "desc", "status", "creator_id", "last_editor_id", "is_os", "m_company_outsourcing_id", "m_branch_id"
+    ];
+    public $createable = [
+        "nomor", "m_comp_id", "periode_awal", "periode_akhir", "total_pengeluaran_gaji", 
+        "desc", "status", "creator_id", "last_editor_id", "is_os", "m_company_outsourcing_id", "m_branch_id"
+    ];
+    public $updateable = [
+        "nomor", "m_comp_id", "periode_awal", "periode_akhir", "total_pengeluaran_gaji", 
+        "desc", "status", "creator_id", "last_editor_id", "is_os", "m_company_outsourcing_id", "m_branch_id"
+    ];
+    public $searchable = [
+        "id", "nomor", "m_comp_id", "periode_awal", "periode_akhir", "total_pengeluaran_gaji", 
+        "desc", "status", "creator_id", "last_editor_id", "created_at", "updated_at", 
+        "is_os", "m_company_outsourcing_id", "m_branch_id"
+    ];
+    public $joins = [
+        "m_comp.id=t_final_gaji.m_comp_id",
+        "m_company_outsourcing.id=t_final_gaji.m_company_outsourcing_id",
+        "m_branch.id=t_final_gaji.m_branch_id",
+        "default_users.id=t_final_gaji.creator_id",
+        "default_users.id=t_final_gaji.last_editor_id"
+    ];
+
     public $fileColumns = [
         /*file_column*/
     ];
@@ -31,17 +56,73 @@ class t_final_gaji extends \App\Models\BasicModels\t_final_gaji
     public function createBefore($model, $arrayData, $metaData, $id = null)
     {
         $req = app()->request;
-        $newArrayData = array_merge($arrayData, [
-            "nomor" => $this->helper->generateNomor("KODE FINAL GAJI"),
-        ]);
+        $isOs = !empty($arrayData['is_os']) || !empty($req->is_os) || !empty($req->m_company_outsourcing_id) || !empty($arrayData['m_company_outsourcing_id']);
+        if ($isOs) {
+            $arrayData['is_os'] = true;
+            if (!empty($req->m_company_outsourcing_id)) {
+                $arrayData['m_company_outsourcing_id'] = $req->m_company_outsourcing_id;
+            }
+            if (!empty($req->m_branch_id)) {
+                $arrayData['m_branch_id'] = $req->m_branch_id;
+            }
+        }
 
-        // $model["periode_awal"] = Carbon::createFromFormat('d/m/Y',  $req["periode_awal"]);
-        // $model["periode_akhir"] = Carbon::createFromFormat('d/m/Y',  $req["periode_akhir"]);
+        $nomor = null;
+        try {
+            if ($isOs) {
+                $cekNum = \DB::table('m_generate_num')->where('nama', 'KODE FINAL GAJI OS')->where('is_active', true)->first();
+                if ($cekNum) {
+                    $nomor = $this->helper->generateNomor("KODE FINAL GAJI OS");
+                }
+            }
+            if (!$nomor) {
+                $nomor = $this->helper->generateNomor("KODE FINAL GAJI");
+            }
+        } catch (\Throwable $e) {
+            $prefix = $isOs ? 'FG-OS' : 'FG';
+            $nomor = $prefix . '-' . date('Ymd') . '-' . sprintf('%04d', rand(1, 9999));
+        }
+
+        $newArrayData = array_merge($arrayData, [
+            "nomor" => $nomor,
+            "status" => $arrayData['status'] ?? 'DRAFT',
+        ]);
 
         return [
             "model" => $model,
             "data" => $newArrayData,
-            // "errors" => ['error1']
+        ];
+    }
+
+    public function updateBefore($model, $arrayData, $metaData, $id = null)
+    {
+        $existing = \DB::table('t_final_gaji')->where('id', $id)->first();
+        if ($existing && in_array(strtoupper(trim($existing->status ?? '')), ['IN_APPROVAL', 'IN APPROVAL', 'POSTED'])) {
+            return [
+                "model" => $model,
+                "data" => $arrayData,
+                "errors" => ["Data Finalisasi Gaji sudah berstatus " . $existing->status . " dan terkunci. Tidak dapat diubah."]
+            ];
+        }
+
+        return [
+            "model" => $model,
+            "data" => $arrayData
+        ];
+    }
+
+    public function deleteBefore($model, $id = null)
+    {
+        $existing = \DB::table('t_final_gaji')->where('id', $id)->first();
+        if ($existing && in_array(strtoupper(trim($existing->status ?? '')), ['IN_APPROVAL', 'IN APPROVAL', 'POSTED'])) {
+            return [
+                "model" => $model,
+                "errors" => ["Data Finalisasi Gaji sudah berstatus " . $existing->status . " dan terkunci. Tidak dapat dihapus."]
+            ];
+        }
+
+        return [
+            "model" => $model
         ];
     }
 
@@ -2138,6 +2219,94 @@ class t_final_gaji extends \App\Models\BasicModels\t_final_gaji
             $kary_id
         ) {
             $q->where("m_kary_id", $kary_id);
+        });
+    }
+
+    public function custom_send_approval()
+    {
+        $id = req('id');
+        if (!$id) {
+            return $this->helper->customResponse("ID data finalisasi gaji diperlukan", 400);
+        }
+
+        $trx = t_final_gaji::find($id);
+        if (!$trx) {
+            return $this->helper->customResponse("Data finalisasi gaji tidak ditemukan", 404);
+        }
+
+        $currentStatus = strtoupper(trim($trx->status ?? ''));
+        if (!in_array($currentStatus, ['DRAFT', 'REJECTED', ''])) {
+            return $this->helper->customResponse("Hanya data berstatus DRAFT atau REJECTED yang dapat diajukan approval.", 400);
+        }
+
+        // Pastikan ada rincian detail karyawan
+        $countDet = \DB::table('t_final_gaji_det')->where('t_final_gaji_id', $trx->id)->count();
+        if ($countDet == 0) {
+            return $this->helper->customResponse("Data finalisasi gaji tidak memiliki rincian karyawan. Tarik data gaji terlebih dahulu sebelum mengajukan approval.", 400);
+        }
+
+        $branchId = $trx->m_branch_id ?: (auth()->user()->m_branch_id ?? null);
+        $ptOsName = '';
+        if ($trx->m_company_outsourcing_id) {
+            $ptOsName = \DB::table('m_company_outsourcing')->where('id', $trx->m_company_outsourcing_id)->value('name') ?? '';
+        }
+
+        $appName = $trx->is_os ? "APPROVAL FINALISASI GAJI OS" : "APPROVAL FINALISASI GAJI";
+        $formName = $trx->is_os ? "t_finalisasi_gaji_os" : "t_finalisasi_gaji";
+
+        $conf = [
+            "app_name"        => $appName,
+            "trx_id"          => $trx->id,
+            "trx_table"       => $this->getTable(),
+            "trx_name"        => "Pengajuan " . ($trx->is_os ? "Finalisasi Gaji OS " . ($ptOsName ? "($ptOsName) " : "") : "Finalisasi Gaji ") . "Periode " . $trx->periode_awal . " s/d " . $trx->periode_akhir,
+            "form_name"       => $formName,
+            "trx_nomor"       => $trx->nomor,
+            "trx_date"        => date('Y-m-d'),
+            "trx_creator_id"  => $trx->creator_id ?: auth()->user()->id,
+            "m_branch_id"     => $branchId,
+        ];
+
+        try {
+            $app = $this->helper->approvalCreateTicket($conf);
+            if ($app) {
+                $trx->update([
+                    'status' => 'IN_APPROVAL',
+                    'm_branch_id' => $branchId
+                ]);
+                return $this->helper->customResponse("Pengajuan approval finalisasi gaji berhasil dikirim ke HC Cabang", 200, $trx);
+            } else {
+                return $this->helper->customResponse("Gagal membuat tiket approval, pastikan konfigurasi approval cabang sudah tersedia.", 400);
+            }
+        } catch (\Throwable $e) {
+            return $this->helper->customResponse("Terjadi kesalahan saat pengajuan approval: " . $e->getMessage(), 500);
+        }
+    }
+
+    public function scopeos($model)
+    {
+        $req = app()->request;
+        $authUser = auth()->user();
+        $osId = $req->m_company_outsourcing_id ?: (request('m_os_id') ?: ($authUser->m_os_id ?? null));
+        if (!$osId && $authUser && !empty($authUser->m_kary_id)) {
+            $osId = \DB::table('m_kary')->where('id', $authUser->m_kary_id)->value('m_company_outsourcing_id');
+        }
+
+        $branchId = $req->m_branch_id ?: ($authUser->m_branch_id ?? null);
+
+        return $model->where('t_final_gaji.is_os', true)
+            ->when(!empty($osId), function ($q) use ($osId) {
+                $q->where('t_final_gaji.m_company_outsourcing_id', $osId);
+            })
+            ->when(!empty($branchId), function ($q) use ($branchId) {
+                $q->where('t_final_gaji.m_branch_id', $branchId);
+            });
+    }
+
+    public function scopeinternal($model)
+    {
+        return $model->where(function ($q) {
+            $q->where('t_final_gaji.is_os', false)
+              ->orWhereNull('t_final_gaji.is_os');
         });
     }
 }
