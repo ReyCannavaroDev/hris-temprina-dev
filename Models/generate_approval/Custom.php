@@ -335,8 +335,9 @@ class generate_approval extends \App\Models\BasicModels\generate_approval
             if ($app->status) {
                 $data = \DB::table($datas['trx_table'])->where('id',$app->trx_id);
                 if ($app->finish) {
+                    $targetStatus = ($datas['trx_table'] === 'm_standart_gaji_harian' && $req->type === 'APPROVED') ? 'POSTED' : $req->type;
                     $data->update([
-                        "status" => $req->type,
+                        "status" => $targetStatus,
                     ]);
                 } else {
                     if($req->type != 'APPROVED'){                        

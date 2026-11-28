@@ -32,9 +32,17 @@ const values = reactive({
   is_active: true,
   check_late: true,
   check_absence: true,
+  status: 'DRAFT',
+  m_branch_id: null,
   //kode: null,
   //start_date: null, // Format tanggalnya dd/mm/yyyy
 });
+
+const canEdit = computed(() => {
+  if (!actionText.value) return false
+  const status = values.status ? values.status.toUpperCase() : 'DRAFT'
+  return status === 'DRAFT' || status === 'REJECTED'
+})
 
 const editKemahalan = ref(false);
 const editFungsional = ref(false);
@@ -464,6 +472,58 @@ onBeforeMount(async () => {
 })
 
 
+const onSendApproval = async () => {
+  if (!values.id) {
+    swal.fire({
+      icon: 'warning',
+      text: 'Harap simpan data terlebih dahulu sebelum mengajukan approval!',
+    })
+    return
+  }
+
+  const confirm = await swal.fire({
+    title: 'Konfirmasi Pengajuan Approval',
+    text: 'Apakah Anda yakin ingin mengajukan Standar Gaji Harian OS ini ke HC Cabang?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Ajukan!',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#2563eb'
+  })
+
+  if (!confirm.isConfirmed) return
+
+  isRequesting.value = true
+  try {
+    const res = await fetch(`${store.server.url_backend}/operation${endpointApi}/send_approval?id=${values.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `${store.user.token_type} ${store.user.token}`
+      }
+    })
+    const result = await res.json()
+    if (!res.ok) {
+      throw new Error(result.message || 'Gagal mengajukan approval')
+    }
+    await swal.fire({
+      icon: 'success',
+      title: 'Berhasil!',
+      text: 'Standar gaji berhasil diajukan ke HC Cabang.',
+    })
+    values.status = 'IN_APPROVAL'
+    router.push(`${route.path}?` + tsId)
+  } catch (err) {
+    swal.fire({
+      icon: 'error',
+      title: 'Gagal',
+      text: err?.message || err,
+    })
+  } finally {
+    isRequesting.value = false
+  }
+}
+
 function filterShowData(params, noBtn) {
   if (activeBtn.value === noBtn) {
     activeBtn.value = null
@@ -490,8 +550,7 @@ const landing = reactive({
       icon: 'trash',
       class: 'bg-red-600 text-light-100',
       title: "Hapus",
-      show: (row) => (currentMenu?.can_delete),
-      // show: () => store.user.data.username==='developer',
+      show: (row) => currentMenu?.can_delete && (!row.status || row.status.toUpperCase() === 'DRAFT' || row.status.toUpperCase() === 'REJECTED'),
       click(row) {
         swal.fire({
           icon: 'warning',
@@ -543,12 +602,7 @@ const landing = reactive({
       title: "Edit",
       class: 'bg-blue-600 text-light-100',
       show: (row) =>
-        currentMenu?.can_update === true,
-      // show: (row) =>
-      //   currentMenu?.can_update === true &&
-      //   (row.status?.toUpperCase() === 'DRAFT' ||
-      //     row.status?.toUpperCase() === 'REVISED'),
-      // show: (row) => (currentMenu?.can_update)||store.user.data.username==='developer',
+        currentMenu?.can_update === true && (!row.status || row.status.toUpperCase() === 'DRAFT' || row.status.toUpperCase() === 'REJECTED'),
       click(row) {
         router.push(`${route.path}/${row.id}?action=Edit&` + tsId)
       }
@@ -653,6 +707,24 @@ const landing = reactive({
     resizable: true,
     flex: 1,
     cellClass: ['border-r', '!border-gray-200', 'justify-start']
+  },
+  {
+    headerName: "Status",
+    field: 'status',
+    filter: true,
+    sortable: true,
+    filter: 'ColFilter',
+    resizable: true,
+    width: 140,
+    cellClass: ['border-r', '!border-gray-200', 'justify-center'],
+    cellRenderer: (p) => {
+      const st = p.value ? p.value.toUpperCase() : 'DRAFT'
+      let badgeClass = 'bg-gray-100 text-gray-700 border-gray-300'
+      if (st === 'POSTED') badgeClass = 'bg-green-100 text-green-700 border-green-300 font-semibold'
+      else if (st === 'IN_APPROVAL' || st === 'IN APPROVAL') badgeClass = 'bg-blue-100 text-blue-700 border-blue-300'
+      else if (st === 'REJECTED') badgeClass = 'bg-red-100 text-red-700 border-red-300'
+      return `<span class="px-2.5 py-0.5 rounded-full text-xs border ${badgeClass}">${st}</span>`
+    }
   },
   ]
 })

@@ -30,9 +30,40 @@ class m_standart_gaji_harian extends \App\Models\BasicModels\m_standart_gaji_har
         });
     }
 
-    // INI DIA KUNCI FIX-NYA: Join tabel m_kary agar scopeharian dan scopeos tidak error 500!
+    public $fillable = [
+        "kode", "m_kary_id", "start_date", "m_zona_id", "m_posisi_id", 
+        "grading_id", "gaji_pokok", "check_late", "desc", "is_active", 
+        "creator_id", "last_editor_id", "created_at", "updated_at", 
+        "total_jam_kerja", "status", "m_branch_id"
+    ];
+
+    public $createable = [
+        "kode", "m_kary_id", "start_date", "m_zona_id", "m_posisi_id", 
+        "grading_id", "gaji_pokok", "check_late", "desc", "is_active", 
+        "creator_id", "last_editor_id", "created_at", "updated_at", 
+        "total_jam_kerja", "status", "m_branch_id"
+    ];
+
+    public $updateable = [
+        "kode", "m_kary_id", "start_date", "m_zona_id", "m_posisi_id", 
+        "grading_id", "gaji_pokok", "check_late", "desc", "is_active", 
+        "creator_id", "last_editor_id", "created_at", "updated_at", 
+        "total_jam_kerja", "status", "m_branch_id"
+    ];
+
+    public $searchable = [
+        "kode", "m_kary_id", "start_date", "m_zona_id", "m_posisi_id", 
+        "grading_id", "gaji_pokok", "check_late", "desc", "is_active", 
+        "creator_id", "last_editor_id", "created_at", "updated_at", 
+        "total_jam_kerja", "status", "m_branch_id"
+    ];
+
+    // Join tabel m_kary, m_company_outsourcing, m_branch, m_posisi agar query relasi lengkap
     public $joins = [
-        "m_kary.id=m_standart_gaji_harian.m_kary_id"
+        "m_kary.id=m_standart_gaji_harian.m_kary_id",
+        "m_company_outsourcing.id=m_kary.m_company_outsourcing_id",
+        "m_branch.id=m_standart_gaji_harian.m_branch_id",
+        "m_posisi.id=m_standart_gaji_harian.m_posisi_id"
     ];
 
     public $fileColumns = [
@@ -48,6 +79,14 @@ class m_standart_gaji_harian extends \App\Models\BasicModels\m_standart_gaji_har
         }
         if (!empty($chosenKaryId)) {
             $arrayData['m_kary_id'] = $chosenKaryId;
+            $branchId = \DB::table('m_kary')->where('id', $chosenKaryId)->value('m_branch_id');
+            if ($branchId) {
+                $arrayData['m_branch_id'] = $branchId;
+            }
+        }
+
+        if (empty($arrayData['status'])) {
+            $arrayData['status'] = 'DRAFT';
         }
 
         return [
@@ -60,6 +99,11 @@ class m_standart_gaji_harian extends \App\Models\BasicModels\m_standart_gaji_har
 
     public function updateBefore($model, $arrayData, $metaData, $id = null)
     {
+        // Guard penguncian data: Data POSTED atau IN_APPROVAL tidak boleh diubah
+        if ($model && in_array(strtoupper(trim($model->status ?? '')), ['POSTED', 'IN_APPROVAL', 'IN APPROVAL'])) {
+            throw new \Exception("Data standar gaji dengan status " . $model->status . " sudah terkunci dan tidak dapat diubah.");
+        }
+
         $chosenKaryId = req('m_kary_id');
         $rawInput = json_decode(app()->request->getContent(), true);
         if (!empty($rawInput['m_kary_id'])) {
@@ -67,6 +111,10 @@ class m_standart_gaji_harian extends \App\Models\BasicModels\m_standart_gaji_har
         }
         if (!empty($chosenKaryId)) {
             $arrayData['m_kary_id'] = $chosenKaryId;
+            $branchId = \DB::table('m_kary')->where('id', $chosenKaryId)->value('m_branch_id');
+            if ($branchId) {
+                $arrayData['m_branch_id'] = $branchId;
+            }
         }
 
         return [
@@ -75,13 +123,68 @@ class m_standart_gaji_harian extends \App\Models\BasicModels\m_standart_gaji_har
         ];
     }
 
+    public function deleteBefore($model, $id = null)
+    {
+        // Guard penguncian data: Data POSTED atau IN_APPROVAL tidak boleh dihapus
+        if ($model && in_array(strtoupper(trim($model->status ?? '')), ['POSTED', 'IN_APPROVAL', 'IN APPROVAL'])) {
+            throw new \Exception("Data standar gaji dengan status " . $model->status . " sudah terkunci dan tidak dapat dihapus.");
+        }
+        return $model;
+    }
+
     public function transformRowData( array $row )
     {
         $newData = [
             "gaji_pokok_formatted" => "Rp " . number_format($row['gaji_pokok'], 0, ',', '.'),
+            "status" => $row['status'] ?? 'DRAFT',
         ];
 
         return array_merge( $row, $newData );
+    }
+
+    // Endpoint untuk mengajukan approval standar gaji harian OS ke HC Cabang
+    public function custom_send_approval()
+    {
+        $id = req('id');
+        $trx = $this->find($id);
+        if (!$trx) {
+            return $this->helper->customResponse("Data standar gaji tidak ditemukan", 404);
+        }
+
+        $currentStatus = strtoupper(trim($trx->status ?? ''));
+        if (!in_array($currentStatus, ['DRAFT', 'REJECTED', ''])) {
+            return $this->helper->customResponse("Hanya data berstatus DRAFT atau REJECTED yang dapat diajukan approval.", 400);
+        }
+
+        $kary = \DB::table('m_kary')->where('id', $trx->m_kary_id)->first();
+        $branchId = $trx->m_branch_id ?: ($kary->m_branch_id ?? auth()->user()->m_branch_id ?? null);
+
+        $conf = [
+            "app_name"        => "APPROVAL STANDAR GAJI HARIAN OS",
+            "trx_id"          => $trx->id,
+            "trx_table"       => $this->getTable(),
+            "trx_name"        => "Pengajuan Standar Gaji Harian OS (" . ($kary->nama_lengkap ?? $trx->kode) . ")",
+            "form_name"       => "m_standart_gaji_harian_os",
+            "trx_nomor"       => $trx->kode,
+            "trx_date"        => date('Y-m-d'),
+            "trx_creator_id"  => $trx->creator_id ?: auth()->user()->id,
+            "m_branch_id"     => $branchId,
+        ];
+
+        try {
+            $app = $this->helper->approvalCreateTicket($conf);
+            if ($app) {
+                $trx->update([
+                    'status' => 'IN_APPROVAL',
+                    'm_branch_id' => $branchId
+                ]);
+                return $this->helper->customResponse("Pengajuan approval ke HC Cabang berhasil dikirim", 200, $trx);
+            } else {
+                return $this->helper->customResponse("Gagal membuat tiket approval, pastikan konfigurasi approval cabang sudah tersedia.", 400);
+            }
+        } catch (\Throwable $e) {
+            return $this->helper->customResponse("Terjadi kesalahan saat pengajuan approval: " . $e->getMessage(), 500);
+        }
     }
 
     public function scopeharian($model)
@@ -139,3 +242,4 @@ class m_standart_gaji_harian extends \App\Models\BasicModels\m_standart_gaji_har
             });
     }
 }
+

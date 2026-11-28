@@ -28,14 +28,29 @@
 <!-- CONTENT -->
 @verbatim
 <div class="flex flex-col border rounded-md shadow-md md:w-full w-full p-0 bg-white border-none">
-  <div class="bg-gray-500 text-white rounded-t-md py-2 px-4">
+  <div class="bg-gray-500 text-white rounded-t-md py-2 px-4 flex justify-between items-center">
     <div class="flex items-center">
       <Icon fa="arrow-left" class="cursor-pointer mr-2 font-bold hover:text-yellow-500" title="Kembali"
         @click="onBack" />
       <div>
-        <h1 class="text-20px font-bold">Form Gaji Harian</h1>
-        <p class="text-gray-100">Master Gaji Harian</p>
+        <h1 class="text-20px font-bold">Form Gaji Harian OS</h1>
+        <p class="text-gray-100">Master Gaji Harian Karyawan Outsourcing</p>
       </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span 
+        v-if="values.status" 
+        :class="{
+          'bg-gray-100 text-gray-800 border-gray-300': values.status.toUpperCase() === 'DRAFT',
+          'bg-blue-100 text-blue-800 border-blue-300': values.status.toUpperCase() === 'IN_APPROVAL' || values.status.toUpperCase() === 'IN APPROVAL',
+          'bg-green-100 text-green-800 border-green-300': values.status.toUpperCase() === 'POSTED',
+          'bg-red-100 text-red-800 border-red-300': values.status.toUpperCase() === 'REJECTED'
+        }"
+        class="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1 shadow-sm uppercase"
+      >
+        <icon :fa="values.status.toUpperCase() === 'POSTED' ? 'lock' : (values.status.toUpperCase() === 'IN_APPROVAL' || values.status.toUpperCase() === 'IN APPROVAL' ? 'clock' : 'tag')" />
+        <span>{{ values.status }}</span>
+      </span>
     </div>
   </div>
 
@@ -47,7 +62,7 @@
         placeholder="Tuliskan Kode" />
     </div>
     <div>
-      <FieldPopup :bind="{ readonly: !actionText }" class="w-full mt-3" :value="values.m_kary_id" @input="v=>{
+      <FieldPopup :bind="{ readonly: !canEdit }" class="w-full mt-3" :value="values.m_kary_id" @input="v=>{
               if(v){
                 values.m_kary_id=v
               }else{
@@ -59,6 +74,9 @@
                 if (obj) {
                   values.m_kary_id = obj.id; 
                   values.m_posisi_id = obj.m_posisi_id; 
+                  if (obj.m_branch_id) {
+                    values.m_branch_id = obj.m_branch_id;
+                  }
                 } else {
                   values.m_kary_id = null;
                 }
@@ -84,14 +102,44 @@
               cellClass: ['border-r', '!border-gray-200', 'justify-center']
             },
             {
-              flex: 1,
+              flex: 1.5,
               field: 'nama_lengkap',
-              headerName: 'Nama',
+              headerName: 'Nama Karyawan',
               sortable: false, 
               resizable: true, 
               filter: 'ColFilter',
-              cellClass: ['border-r', '!border-gray-200', 'justify-center']
-            },    
+              cellClass: ['border-r', '!border-gray-200', 'justify-start']
+            },
+            {
+              flex: 1.5,
+              field: 'm_company_outsourcing.name',
+              headerName: 'PT Outsourcing',
+              sortable: false, 
+              resizable: true, 
+              filter: 'ColFilter',
+              cellClass: ['border-r', '!border-gray-200', 'justify-start', 'font-semibold', 'text-blue-600'],
+              valueGetter: (p) => p.data['m_company_outsourcing.name'] || p.data.m_company_outsourcing?.name || '-'
+            },
+            {
+              flex: 1.2,
+              field: 'm_branch.name',
+              headerName: 'Cabang',
+              sortable: false, 
+              resizable: true, 
+              filter: 'ColFilter',
+              cellClass: ['border-r', '!border-gray-200', 'justify-center'],
+              valueGetter: (p) => p.data['m_branch.name'] || p.data.m_branch?.name || '-'
+            },
+            {
+              flex: 1.2,
+              field: 'm_posisi.nama',
+              headerName: 'Jabatan',
+              sortable: false, 
+              resizable: true, 
+              filter: 'ColFilter',
+              cellClass: ['border-r', '!border-gray-200', 'justify-start'],
+              valueGetter: (p) => p.data['m_posisi.nama'] || p.data.m_posisi?.nama || '-'
+            }
           ]" />
     </div>
 
@@ -118,7 +166,7 @@
    <div>
       <FieldX 
         :key="values.start_date" 
-        :bind="{ readonly: !actionText }" 
+        :bind="{ readonly: !canEdit }" 
         :value="values.start_date" 
         @input="(v)=>values.start_date=v"
         :errorText="formErrors.start_date?'failed':''" 
@@ -132,19 +180,19 @@
     </div>
 
     <div>
-      <FieldX class="w-full !mt-3" :bind="{ readonly: !actionText }" :value="values.desc"
+      <FieldX class="w-full !mt-3" :bind="{ readonly: !canEdit }" :value="values.desc"
         :errorText="formErrors.desc?'failed':''" @input="v=>values.desc=v" type="textarea" :hints="formErrors.desc"
         label="Keterangan" placeholder="Tuliskan Keterangan" :check="false" />
     </div>
 
     <div>
-      <FieldNumber :bind="{ readonly: !actionText }" :value="values.take_home_pay" @input="(v)=>values.take_home_pay=v"
+      <FieldNumber :bind="{ readonly: !canEdit }" :value="values.take_home_pay" @input="(v)=>values.take_home_pay=v"
         :errorText="formErrors.take_home_pay?'failed':''" :hints="formErrors.take_home_pay" :check="false"
         class="w-full !mt-3" label="Gaji Harian" placeholder="Gaji Harian" />
     </div>
 
      <div>
-      <FieldNumber :bind="{ readonly: !actionText }" :value="values.total_jam_kerja" @input="(v)=>values.total_jam_kerja=v"
+      <FieldNumber :bind="{ readonly: !canEdit }" :value="values.total_jam_kerja" @input="(v)=>values.total_jam_kerja=v"
         :errorText="formErrors.total_jam_kerja?'failed':''" :hints="formErrors.total_jam_kerja" :check="false"
         class="w-full !mt-3" label="Total Jam Kerja" placeholder="Total Jam Kerja" />
     </div>
@@ -161,7 +209,7 @@
                 :class="{'after:bg-gray-500': values.is_active === false}"
                 role="switch"
                 id="is_active_for_click"
-                :disabled="!actionText"
+                :disabled="!canEdit"
                 v-model="values.is_active"
                 />
         </div>
@@ -218,7 +266,7 @@
       <icon fa="plus" /> 
       <span>Add to List</span> 
     </button> -->
-    <div v-if="actionText">
+    <div v-if="canEdit">
       <ButtonMultiSelect title="Add Detail" @add="onDetailAdd" :api="{
           url: `${store.server.url_backend}/operation/m_general`,
           headers: {'Content-Type': 'Application/json', authorization: `${store.user.token_type} ${store.user.token}`},
@@ -254,7 +302,7 @@
           }
           ]">
         <div class="flex items-center space-x-2">
-          <div v-show="actionText"
+          <div v-show="canEdit"
             class="bg-[#005FBF] hover:bg-[#0055ab] text-white py-3 px-6 flex items-center justify-center space-x-2 rounded transition-all duration-200 ease-in-out shadow-md hover:shadow-lg">
             <icon fa="plus" />
             Add To List
@@ -299,7 +347,7 @@
               {{ i + 1 }}.
             </td>
             <td class="p-2 border border-[#CACACA]">
-              <FieldSelect :bind="{ disabled: !actionText, clearable:false }" class="!mt-0 w-full"
+              <FieldSelect :bind="{ disabled: !canEdit, clearable:false }" class="!mt-0 w-full"
                 :value="item.komponen_id" @input="(v) => {
                         item.komponen_id = v;
                       }" :errorText="formErrors.komponen_id?'failed':''" displayField="value"
@@ -311,29 +359,10 @@
                               selectfield:'this.id,this.value'
                             }
                       }" valueField="id" :check="false" label="" placeholder="Pilih Komponen" />
-              <!-- <div class="grid grid-cols-12 items-center">
-                <FieldX :bind="{ readonly: !actionText }" class="col-span-11 w-full !mt-0" :value="item.komponen" @input="v=>item.komponen=v" v-if="item.is_insert"
-                :errorText="formErrors.komponen?'failed':''" :hints="formErrors.komponen" label=""
-                placeholder="Tuliskan Komponen" :check="false" />  
-                <FieldSelect
-                  :bind="{ disabled: !actionText, clearable:true }" class="col-span-11 w-full !mt-0" v-else
-                  :value="item.komponen" @input="v=>{
-                      item.komponen=v
-                  }"
-                  :errorText="formErrors.komponen?'failed':''" 
-                  :hints="formErrors.komponen"
-                  :options="optTipe"
-                  placeholder="Pilih Komponen" label="" :check="false"
-                />
-                
-                <input type="checkbox" v-model="item.is_insert" id="is_insert"  class="col-span-1 w-full !mt-0" :disabled="!actionText">
-                </div> -->
             </td>
 
-
-
             <td class="p-2 border border-[#CACACA]">
-              <FieldSelect :bind="{ disabled: !actionText, clearable:false }" class="!mt-0 w-full"
+              <FieldSelect :bind="{ disabled: !canEdit, clearable:false }" class="!mt-0 w-full"
                 :value="item.komponen_tipe_id" @input="(v) => {
                         item.komponen_tipe_id = v;
                       }" :errorText="formErrors.komponen_tipe_id?'failed':''" displayField="value"
@@ -347,66 +376,33 @@
                       }" valueField="id" :check="false" label="" placeholder="Pilih Tipe" />
             </td>
 
-
-
             <td class="p-2 border border-[#CACACA]">
-              <FieldSelect :bind="{ disabled: !actionText, clearable:false }" class="!mt-0 w-full" :value="item.faktor"
+              <FieldSelect :bind="{ disabled: !canEdit, clearable:false }" class="!mt-0 w-full" :value="item.faktor"
                 @input="v=>item.faktor=v" :errorText="formErrors.faktor?'failed':''" label="" placeholder="Pilih Faktor"
                 :hints="formErrors.faktor" :options="['-','+']" valueField="key" displayField="key" :check="false" />
             </td>
 
             <td class="p-2 border border-[#CACACA]">
-              <FieldNumber class="!mt-0 w-full" :bind="{ readonly: !actionText }" :value="item.nilai"
+              <FieldNumber class="!mt-0 w-full" :bind="{ readonly: !canEdit }" :value="item.nilai"
                 @input="(v)=>item.nilai=v" :errorText="formErrors.nilai?'failed':''" :hints="formErrors.nilai"
                 placeholder="Tuliskan Nilai" label="" :check="false" />
             </td>
 
             <td class="p-2 border border-[#CACACA]">
-              <FieldSelect :bind="{ disabled: !actionText, clearable:false }" class="!mt-0 w-full" :value="item.periode"
+              <FieldSelect :bind="{ disabled: !canEdit, clearable:false }" class="!mt-0 w-full" :value="item.periode"
                 @input="v=>item.periode=v" :errorText="formErrors.periode?'failed':''" label=""
                 placeholder="Pilih Periode" :hints="formErrors.periode" :options="['Bulanan','Harian']" valueField="key"
                 displayField="key" :check="false" />
             </td>
 
-            <!-- <td class="p-3 text-center border">
-              <div class="flex justify-center items-center">
-                <label class="h-6 w-6 cursor-pointer flex items-center justify-center">
-      <input 
-        type="checkbox" 
-        class="peer hidden" 
-        v-model="item.is_from_thp" 
-        :disabled="!actionText || item.komponen_tipe_id !== 15539" 
-      />
-      <span class="h-6 w-6 flex items-center justify-center border border-gray-300 rounded-md bg-white peer-checked:bg-blue-500 peer-checked:border-blue-500 peer-disabled:opacity-50">
-        <svg 
-          v-if="item.is_from_thp" 
-          xmlns="http://www.w3.org/2000/svg" 
-          class="h-4 w-4 text-white" 
-          viewBox="0 0 20 20" 
-          fill="currentColor"
-        >
-          <path 
-            fill-rule="evenodd" 
-            d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586l-3.293-3.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z" 
-            clip-rule="evenodd" 
-          />
-        </svg>
-      </span>
-    </label>
-              </div>
-            </td> -->
-
-
-
             <td class="p-2 border border-[#CACACA]">
               <div class="flex justify-center">
-                <button type="button" @click="removeDetail(i)" :disabled="!actionText">
+                <button type="button" @click="removeDetail(i)" :disabled="!canEdit">
                     <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path id="Vector" d="M14 1H10.5L9.5 0H4.5L3.5 1H0V3H14M1 16C1 16.5304 1.21071 17.0391 1.58579 17.4142C1.96086 17.7893 2.46957 18 3 18H11C11.5304 18 12.0391 17.7893 12.4142 17.4142C12.7893 17.0391 13 16.5304 13 16V4H1V16Z" fill="#F24E1E"/>
                     </svg>
                   </button>
               </div>
-
             </td>
           </tr>
           <tr v-else class="text-center">
@@ -423,22 +419,44 @@
   <!--BUTTON-->
 
   <div class="flex flex-row items-center justify-end space-x-2 p-2">
-    <i class="text-gray-500 text-[12px]">Tekan CTRL + S untuk shortcut Save Data</i>
+    <!-- Status Notice Banners -->
+    <div v-if="values.status?.toUpperCase() === 'POSTED'" class="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded text-xs font-semibold mr-auto">
+      <icon fa="lock" />
+      <span>Data Standar Gaji telah disetujui (POSTED) dan terkunci permanen</span>
+    </div>
+    <div v-else-if="values.status?.toUpperCase() === 'IN_APPROVAL' || values.status?.toUpperCase() === 'IN APPROVAL'" class="flex items-center gap-2 text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs font-semibold mr-auto">
+      <icon fa="clock" />
+      <span>Data Standar Gaji sedang dalam proses review / approval oleh HC Cabang</span>
+    </div>
+    <div v-else-if="values.status?.toUpperCase() === 'REJECTED'" class="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 px-3 py-1.5 rounded text-xs font-semibold mr-auto">
+      <icon fa="exclamation-circle" />
+      <span>Pengajuan ditolak (REJECTED). Silakan revisi data lalu ajukan kembali.</span>
+    </div>
+
+    <i class="text-gray-500 text-[12px]" v-show="canEdit">Tekan CTRL + S untuk shortcut Save Data</i>
     <button
-        class="bg-red-600 text-white font-semibold hover:bg-red-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
-        v-show="actionText"
+        class="bg-red-600 text-white font-semibold hover:bg-red-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2 flex items-center gap-1.5"
+        v-show="canEdit"
         @click="onReset(true)"
       >
         <icon fa="times" />
-        Reset
+        <span>Reset</span>
       </button>
     <button
-        class="bg-green-600 text-white font-semibold hover:bg-green-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2"
-        v-show="actionText && (currentMenu?.can_create || currentMenu?.can_update)"
+        class="bg-green-600 text-white font-semibold hover:bg-green-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2 flex items-center gap-1.5"
+        v-show="canEdit && (currentMenu?.can_create || currentMenu?.can_update)"
         @click="onSave"
       >
         <icon fa="save" />
-        Simpan
+        <span>Simpan Draft</span>
+      </button>
+    <button
+        class="bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-transform duration-300 transform hover:-translate-y-0.5 rounded-md p-2 flex items-center gap-1.5 shadow-sm"
+        v-show="values.id && canEdit && (values.status?.toUpperCase() === 'DRAFT' || values.status?.toUpperCase() === 'REJECTED' || !values.status)"
+        @click="onSendApproval"
+      >
+        <icon fa="paper-plane" />
+        <span>Ajukan Approval</span>
       </button>
   </div>
 </div>
