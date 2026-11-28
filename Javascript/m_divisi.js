@@ -368,7 +368,7 @@ const landing = reactive({
       order_by: "nomor",
 		  // order_type: "ASC",
       scopes: 'LandingDivisi',
-      searchfield: 'this.id, this.nomor, m_branch.name, this.is_active'
+      searchfield: 'this.id, this.nomor, m_branch.name, parent.nomor, this.is_active'
     },
     onsuccess(response) {
       response.page = response.current_page
@@ -415,6 +415,23 @@ const landing = reactive({
     resizable: true,
     wrapText:true,
     cellClass: [ 'border-r', '!border-gray-200', 'justify-start']
+  },
+  {
+    field: 'parent.name',
+    headerName: 'Parent',
+    filter: true,
+    sortable: true,
+    flex:1,
+    filter: 'ColFilter',
+    resizable: true,
+    wrapText:true,
+    cellClass: [ 'border-r', '!border-gray-200', 'justify-start'],
+    valueGetter: (p) => {
+      const val = p.data?.['parent.name'] || p.data?.parent_name || p.data?.parent?.name
+      if (val && val !== '-') return val
+      if (p.data?.['parent.nomor']) return `[${p.data['parent.nomor']}]`
+      return '-'
+    }
   },
   {
     field: 'is_active',

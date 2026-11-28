@@ -45,6 +45,45 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
         $data['nama'] = $divisiVal;
         $data['name_old'] = $divisiVal;
         $data['concat_divisi_branch'] = $displayWithBranch;
+
+        $parentVal = '';
+        if (!empty($row['parent_id'])) {
+            $rawParentName = $row['parent.name'] ?? null;
+            if (!empty($rawParentName)) {
+                $pGen = \App\Models\BasicModels\m_general::find($rawParentName);
+                if ($pGen && !empty($pGen->value) && in_array(strtoupper($pGen->group ?? ''), ['MASTER_DIVISI', 'DIVISI'])) {
+                    $parentVal = $pGen->value;
+                }
+            }
+            if (empty($parentVal) && !empty($row['parent.name_old'])) {
+                $parentVal = $row['parent.name_old'];
+            }
+            if (empty($parentVal) && !empty($rawParentName) && !is_numeric($rawParentName)) {
+                $parentVal = $rawParentName;
+            }
+            if (empty($parentVal)) {
+                $parentRow = \DB::table('m_divisi')->where('id', $row['parent_id'])->first();
+                if ($parentRow) {
+                    if (!empty($parentRow->name)) {
+                        $pGen = \App\Models\BasicModels\m_general::find($parentRow->name);
+                        if ($pGen && !empty($pGen->value)) {
+                            $parentVal = $pGen->value;
+                        }
+                    }
+                    if (empty($parentVal) && !empty($parentRow->name_old)) {
+                        $parentVal = $parentRow->name_old;
+                    }
+                    if (empty($parentVal) && !empty($parentRow->name) && !is_numeric($parentRow->name)) {
+                        $parentVal = $parentRow->name;
+                    }
+                    if (empty($parentVal) && !empty($parentRow->nomor)) {
+                        $parentVal = 'Divisi ' . $parentRow->nomor;
+                    }
+                }
+            }
+        }
+        $data['parent.name'] = $parentVal ?: '-';
+        $data['parent_name'] = $parentVal ?: '-';
         // Keamanan: Batasi kolom default_users (creator & last_editor) hanya ke id dan name saja
         foreach ($row as $key => $val) {
             if (strpos($key, 'creator.') === 0 && !in_array($key, ['creator.id', 'creator.name'])) {
@@ -91,6 +130,15 @@ class m_divisi extends \App\Models\BasicModels\m_divisi
                           ->from('m_branch')
                           ->whereColumn('m_branch.id', 'm_divisi.m_branch_id')
                           ->whereRaw('LOWER(m_branch.name::text) ~* ?', [$keyword]);
+                  })
+                  ->orWhereExists(function ($sub) use ($keyword) {
+                      $sub->select(\DB::raw(1))
+                          ->from('m_divisi as parent_d')
+                          ->whereColumn('parent_d.id', 'm_divisi.parent_id')
+                          ->where(function($w) use ($keyword) {
+                              $w->where('parent_d.nomor', 'ILIKE', "%{$keyword}%")
+                                ->orWhereRaw('LOWER(COALESCE(parent_d.name_old, CAST(parent_d.name AS text), \'\')) ~* ?', [$keyword]);
+                          });
                   });
             });
         }

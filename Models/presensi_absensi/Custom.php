@@ -1098,11 +1098,26 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         // 4. Simpan ke DB beserta snapshot jadwal & jam kerja
         DB::beginTransaction();
         try {
-            $distance = $kary_id ? $this->distance($req->lat, $req->long, $kary_id) : false;
-            $ipLokasi = (!$distance && $kary_id) ? $this->checkIpScope($kary_id) : false;
+            $clientIp = request()->header('X-Forwarded-For') 
+                ? trim(explode(',', request()->header('X-Forwarded-For'))[0])
+                : (request()->header('CF-Connecting-IP') ?: request()->ip());
+
+            $deniedInfo = $kary_id ? $this->isClientIpDenied($kary_id, $clientIp) : false;
+            $distance = (!$deniedInfo && $kary_id) ? $this->distance($req->lat, $req->long, $kary_id) : false;
+            $ipLokasi = (!$deniedInfo && !$distance && $kary_id) ? $this->checkIpScope($kary_id, $clientIp) : false;
 
             $data = [];
-            if ($distance) {
+            if ($deniedInfo) {
+                $data["on_scope"] = false;
+                $data["region"] = "Out Scope (IP Ditolak)";
+                $data["checkin_lat"] = $req->lat;
+                $data["checkin_long"] = $req->long;
+                $data["checkin_address"] = $req->address ?: "IP Ditolak ({$clientIp})";
+                $denyNote = !empty($deniedInfo['note']) ? " [{$deniedInfo['note']}]" : "";
+                $data["catatan_in"] = $req->catatan_in 
+                    ? ($req->catatan_in . " (Terdeteksi IP ditolak: {$clientIp}{$denyNote})")
+                    : "Terdeteksi akses dari IP yang ditolak ({$clientIp}{$denyNote})";
+            } elseif ($distance) {
                 $data["on_scope"] = true;
                 $data["region"] = $distance->nama;
                 $data["checkin_lat"] = $req->lat;
@@ -1275,12 +1290,26 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         DB::beginTransaction();
         try {
             // Jarak Scope (GPS & IP Kantor)
-            $distance = $kary_id ? $this->distance($req->lat, $req->long, $kary_id) : false;
-            $ipLokasi = (!$distance && $kary_id) ? $this->checkIpScope($kary_id) : false;
+            $clientIp = request()->header('X-Forwarded-For') 
+                ? trim(explode(',', request()->header('X-Forwarded-For'))[0])
+                : (request()->header('CF-Connecting-IP') ?: request()->ip());
 
-            $onScope = ($distance || $ipLokasi) ? true : false;
-            $regionName = $distance ? $distance->nama : ($ipLokasi ? $ipLokasi->nama : "Out Scope");
-            $catatanOut = ($distance || $ipLokasi) ? null : ($req->catatan_out ?? null);
+            $deniedInfo = $kary_id ? $this->isClientIpDenied($kary_id, $clientIp) : false;
+            $distance = (!$deniedInfo && $kary_id) ? $this->distance($req->lat, $req->long, $kary_id) : false;
+            $ipLokasi = (!$deniedInfo && !$distance && $kary_id) ? $this->checkIpScope($kary_id, $clientIp) : false;
+
+            if ($deniedInfo) {
+                $onScope = false;
+                $regionName = "Out Scope (IP Ditolak)";
+                $denyNote = !empty($deniedInfo['note']) ? " [{$deniedInfo['note']}]" : "";
+                $catatanOut = $req->catatan_out 
+                    ? ($req->catatan_out . " (Terdeteksi IP ditolak: {$clientIp}{$denyNote})")
+                    : "Terdeteksi akses dari IP yang ditolak ({$clientIp}{$denyNote})";
+            } else {
+                $onScope = ($distance || $ipLokasi) ? true : false;
+                $regionName = $distance ? $distance->nama : ($ipLokasi ? $ipLokasi->nama : "Out Scope");
+                $catatanOut = ($distance || $ipLokasi) ? null : ($req->catatan_out ?? null);
+            }
 
             // Jam Kerja Diakui (Outsource) dengan full Datetime
             $jam_kerja_diakui = null;
@@ -1360,6 +1389,120 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         return (($ip_decimal & $netmask_decimal) === ($subnet_decimal & $netmask_decimal));
     }
 
+    private function parseIpRules($rawIpAddress): array
+    {
+        if (empty($rawIpAddress)) {
+            return [];
+        }
+        $raw = trim((string)$rawIpAddress);
+        if (str_starts_with($raw, '[') || str_starts_with($raw, '{')) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $rules = [];
+                foreach ($decoded as $item) {
+                    if (is_array($item) && !empty($item['ip'])) {
+                        $rules[] = [
+                            'ip'     => trim($item['ip']),
+                            'access' => strtolower(trim($item['access'] ?? 'accept')) === 'deny' ? 'deny' : 'accept',
+                            'note'   => trim($item['note'] ?? ''),
+                        ];
+                    }
+                }
+                if (!empty($rules)) {
+                    return $rules;
+                }
+            }
+        }
+
+        // Fallback backward compatibility untuk data koma eksisting
+        $rules = [];
+        $items = array_filter(array_map('trim', explode(',', $raw)));
+        foreach ($items as $entry) {
+            $parts = explode(':', $entry);
+            if (count($parts) > 1 && in_array(strtolower(trim(end($parts))), ['accept', 'deny'])) {
+                $access = strtolower(trim(array_pop($parts)));
+                $ip = trim(implode(':', $parts));
+                $rules[] = ['ip' => $ip, 'access' => $access, 'note' => ''];
+            } else {
+                $rules[] = ['ip' => $entry, 'access' => 'accept', 'note' => ''];
+            }
+        }
+        return $rules;
+    }
+
+    private function matchSingleIp($clientIp, $ruleIp): bool
+    {
+        if (empty($clientIp) || empty($ruleIp)) {
+            return false;
+        }
+        if ($clientIp === $ruleIp) {
+            return true;
+        }
+        if (str_contains($ruleIp, '/') && $this->ipInSubnet($clientIp, $ruleIp)) {
+            return true;
+        }
+        return false;
+    }
+
+    private function isClientIpDenied($kary_id, $clientIp = null)
+    {
+        if (!$clientIp) {
+            $clientIp = request()->header('X-Forwarded-For') 
+                ? trim(explode(',', request()->header('X-Forwarded-For'))[0])
+                : (request()->header('CF-Connecting-IP') ?: request()->ip());
+        }
+
+        if (empty($clientIp) || empty($kary_id)) {
+            return false;
+        }
+
+        $kary = \DB::table('m_kary')->where('id', $kary_id)->first();
+        if (!$kary) {
+            return false;
+        }
+
+        $lokasiIds = \DB::table('m_kary_d_lokasi')->where('m_kary_id', $kary_id)->pluck('presensi_lokasi_id')->toArray();
+        if (!empty($kary->presensi_lokasi_default_id)) {
+            $lokasiIds[] = $kary->presensi_lokasi_default_id;
+        }
+
+        $query = \DB::table('presensi_lokasi')
+            ->where('is_active', true)
+            ->whereNotNull('ip_address')
+            ->where('ip_address', '<>', '');
+
+        if (!empty($kary->m_branch_id)) {
+            $query->where(function ($q) use ($lokasiIds, $kary) {
+                if (!empty($lokasiIds)) {
+                    $q->whereIn('id', $lokasiIds)
+                      ->orWhere('branch_id', $kary->m_branch_id);
+                } else {
+                    $q->where('branch_id', $kary->m_branch_id);
+                }
+            });
+        } elseif (!empty($lokasiIds)) {
+            $query->whereIn('id', $lokasiIds);
+        }
+
+        $lokasis = $query->get();
+
+        foreach ($lokasis as $lok) {
+            $rules = $this->parseIpRules($lok->ip_address);
+            foreach ($rules as $rule) {
+                if ($rule['access'] === 'deny' && $this->matchSingleIp($clientIp, $rule['ip'])) {
+                    return [
+                        'lokasi' => $lok,
+                        'rule'   => $rule,
+                        'ip'     => $rule['ip'],
+                        'note'   => $rule['note'] ?? ''
+                    ];
+                }
+            }
+        }
+
+        return false;
+    }
+
     private function checkIpScope($kary_id, $clientIp = null)
     {
         if (!$clientIp) {
@@ -1403,12 +1546,23 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
         $lokasis = $query->get();
 
         foreach ($lokasis as $lok) {
-            $allowedIps = array_filter(array_map('trim', explode(',', $lok->ip_address)));
-            foreach ($allowedIps as $ip) {
-                if ($ip === $clientIp) {
-                    return $lok;
+            $rules = $this->parseIpRules($lok->ip_address);
+            
+            // 1. Cek aturan DENY terlebih dahulu (misal server, mikrotik)
+            $isDeniedInLocation = false;
+            foreach ($rules as $rule) {
+                if ($rule['access'] === 'deny' && $this->matchSingleIp($clientIp, $rule['ip'])) {
+                    $isDeniedInLocation = true;
+                    break;
                 }
-                if (strpos($ip, '/') !== false && $this->ipInSubnet($clientIp, $ip)) {
+            }
+            if ($isDeniedInLocation) {
+                continue; // Jangan terima lokasi ini jika IP client ditolak
+            }
+
+            // 2. Cek aturan ACCEPT
+            foreach ($rules as $rule) {
+                if ($rule['access'] === 'accept' && $this->matchSingleIp($clientIp, $rule['ip'])) {
                     return $lok;
                 }
             }
@@ -1432,11 +1586,24 @@ class presensi_absensi extends \App\Models\BasicModels\presensi_absensi
     public function custom_distance_check($req)
     {
         $kary_id = default_users::find(auth()->user()->id)?->m_kary_id ?? 0;
-        //dd(default_users::find(auth()->user()->id), $kary_id);
-        $distance = $this->distance($req->lat, $req->long, $kary_id);
-        $ipLokasi = (!$distance && $kary_id) ? $this->checkIpScope($kary_id) : false;
+        $clientIp = request()->header('X-Forwarded-For') 
+            ? trim(explode(',', request()->header('X-Forwarded-For'))[0])
+            : (request()->header('CF-Connecting-IP') ?: request()->ip());
 
-        if ($distance) {
+        $deniedInfo = $kary_id ? $this->isClientIpDenied($kary_id, $clientIp) : false;
+        $distance = (!$deniedInfo && $kary_id) ? $this->distance($req->lat, $req->long, $kary_id) : false;
+        $ipLokasi = (!$deniedInfo && !$distance && $kary_id) ? $this->checkIpScope($kary_id, $clientIp) : false;
+
+        if ($deniedInfo) {
+            $data["on_scope"] = false;
+            $data["region"] = "Out Scope (IP Ditolak)";
+            $data["checkout_lat"] = $req->lat;
+            $data["checkout_long"] = $req->long;
+            $data["checkout_address"] = $req->address ?: "IP Ditolak ({$clientIp})";
+            $data["is_ip_denied"] = true;
+            $denyNote = !empty($deniedInfo['note']) ? " [{$deniedInfo['note']}]" : "";
+            $data["denied_message"] = "Alamat IP terdeteksi sebagai IP yang ditolak ({$clientIp}{$denyNote})";
+        } elseif ($distance) {
             $data["on_scope"] = true;
             $data["region"] = $distance->nama;
             $data["checkout_lat"] = $distance->lat;

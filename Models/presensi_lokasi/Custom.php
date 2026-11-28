@@ -33,6 +33,9 @@ class presensi_lokasi extends \App\Models\BasicModels\presensi_lokasi
         if (!empty($arrayData['branch_id']) && empty($arrayData['comp_id'])) {
             $arrayData['comp_id'] = $arrayData['branch_id'];
         }
+        if (isset($arrayData['ip_address']) && is_array($arrayData['ip_address'])) {
+            $arrayData['ip_address'] = json_encode($arrayData['ip_address']);
+        }
         return ["model" => $model, "data" => $arrayData];
     }
 
@@ -43,6 +46,9 @@ class presensi_lokasi extends \App\Models\BasicModels\presensi_lokasi
         }
         if (!empty($arrayData['branch_id']) && empty($arrayData['comp_id'])) {
             $arrayData['comp_id'] = $arrayData['branch_id'];
+        }
+        if (isset($arrayData['ip_address']) && is_array($arrayData['ip_address'])) {
+            $arrayData['ip_address'] = json_encode($arrayData['ip_address']);
         }
         return ["model" => $model, "data" => $arrayData];
     }

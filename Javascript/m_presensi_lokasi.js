@@ -53,15 +53,38 @@ const ipList = ref([])
 
 const parseIpStringToList = (ipStr) => {
   if (!ipStr) return []
-  return ipStr
+  const trimmed = (typeof ipStr === 'string' ? ipStr : '').trim()
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => ({
+          ip: item.ip || '',
+          access: item.access === 'deny' ? 'deny' : 'accept',
+          note: item.note || ''
+        }))
+      }
+    } catch (e) {
+      console.error('Failed to parse ip JSON', e)
+    }
+  }
+  return trimmed
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
-    .map((ip) => ({ ip, note: '' }))
+    .map((entry) => {
+      const parts = entry.split(':')
+      if (parts.length > 1 && ['accept', 'deny'].includes(parts[parts.length - 1].trim().toLowerCase())) {
+        const access = parts.pop().trim().toLowerCase()
+        const ip = parts.join(':').trim()
+        return { ip, access, note: '' }
+      }
+      return { ip: entry, access: 'accept', note: '' }
+    })
 }
 
 const addIp = () => {
-  ipList.value.push({ ip: '', note: '' })
+  ipList.value.push({ ip: '', access: 'accept', note: '' })
 }
 
 const removeIp = (index) => {
@@ -164,23 +187,37 @@ async function onSave() {
   try {
     // Compile ipList to values.ip_address
     const validIps = ipList.value
-      .map((item) => item.ip.trim())
-      .filter((ip) => ip.length > 0)
+      .map((item) => ({
+        ip: (item.ip || '').trim(),
+        access: item.access === 'deny' ? 'deny' : 'accept',
+        note: (item.note || '').trim()
+      }))
+      .filter((item) => item.ip.length > 0)
 
     // Validasi format IPv4
-    for (const ip of validIps) {
-      const cleanIp = ip.split('/')[0]
+    for (const item of validIps) {
+      const cleanIp = item.ip.split('/')[0]
       const parts = cleanIp.split('.')
       if (parts.length !== 4 || parts.some(p => isNaN(p) || p === '' || Number(p) < 0 || Number(p) > 255)) {
         swal.fire({
           icon: 'warning',
-          text: `Format IP tidak valid: "${ip}". Pastikan format IPv4 valid (contoh: 180.252.10.1).`
+          text: `Format IP tidak valid: "${item.ip}". Pastikan format IPv4 valid (contoh: 180.252.10.1).`
         })
         return
       }
+      if (item.ip.includes('/')) {
+        const mask = parseInt(item.ip.split('/')[1])
+        if (isNaN(mask) || mask < 1 || mask > 32) {
+          swal.fire({
+            icon: 'warning',
+            text: `Prefix subnet mask tidak valid: "${item.ip}". Harus antara 1 dan 32 (contoh: 192.168.1.0/24).`
+          })
+          return
+        }
+      }
     }
 
-    values.ip_address = validIps.join(', ')
+    values.ip_address = validIps.length > 0 ? JSON.stringify(validIps) : ''
 
     if (values.comp_id && !values.branch_id) {
       values.branch_id = values.comp_id
@@ -415,12 +452,44 @@ const landing = computed(() => {
       field: 'ip_address',
       filter: true,
       sortable: true,
-      flex: 1.5,
+      flex: 1.8,
       filter: 'ColFilter',
       resizable: true,
       wrapText: true,
       cellClass: ['border-r', '!border-gray-200', 'justify-start'],
-      valueGetter: (p) => p.data.ip_address || '-'
+      valueGetter: (p) => {
+        const raw = p.data?.ip_address
+        if (!raw) return '-'
+        if (typeof raw === 'string' && (raw.trim().startsWith('[') || raw.trim().startsWith('{'))) {
+          try {
+            const arr = JSON.parse(raw)
+            if (Array.isArray(arr)) {
+              return arr.map(i => `${i.ip} [${i.access || 'accept'}]`).join(', ')
+            }
+          } catch (e) {}
+        }
+        return raw
+      },
+      cellRenderer: ({ value, data }) => {
+        const raw = data?.ip_address
+        if (!raw) return '<span class="text-gray-400">-</span>'
+        let items = []
+        if (typeof raw === 'string' && (raw.trim().startsWith('[') || raw.trim().startsWith('{'))) {
+          try {
+            items = JSON.parse(raw)
+          } catch(e) {}
+        }
+        if (!Array.isArray(items) || items.length === 0) {
+          const list = (typeof raw === 'string' ? raw : '').split(',').map(s => s.trim()).filter(Boolean)
+          items = list.map(ip => ({ ip, access: 'accept' }))
+        }
+        if (items.length === 0) return '<span class="text-gray-400">-</span>'
+        return `<div class="flex flex-wrap gap-1 py-1">` + items.map(item => {
+          const isDeny = (item.access || '').toLowerCase() === 'deny'
+          const badgeClass = isDeny ? 'bg-red-100 text-red-700 border-red-300' : 'bg-green-100 text-green-700 border-green-300'
+          return `<span class="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border ${badgeClass} font-mono font-medium">${item.ip} (${item.access || 'accept'})</span>`
+        }).join('') + `</div>`
+      }
     },
     {
       headerName: 'Latitude',

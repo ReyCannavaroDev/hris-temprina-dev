@@ -190,10 +190,10 @@
           <div>
             <h2 class="text-sm font-bold text-gray-700 flex items-center gap-1.5">
               <icon fa="network-wired" class="text-blue-600" />
-              Daftar IP Kantor (Whitelisted Multi-IP)
+              Daftar IP Kantor (Filter Akses Accept / Deny)
             </h2>
             <p class="text-xs text-gray-500 mt-0.5">
-              Karyawan yang terhubung ke IP kantor ini otomatis berstatus <b>ON SCOPE</b> tanpa tergantung fluktuasi sinyal GPS.
+              Atur alamat IP kantor untuk validasi presensi. Pilih <b>Accept</b> untuk IP yang diizinkan (On Scope) atau <b>Deny</b> untuk IP yang ditolak (misal IP Server, Mikrotik/Gateway).
             </p>
           </div>
           <button 
@@ -211,10 +211,11 @@
           <table class="table-auto border border-[#CACACA] w-full bg-white rounded">
             <thead>
               <tr class="bg-[#f8f8f8] border-b border-[#CACACA]">
-                <th class="p-2 text-center text-xs font-semibold text-gray-600 border-r border-[#CACACA] w-[60px]">No.</th>
-                <th class="p-2 text-left text-xs font-semibold text-gray-600 border-r border-[#CACACA] w-[50%]">Alamat IP Publik Kantor <span class="text-red-500">*</span></th>
+                <th class="p-2 text-center text-xs font-semibold text-gray-600 border-r border-[#CACACA] w-[50px]">No.</th>
+                <th class="p-2 text-left text-xs font-semibold text-gray-600 border-r border-[#CACACA] w-[35%]">Alamat IP Kantor <span class="text-red-500">*</span></th>
+                <th class="p-2 text-center text-xs font-semibold text-gray-600 border-r border-[#CACACA] w-[150px]">Access (Akses) <span class="text-red-500">*</span></th>
                 <th class="p-2 text-left text-xs font-semibold text-gray-600 border-r border-[#CACACA]">Keterangan (Opsional)</th>
-                <th class="p-2 text-center text-xs font-semibold text-gray-600 w-[80px]" v-show="actionText">Action</th>
+                <th class="p-2 text-center text-xs font-semibold text-gray-600 w-[70px]" v-show="actionText">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -232,12 +233,23 @@
                     class="w-full text-xs p-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
                   />
                 </td>
+                <td class="p-2 border-r border-[#CACACA] text-center">
+                  <select 
+                    v-model="item.access" 
+                    :disabled="!actionText"
+                    class="w-full text-xs p-1.5 border rounded font-semibold focus:outline-none focus:ring-1"
+                    :class="item.access === 'deny' ? 'bg-red-50 text-red-700 border-red-300 focus:ring-red-400' : 'bg-green-50 text-green-700 border-green-300 focus:ring-green-400'"
+                  >
+                    <option value="accept">Accept (Izinkan)</option>
+                    <option value="deny">Deny (Tolak)</option>
+                  </select>
+                </td>
                 <td class="p-2 border-r border-[#CACACA]">
                   <input 
                     type="text" 
                     v-model="item.note" 
                     :disabled="!actionText"
-                    placeholder="Contoh: ISP Utama / Wi-Fi Kantor"
+                    placeholder="Contoh: IP Server / Mikrotik / ISP Utama"
                     class="w-full text-xs p-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
                 </td>
@@ -255,7 +267,7 @@
                 </td>
               </tr>
               <tr v-if="ipList.length === 0">
-                <td colspan="4" class="p-4 text-center text-xs text-gray-400 italic">
+                <td colspan="5" class="p-4 text-center text-xs text-gray-400 italic">
                   Belum ada IP kantor yang ditambahkan. Klik tombol <b>+ Tambah IP</b> di atas jika lokasi ini divalidasi via IP kantor.
                 </td>
               </tr>
